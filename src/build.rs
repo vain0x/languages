@@ -1,11 +1,12 @@
 use std::fs;
 use std::path::Path;
 
-const TEMPLATE: &'static str = r#####"const PROGRAM: &'static str = r####"
+const TEMPLATE: &'static str = r#####"// This program is compiled and evaluated at runtime.
+const PROGRAM: &'static str = r####"
 ${ATLISP_CONTENTS}"####;
 
 pub fn main() {
-    eval_with_stdio(PROGRAM.into());
+    eval_with_stdio(PROGRAM);
 }
 
 ${LIB_CONTENTS}"#####;

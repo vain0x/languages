@@ -1,7 +1,7 @@
-(vec
+(+
     (let A (read_int))
     (let B (read_int))
     (let C (read_int))
     (let S (read_str))
-    (println (sum A B C) S)
+    (println (to_str (+ A B C)) " " S)
 )

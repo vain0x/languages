@@ -1,17 +1,19 @@
 use std::collections::BTreeMap;
-use std::fmt::{self, Display, Write as FmtWrite};
 use std::io::{self, Write as IoWrite};
 use std::str;
 
 const PUNS: &'static [&'static str] = &["(", ")"];
+const BINS: &'static [&'static str] = &["++", "+", "-", "*", "/", "%"];
 
 const EOF: &'static Tok = &Tok::Eof;
 
 type TokId = usize;
-type SynId = usize;
 type Range = (usize, usize);
 type Toks = Vec<(Tok, Range)>;
-type Doc = (String, Toks, Vec<Syn>);
+type SynId = usize;
+type RegId = usize;
+type Off = usize;
+type Ins = (Op, usize, usize);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Tok {
@@ -30,29 +32,18 @@ pub enum Syn {
     App(Vec<SynId>),
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum Val {
-    Id(String),
-    Int(i64),
-    Str(String),
-    Vec(Vec<Val>),
-}
-
-impl Display for Val {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Val::Id(ref value) => f.write_fmt(format_args!("{}", value)),
-            &Val::Int(value) => f.write_fmt(format_args!("{}", value)),
-            &Val::Str(ref value) => f.write_fmt(format_args!("{}", value)),
-            &Val::Vec(ref value) => {
-                f.write_char('[')?;
-                for item in value {
-                    f.write_fmt(format_args!("{}", item))?;
-                }
-                f.write_char(']')
-            }
-        }
-    }
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Op {
+    Imm,
+    Store,
+    Load,
+    Bin(&'static str),
+    ToStr,
+    ReadInt,
+    ReadStr,
+    Print,
+    PrintLn,
+    Exit,
 }
 
 struct Tokenizer {
@@ -111,7 +102,7 @@ impl Tokenizer {
                 }
                 let r = self.cur;
                 self.cur += 1;
-                let word = self.src[l..r].into();
+                let word = self.src[l + 1..r].into();
                 self.toks.push((Tok::Str(word), (l, r + 1)));
                 continue;
             }
@@ -138,7 +129,8 @@ fn is_ascii_digit(c: u8) -> bool {
 }
 
 fn is_id_char(c: u8) -> bool {
-    b'a' <= c && c <= b'z' || b'A' <= c && c <= b'Z' || c == b'_' || is_ascii_digit(c)
+    (b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z')
+        || (is_ascii_digit(c) || b"!#$'*+-./<=>?@^_~".contains(&c))
 }
 
 fn is_whitespace(c: u8) -> bool {
@@ -180,8 +172,6 @@ impl Parser {
     }
 
     fn read_exp(&mut self) -> SynId {
-        let tok_id = self.cur;
-
         if self.next_is_opening() {
             self.cur += 1;
             let mut children = vec![];
@@ -195,9 +185,11 @@ impl Parser {
         }
         if self.next_is_closing() {
             self.cur += 1;
+            let tok_id = self.cur;
             return self.push(Syn::Err("Unmatched bracket".into(), tok_id));
         }
 
+        let tok_id = self.cur;
         self.cur += 1;
         self.push(Syn::Val(tok_id))
     }
@@ -208,9 +200,144 @@ impl Parser {
     }
 }
 
+pub struct Compiler {
+    toks: Toks,
+    syns: Vec<Syn>,
+    ins: Vec<Ins>,
+    reg_num: usize,
+    env: BTreeMap<String, usize>,
+    off: Off,
+    strs: Vec<String>,
+}
+
+impl Compiler {
+    fn new_reg(&mut self) -> usize {
+        self.reg_num += 1;
+        self.reg_num - 1
+    }
+
+    fn push(&mut self, op: Op, l: RegId, r: usize) -> RegId {
+        self.ins.push((op, l, r));
+        l
+    }
+
+    fn on_tok(&mut self, tok_id: usize) -> RegId {
+        match &self.toks[tok_id].0 {
+            &Tok::Err(ref err) => panic!("{}", err),
+            &Tok::Id(ref name) => {
+                if let Some(&off) = self.env.get(name) {
+                    let l = self.new_reg();
+                    self.push(Op::Load, l, off)
+                } else {
+                    panic!("var undefined {}", name)
+                }
+            }
+            &Tok::Int(value) => {
+                let l = self.new_reg();
+                self.push(Op::Imm, l, value as usize)
+            }
+            &Tok::Str(_) => {
+                let value = match self.toks[tok_id].0.clone() {
+                    Tok::Str(value) => value,
+                    _ => unreachable!(),
+                };
+                let l = self.new_reg();
+                self.strs.push(value.to_owned());
+                self.push(Op::Imm, l, self.strs.len() - 1)
+            }
+            &Tok::Pun(_) | Tok::Eof => unreachable!(),
+        }
+    }
+
+    fn to_str(&self, syn_id: SynId) -> &str {
+        if let &Syn::Val(tok_id) = &self.syns[syn_id] {
+            match &self.toks[tok_id].0 {
+                &Tok::Id(ref id) => id,
+                &Tok::Str(ref str) => str,
+                tok => panic!("{:?} must be str or id", tok),
+            }
+        } else {
+            panic!("{} must be an str or id", syn_id)
+        }
+    }
+
+    fn do_pri(&mut self, name: &str, syns: &[SynId]) -> RegId {
+        if let Some(bin_id) = BINS.iter().position(|&x| x == name) {
+            let l = self.on_exp(syns[0]);
+            for i in 1..syns.len() {
+                let r = self.on_exp(syns[i]);
+                self.push(Op::Bin(BINS[bin_id]), l, r);
+            }
+            l
+        } else if name == "let" {
+            let name = self.to_str(syns[0]).into();
+            let l = self.on_exp(syns[1]);
+            let off = self.off;
+            self.off += 1;
+            self.env.insert(name, off);
+            self.push(Op::Store, l, off)
+        } else if name == "to_str" {
+            let l = self.on_exp(syns[0]);
+            self.push(Op::ToStr, l, 0)
+        } else if name == "read_int" {
+            let l = self.new_reg();
+            self.push(Op::ReadInt, l, 0)
+        } else if name == "read_str" {
+            let l = self.new_reg();
+            self.push(Op::ReadStr, l, 0)
+        } else if name == "print" {
+            for i in 0..syns.len() {
+                let l = self.on_exp(syns[i]);
+                self.push(Op::Print, l, 0);
+            }
+            0
+        } else if name == "println" {
+            for i in 0..syns.len() {
+                let last = i + 1 == syns.len();
+                let l = self.on_exp(syns[i]);
+                self.push(if last { Op::PrintLn } else { Op::Print }, l, 0);
+            }
+            0
+        } else {
+            unimplemented!("{}", name)
+        }
+    }
+
+    fn on_exp(&mut self, syn_id: SynId) -> RegId {
+        let syn = self.syns[syn_id].clone();
+        match syn {
+            Syn::Err(err, _) => panic!("{}", err),
+            Syn::Val(tok_id) => self.on_tok(tok_id),
+            Syn::App(syns) => {
+                if let Syn::Val(tok_id) = self.syns[syns[0]] {
+                    match self.toks[tok_id].0.clone() {
+                        Tok::Id(head) => self.do_pri(&head, &syns[1..]),
+                        _ => panic!("{:?} callee must be identifier", &self.toks[syns[0]]),
+                    }
+                } else {
+                    panic!("{}")
+                }
+            }
+        }
+    }
+
+    fn compile(mut self) -> (Vec<Ins>, usize, usize, Vec<String>) {
+        writeln!(io::stderr(), "toks={:?}\nsyns={:?}", self.toks, self.syns).unwrap();
+
+        self.on_exp(self.syns.len() - 1);
+        self.push(Op::Exit, 0, 0);
+
+        writeln!(io::stderr(), "ins={:?}", self.ins).unwrap();
+
+        (self.ins, self.reg_num, self.off, self.strs)
+    }
+}
+
 pub struct Evaluator<R, W> {
-    doc: Doc,
-    env: BTreeMap<String, Val>,
+    ins: Vec<Ins>,
+    reg_num: usize,
+    off: usize,
+    strs: Vec<String>,
     stdin_line: String,
     stdin_words: Vec<String>,
     stdin: R,
@@ -232,139 +359,49 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
         panic!("Expected a word but not given.");
     }
 
-    fn toks(&self) -> &[(Tok, Range)] {
-        &self.doc.1
-    }
-
-    fn syns(&self) -> &[Syn] {
-        &self.doc.2
-    }
-
-    fn app_item(&self, syn_id: SynId, i: usize) -> SynId {
-        if let &Syn::App(ref items) = &self.syns()[syn_id] {
-            return items[i];
-        }
-        unreachable!()
-    }
-
-    fn app_len(&self, syn_id: SynId) -> usize {
-        if let &Syn::App(ref items) = &self.syns()[syn_id] {
-            return items.len();
-        }
-        unreachable!()
-    }
-
-    fn do_app(&mut self, id: &str, vals: Vec<Val>) -> Val {
-        if id == "read_int" {
-            return Val::Int(self.next_word().parse().unwrap());
-        }
-        if id == "read_str" {
-            return Val::Str(self.next_word());
-        }
-        if id == "println" {
-            write_join(&mut self.stdout, b" ", &vals);
-            writeln!(self.stdout, "").unwrap();
-            return Val::Int(0);
-        }
-        if id == "sum" {
-            let mut sum = 0;
-            for i in 0..vals.len() {
-                match &vals[i] {
-                    &Val::Int(value) => sum += value,
-                    _ => panic!("sum's argument must be integers"),
-                }
-            }
-            return Val::Int(sum);
-        }
-        if id == "join" {
-            let sep = match &vals[0] {
-                &Val::Str(ref sep) => sep,
-                _ => panic!("join's first argument must be a str"),
-            };
-            let mut buf = Vec::new();
-            write_join(&mut buf, sep.as_bytes(), &vals[1..]);
-            return Val::Str(String::from_utf8(buf).unwrap());
-        }
-        if id == "let" {
-            match (&vals[0], &vals[1]) {
-                (&Val::Id(ref name), val) => {
-                    self.env.insert(name.to_owned(), val.clone());
-                    return val.clone();
-                }
-                _ => panic!("let's first param must be id"),
-            }
-        }
-        if id == "vec" {
-            return Val::Vec(vals);
-        }
-        panic!("unknown primitive");
-    }
-
-    fn eval_exp(&mut self, stack: &mut Vec<Val>, syn_id: usize) {
-        writeln!(io::stderr(), "eval {} {:?}", syn_id, &self.syns()[syn_id]).unwrap();
-
-        match &self.syns()[syn_id] {
-            &Syn::Err(ref err, _) => panic!("{}", err),
-            &Syn::Val(tok_id) => match &self.toks()[tok_id].0 {
-                &Tok::Err(ref err) => panic!("{}", err),
-                &Tok::Id(ref id) => {
-                    if let Some(val) = self.env.get(id) {
-                        stack.push((*val).clone());
-                        return;
-                    }
-                    stack.push(Val::Id(id.to_owned()));
-                    return;
-                }
-                &Tok::Int(value) => stack.push(Val::Int(value)),
-                &Tok::Str(ref value) => stack.push(Val::Str(value.to_owned())),
-                &Tok::Pun(_) => return,
-                &Tok::Eof => return,
-            },
-            &Syn::App(_) => {}
-        }
-
-        let len = self.app_len(syn_id);
-        for i in 0..len {
-            let item = self.app_item(syn_id, i);
-            self.eval_exp(stack, item);
-        }
-        if len == 0 {
-            return;
-        }
-
-        let mut vals = vec![];
-        for _ in 1..len {
-            vals.push(stack.pop().unwrap());
-        }
-        vals.reverse();
-        let head = stack.pop().unwrap();
-
-        match &head {
-            &Val::Id(ref id) => {
-                let val = self.do_app(id, vals);
-                stack.push(val);
-            }
-            _ => panic!("head must be an identifier"),
-        }
-    }
-
     fn eval(mut self) {
-        let mut stack = vec![Val::Int(0)];
-        let syn_id = self.syns().len() - 1;
-        self.eval_exp(&mut stack, syn_id);
-    }
-}
-
-fn write_join<W: IoWrite, V: Display>(buf: &mut W, sep: &[u8], items: &[V]) {
-    for i in 0..items.len() {
-        if i > 0 {
-            buf.write(sep).unwrap();
+        let mut regs = vec![0; self.reg_num];
+        let mut stack = vec![0; self.off];
+        let mut strs = self.strs.to_owned();
+        let mut pc = 0;
+        loop {
+            let (op, l, r) = self.ins[pc];
+            pc += 1;
+            match op {
+                Op::Imm => regs[l] = r as i64,
+                Op::Load => regs[l] = stack[r],
+                Op::Store => stack[r] = regs[l],
+                Op::ToStr => {
+                    let t = regs[l].to_string();
+                    strs.push(t);
+                    regs[l] = (strs.len() - 1) as i64;
+                }
+                Op::Bin("++") => {
+                    let mut t = strs[regs[l] as usize].clone();
+                    t += &strs[regs[r] as usize];
+                    strs.push(t);
+                    regs[l] = (strs.len() - 1) as i64;
+                }
+                Op::Bin("+") => regs[l] += regs[r],
+                Op::Bin("-") => regs[l] -= regs[r],
+                Op::Bin("*") => regs[l] *= regs[r],
+                Op::Bin("/") => regs[l] /= regs[r],
+                Op::Bin("%") => regs[l] %= regs[r],
+                Op::Bin(_) => unimplemented!(),
+                Op::ReadInt => regs[l] = self.next_word().parse().unwrap_or(0),
+                Op::ReadStr => {
+                    strs.push(self.next_word());
+                    regs[l] = (strs.len() - 1) as i64;
+                }
+                Op::Print => write!(self.stdout, "{}", strs[regs[l] as usize]).unwrap(),
+                Op::PrintLn => writeln!(self.stdout, "{}", strs[regs[l] as usize]).unwrap(),
+                Op::Exit => return,
+            }
         }
-        write!(buf, "{}", items[i]).unwrap();
     }
 }
 
-pub fn parse(src: &str) -> Doc {
+pub fn compile(src: &str) -> (Vec<Ins>, usize, usize, Vec<String>) {
     let src = src.to_owned();
     let toks = Tokenizer {
         src: src.clone(),
@@ -378,14 +415,26 @@ pub fn parse(src: &str) -> Doc {
         syns: vec![],
     }
     .parse();
-    (src, toks, syns)
+    Compiler {
+        toks: toks,
+        syns: syns,
+        ins: vec![],
+        reg_num: 0,
+        env: BTreeMap::new(),
+        off: 0,
+        strs: vec![],
+    }
+    .compile()
 }
 
-pub fn eval(source: &str, stdin: String) -> String {
+pub fn eval(src: &str, stdin: &str) -> String {
     let mut stdout = Vec::new();
+    let (ins, reg_num, off, strs) = compile(src);
     Evaluator {
-        doc: parse(source),
-        env: BTreeMap::new(),
+        ins: ins,
+        reg_num: reg_num,
+        off: off,
+        strs: strs,
         stdin_line: String::new(),
         stdin_words: Vec::new(),
         stdin: io::BufReader::new(io::Cursor::new(&stdin)),
@@ -395,12 +444,15 @@ pub fn eval(source: &str, stdin: String) -> String {
     String::from_utf8(stdout).unwrap()
 }
 
-pub fn eval_with_stdio(src: String) {
+pub fn eval_with_stdio(src: &str) {
     let stdin = io::stdin();
     let stdout = io::stdout();
+    let (ins, reg_num, off, strs) = compile(src);
     Evaluator {
-        doc: parse(&src),
-        env: BTreeMap::new(),
+        ins: ins,
+        reg_num: reg_num,
+        off: off,
+        strs: strs,
         stdin_line: String::new(),
         stdin_words: Vec::new(),
         stdin: io::BufReader::new(stdin.lock()),

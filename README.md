@@ -159,3 +159,7 @@ rustup override set 1.15.1
 To build, run `cargo build`.
 
 To run tests, run `cargo test`. Tests are written in [tests/tests.rs](tests/tests.rs).
+
+## Others
+
+This project uses *odd* code formatting rule to reduce code size. Configuration is written in `rustfmt.toml` and `.editorconfig`.

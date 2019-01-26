@@ -469,6 +469,11 @@ impl Compiler {
 
 pub struct Evaluator<R, W> {
     p: Program,
+    labels: Vec<usize>,
+    regs: Vec<i64>,
+    stack: Vec<i64>,
+    strs: Vec<String>,
+    pc: usize,
     stdin_line: String,
     stdin_words: Vec<String>,
     stdin: R,
@@ -490,67 +495,69 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
         panic!("Expected a word but not given.");
     }
 
-    fn eval(mut self) {
-        let mut regs = vec![0; self.p.reg_num];
-        let mut stack = vec![0; self.p.var_num];
-        let mut strs = self.p.strs.to_owned();
-        let mut pc = 0;
+    fn eval_ins(&mut self, op: Op, l: usize, r: usize) {
+        match op {
+            Op::Imm => self.regs[l] = r as i64,
+            Op::Mov => self.regs[l] = self.regs[r],
+            Op::Jump => self.pc = self.labels[r],
+            Op::Unless => {
+                if self.regs[l] == 0 {
+                    self.pc = self.labels[r]
+                }
+            }
+            Op::Load => self.regs[l] = self.stack[r],
+            Op::Store => self.stack[r] = self.regs[l],
+            Op::ToStr => {
+                let t = self.regs[l].to_string();
+                self.strs.push(t);
+                self.regs[l] = (self.strs.len() - 1) as i64;
+            }
+            Op::Bin("++") => {
+                let mut t = self.strs[self.regs[l] as usize].clone();
+                t += &self.strs[self.regs[r] as usize];
+                self.strs.push(t);
+                self.regs[l] = (self.strs.len() - 1) as i64;
+            }
+            Op::Bin("+") => self.regs[l] += self.regs[r],
+            Op::Bin("-") => self.regs[l] -= self.regs[r],
+            Op::Bin("*") => self.regs[l] *= self.regs[r],
+            Op::Bin("/") => self.regs[l] /= self.regs[r],
+            Op::Bin("%") => self.regs[l] %= self.regs[r],
+            Op::Bin("==") => self.regs[l] = bool_to_int(self.regs[l] == self.regs[r]),
+            Op::Bin("!=") => self.regs[l] = bool_to_int(self.regs[l] != self.regs[r]),
+            Op::Bin("<") => self.regs[l] = bool_to_int(self.regs[l] < self.regs[r]),
+            Op::Bin("<=") => self.regs[l] = bool_to_int(self.regs[l] <= self.regs[r]),
+            Op::Bin(">") => self.regs[l] = bool_to_int(self.regs[l] > self.regs[r]),
+            Op::Bin(">=") => self.regs[l] = bool_to_int(self.regs[l] >= self.regs[r]),
+            Op::Bin(_) => unimplemented!(),
+            Op::ReadInt => self.regs[l] = self.next_word().parse().unwrap_or(0),
+            Op::ReadStr => {
+                let word = self.next_word();
+                self.strs.push(word);
+                self.regs[l] = (self.strs.len() - 1) as i64;
+            }
+            Op::Print => write!(self.stdout, "{}", self.strs[self.regs[l] as usize]).unwrap(),
+            Op::PrintLn => writeln!(self.stdout, "{}", self.strs[self.regs[l] as usize]).unwrap(),
+            Op::Label => {}
+            Op::Exit => return,
+        }
+    }
 
+    fn eval(mut self) {
         // Build jump table.
-        let mut labels = vec![0; self.p.lab_num];
         for pc in 0..self.p.ins.len() {
             if let (Op::Label, _, r) = self.p.ins[pc] {
-                labels[r] = pc + 1;
+                self.labels[r] = pc + 1;
             }
         }
 
         loop {
-            let (op, l, r) = self.p.ins[pc];
-            pc += 1;
-            match op {
-                Op::Imm => regs[l] = r as i64,
-                Op::Mov => regs[l] = regs[r],
-                Op::Jump => pc = labels[r],
-                Op::Unless => {
-                    if regs[l] == 0 {
-                        pc = labels[r]
-                    }
-                }
-                Op::Load => regs[l] = stack[r],
-                Op::Store => stack[r] = regs[l],
-                Op::ToStr => {
-                    let t = regs[l].to_string();
-                    strs.push(t);
-                    regs[l] = (strs.len() - 1) as i64;
-                }
-                Op::Bin("++") => {
-                    let mut t = strs[regs[l] as usize].clone();
-                    t += &strs[regs[r] as usize];
-                    strs.push(t);
-                    regs[l] = (strs.len() - 1) as i64;
-                }
-                Op::Bin("+") => regs[l] += regs[r],
-                Op::Bin("-") => regs[l] -= regs[r],
-                Op::Bin("*") => regs[l] *= regs[r],
-                Op::Bin("/") => regs[l] /= regs[r],
-                Op::Bin("%") => regs[l] %= regs[r],
-                Op::Bin("==") => regs[l] = bool_to_int(regs[l] == regs[r]),
-                Op::Bin("!=") => regs[l] = bool_to_int(regs[l] != regs[r]),
-                Op::Bin("<") => regs[l] = bool_to_int(regs[l] < regs[r]),
-                Op::Bin("<=") => regs[l] = bool_to_int(regs[l] <= regs[r]),
-                Op::Bin(">") => regs[l] = bool_to_int(regs[l] > regs[r]),
-                Op::Bin(">=") => regs[l] = bool_to_int(regs[l] >= regs[r]),
-                Op::Bin(_) => unimplemented!(),
-                Op::ReadInt => regs[l] = self.next_word().parse().unwrap_or(0),
-                Op::ReadStr => {
-                    strs.push(self.next_word());
-                    regs[l] = (strs.len() - 1) as i64;
-                }
-                Op::Print => write!(self.stdout, "{}", strs[regs[l] as usize]).unwrap(),
-                Op::PrintLn => writeln!(self.stdout, "{}", strs[regs[l] as usize]).unwrap(),
-                Op::Label => {}
-                Op::Exit => return,
+            let (op, l, r) = self.p.ins[self.pc];
+            if op == Op::Exit {
+                break;
             }
+            self.pc += 1;
+            self.eval_ins(op, l, r);
         }
     }
 }
@@ -585,6 +592,11 @@ pub fn compile(src: &str) -> Program {
 
 pub fn exec<R: io::Read, W: io::Write>(program: Program, stdin: R, stdout: W) {
     Evaluator {
+        labels: vec![0; program.lab_num],
+        regs: vec![0; program.reg_num],
+        stack: vec![0; program.var_num], // Allocate static vars.
+        strs: program.strs.to_owned(),   // Allocate string literals.
+        pc: 0,
         p: program,
         stdin_line: String::new(),
         stdin_words: Vec::new(),

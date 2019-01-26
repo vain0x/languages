@@ -20,12 +20,12 @@ The following code is a solution written in picomet-lang to solve this problem: 
 
 This reads two integers from STDIN and prints a word to STDOUT that indicates whether the product of two integers is even or odd.
 
-Other examples are available at the bottom of [tests/tests.rs](tests/tests.rs).
+Other examples are available at the bottom of [picomet/tests/tests.rs](picomet/tests/tests.rs).
 
 ## Document: How to Write Picomet-lang
 
 - Before read, please check last-modified date because I might forget to update the document after changes.
-- See [tests/tests.rs](tests/tests.rs) for actually working picomet-lang codes.
+- See [picomet/tests/tests.rs](picomet/tests/tests.rs) for actually working picomet-lang codes.
 
 ### Doc: Language properties
 
@@ -134,11 +134,11 @@ Other too detailed things.
 
 ## Solve
 
-To solve a problem with picomet-lang, write your code in `examples/solver.picomet`.
+To solve a problem with picomet-lang, write your code in [picomet/examples/solver.picomet](picomet/examples/solver.picomet).
 
 To run your code, use `./run`.
 
-To submit your code, run `./build` and copy-and-paste `examples/solver.rs`.
+To submit your code, run `./build` and copy-and-paste `picomet/examples/solver.rs`.
 
 ## Develop
 
@@ -146,7 +146,7 @@ To develop this project, first install Rust.
 
 - To install Rust tools, follow the instructions written in [Rust programming language](https://www.rust-lang.org/)
 
-Second, inside the project directory, run the following command.
+Second, inside the `picomet` directory, run the following command.
 
 ```sh
 rustup install 1.15.1
@@ -158,8 +158,8 @@ rustup override set 1.15.1
 
 To build, run `cargo build`.
 
-To run tests, run `cargo test`. Tests are written in [tests/tests.rs](tests/tests.rs).
+To run tests, run `cargo test`. Tests are written in [picomet/tests/tests.rs](picomet/tests/tests.rs).
 
 ## Others
 
-This project uses *odd* code formatting rule to reduce code size. Configuration is written in `rustfmt.toml` and `.editorconfig`.
+The `picomet` project uses *odd* code formatting rule to reduce code size. Configuration is written in [picomet/rustfmt.toml](picomet/rustfmt.toml) and [picomet/.editorconfig](picomet/.editorconfig).

@@ -13,6 +13,9 @@ type Range = (usize, usize);
 type Toks = Vec<(Tok, Range)>;
 type SynId = usize;
 type RegId = usize;
+type LabId = usize;
+type VarId = usize;
+type EnvId = usize;
 type Ins = (Op, usize, usize);
 
 #[derive(Clone, PartialEq, Debug)]
@@ -48,6 +51,12 @@ pub enum Op {
     Print,
     PrintLn,
     Exit,
+}
+
+#[derive(Default)]
+struct Env {
+    parent_env_id: usize,
+    vars: BTreeMap<String, VarId>,
 }
 
 #[derive(Clone, Default)]
@@ -220,21 +229,22 @@ pub struct Compiler {
     toks: Toks,
     syns: Vec<Syn>,
     p: Program,
-    env: BTreeMap<String, usize>,
+    envs: Vec<Env>,
+    env_id: EnvId,
 }
 
 impl Compiler {
-    fn new_reg(&mut self) -> usize {
+    fn new_reg(&mut self) -> RegId {
         self.p.reg_num += 1;
         self.p.reg_num - 1
     }
 
-    fn new_var(&mut self) -> usize {
+    fn new_var(&mut self) -> VarId {
         self.p.var_num += 1;
         self.p.var_num - 1
     }
 
-    fn new_lab(&mut self) -> usize {
+    fn new_lab(&mut self) -> LabId {
         self.p.lab_num += 1;
         self.p.lab_num - 1
     }
@@ -249,11 +259,31 @@ impl Compiler {
         self.p.strs.len() - 1
     }
 
-    fn on_tok(&mut self, tok_id: usize) -> RegId {
+    fn replace_env(&mut self, parent_env_id: EnvId) {
+        let mut env = Env::default();
+        env.parent_env_id = parent_env_id;
+        self.envs.push(env);
+        self.env_id = self.envs.len() - 1;
+    }
+
+    fn find_var_id(&self, name: &str) -> Option<VarId> {
+        let mut env_id = self.env_id;
+        loop {
+            if let Some(&var_id) = self.envs[env_id].vars.get(name) {
+                return Some(var_id);
+            }
+            if env_id == 0 {
+                return None;
+            }
+            env_id = self.envs[env_id].parent_env_id;
+        }
+    }
+
+    fn on_tok(&mut self, tok_id: TokId) -> RegId {
         match self.toks[tok_id].0.clone() {
             Tok::Err(err) => panic!("{}", err),
             Tok::Id(name) => {
-                if let Some(&var_id) = self.env.get(&name) {
+                if let Some(var_id) = self.find_var_id(&name) {
                     let l = self.new_reg();
                     self.push(Op::Load, l, var_id)
                 } else if name == "true" {
@@ -309,10 +339,21 @@ impl Compiler {
             self.push(Op::Bin(RELS[id]), l, r)
         } else if name == "let" {
             let name = self.to_str(syns[0]).into();
-            let l = self.on_exp(syns[1]);
+            // Create local variable. Shadow if existing.
             let var_id = self.new_var();
-            self.env.insert(name, var_id);
+            self.envs[self.env_id].vars.insert(name, var_id);
+            // Set default value.
+            let l = self.on_exp(syns[1]);
             self.push(Op::Store, l, var_id)
+        } else if name == "begin" {
+            let cur_env_id = self.env_id;
+            self.replace_env(cur_env_id);
+            let mut l = 0;
+            for i in 0..syns.len() {
+                l = self.on_exp(syns[i]);
+            }
+            self.env_id = cur_env_id;
+            l
         } else if name == "cond" {
             // Label to point to the end of cond.
             let end_lab = self.new_lab();
@@ -324,7 +365,7 @@ impl Compiler {
                     // .. cond then_cl ..
                     let else_lab = self.new_lab();
                     let cond = self.on_exp(syns[i]);
-                    // Unless cond is true, goto next clause.
+                    // Unless cond is true, go to next clause.
                     self.push(Op::Unless, cond, else_lab);
                     // Evaluate the then clause.
                     let then_cl = self.on_exp(syns[i + 1]);
@@ -364,7 +405,7 @@ impl Compiler {
         } else if name == "set" {
             let name = self.to_str(syns[0]).to_owned();
             let l = self.on_exp(syns[1]);
-            let var_id = *self.env.get(&name).expect("unknown var");
+            let var_id = self.find_var_id(&name).expect("unknown var");
             self.push(Op::Store, l, var_id)
         } else if name == "to_str" {
             let l = self.on_exp(syns[0]);
@@ -413,6 +454,8 @@ impl Compiler {
 
     fn compile(mut self) -> Program {
         writeln!(io::stderr(), "toks={:?}\nsyns={:?}", self.toks, self.syns).unwrap();
+
+        self.replace_env(0); // Global env.
 
         let entry_syn_id = self.syns.len() - 1;
         self.on_exp(entry_syn_id);
@@ -534,7 +577,8 @@ pub fn compile(src: &str) -> Program {
         toks: toks,
         syns: syns,
         p: Program::default(),
-        env: BTreeMap::new(),
+        envs: Vec::new(),
+        env_id: 0,
     }
     .compile()
 }

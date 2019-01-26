@@ -65,6 +65,22 @@ fn test_string_primitives() {
 }
 
 #[test]
+fn test_shadowing() {
+    eval_tests(
+        r#"(begin
+            (let a 1)
+            (begin
+                (println (to_str a))
+                (let a 2)
+                (set a 3)
+                (println (to_str a)))
+            (println (to_str a))
+        )"#,
+        &[("", "1\n3\n1\n")],
+    )
+}
+
+#[test]
 fn test_cond() {
     eval_tests(
         r#"(cond (== (read_int) 1) (println "YES") (println "NO"))"#,

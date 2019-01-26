@@ -1,6 +1,15 @@
 #![cfg(test)]
 
+extern crate atlisp;
+
 use atlisp::eval;
+
+fn eval_table(src: &str, ios: &[(&str, &str)]) {
+    for &(input, expected) in ios {
+        let actual = eval(src, input);
+        assert_eq!(actual, expected, "src={}\ninput={}", src, input);
+    }
+}
 
 #[test]
 fn test_read_int() {
@@ -33,4 +42,17 @@ fn test_string_primitives() {
         "42 is answer\n"
     );
     assert_eq!(eval(r#"(println (++ "a" "b"))"#, ""), "ab\n");
+}
+
+#[test]
+fn test_cond() {
+    assert_eq!(
+        eval(r#"(cond true (println "YES") (println "NO"))"#, ""),
+        "YES\n"
+    );
+
+    eval_table(
+        r#"(cond (== (read_int) 1) (println "YES") (println "NO"))"#,
+        &[("1", "YES\n"), ("0", "NO\n")],
+    );
 }

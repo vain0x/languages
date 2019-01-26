@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::prelude::*;
 use std::path::Path;
 
 const TEMPLATE: &'static str = r#####"// This program is compiled and evaluated at runtime.
@@ -11,19 +12,32 @@ pub fn main() {
 
 ${LIB_CONTENTS}"#####;
 
+fn read_to_string(p: &Path) -> String {
+    let mut file = match fs::File::open(p) {
+        Ok(file) => file,
+        Err(_) => return "".into(),
+    };
+    let mut buffer = String::new();
+    file.read_to_string(&mut buffer).unwrap();
+    buffer
+}
+
 fn main() {
     let root_path = env!("CARGO_MANIFEST_DIR");
     let lib_path = Path::new(root_path).join("src").join("lib.rs");
     let atlisp_path = Path::new(root_path).join("examples").join("solver.atlisp");
     let solver_path = Path::new(root_path).join("examples").join("solver.rs");
 
-    let lib_contents = fs::read_to_string(&lib_path).unwrap();
-    let atlisp_contents = fs::read_to_string(&atlisp_path).unwrap();
-    let current_contents = fs::read_to_string(&solver_path).unwrap_or_default();
+    let lib_contents = read_to_string(&lib_path);
+    let atlisp_contents = read_to_string(&atlisp_path);
+    let current_contents = read_to_string(&solver_path);
 
-    let solver_contents = TEMPLATE.replace("${ATLISP_CONTENTS}", &atlisp_contents).replace("${LIB_CONTENTS}", &lib_contents);
+    let solver_contents = TEMPLATE
+        .replace("${ATLISP_CONTENTS}", &atlisp_contents)
+        .replace("${LIB_CONTENTS}", &lib_contents);
 
     if current_contents != solver_contents {
-        fs::write(solver_path, solver_contents).unwrap();
+        let mut file = fs::File::create(solver_path).unwrap();
+        file.write_all(solver_contents.as_bytes()).unwrap();
     }
 }

@@ -12,7 +12,6 @@ type Range = (usize, usize);
 type Toks = Vec<(Tok, Range)>;
 type SynId = usize;
 type RegId = usize;
-type Off = usize;
 type Ins = (Op, usize, usize);
 
 #[derive(Clone, PartialEq, Debug)]
@@ -35,8 +34,12 @@ pub enum Syn {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Op {
     Imm,
+    Mov,
     Store,
     Load,
+    Label,
+    Jump,
+    Unless,
     Bin(&'static str),
     ToStr,
     ReadInt,
@@ -46,6 +49,16 @@ pub enum Op {
     Exit,
 }
 
+#[derive(Default)]
+pub struct Program {
+    ins: Vec<Ins>,
+    strs: Vec<String>,
+    reg_num: usize,
+    var_num: usize,
+    lab_num: usize,
+}
+
+#[derive(Default)]
 struct Tokenizer {
     src: String,
     cur: usize,
@@ -137,6 +150,7 @@ fn is_whitespace(c: u8) -> bool {
     c == b' ' || c == b'\r' || c == b'\n'
 }
 
+#[derive(Default)]
 struct Parser {
     toks: Toks,
     cur: usize,
@@ -200,52 +214,71 @@ impl Parser {
     }
 }
 
+#[derive(Default)]
 pub struct Compiler {
     toks: Toks,
     syns: Vec<Syn>,
-    ins: Vec<Ins>,
-    reg_num: usize,
+    p: Program,
     env: BTreeMap<String, usize>,
-    off: Off,
-    strs: Vec<String>,
 }
 
 impl Compiler {
     fn new_reg(&mut self) -> usize {
-        self.reg_num += 1;
-        self.reg_num - 1
+        self.p.reg_num += 1;
+        self.p.reg_num - 1
+    }
+
+    fn new_var(&mut self) -> usize {
+        self.p.var_num += 1;
+        self.p.var_num - 1
+    }
+
+    fn new_lab(&mut self) -> usize {
+        self.p.lab_num += 1;
+        self.p.lab_num - 1
     }
 
     fn push(&mut self, op: Op, l: RegId, r: usize) -> RegId {
-        self.ins.push((op, l, r));
+        self.p.ins.push((op, l, r));
         l
     }
 
+    fn push_str(&mut self, value: String) -> usize {
+        self.p.strs.push(value.to_owned());
+        self.p.strs.len() - 1
+    }
+
     fn on_tok(&mut self, tok_id: usize) -> RegId {
-        match &self.toks[tok_id].0 {
-            &Tok::Err(ref err) => panic!("{}", err),
-            &Tok::Id(ref name) => {
-                if let Some(&off) = self.env.get(name) {
+        match self.toks[tok_id].0.clone() {
+            Tok::Err(err) => panic!("{}", err),
+            Tok::Id(name) => {
+                if let Some(&var_id) = self.env.get(&name) {
                     let l = self.new_reg();
-                    self.push(Op::Load, l, off)
+                    self.push(Op::Load, l, var_id)
+                } else if name == "true" {
+                    let l = self.new_reg();
+                    self.push(Op::Imm, l, 1)
+                } else if name == "false" {
+                    let l = self.new_reg();
+                    self.push(Op::Imm, l, 0)
                 } else {
                     panic!("var undefined {}", name)
                 }
             }
-            &Tok::Int(value) => {
+            Tok::Int(value) => {
                 let l = self.new_reg();
                 self.push(Op::Imm, l, value as usize)
             }
-            &Tok::Str(_) => {
+            Tok::Str(_) => {
                 let value = match self.toks[tok_id].0.clone() {
                     Tok::Str(value) => value,
                     _ => unreachable!(),
                 };
+                let str_id = self.push_str(value);
                 let l = self.new_reg();
-                self.strs.push(value.to_owned());
-                self.push(Op::Imm, l, self.strs.len() - 1)
+                self.push(Op::Imm, l, str_id)
             }
-            &Tok::Pun(_) | Tok::Eof => unreachable!(),
+            Tok::Pun(_) | Tok::Eof => unreachable!(),
         }
     }
 
@@ -269,13 +302,38 @@ impl Compiler {
                 self.push(Op::Bin(BINS[bin_id]), l, r);
             }
             l
+        } else if name == "==" {
+            let l = self.on_exp(syns[0]);
+            let r = self.on_exp(syns[1]);
+            self.push(Op::Bin("=="), l, r)
         } else if name == "let" {
             let name = self.to_str(syns[0]).into();
             let l = self.on_exp(syns[1]);
-            let off = self.off;
-            self.off += 1;
-            self.env.insert(name, off);
-            self.push(Op::Store, l, off)
+            let var_id = self.new_var();
+            self.env.insert(name, var_id);
+            self.push(Op::Store, l, var_id)
+        } else if name == "cond" {
+            let end_lab = self.new_lab();
+            let end_reg = self.new_reg();
+            let mut i = 0;
+            while i < syns.len() {
+                if i + 1 < syns.len() {
+                    let else_lab = self.new_lab();
+                    let cond = self.on_exp(syns[i]);
+                    self.push(Op::Unless, cond, else_lab);
+                    let then_cl = self.on_exp(syns[i + 1]);
+                    self.push(Op::Mov, end_reg, then_cl);
+                    self.push(Op::Jump, 0, end_lab);
+                    self.push(Op::Label, 0, else_lab);
+                    i += 2;
+                } else {
+                    let else_cl = self.on_exp(syns[i]);
+                    self.push(Op::Mov, end_reg, else_cl);
+                    i += 1;
+                }
+            }
+            self.push(Op::Label, 0, end_lab);
+            end_reg
         } else if name == "to_str" {
             let l = self.on_exp(syns[0]);
             self.push(Op::ToStr, l, 0)
@@ -299,7 +357,7 @@ impl Compiler {
             }
             0
         } else {
-            unimplemented!("{}", name)
+            unimplemented!()
         }
     }
 
@@ -321,23 +379,21 @@ impl Compiler {
         }
     }
 
-    fn compile(mut self) -> (Vec<Ins>, usize, usize, Vec<String>) {
+    fn compile(mut self) -> Program {
         writeln!(io::stderr(), "toks={:?}\nsyns={:?}", self.toks, self.syns).unwrap();
 
-        self.on_exp(self.syns.len() - 1);
+        let entry_syn_id = self.syns.len() - 1;
+        self.on_exp(entry_syn_id);
         self.push(Op::Exit, 0, 0);
 
-        writeln!(io::stderr(), "ins={:?}", self.ins).unwrap();
+        writeln!(io::stderr(), "ins={:?}", self.p.ins).unwrap();
 
-        (self.ins, self.reg_num, self.off, self.strs)
+        self.p
     }
 }
 
 pub struct Evaluator<R, W> {
-    ins: Vec<Ins>,
-    reg_num: usize,
-    off: usize,
-    strs: Vec<String>,
+    p: Program,
     stdin_line: String,
     stdin_words: Vec<String>,
     stdin: R,
@@ -360,15 +416,31 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
     }
 
     fn eval(mut self) {
-        let mut regs = vec![0; self.reg_num];
-        let mut stack = vec![0; self.off];
-        let mut strs = self.strs.to_owned();
+        let mut regs = vec![0; self.p.reg_num];
+        let mut stack = vec![0; self.p.var_num];
+        let mut strs = self.p.strs.to_owned();
         let mut pc = 0;
+
+        // Build jump table.
+        let mut labels = vec![0; self.p.lab_num];
+        for pc in 0..self.p.ins.len() {
+            if let (Op::Label, _, r) = self.p.ins[pc] {
+                labels[r] = pc + 1;
+            }
+        }
+
         loop {
-            let (op, l, r) = self.ins[pc];
+            let (op, l, r) = self.p.ins[pc];
             pc += 1;
             match op {
                 Op::Imm => regs[l] = r as i64,
+                Op::Mov => regs[l] = regs[r],
+                Op::Jump => pc = labels[r],
+                Op::Unless => {
+                    if regs[l] == 0 {
+                        pc = labels[r]
+                    }
+                }
                 Op::Load => regs[l] = stack[r],
                 Op::Store => stack[r] = regs[l],
                 Op::ToStr => {
@@ -387,6 +459,7 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
                 Op::Bin("*") => regs[l] *= regs[r],
                 Op::Bin("/") => regs[l] /= regs[r],
                 Op::Bin("%") => regs[l] %= regs[r],
+                Op::Bin("==") => regs[l] = bool_to_int(regs[l] == regs[r]),
                 Op::Bin(_) => unimplemented!(),
                 Op::ReadInt => regs[l] = self.next_word().parse().unwrap_or(0),
                 Op::ReadStr => {
@@ -395,13 +468,18 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
                 }
                 Op::Print => write!(self.stdout, "{}", strs[regs[l] as usize]).unwrap(),
                 Op::PrintLn => writeln!(self.stdout, "{}", strs[regs[l] as usize]).unwrap(),
+                Op::Label => {}
                 Op::Exit => return,
             }
         }
     }
 }
 
-pub fn compile(src: &str) -> (Vec<Ins>, usize, usize, Vec<String>) {
+fn bool_to_int(x: bool) -> i64 {
+    (if x { 1 } else { 0 })
+}
+
+pub fn compile(src: &str) -> Program {
     let src = src.to_owned();
     let toks = Tokenizer {
         src: src.clone(),
@@ -418,23 +496,17 @@ pub fn compile(src: &str) -> (Vec<Ins>, usize, usize, Vec<String>) {
     Compiler {
         toks: toks,
         syns: syns,
-        ins: vec![],
-        reg_num: 0,
+        p: Program::default(),
         env: BTreeMap::new(),
-        off: 0,
-        strs: vec![],
     }
     .compile()
 }
 
 pub fn eval(src: &str, stdin: &str) -> String {
     let mut stdout = Vec::new();
-    let (ins, reg_num, off, strs) = compile(src);
+    let program = compile(src);
     Evaluator {
-        ins: ins,
-        reg_num: reg_num,
-        off: off,
-        strs: strs,
+        p: program,
         stdin_line: String::new(),
         stdin_words: Vec::new(),
         stdin: io::BufReader::new(io::Cursor::new(&stdin)),
@@ -447,12 +519,9 @@ pub fn eval(src: &str, stdin: &str) -> String {
 pub fn eval_with_stdio(src: &str) {
     let stdin = io::stdin();
     let stdout = io::stdout();
-    let (ins, reg_num, off, strs) = compile(src);
+    let program = compile(src);
     Evaluator {
-        ins: ins,
-        reg_num: reg_num,
-        off: off,
-        strs: strs,
+        p: program,
         stdin_line: String::new(),
         stdin_words: Vec::new(),
         stdin: io::BufReader::new(stdin.lock()),

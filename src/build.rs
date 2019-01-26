@@ -4,7 +4,7 @@ use std::path::Path;
 
 const TEMPLATE: &'static str = r#####"// This program is compiled and evaluated at runtime.
 const PROGRAM: &'static str = r####"
-${ATLISP_CONTENTS}"####;
+${PICOMET_CONTENTS}"####;
 
 pub fn main() {
     eval_with_stdio(PROGRAM);
@@ -25,15 +25,15 @@ fn read_to_string(p: &Path) -> String {
 fn main() {
     let root_path = env!("CARGO_MANIFEST_DIR");
     let lib_path = Path::new(root_path).join("src").join("lib.rs");
-    let atlisp_path = Path::new(root_path).join("examples").join("solver.atlisp");
+    let picomet_path = Path::new(root_path).join("examples").join("solver.picomet");
     let solver_path = Path::new(root_path).join("examples").join("solver.rs");
 
     let lib_contents = read_to_string(&lib_path);
-    let atlisp_contents = read_to_string(&atlisp_path);
+    let picomet_contents = read_to_string(&picomet_path);
     let current_contents = read_to_string(&solver_path);
 
     let solver_contents = TEMPLATE
-        .replace("${ATLISP_CONTENTS}", &atlisp_contents)
+        .replace("${PICOMET_CONTENTS}", &picomet_contents)
         .replace("${LIB_CONTENTS}", &lib_contents);
 
     if current_contents != solver_contents {

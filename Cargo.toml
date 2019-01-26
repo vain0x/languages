@@ -1,5 +1,5 @@
 [package]
-name = "atlisp"
+name = "picomet-lang"
 version = "1.0.0"
 authors = ["vain0x <vainzerox@gmail.com>"]
 build = "src/build.rs"

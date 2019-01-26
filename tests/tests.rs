@@ -1,22 +1,22 @@
 #![cfg(test)]
 
-extern crate atlisp;
+extern crate picomet_lang;
 
 use std::io;
 
 fn eval(src: &str, stdin: &str) -> String {
-    let program = atlisp::compile(src);
+    let program = picomet_lang::compile(src);
     let mut stdout = Vec::new();
-    atlisp::exec(program, io::Cursor::new(stdin), &mut stdout);
+    picomet_lang::exec(program, io::Cursor::new(stdin), &mut stdout);
     String::from_utf8(stdout).unwrap()
 }
 
 fn eval_tests(src: &str, ios: &[(&str, &str)]) {
-    let program = atlisp::compile(src);
+    let program = picomet_lang::compile(src);
 
     for &(input, expected) in ios {
         let mut stdout = Vec::new();
-        atlisp::exec(program.clone(), io::Cursor::new(input), &mut stdout);
+        picomet_lang::exec(program.clone(), io::Cursor::new(input), &mut stdout);
         let actual = String::from_utf8(stdout).unwrap();
 
         assert_eq!(actual, expected, "src={}\ninput={}", src, input);

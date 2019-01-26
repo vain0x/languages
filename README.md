@@ -1,5 +1,5 @@
-# ATLISP
+# PICOMET-LANG
 
 *WIP*
 
-**ATLISP** is a programming language for programming contests.
+**Picomet-lang** is a pico programming language for programming contests.

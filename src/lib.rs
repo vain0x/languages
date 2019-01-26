@@ -334,6 +334,11 @@ impl Compiler {
             }
             self.push(Op::Label, 0, end_lab);
             end_reg
+        } else if name == "set" {
+            let name = self.to_str(syns[0]).to_owned();
+            let l = self.on_exp(syns[1]);
+            let var_id = *self.env.get(&name).expect("unknown var");
+            self.push(Op::Store, l, var_id)
         } else if name == "to_str" {
             let l = self.on_exp(syns[0]);
             self.push(Op::ToStr, l, 0)

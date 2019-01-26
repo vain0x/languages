@@ -48,6 +48,14 @@ fn test_let() {
 }
 
 #[test]
+fn test_set() {
+    assert_eq!(
+        eval(r#"(+ (let a 2) (set a (+ a 3)) (println (to_str a)))"#, ""),
+        "5\n"
+    )
+}
+
+#[test]
 fn test_string_primitives() {
     assert_eq!(
         eval(r#"(println (to_str 42) " is answer")"#, ""),
@@ -92,5 +100,28 @@ fn test_abc086_a_product() {
             (println (cond (== (% (* a b) 2) 0) "Even" "Odd"))
         )"#,
         &[("3 4\n", "Even\n"), ("1 21\n", "Odd\n")],
+    )
+}
+
+/// https://atcoder.jp/contests/abs/tasks/abc081_a?lang=en
+#[test]
+fn test_abc081_a_placing_marbles() {
+    eval_tests(
+        r#"(+
+            (let n (read_int))
+            (let k 0)
+            (cond (== (% n 10) 1) (set k (+ k 1)))
+            (set n (/ n 10))
+            (cond (== (% n 10) 1) (set k (+ k 1)))
+            (set n (/ n 10))
+            (cond (== (% n 10) 1) (set k (+ k 1)))
+            (println (to_str k))
+        )"#,
+        &[
+            ("101\n", "2\n"),
+            ("000\n", "0\n"),
+            ("111\n", "3\n"),
+            ("010\n", "1\n"),
+        ],
     )
 }

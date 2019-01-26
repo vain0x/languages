@@ -7,6 +7,9 @@ const BINS: &'static [&'static str] = &["++", "+", "-", "*", "/", "%"];
 const RELS: &'static [&'static str] = &["==", "!=", "<", "<=", ">", ">="];
 
 const EOF: &'static Tok = &Tok::Eof;
+const GLOBAL_FUN_ID: FunId = 0;
+const BASE_PTR_REG_ID: RegId = 0;
+const RET_REG_ID: RegId = 1;
 
 type TokId = usize;
 type Range = (usize, usize);
@@ -15,7 +18,7 @@ type SynId = usize;
 type RegId = usize;
 type LabId = usize;
 type VarId = usize;
-type EnvId = usize;
+type FunId = usize;
 type Ins = (Op, usize, usize);
 
 #[derive(Clone, PartialEq, Debug)]
@@ -38,12 +41,15 @@ pub enum Syn {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Op {
 	Imm,
+	AddImm,
 	Mov,
 	Store,
 	Load,
 	Label,
 	Jump,
 	Unless,
+	Call,
+	Ret,
 	Bin(&'static str),
 	ToStr,
 	ReadInt,
@@ -53,18 +59,20 @@ pub enum Op {
 	Exit,
 }
 
-#[derive(Default)]
-struct Env {
-	parent_env_id: usize,
+#[derive(Clone, Default)]
+struct Fun {
+	name: String,
+	lab_id: LabId,
 	vars: BTreeMap<String, VarId>,
+	var_num: usize,
+	ins: Vec<Ins>,
 }
 
 #[derive(Clone, Default)]
 pub struct Program {
-	ins: Vec<Ins>,
+	funs: Vec<Fun>,
 	strs: Vec<String>,
 	reg_num: usize,
-	var_num: usize,
 	lab_num: usize,
 }
 
@@ -220,13 +228,12 @@ impl Parser {
 	}
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Compiler {
 	toks: Toks,
 	syns: Vec<Syn>,
 	p: Program,
-	envs: Vec<Env>,
-	env_id: EnvId,
+	cur_fun_id: FunId,
 }
 
 impl Compiler {
@@ -235,18 +242,13 @@ impl Compiler {
 		self.p.reg_num - 1
 	}
 
-	fn new_var(&mut self) -> VarId {
-		self.p.var_num += 1;
-		self.p.var_num - 1
-	}
-
 	fn new_lab(&mut self) -> LabId {
 		self.p.lab_num += 1;
 		self.p.lab_num - 1
 	}
 
 	fn push(&mut self, op: Op, l: RegId, r: usize) -> RegId {
-		self.p.ins.push((op, l, r));
+		self.p.funs[self.cur_fun_id].ins.push((op, l, r));
 		l
 	}
 
@@ -255,23 +257,34 @@ impl Compiler {
 		self.p.strs.len() - 1
 	}
 
-	fn replace_env(&mut self, parent_env_id: EnvId) {
-		let mut env = Env::default();
-		env.parent_env_id = parent_env_id;
-		self.envs.push(env);
-		self.env_id = self.envs.len() - 1;
+	fn push_var(&mut self, name: &str) {
+		let fun = &mut self.p.funs[self.cur_fun_id];
+		fun.var_num += 1;
+		let var_id = fun.var_num - 1;
+		fun.vars.insert(name.to_owned(), var_id);
 	}
 
-	fn find_var_id(&self, name: &str) -> Option<VarId> {
-		let mut env_id = self.env_id;
-		loop {
-			if let Some(&var_id) = self.envs[env_id].vars.get(name) {
-				return Some(var_id);
+	fn find_var_id(&self, name: &str) -> Option<(VarId, bool)> {
+		for &fun_id in &[self.cur_fun_id, GLOBAL_FUN_ID] {
+			if let Some(&var_id) = self.p.funs[fun_id].vars.get(name) {
+				return Some((var_id, fun_id != GLOBAL_FUN_ID));
 			}
-			if env_id == 0 {
-				return None;
-			}
-			env_id = self.envs[env_id].parent_env_id;
+		}
+		None
+	}
+
+	fn on_var(&mut self, name: &str) -> Option<RegId> {
+		if let Some((var_id, local)) = self.find_var_id(&name) {
+			let r = self.new_reg();
+			if local {
+				self.push(Op::Mov, r, BASE_PTR_REG_ID);
+				self.push(Op::AddImm, r, var_id);
+			} else {
+				self.push(Op::Imm, r, var_id);
+			};
+			Some(r)
+		} else {
+			None
 		}
 	}
 
@@ -279,14 +292,12 @@ impl Compiler {
 		match self.toks[tok_id].0.clone() {
 			Tok::Err(err) => panic!("{}", err),
 			Tok::Id(name) => {
-				if let Some(var_id) = self.find_var_id(&name) {
-					let l = self.new_reg();
-					self.push(Op::Load, l, var_id)
+				let l = self.new_reg();
+				if let Some(r) = self.on_var(&name) {
+					self.push(Op::Load, l, r)
 				} else if name == "true" {
-					let l = self.new_reg();
 					self.push(Op::Imm, l, 1)
 				} else if name == "false" {
-					let l = self.new_reg();
 					self.push(Op::Imm, l, 0)
 				} else {
 					panic!("var undefined {}", name)
@@ -296,11 +307,7 @@ impl Compiler {
 				let l = self.new_reg();
 				self.push(Op::Imm, l, value as usize)
 			}
-			Tok::Str(_) => {
-				let value = match self.toks[tok_id].0.clone() {
-					Tok::Str(value) => value,
-					_ => unreachable!(),
-				};
+			Tok::Str(value) => {
 				let str_id = self.push_str(value);
 				let l = self.new_reg();
 				self.push(Op::Imm, l, str_id)
@@ -313,7 +320,7 @@ impl Compiler {
 		if let &Syn::Val(tok_id) = &self.syns[syn_id] {
 			match &self.toks[tok_id].0 {
 				&Tok::Id(ref id) => id,
-				&Tok::Str(ref str) => str,
+				&Tok::Str(ref value) => value,
 				tok => panic!("{:?} must be str or id", tok),
 			}
 		} else {
@@ -321,7 +328,15 @@ impl Compiler {
 		}
 	}
 
-	fn do_pri(&mut self, name: &str, syns: &[SynId]) -> RegId {
+	fn do_app(&mut self, name: &str, syns: &[SynId]) -> RegId {
+		for fun_id in 0..self.p.funs.len() {
+			if name == &self.p.funs[fun_id].name {
+				let l = self.new_reg();
+				self.push(Op::Call, 0, fun_id);
+				return self.push(Op::Mov, l, RET_REG_ID);
+			}
+		}
+
 		if let Some(bin_id) = BINS.iter().position(|&x| x == name) {
 			let l = self.on_exp(syns[0]);
 			for i in 1..syns.len() {
@@ -334,21 +349,38 @@ impl Compiler {
 			let r = self.on_exp(syns[1]);
 			self.push(Op::Bin(RELS[id]), l, r)
 		} else if name == "let" {
-			let name = self.to_str(syns[0]).into();
-			// Create local variable. Shadow if existing.
-			let var_id = self.new_var();
-			self.envs[self.env_id].vars.insert(name, var_id);
-			// Set default value.
+			let name = self.to_str(syns[0]).to_owned();
+			// Evaluate default value.
 			let l = self.on_exp(syns[1]);
-			self.push(Op::Store, l, var_id)
+			// Create variable.
+			self.push_var(&name);
+			// Set default value.
+			let r = self.on_var(&name).unwrap();
+			self.push(Op::Store, l, r)
+		} else if name == "def" {
+			let arg_syns = match self.syns[syns[0]].clone() {
+				Syn::App(arg_syns) => arg_syns,
+				_ => panic!("first arg of def must be app"),
+			};
+			let name = self.to_str(arg_syns[0]).to_owned();
+			let lab_id = self.new_lab();
+			// Save current context.
+			let cur_fun_id = self.cur_fun_id;
+			// Start function context.
+			self.p.funs.push(Fun { name: name, lab_id: lab_id, ..Fun::default() });
+			self.cur_fun_id = self.p.funs.len() - 1;
+			self.push(Op::Label, 0, lab_id);
+			let l = self.on_exp(syns[1]);
+			self.push(Op::Mov, RET_REG_ID, l);
+			self.push(Op::Ret, 0, 0);
+			// Restore context.
+			self.cur_fun_id = cur_fun_id;
+			0
 		} else if name == "begin" {
-			let cur_env_id = self.env_id;
-			self.replace_env(cur_env_id);
 			let mut l = 0;
 			for i in 0..syns.len() {
 				l = self.on_exp(syns[i]);
 			}
-			self.env_id = cur_env_id;
 			l
 		} else if name == "cond" {
 			// Label to point to the end of cond.
@@ -384,11 +416,9 @@ impl Compiler {
 		} else if name == "while" {
 			let beg_lab = self.new_lab();
 			let end_lab = self.new_lab();
-			// Register to set the result of cond.
-
 			self.push(Op::Label, 0, beg_lab);
 			let cond = self.on_exp(syns[0]);
-			// Unless cond is true, goto end clause.
+			// Unless cond is true, go to end.
 			self.push(Op::Unless, cond, end_lab);
 			// Evaluate the body.
 			self.on_exp(syns[1]);
@@ -396,13 +426,12 @@ impl Compiler {
 			self.push(Op::Jump, 0, beg_lab);
 			// Come on break.
 			self.push(Op::Label, 0, end_lab);
-			// No result.
-			0
+			0 // No result.
 		} else if name == "set" {
 			let name = self.to_str(syns[0]).to_owned();
 			let l = self.on_exp(syns[1]);
-			let var_id = self.find_var_id(&name).expect("unknown var");
-			self.push(Op::Store, l, var_id)
+			let r = self.on_var(&name).expect("unknown var");
+			self.push(Op::Store, l, r)
 		} else if name == "to_str" {
 			let l = self.on_exp(syns[0]);
 			self.push(Op::ToStr, l, 0)
@@ -435,29 +464,30 @@ impl Compiler {
 		match syn {
 			Syn::Err(err, _) => panic!("{}", err),
 			Syn::Val(tok_id) => self.on_tok(tok_id),
-			Syn::App(syns) => {
-				if let Syn::Val(tok_id) = self.syns[syns[0]] {
-					match self.toks[tok_id].0.clone() {
-						Tok::Id(head) => self.do_pri(&head, &syns[1..]),
-						tok => panic!("{:?} callee must be identifier", &tok),
-					}
-				} else {
-					panic!("callee must be identifier")
-				}
-			}
+			Syn::App(syns) => match self.syns[syns[0]].clone() {
+				Syn::Val(tok_id) => match self.toks[tok_id].0.clone() {
+					Tok::Id(head) => self.do_app(&head, &syns[1..]),
+					tok => panic!("{:?} callee must be identifier", &tok),
+				},
+				syn => panic!("callee must be identifier {:?}", syn),
+			},
 		}
 	}
 
 	fn compile(mut self) -> Program {
-		writeln!(io::stderr(), "toks={:?}\nsyns={:?}", self.toks, self.syns).unwrap();
-
-		self.replace_env(0); // Global env.
+		self.p.reg_num += 2; // Allocate well-known registers.
+		self.p.funs.push(Fun::default()); // Entry function.
 
 		let entry_syn_id = self.syns.len() - 1;
 		self.on_exp(entry_syn_id);
 		self.push(Op::Exit, 0, 0);
 
-		writeln!(io::stderr(), "ins={:?}", self.p.ins).unwrap();
+		// Merge instructions to the global function.
+		let mut ins = vec![];
+		for fun in self.p.funs.iter_mut() {
+			ins.append(&mut fun.ins);
+		}
+		self.p.funs[0].ins = ins;
 
 		self.p
 	}
@@ -491,8 +521,10 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
 	}
 
 	fn eval_ins(&mut self, op: Op, l: usize, r: usize) {
+		// writeln!(io::stderr(), "{:?} {} {}", op, l, r);
 		match op {
 			Op::Imm => self.regs[l] = r as i64,
+			Op::AddImm => self.regs[l] += r as i64,
 			Op::Mov => self.regs[l] = self.regs[r],
 			Op::Jump => self.pc = self.labels[r],
 			Op::Unless => {
@@ -500,8 +532,25 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
 					self.pc = self.labels[r]
 				}
 			}
-			Op::Load => self.regs[l] = self.stack[r],
-			Op::Store => self.stack[r] = self.regs[l],
+			Op::Call => {
+				// stack frame: bp, ret-pc, vars...
+				let var_num = self.p.funs[r].var_num;
+				let pc = self.labels[self.p.funs[r].lab_id];
+				let bp = self.stack.len() + 2;
+				self.stack.resize(bp + var_num, 0);
+				self.stack[bp - 2] = self.regs[BASE_PTR_REG_ID];
+				self.stack[bp - 1] = self.pc as i64;
+				self.regs[BASE_PTR_REG_ID] = bp as i64;
+				self.pc = pc;
+			}
+			Op::Ret => {
+				let cur_bp = self.regs[BASE_PTR_REG_ID] as usize;
+				let ret_bp = self.stack[cur_bp - 2];
+				self.pc = self.stack[cur_bp - 1] as usize;
+				self.regs[BASE_PTR_REG_ID] = ret_bp;
+			}
+			Op::Load => self.regs[l] = self.stack[self.regs[r] as usize],
+			Op::Store => self.stack[self.regs[r] as usize] = self.regs[l],
 			Op::ToStr => {
 				let t = self.regs[l].to_string();
 				self.strs.push(t);
@@ -539,15 +588,20 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
 	}
 
 	fn eval(mut self) {
+		let ins = std::mem::replace(&mut self.p.funs[0].ins, vec![]);
+
 		// Build jump table.
-		for pc in 0..self.p.ins.len() {
-			if let (Op::Label, _, r) = self.p.ins[pc] {
+		for pc in 0..ins.len() {
+			if let (Op::Label, _, r) = ins[pc] {
 				self.labels[r] = pc + 1;
 			}
 		}
 
+		// Allocate static vars.
+		self.stack.resize(self.p.funs[0].var_num, 0);
+
 		loop {
-			let (op, l, r) = self.p.ins[self.pc];
+			let (op, l, r) = ins[self.pc];
 			if op == Op::Exit {
 				break;
 			}
@@ -563,15 +617,15 @@ pub fn compile(src: &str) -> Program {
 	let src = src.to_owned();
 	let toks = Tokenizer { src: src.clone(), toks: vec![], cur: 0 }.tokenize();
 	let syns = Parser { toks: toks.clone(), cur: 0, syns: vec![] }.parse();
-	Compiler { toks: toks, syns: syns, p: Program::default(), envs: Vec::new(), env_id: 0 }.compile()
+	Compiler { toks: toks, syns: syns, p: Program::default(), ..Compiler::default() }.compile()
 }
 
 pub fn exec<R: io::Read, W: io::Write>(program: Program, stdin: R, stdout: W) {
 	Evaluator {
 		labels: vec![0; program.lab_num],
 		regs: vec![0; program.reg_num],
-		stack: vec![0; program.var_num], // Allocate static vars.
-		strs: program.strs.to_owned(),   // Allocate string literals.
+		stack: vec![],
+		strs: program.strs.to_owned(), // Allocate string literals.
 		pc: 0,
 		p: program,
 		stdin_line: String::new(),

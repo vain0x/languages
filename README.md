@@ -44,7 +44,7 @@ The whole picomet-lang program is an expression.
 
 It tends to start with `begin`. `(begin x y .. z)` evaluates arguments in left-to-right order. The result is the final argument.
 
-Note that `begin` is very similar to block expressions in Rust. `(begin x y z)` is `{ x; y; z }` in Rust.
+Note that `begin` is similar to block expressions in Rust. `(begin x y z)` is `{ x; y; z }` in Rust.
 
 ### Doc: Common features
 
@@ -93,8 +93,6 @@ Variables hold any kind of value (for now).
 
 - `(let x a)` defines new variable named `x` with initial value `a`.
 - `(set x b)` changes the content of variable `x` to `b`.
-
-Variables are local to *scope*. In other words, variables defined inside a `begin` block, they are available only inside the block.
 
 ### Doc: Conditional branches
 

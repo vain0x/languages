@@ -56,22 +56,6 @@ fn test_string_primitives() {
 }
 
 #[test]
-fn test_shadowing() {
-	eval_tests(
-		r#"(begin
-			(let a 1)
-			(begin
-				(println (to_str a))
-				(let a 2)
-				(set a 3)
-				(println (to_str a)))
-			(println (to_str a))
-		)"#,
-		&[("", "1\n3\n1\n")],
-	)
-}
-
-#[test]
 fn test_cond() {
 	eval_tests(
 		r#"(cond (== (read_int) 1) (println "YES") (println "NO"))"#,
@@ -90,6 +74,32 @@ fn test_while() {
 				(set i (+ i 1))
 			))"#,
 		&[("0\n", ""), ("1\n", "0\n"), ("3\n", "0\n1\n2\n")],
+	)
+}
+
+#[test]
+fn test_def() {
+	eval_tests(
+		r#"(begin
+			(def (answer) 42)
+			(answer)
+			(println (to_str (answer)))
+		)"#,
+		&[(("", "42\n"))],
+	)
+}
+
+#[test]
+fn test_def_modify_global_vars() {
+	eval_tests(
+		r#"(begin
+			(let i 0)
+			(def (increment) (set i (+ i 1)))
+			(increment)
+			(increment)
+			(println (to_str i))
+		)"#,
+		&[(("", "2\n"))],
 	)
 }
 

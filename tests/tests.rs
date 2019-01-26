@@ -104,7 +104,7 @@ fn test_welcome_to_atcoder() {
     )
 }
 
-/// https://atcoder.jp/contests/abs/tasks/abc086_a?lang=en
+/// <https://atcoder.jp/contests/abs/tasks/abc086_a?lang=en>
 #[test]
 fn test_abc086_a_product() {
     eval_tests(
@@ -163,5 +163,39 @@ fn test_abc081_b_shift_only() {
             (println (to_str min_count))
         )"#,
         &[("3\n8 12 40\n", "2\n"), ("4\n5 6 8 10\n", "0\n")],
+    )
+}
+
+/// <https://atcoder.jp/contests/abs/tasks/abc087_b?lang=en>
+#[test]
+fn test_abc087_b_coins() {
+    eval_tests(
+        r#"(+
+            (let A (read_int))
+            (let B (read_int))
+            (let C (read_int))
+            (let X (read_int))
+            (let k 0)
+            (let a 0)
+            (while (<= a A) (+
+                (let b 0)
+                (while (<= b B) (+
+                    (let Y (- X (* a 500)))
+                    (set Y (- Y (* b 100)))
+                    (cond (<= 0 Y) (+
+                        (let c (/ Y 50))
+                        (cond (<= c C) (set k (+ k 1)))
+                    ))
+                    (set b (+ b 1))
+                ))
+                (set a (+ a 1))
+            ))
+            (println (to_str k))
+        )"#,
+        &[
+            ("2\n2\n2\n100\n", "2\n"),
+            ("5\n1\n0\n150\n", "0\n"),
+            ("30\n40\n50\n6000\n", "213\n"),
+        ],
     )
 }

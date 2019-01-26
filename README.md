@@ -8,7 +8,7 @@ The goal is to solve competitive programming problems, especially [AtCoder Begin
 
 ## Example
 
-The following is a solution written in picomet-lang to solve this problem: [ABC086A - Product](https://atcoder.jp/contests/abs/tasks/abc086_a?lang=en).
+The following code is a solution written in picomet-lang to solve this problem: [ABC086A - Product](https://atcoder.jp/contests/abs/tasks/abc086_a?lang=en).
 
 ```js
 (begin
@@ -18,9 +18,103 @@ The following is a solution written in picomet-lang to solve this problem: [ABC0
 )
 ```
 
-This reads two integers from STDIN and print a word to STDOUT that indicates whether the product of two integers are even or odd.
+This reads two integers from STDIN and prints a word to STDOUT that indicates whether the product of two integers is even or odd.
 
-Other examples are available at the bottom of `tests/tests.rs`.
+Other examples are available at the bottom of [tests/tests.rs](tests/tests.rs).
+
+## Document: How to Write Picomet-lang
+
+- Before read, please check last-modified date because I might forget to update the document after changes.
+- See [tests/tests.rs](tests/tests.rs) for actually working picomet-lang codes.
+
+### Doc: Language properties
+
+Picomet-lang is more similar to imperative languages than LISP except for syntax.
+
+- LISP-like grammar
+- Imperative
+- Strict evaluation
+- No memory management
+- Single-threaded
+- *Type systems are to be determined. No type checks for now!*
+
+### Doc: Block expression
+
+The whole picomet-lang program is an expression.
+
+It tends to start with `begin`. `(begin x y .. z)` evaluates arguments in left-to-right order. The result is the final argument.
+
+Note that `begin` is very similar to block expressions in Rust. `(begin x y z)` is `{ x; y; z }` in Rust.
+
+### Doc: Common features
+
+These features are common in other programming languages.
+
+- Numbers: `0`, `42`, etc. (Negative numbers are not supported yet.)
+- Strings: `"Hello"`, etc. (Escape sequences are not supported yet.)
+- Comments: From `//` to end of line. (Multi-line comments will not supported.)
+
+### Doc: Identifiers
+
+*Identifiers* are name of variables, functions or keywords. You can use almost all ASCII symbols including `+-*/%=<>!?` etc. for names.
+
+For example, `+` is just a name of function rather than operator. There does not exist operators in picomet-lang.
+
+### Doc: Numeric operations
+
+Instead of operators, use functions such as `+`, `-`, `*`, `/`, `%` for calculation. For example, `(+ 2 3)` means `2 + 3` (= 5).
+
+These arithmetic operators *fold* arguments. E.g. `(+ 2 3 4)` works the same as `((+ 2 3) 4)`, i.e. `(2 + 3) + 4`. In the same way, `(- 7 2 3)` is `((7 - 2) - 3)` (= 2).
+
+Comparison functions such as `==`, `!=`, `<`, `>=`,`<=`, `>=` don't fold arguments. Pass exactly two arguments like this: `(== x 0)`.
+
+### Docs: String operations
+
+*Note that string manipulations are still in development. It will change completely.*
+
+- `(++ x y)` concatenates strings.
+- `(to_str x)` converts an integer `x` to string (decimal representation).
+
+### Docs: Standard Input/Output
+
+For convenience in competitive programming, standard input is considered a list of words separated by spaces or line breaks by default.
+
+- `(read_str)` reads a word from STDIN and gets the string.
+- `(read_int)` does the same except it parses the word as integer.
+- `(print x y..)` prints strings to STDOUT.
+    - Arguments must be strings.
+- `(println x y ..)` prints strings to STDOUT.
+    - Different from `print`, it also writes a line break after all arguments and flushes.
+    - Arguments must be strings.
+
+### Doc: Variables
+
+Variables hold any kind of value (for now).
+
+- `(let x a)` defines new variable named `x` with initial value `a`.
+- `(set x b)` changes the content of variable `x` to `b`.
+
+Variables are local to *scope*. In other words, variables defined inside a `begin` block, they are available only inside the block.
+
+### Doc: Conditional branches
+
+- `(cond true x y)` equals to `x`.
+- `(cond false x y)` equals to `y`.
+
+You can omit "else" part (`y`) if unnecessary.
+
+### Docs: Loops
+
+- `(while b x)` repeatedly tests `b` is true or not and if it's true, evaluates `x`.
+- Once `b` is evaluated to false, the loop ends.
+
+### Docs: Others
+
+Other too detailed things.
+
+- `cond` can take any number of condition-then part in arguments for else-if syntax. `(cond b1 x1 b2 x2 y)` is equivalent to `(cond b1 x1 (cond b2 x2 y))`.
+- The result of `(cond false x)` is indeterminate value.
+- The result of `while` is indeterminate value.
 
 ## Stages
 
@@ -48,21 +142,20 @@ To submit your code, run `./build` and copy-and-paste `examples/solver.rs`.
 
 ## Develop
 
-To develop this project, firstly:
+To develop this project, first install Rust.
 
-- Install Rust
-    - Follow the instructions written in [Rust programming language](https://www.rust-lang.org/)
+- To install Rust tools, follow the instructions written in [Rust programming language](https://www.rust-lang.org/)
 
-Inside the project directory, run the following command.
+Second, inside the project directory, run the following command.
 
 ```sh
 rustup install 1.15.1
 rustup override set 1.15.1
 ```
 
-- Note: This command tells rust processor to use old version of Rust inside the directory. Picomet-lang is written in the version because AtCoder doesn't support newer version of Rust for now.
+- Note: This command tells rust processor to use old version of Rust only for the directory. Picomet-lang is written in the version because AtCoder doesn't support newer version of Rust for now.
 - Note: Due to the version, you tend to get more compile errors than the usual. The version doesn't support "match ergonomics" and "non-lexical-lifetime" features and some of standard library APIs.
 
-To build, `cargo build`.
+To build, run `cargo build`.
 
-To run tests, `cargo test`. Tests are written in `tests/tests.rs`.
+To run tests, run `cargo test`. Tests are written in [tests/tests.rs](tests/tests.rs).

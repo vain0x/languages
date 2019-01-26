@@ -72,6 +72,20 @@ fn test_cond() {
     );
 }
 
+#[test]
+fn test_while() {
+    eval_tests(
+        r#"(+
+            (let N (read_int))
+            (let i 0)
+            (while (< i N) (+
+                (println (to_str i))
+                (set i (+ i 1))
+            ))"#,
+        &[("0\n", ""), ("1\n", "0\n"), ("3\n", "0\n1\n2\n")],
+    )
+}
+
 /// <https://atcoder.jp/contests/abs/tasks/practice_1?lang=en>
 #[test]
 fn test_welcome_to_atcoder() {
@@ -103,7 +117,7 @@ fn test_abc086_a_product() {
     )
 }
 
-/// https://atcoder.jp/contests/abs/tasks/abc081_a?lang=en
+/// <https://atcoder.jp/contests/abs/tasks/abc081_a?lang=en>
 #[test]
 fn test_abc081_a_placing_marbles() {
     eval_tests(
@@ -123,5 +137,31 @@ fn test_abc081_a_placing_marbles() {
             ("111\n", "3\n"),
             ("010\n", "1\n"),
         ],
+    )
+}
+
+/// <https://atcoder.jp/contests/abs/tasks/abc081_b?lang=en>
+#[test]
+fn test_abc081_b_shift_only() {
+    eval_tests(
+        r#"(+
+            (let N (read_int))
+            (let min_count 1000000000)
+            (let i 0)
+            (while (< i N) (+
+                (let A (read_int))
+                (let count 0)
+                (while (== (% A 2) 0) (+
+                    (set A (/ A 2))
+                    (set count (+ count 1))
+                ))
+                (cond (> min_count count) (+
+                    (set min_count count)
+                ))
+                (set i (+ i 1))
+            ))
+            (println (to_str min_count))
+        )"#,
+        &[("3\n8 12 40\n", "2\n"), ("4\n5 6 8 10\n", "0\n")],
     )
 }

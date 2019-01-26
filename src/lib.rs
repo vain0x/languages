@@ -4,6 +4,7 @@ use std::str;
 
 const PUNS: &'static [&'static str] = &["(", ")"];
 const BINS: &'static [&'static str] = &["++", "+", "-", "*", "/", "%"];
+const RELS: &'static [&'static str] = &["==", "!=", "<", "<=", ">", ">="];
 
 const EOF: &'static Tok = &Tok::Eof;
 
@@ -302,10 +303,10 @@ impl Compiler {
                 self.push(Op::Bin(BINS[bin_id]), l, r);
             }
             l
-        } else if name == "==" {
+        } else if let Some(id) = RELS.iter().position(|&x| x == name) {
             let l = self.on_exp(syns[0]);
             let r = self.on_exp(syns[1]);
-            self.push(Op::Bin("=="), l, r)
+            self.push(Op::Bin(RELS[id]), l, r)
         } else if name == "let" {
             let name = self.to_str(syns[0]).into();
             let l = self.on_exp(syns[1]);
@@ -313,20 +314,29 @@ impl Compiler {
             self.env.insert(name, var_id);
             self.push(Op::Store, l, var_id)
         } else if name == "cond" {
+            // Label to point to the end of cond.
             let end_lab = self.new_lab();
+            // Register to set the result of cond.
             let end_reg = self.new_reg();
             let mut i = 0;
             while i < syns.len() {
                 if i + 1 < syns.len() {
+                    // .. cond then_cl ..
                     let else_lab = self.new_lab();
                     let cond = self.on_exp(syns[i]);
+                    // Unless cond is true, goto next clause.
                     self.push(Op::Unless, cond, else_lab);
+                    // Evaluate the then clause.
                     let then_cl = self.on_exp(syns[i + 1]);
+                    // Set the result to the result register.
                     self.push(Op::Mov, end_reg, then_cl);
+                    // Jump to the end of cond.
                     self.push(Op::Jump, 0, end_lab);
+                    // Come from the `unless`.
                     self.push(Op::Label, 0, else_lab);
                     i += 2;
                 } else {
+                    // .. else_cl
                     let else_cl = self.on_exp(syns[i]);
                     self.push(Op::Mov, end_reg, else_cl);
                     i += 1;
@@ -334,6 +344,23 @@ impl Compiler {
             }
             self.push(Op::Label, 0, end_lab);
             end_reg
+        } else if name == "while" {
+            let beg_lab = self.new_lab();
+            let end_lab = self.new_lab();
+            // Register to set the result of cond.
+
+            self.push(Op::Label, 0, beg_lab);
+            let cond = self.on_exp(syns[0]);
+            // Unless cond is true, goto end clause.
+            self.push(Op::Unless, cond, end_lab);
+            // Evaluate the body.
+            self.on_exp(syns[1]);
+            // Jump to the begin label to continue.
+            self.push(Op::Jump, 0, beg_lab);
+            // Come on break.
+            self.push(Op::Label, 0, end_lab);
+            // No result.
+            0
         } else if name == "set" {
             let name = self.to_str(syns[0]).to_owned();
             let l = self.on_exp(syns[1]);
@@ -362,7 +389,7 @@ impl Compiler {
             }
             0
         } else {
-            unimplemented!()
+            panic!("unknown callee {}", name)
         }
     }
 
@@ -378,7 +405,7 @@ impl Compiler {
                         tok => panic!("{:?} callee must be identifier", &tok),
                     }
                 } else {
-                    panic!("{}")
+                    panic!("callee must be identifier")
                 }
             }
         }
@@ -465,6 +492,11 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
                 Op::Bin("/") => regs[l] /= regs[r],
                 Op::Bin("%") => regs[l] %= regs[r],
                 Op::Bin("==") => regs[l] = bool_to_int(regs[l] == regs[r]),
+                Op::Bin("!=") => regs[l] = bool_to_int(regs[l] != regs[r]),
+                Op::Bin("<") => regs[l] = bool_to_int(regs[l] < regs[r]),
+                Op::Bin("<=") => regs[l] = bool_to_int(regs[l] <= regs[r]),
+                Op::Bin(">") => regs[l] = bool_to_int(regs[l] > regs[r]),
+                Op::Bin(">=") => regs[l] = bool_to_int(regs[l] >= regs[r]),
                 Op::Bin(_) => unimplemented!(),
                 Op::ReadInt => regs[l] = self.next_word().parse().unwrap_or(0),
                 Op::ReadStr => {

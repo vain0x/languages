@@ -2,11 +2,23 @@
 
 extern crate atlisp;
 
-use atlisp::eval;
+use std::io;
 
-fn eval_table(src: &str, ios: &[(&str, &str)]) {
+fn eval(src: &str, stdin: &str) -> String {
+    let program = atlisp::compile(src);
+    let mut stdout = Vec::new();
+    atlisp::exec(program, io::Cursor::new(stdin), &mut stdout);
+    String::from_utf8(stdout).unwrap()
+}
+
+fn eval_tests(src: &str, ios: &[(&str, &str)]) {
+    let program = atlisp::compile(src);
+
     for &(input, expected) in ios {
-        let actual = eval(src, input);
+        let mut stdout = Vec::new();
+        atlisp::exec(program.clone(), io::Cursor::new(input), &mut stdout);
+        let actual = String::from_utf8(stdout).unwrap();
+
         assert_eq!(actual, expected, "src={}\ninput={}", src, input);
     }
 }
@@ -46,13 +58,39 @@ fn test_string_primitives() {
 
 #[test]
 fn test_cond() {
-    assert_eq!(
-        eval(r#"(cond true (println "YES") (println "NO"))"#, ""),
-        "YES\n"
-    );
-
-    eval_table(
+    eval_tests(
         r#"(cond (== (read_int) 1) (println "YES") (println "NO"))"#,
         &[("1", "YES\n"), ("0", "NO\n")],
     );
+}
+
+/// <https://atcoder.jp/contests/abs/tasks/practice_1?lang=en>
+#[test]
+fn test_welcome_to_atcoder() {
+    eval_tests(
+        r#"(+
+            (let a (read_int))
+            (let b (read_int))
+            (let c (read_int))
+            (let s (read_str))
+            (println (to_str (+ a b c)) " " s)
+        )"#,
+        &[
+            ("1\n2 3\ntest\n", "6 test\n"),
+            ("72\n128 256\nmyonmyon\n", "456 myonmyon\n"),
+        ],
+    )
+}
+
+/// https://atcoder.jp/contests/abs/tasks/abc086_a?lang=en
+#[test]
+fn test_abc086_a_product() {
+    eval_tests(
+        r#"(+
+            (let a (read_int))
+            (let b (read_int))
+            (println (cond (== (% (* a b) 2) 0) "Even" "Odd"))
+        )"#,
+        &[("3 4\n", "Even\n"), ("1 21\n", "Odd\n")],
+    )
 }

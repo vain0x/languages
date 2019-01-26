@@ -49,7 +49,7 @@ pub enum Op {
     Exit,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Program {
     ins: Vec<Ins>,
     strs: Vec<String>,
@@ -96,6 +96,10 @@ impl Tokenizer {
     fn tokenize(mut self) -> Vec<(Tok, Range)> {
         't: while self.cur < self.src.len() {
             let l = self.cur;
+            if self.expect("//") {
+                self.take(|c| c != b'\n');
+                continue;
+            }
             if let Some(_) = self.take(is_whitespace) {
                 continue;
             }
@@ -119,10 +123,6 @@ impl Tokenizer {
                 self.toks.push((Tok::Str(word), (l, r + 1)));
                 continue;
             }
-            if self.expect("//") {
-                self.take(|c| c != b'\n');
-                continue;
-            }
             for pun in PUNS {
                 if self.expect(pun) {
                     self.toks.push((Tok::Pun(pun), (l, self.cur)));
@@ -142,8 +142,8 @@ fn is_ascii_digit(c: u8) -> bool {
 }
 
 fn is_id_char(c: u8) -> bool {
-    (b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z')
-        || (is_ascii_digit(c) || b"!#$'*+-./<=>?@^_~".contains(&c))
+    (b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z' || is_ascii_digit(c))
+        || b"!#$'*+-./%<=>?@^_~".contains(&c)
 }
 
 fn is_whitespace(c: u8) -> bool {
@@ -370,7 +370,7 @@ impl Compiler {
                 if let Syn::Val(tok_id) = self.syns[syns[0]] {
                     match self.toks[tok_id].0.clone() {
                         Tok::Id(head) => self.do_pri(&head, &syns[1..]),
-                        _ => panic!("{:?} callee must be identifier", &self.toks[syns[0]]),
+                        tok => panic!("{:?} callee must be identifier", &tok),
                     }
                 } else {
                     panic!("{}")
@@ -502,30 +502,20 @@ pub fn compile(src: &str) -> Program {
     .compile()
 }
 
-pub fn eval(src: &str, stdin: &str) -> String {
-    let mut stdout = Vec::new();
-    let program = compile(src);
+pub fn exec<R: io::Read, W: io::Write>(program: Program, stdin: R, stdout: W) {
     Evaluator {
         p: program,
         stdin_line: String::new(),
         stdin_words: Vec::new(),
-        stdin: io::BufReader::new(io::Cursor::new(&stdin)),
-        stdout: io::BufWriter::new(&mut stdout),
+        stdin: io::BufReader::new(stdin),
+        stdout: io::BufWriter::new(stdout),
     }
     .eval();
-    String::from_utf8(stdout).unwrap()
 }
 
 pub fn eval_with_stdio(src: &str) {
+    let program = compile(src);
     let stdin = io::stdin();
     let stdout = io::stdout();
-    let program = compile(src);
-    Evaluator {
-        p: program,
-        stdin_line: String::new(),
-        stdin_words: Vec::new(),
-        stdin: io::BufReader::new(stdin.lock()),
-        stdout: io::BufWriter::new(stdout.lock()),
-    }
-    .eval();
+    exec(program, stdin, stdout);
 }

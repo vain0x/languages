@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::io::{self, Write as IoWrite};
 use std::str;
@@ -8,9 +9,10 @@ const RELS: &'static [&'static str] = &["==", "!=", "<", "<=", ">", ">="];
 
 const EOF: &'static Tok = &Tok::Eof;
 const GLOBAL_FUN_ID: FunId = 0;
-const NO_REG_ID: RegId = 0;
+const NO_REG_ID: RegId = 1 << 20;
 const BASE_PTR_REG_ID: RegId = 0;
 const RET_REG_ID: RegId = 1;
+const REG_NUM: usize = 10;
 
 type TokId = usize;
 type Range = (usize, usize);
@@ -41,6 +43,7 @@ pub enum Syn {
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Op {
+    Kill,
     Imm(i64),
     AddImm(i64),
     Mov(RegId),
@@ -301,13 +304,15 @@ impl Compiler {
             Tok::Id(name) => {
                 let l = self.new_reg();
                 if let Some(r) = self.on_var(&name) {
-                    self.push(Op::Load(r), l)
+                    self.push(Op::Load(r), l);
+                    self.push(Op::Kill, r);
+                    l
                 } else if name == "true" {
                     self.push(Op::Imm(1), l)
                 } else if name == "false" {
                     self.push(Op::Imm(0), l)
                 } else {
-                    panic!("var undefined {}", name)
+                    panic!("var undefined {}", name);
                 }
             }
             Tok::Int(value) => {
@@ -343,6 +348,7 @@ impl Compiler {
                 if syns.len() > 0 {
                     let r = self.on_exp(syns[0]);
                     self.push(Op::Push, r);
+                    self.push(Op::Kill, r);
                     arity += 1;
                 }
                 self.push(Op::Call(lab_id, arity), NO_REG_ID);
@@ -358,12 +364,15 @@ impl Compiler {
             for i in 1..syns.len() {
                 let r = self.on_exp(syns[i]);
                 self.push(Op::Bin(BINS[bin_id], r), l);
+                self.push(Op::Kill, r);
             }
             l
         } else if let Some(id) = RELS.iter().position(|&x| x == name) {
             let l = self.on_exp(syns[0]);
             let r = self.on_exp(syns[1]);
-            self.push(Op::Bin(RELS[id], r), l)
+            self.push(Op::Bin(RELS[id], r), l);
+            self.push(Op::Kill, r);
+            l
         } else if name == "let" {
             let name = self.to_str(syns[0]).to_owned();
             // Evaluate default value.
@@ -372,7 +381,10 @@ impl Compiler {
             self.push_var(&name);
             // Set default value.
             let r = self.on_var(&name).unwrap();
-            self.push(Op::Store(r), l)
+            self.push(Op::Store(r), l);
+            self.push(Op::Kill, l);
+            self.push(Op::Kill, r);
+            NO_REG_ID
         } else if name == "def" {
             let arg_syns = match self.syns[syns[0]].clone() {
                 Syn::App(arg_syns) => arg_syns,
@@ -396,14 +408,17 @@ impl Compiler {
             self.push(Op::Label(lab_id), 0);
             let l = self.on_exp(syns[1]);
             self.push(Op::Mov(l), RET_REG_ID);
+            self.push(Op::Kill, l);
             self.push(Op::Ret, NO_REG_ID);
             // Restore context.
             self.cur_fun_id = cur_fun_id;
-            0
+            NO_REG_ID
         } else if name == "begin" {
-            let mut l = 0;
+            let mut l = NO_REG_ID;
             for i in 0..syns.len() {
-                l = self.on_exp(syns[i]);
+                let r = self.on_exp(syns[i]);
+                self.push(Op::Kill, l);
+                l = r;
             }
             l
         } else if name == "cond" {
@@ -419,10 +434,12 @@ impl Compiler {
                     let cond = self.on_exp(syns[i]);
                     // Unless cond is true, go to next clause.
                     self.push(Op::Unless(else_lab), cond);
+                    self.push(Op::Kill, cond);
                     // Evaluate the then clause.
                     let then_cl = self.on_exp(syns[i + 1]);
                     // Set the result to the result register.
                     self.push(Op::Mov(then_cl), end_reg);
+                    self.push(Op::Kill, then_cl);
                     // Jump to the end of cond.
                     self.push(Op::Jump(end_lab), NO_REG_ID);
                     // Come from the `unless`.
@@ -432,6 +449,7 @@ impl Compiler {
                     // .. else_cl
                     let else_cl = self.on_exp(syns[i]);
                     self.push(Op::Mov(else_cl), end_reg);
+                    self.push(Op::Kill, else_cl);
                     i += 1;
                 }
             }
@@ -444,18 +462,23 @@ impl Compiler {
             let cond = self.on_exp(syns[0]);
             // Unless cond is true, go to end.
             self.push(Op::Unless(end_lab), cond);
+            self.push(Op::Kill, cond);
             // Evaluate the body.
-            self.on_exp(syns[1]);
+            let l = self.on_exp(syns[1]);
+            self.push(Op::Kill, l);
             // Jump to the begin label to continue.
             self.push(Op::Jump(beg_lab), 0);
             // Come on break.
             self.push(Op::Label(end_lab), 0);
-            0 // No result.
+            NO_REG_ID
         } else if name == "set" {
             let name = self.to_str(syns[0]).to_owned();
             let l = self.on_exp(syns[1]);
             let r = self.on_var(&name).expect("unknown var");
-            self.push(Op::Store(r), l)
+            self.push(Op::Store(r), l);
+            self.push(Op::Kill, l);
+            self.push(Op::Kill, r);
+            NO_REG_ID
         } else if name == "to_str" {
             let l = self.on_exp(syns[0]);
             self.push(Op::ToStr, l)
@@ -469,15 +492,17 @@ impl Compiler {
             for i in 0..syns.len() {
                 let l = self.on_exp(syns[i]);
                 self.push(Op::Print, l);
+                self.push(Op::Kill, l);
             }
-            0
+            NO_REG_ID
         } else if name == "println" {
             for i in 0..syns.len() {
                 let last = i + 1 == syns.len();
                 let l = self.on_exp(syns[i]);
                 self.push(if last { Op::PrintLn } else { Op::Print }, l);
+                self.push(Op::Kill, l);
             }
-            0
+            NO_REG_ID
         } else {
             panic!("unknown callee {}", name)
         }
@@ -498,13 +523,62 @@ impl Compiler {
         }
     }
 
-    fn compile(mut self) -> Program {
+    fn gen_ir(&mut self) {
         self.p.reg_num += 2; // Allocate well-known registers.
         self.p.funs.push(Fun::default()); // Entry function.
 
         let entry_syn_id = self.syns.len() - 1;
         self.on_exp(entry_syn_id);
         self.push(Op::Exit, NO_REG_ID);
+    }
+
+    fn alloc_regs(&mut self) {
+        for fun_id in 0..self.p.funs.len() {
+            let used = RefCell::new(vec![false; REG_NUM]);
+            let mut reg_map = BTreeMap::new();
+            reg_map.insert(BASE_PTR_REG_ID, BASE_PTR_REG_ID);
+            reg_map.insert(RET_REG_ID, RET_REG_ID);
+            used.borrow_mut()[BASE_PTR_REG_ID] = true;
+            used.borrow_mut()[RET_REG_ID] = true;
+
+            let mut alloc = |reg_id: RegId| {
+                if reg_id == NO_REG_ID {
+                    return BASE_PTR_REG_ID;
+                }
+                if let Some(&reg_id) = reg_map.get(&reg_id) {
+                    return reg_id;
+                }
+                for i in 0..REG_NUM {
+                    if !used.borrow()[i] {
+                        reg_map.insert(reg_id, i);
+                        used.borrow_mut()[i] = true;
+                        return i;
+                    }
+                }
+                panic!("too many registers are required")
+            };
+            for ins in &mut self.p.funs[fun_id].ins {
+                if let Op::Kill = ins.0 {
+                    ins.1 = alloc(ins.1);
+                    used.borrow_mut()[ins.1] = false;
+                    continue;
+                }
+
+                ins.1 = alloc(ins.1);
+                match ins.0 {
+                    Op::Mov(ref mut reg_id)
+                    | Op::Load(ref mut reg_id)
+                    | Op::Store(ref mut reg_id)
+                    | Op::Bin(_, ref mut reg_id) => *reg_id = alloc(*reg_id),
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    fn compile(mut self) -> Program {
+        self.gen_ir();
+        self.alloc_regs();
 
         // Merge instructions to the global function.
         let mut ins = vec![];
@@ -605,7 +679,7 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
             }
             Op::Print => write!(self.stdout, "{}", self.strs[self.regs[l] as usize]).unwrap(),
             Op::PrintLn => writeln!(self.stdout, "{}", self.strs[self.regs[l] as usize]).unwrap(),
-            Op::Label(_) => {}
+            Op::Label(_) | Op::Kill => {}
             Op::Exit => return,
         }
     }
@@ -664,7 +738,7 @@ pub fn compile(src: &str) -> Program {
 pub fn exec<R: io::Read, W: io::Write>(program: Program, stdin: R, stdout: W) {
     Evaluator {
         labels: vec![0; program.lab_num],
-        regs: vec![0; program.reg_num],
+        regs: vec![0; REG_NUM],
         stack: vec![],
         frames: vec![],
         strs: program.strs.to_owned(), // Allocate string literals.

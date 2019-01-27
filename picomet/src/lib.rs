@@ -10,6 +10,7 @@ const EOF: &'static Tok = &Tok::Eof;
 const GLOBAL_FUN_ID: FunId = 0;
 const BASE_PTR_REG_ID: RegId = 0;
 const RET_REG_ID: RegId = 1;
+const NO_REG_ID: RegId = 0;
 
 type TokId = usize;
 type Range = (usize, usize);
@@ -19,7 +20,7 @@ type RegId = usize;
 type LabId = usize;
 type VarId = usize;
 type FunId = usize;
-type Ins = (Op, usize, usize);
+type Ins = (Op, RegId);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Tok {
@@ -40,17 +41,17 @@ pub enum Syn {
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Op {
-    Imm,
-    AddImm,
-    Mov,
-    Store,
-    Load,
-    Label,
-    Jump,
-    Unless,
-    Call,
+    Imm(i64),
+    AddImm(i64),
+    Mov(RegId),
+    Store(RegId),
+    Load(RegId),
+    Label(LabId),
+    Jump(LabId),
+    Unless(LabId),
+    Call(FunId),
     Ret,
-    Bin(&'static str),
+    Bin(&'static str, RegId),
     ToStr,
     ReadInt,
     ReadStr,
@@ -251,8 +252,8 @@ impl Compiler {
         self.p.lab_num - 1
     }
 
-    fn push(&mut self, op: Op, l: RegId, r: usize) -> RegId {
-        self.p.funs[self.cur_fun_id].ins.push((op, l, r));
+    fn push(&mut self, op: Op, l: RegId) -> RegId {
+        self.p.funs[self.cur_fun_id].ins.push((op, l));
         l
     }
 
@@ -281,10 +282,10 @@ impl Compiler {
         if let Some((var_id, local)) = self.find_var_id(&name) {
             let r = self.new_reg();
             if local {
-                self.push(Op::Mov, r, BASE_PTR_REG_ID);
-                self.push(Op::AddImm, r, var_id);
+                self.push(Op::Mov(BASE_PTR_REG_ID), r);
+                self.push(Op::AddImm(var_id as i64), r);
             } else {
-                self.push(Op::Imm, r, var_id);
+                self.push(Op::Imm(var_id as i64), r);
             };
             Some(r)
         } else {
@@ -298,23 +299,23 @@ impl Compiler {
             Tok::Id(name) => {
                 let l = self.new_reg();
                 if let Some(r) = self.on_var(&name) {
-                    self.push(Op::Load, l, r)
+                    self.push(Op::Load(r), l)
                 } else if name == "true" {
-                    self.push(Op::Imm, l, 1)
+                    self.push(Op::Imm(1), l)
                 } else if name == "false" {
-                    self.push(Op::Imm, l, 0)
+                    self.push(Op::Imm(0), l)
                 } else {
                     panic!("var undefined {}", name)
                 }
             }
             Tok::Int(value) => {
                 let l = self.new_reg();
-                self.push(Op::Imm, l, value as usize)
+                self.push(Op::Imm(value), l)
             }
             Tok::Str(value) => {
                 let str_id = self.push_str(value);
                 let l = self.new_reg();
-                self.push(Op::Imm, l, str_id)
+                self.push(Op::Imm(str_id as i64), l)
             }
             Tok::Pun(_) | Tok::Eof => unreachable!(),
         }
@@ -336,8 +337,8 @@ impl Compiler {
         for fun_id in 0..self.p.funs.len() {
             if name == &self.p.funs[fun_id].name {
                 let l = self.new_reg();
-                self.push(Op::Call, 0, fun_id);
-                return self.push(Op::Mov, l, RET_REG_ID);
+                self.push(Op::Call(fun_id), NO_REG_ID);
+                return self.push(Op::Mov(RET_REG_ID), l);
             }
         }
 
@@ -345,13 +346,13 @@ impl Compiler {
             let l = self.on_exp(syns[0]);
             for i in 1..syns.len() {
                 let r = self.on_exp(syns[i]);
-                self.push(Op::Bin(BINS[bin_id]), l, r);
+                self.push(Op::Bin(BINS[bin_id], r), l);
             }
             l
         } else if let Some(id) = RELS.iter().position(|&x| x == name) {
             let l = self.on_exp(syns[0]);
             let r = self.on_exp(syns[1]);
-            self.push(Op::Bin(RELS[id]), l, r)
+            self.push(Op::Bin(RELS[id], r), l)
         } else if name == "let" {
             let name = self.to_str(syns[0]).to_owned();
             // Evaluate default value.
@@ -360,7 +361,7 @@ impl Compiler {
             self.push_var(&name);
             // Set default value.
             let r = self.on_var(&name).unwrap();
-            self.push(Op::Store, l, r)
+            self.push(Op::Store(r), l)
         } else if name == "def" {
             let arg_syns = match self.syns[syns[0]].clone() {
                 Syn::App(arg_syns) => arg_syns,
@@ -377,10 +378,10 @@ impl Compiler {
                 ..Fun::default()
             });
             self.cur_fun_id = self.p.funs.len() - 1;
-            self.push(Op::Label, 0, lab_id);
+            self.push(Op::Label(lab_id), 0);
             let l = self.on_exp(syns[1]);
-            self.push(Op::Mov, RET_REG_ID, l);
-            self.push(Op::Ret, 0, 0);
+            self.push(Op::Mov(l), RET_REG_ID);
+            self.push(Op::Ret, NO_REG_ID);
             // Restore context.
             self.cur_fun_id = cur_fun_id;
             0
@@ -402,64 +403,64 @@ impl Compiler {
                     let else_lab = self.new_lab();
                     let cond = self.on_exp(syns[i]);
                     // Unless cond is true, go to next clause.
-                    self.push(Op::Unless, cond, else_lab);
+                    self.push(Op::Unless(else_lab), cond);
                     // Evaluate the then clause.
                     let then_cl = self.on_exp(syns[i + 1]);
                     // Set the result to the result register.
-                    self.push(Op::Mov, end_reg, then_cl);
+                    self.push(Op::Mov(then_cl), end_reg);
                     // Jump to the end of cond.
-                    self.push(Op::Jump, 0, end_lab);
+                    self.push(Op::Jump(end_lab), NO_REG_ID);
                     // Come from the `unless`.
-                    self.push(Op::Label, 0, else_lab);
+                    self.push(Op::Label(else_lab), NO_REG_ID);
                     i += 2;
                 } else {
                     // .. else_cl
                     let else_cl = self.on_exp(syns[i]);
-                    self.push(Op::Mov, end_reg, else_cl);
+                    self.push(Op::Mov(else_cl), end_reg);
                     i += 1;
                 }
             }
-            self.push(Op::Label, 0, end_lab);
+            self.push(Op::Label(end_lab), 0);
             end_reg
         } else if name == "while" {
             let beg_lab = self.new_lab();
             let end_lab = self.new_lab();
-            self.push(Op::Label, 0, beg_lab);
+            self.push(Op::Label(beg_lab), 0);
             let cond = self.on_exp(syns[0]);
             // Unless cond is true, go to end.
-            self.push(Op::Unless, cond, end_lab);
+            self.push(Op::Unless(end_lab), cond);
             // Evaluate the body.
             self.on_exp(syns[1]);
             // Jump to the begin label to continue.
-            self.push(Op::Jump, 0, beg_lab);
+            self.push(Op::Jump(beg_lab), 0);
             // Come on break.
-            self.push(Op::Label, 0, end_lab);
+            self.push(Op::Label(end_lab), 0);
             0 // No result.
         } else if name == "set" {
             let name = self.to_str(syns[0]).to_owned();
             let l = self.on_exp(syns[1]);
             let r = self.on_var(&name).expect("unknown var");
-            self.push(Op::Store, l, r)
+            self.push(Op::Store(r), l)
         } else if name == "to_str" {
             let l = self.on_exp(syns[0]);
-            self.push(Op::ToStr, l, 0)
+            self.push(Op::ToStr, l)
         } else if name == "read_int" {
             let l = self.new_reg();
-            self.push(Op::ReadInt, l, 0)
+            self.push(Op::ReadInt, l)
         } else if name == "read_str" {
             let l = self.new_reg();
-            self.push(Op::ReadStr, l, 0)
+            self.push(Op::ReadStr, l)
         } else if name == "print" {
             for i in 0..syns.len() {
                 let l = self.on_exp(syns[i]);
-                self.push(Op::Print, l, 0);
+                self.push(Op::Print, l);
             }
             0
         } else if name == "println" {
             for i in 0..syns.len() {
                 let last = i + 1 == syns.len();
                 let l = self.on_exp(syns[i]);
-                self.push(if last { Op::PrintLn } else { Op::Print }, l, 0);
+                self.push(if last { Op::PrintLn } else { Op::Print }, l);
             }
             0
         } else {
@@ -488,7 +489,7 @@ impl Compiler {
 
         let entry_syn_id = self.syns.len() - 1;
         self.on_exp(entry_syn_id);
-        self.push(Op::Exit, 0, 0);
+        self.push(Op::Exit, NO_REG_ID);
 
         // Merge instructions to the global function.
         let mut ins = vec![];
@@ -529,19 +530,19 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
         panic!("Expected a word but not given.");
     }
 
-    fn eval_ins(&mut self, op: Op, l: usize, r: usize) {
+    fn eval_ins(&mut self, op: Op, l: RegId) {
         // writeln!(io::stderr(), "{:?} {} {}", op, l, r);
         match op {
-            Op::Imm => self.regs[l] = r as i64,
-            Op::AddImm => self.regs[l] += r as i64,
-            Op::Mov => self.regs[l] = self.regs[r],
-            Op::Jump => self.pc = self.labels[r],
-            Op::Unless => {
+            Op::Imm(r) => self.regs[l] = r,
+            Op::AddImm(r) => self.regs[l] += r,
+            Op::Mov(r) => self.regs[l] = self.regs[r],
+            Op::Jump(r) => self.pc = self.labels[r],
+            Op::Unless(r) => {
                 if self.regs[l] == 0 {
                     self.pc = self.labels[r]
                 }
             }
-            Op::Call => {
+            Op::Call(r) => {
                 // stack frame: bp, ret-pc, vars...
                 let var_num = self.p.funs[r].var_num;
                 let pc = self.labels[self.p.funs[r].lab_id];
@@ -558,31 +559,31 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
                 self.pc = self.stack[cur_bp - 1] as usize;
                 self.regs[BASE_PTR_REG_ID] = ret_bp;
             }
-            Op::Load => self.regs[l] = self.stack[self.regs[r] as usize],
-            Op::Store => self.stack[self.regs[r] as usize] = self.regs[l],
+            Op::Load(r) => self.regs[l] = self.stack[self.regs[r] as usize],
+            Op::Store(r) => self.stack[self.regs[r] as usize] = self.regs[l],
             Op::ToStr => {
                 let t = self.regs[l].to_string();
                 self.strs.push(t);
                 self.regs[l] = (self.strs.len() - 1) as i64;
             }
-            Op::Bin("++") => {
+            Op::Bin("++", r) => {
                 let mut t = self.strs[self.regs[l] as usize].clone();
                 t += &self.strs[self.regs[r] as usize];
                 self.strs.push(t);
                 self.regs[l] = (self.strs.len() - 1) as i64;
             }
-            Op::Bin("+") => self.regs[l] += self.regs[r],
-            Op::Bin("-") => self.regs[l] -= self.regs[r],
-            Op::Bin("*") => self.regs[l] *= self.regs[r],
-            Op::Bin("/") => self.regs[l] /= self.regs[r],
-            Op::Bin("%") => self.regs[l] %= self.regs[r],
-            Op::Bin("==") => self.regs[l] = bool_to_int(self.regs[l] == self.regs[r]),
-            Op::Bin("!=") => self.regs[l] = bool_to_int(self.regs[l] != self.regs[r]),
-            Op::Bin("<") => self.regs[l] = bool_to_int(self.regs[l] < self.regs[r]),
-            Op::Bin("<=") => self.regs[l] = bool_to_int(self.regs[l] <= self.regs[r]),
-            Op::Bin(">") => self.regs[l] = bool_to_int(self.regs[l] > self.regs[r]),
-            Op::Bin(">=") => self.regs[l] = bool_to_int(self.regs[l] >= self.regs[r]),
-            Op::Bin(_) => unimplemented!(),
+            Op::Bin("+", r) => self.regs[l] += self.regs[r],
+            Op::Bin("-", r) => self.regs[l] -= self.regs[r],
+            Op::Bin("*", r) => self.regs[l] *= self.regs[r],
+            Op::Bin("/", r) => self.regs[l] /= self.regs[r],
+            Op::Bin("%", r) => self.regs[l] %= self.regs[r],
+            Op::Bin("==", r) => self.regs[l] = bool_to_int(self.regs[l] == self.regs[r]),
+            Op::Bin("!=", r) => self.regs[l] = bool_to_int(self.regs[l] != self.regs[r]),
+            Op::Bin("<", r) => self.regs[l] = bool_to_int(self.regs[l] < self.regs[r]),
+            Op::Bin("<=", r) => self.regs[l] = bool_to_int(self.regs[l] <= self.regs[r]),
+            Op::Bin(">", r) => self.regs[l] = bool_to_int(self.regs[l] > self.regs[r]),
+            Op::Bin(">=", r) => self.regs[l] = bool_to_int(self.regs[l] >= self.regs[r]),
+            Op::Bin(..) => unimplemented!(),
             Op::ReadInt => self.regs[l] = self.next_word().parse().unwrap_or(0),
             Op::ReadStr => {
                 let word = self.next_word();
@@ -591,7 +592,7 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
             }
             Op::Print => write!(self.stdout, "{}", self.strs[self.regs[l] as usize]).unwrap(),
             Op::PrintLn => writeln!(self.stdout, "{}", self.strs[self.regs[l] as usize]).unwrap(),
-            Op::Label => {}
+            Op::Label(_) => {}
             Op::Exit => return,
         }
     }
@@ -601,7 +602,7 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
 
         // Build jump table.
         for pc in 0..ins.len() {
-            if let (Op::Label, _, r) = ins[pc] {
+            if let (Op::Label(r), _) = ins[pc] {
                 self.labels[r] = pc + 1;
             }
         }
@@ -610,12 +611,12 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
         self.stack.resize(self.p.funs[0].var_num, 0);
 
         loop {
-            let (op, l, r) = ins[self.pc];
+            let (op, l) = ins[self.pc];
             if op == Op::Exit {
                 break;
             }
             self.pc += 1;
-            self.eval_ins(op, l, r);
+            self.eval_ins(op, l);
         }
     }
 }

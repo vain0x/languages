@@ -8,9 +8,9 @@ const RELS: &'static [&'static str] = &["==", "!=", "<", "<=", ">", ">="];
 
 const EOF: &'static Tok = &Tok::Eof;
 const GLOBAL_FUN_ID: FunId = 0;
+const NO_REG_ID: RegId = 0;
 const BASE_PTR_REG_ID: RegId = 0;
 const RET_REG_ID: RegId = 1;
-const NO_REG_ID: RegId = 0;
 
 type TokId = usize;
 type Range = (usize, usize);
@@ -46,6 +46,8 @@ pub enum Op {
     Mov(RegId),
     Store(RegId),
     Load(RegId),
+    Push,
+    Pop,
     Label(LabId),
     Jump(LabId),
     Unless(LabId),
@@ -336,9 +338,9 @@ impl Compiler {
     fn do_app(&mut self, name: &str, syns: &[SynId]) -> RegId {
         for fun_id in 0..self.p.funs.len() {
             if name == &self.p.funs[fun_id].name {
-                let l = self.new_reg();
-                self.push(Op::Call(fun_id), NO_REG_ID);
-                return self.push(Op::Mov(RET_REG_ID), l);
+                let lab_id = self.p.funs[fun_id].lab_id;
+                self.push(Op::Call(lab_id), NO_REG_ID);
+                return RET_REG_ID;
             }
         }
 
@@ -507,6 +509,7 @@ pub struct Evaluator<R, W> {
     labels: Vec<usize>,
     regs: Vec<i64>,
     stack: Vec<i64>,
+    frames: Vec<(usize, i64)>,
     strs: Vec<String>,
     pc: usize,
     stdin_line: String,
@@ -542,22 +545,19 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
                     self.pc = self.labels[r]
                 }
             }
-            Op::Call(r) => {
-                // stack frame: bp, ret-pc, vars...
-                let var_num = self.p.funs[r].var_num;
-                let pc = self.labels[self.p.funs[r].lab_id];
-                let bp = self.stack.len() + 2;
-                self.stack.resize(bp + var_num, 0);
-                self.stack[bp - 2] = self.regs[BASE_PTR_REG_ID];
-                self.stack[bp - 1] = self.pc as i64;
-                self.regs[BASE_PTR_REG_ID] = bp as i64;
-                self.pc = pc;
+            Op::Push => {
+                self.stack.push(self.regs[l]);
+            }
+            Op::Pop => self.regs[l] = self.stack.pop().unwrap(),
+            Op::Call(lab_id) => {
+                self.frames.push((self.pc, self.regs[BASE_PTR_REG_ID]));
+                self.pc = self.labels[lab_id];
+                self.regs[BASE_PTR_REG_ID] = self.stack.len() as i64;
             }
             Op::Ret => {
-                let cur_bp = self.regs[BASE_PTR_REG_ID] as usize;
-                let ret_bp = self.stack[cur_bp - 2];
-                self.pc = self.stack[cur_bp - 1] as usize;
-                self.regs[BASE_PTR_REG_ID] = ret_bp;
+                let (pc, bp) = self.frames.pop().unwrap();
+                self.pc = pc;
+                self.regs[BASE_PTR_REG_ID] = bp;
             }
             Op::Load(r) => self.regs[l] = self.stack[self.regs[r] as usize],
             Op::Store(r) => self.stack[self.regs[r] as usize] = self.regs[l],
@@ -653,6 +653,7 @@ pub fn exec<R: io::Read, W: io::Write>(program: Program, stdin: R, stdout: W) {
         labels: vec![0; program.lab_num],
         regs: vec![0; program.reg_num],
         stack: vec![],
+        frames: vec![],
         strs: program.strs.to_owned(), // Allocate string literals.
         pc: 0,
         p: program,

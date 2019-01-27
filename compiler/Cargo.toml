@@ -1,7 +1,7 @@
 [package]
-name = "picomet-lang"
-version = "1.0.0"
+name = "picomet-lang-compiler"
+version = "0.1.0"
 authors = ["vain0x <vainzerox@gmail.com>"]
-build = "src/build.rs"
+edition = "2018"
 
 [dependencies]

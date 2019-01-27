@@ -1,4 +1,0 @@
-#!/bin/bash
-
-cargo build
-cargo watch -x 'build --example solver --lib'

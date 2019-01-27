@@ -1,22 +1,25 @@
 #![cfg(test)]
 
-extern crate picomet_lang;
+extern crate picomet_lang_compiler;
+extern crate picomet_lang_runtime;
 
 use std::io;
+use std::io::Write;
 
 fn eval(src: &str, stdin: &str) -> String {
-    let program = picomet_lang::compile(src);
+    let program = picomet_lang_compiler::compile(src);
     let mut stdout = Vec::new();
-    picomet_lang::exec(program, io::Cursor::new(stdin), &mut stdout);
+    picomet_lang_runtime::eval(&program, io::Cursor::new(stdin), &mut stdout);
     String::from_utf8(stdout).unwrap()
 }
 
 fn eval_tests(src: &str, ios: &[(&str, &str)]) {
-    let program = picomet_lang::compile(src);
+    let program = picomet_lang_compiler::compile(src);
+    writeln!(std::io::stderr(), "{}", program);
 
     for &(input, expected) in ios {
         let mut stdout = Vec::new();
-        picomet_lang::exec(program.clone(), io::Cursor::new(input), &mut stdout);
+        picomet_lang_runtime::eval(&program, io::Cursor::new(input), &mut stdout);
         let actual = String::from_utf8(stdout).unwrap();
 
         assert_eq!(actual, expected, "src={}\ninput={}", src, input);
@@ -75,7 +78,7 @@ fn test_cond() {
 #[test]
 fn test_while() {
     eval_tests(
-        r#"(+
+        r#"(begin
             (let N (read_int))
             (let i 0)
             (while (< i N) (+
@@ -86,6 +89,7 @@ fn test_while() {
     )
 }
 
+#[ignore]
 #[test]
 fn test_def() {
     eval_tests(
@@ -98,6 +102,7 @@ fn test_def() {
     )
 }
 
+#[ignore]
 #[test]
 fn test_def_modify_global_vars() {
     eval_tests(
@@ -112,6 +117,7 @@ fn test_def_modify_global_vars() {
     )
 }
 
+#[ignore]
 #[test]
 fn test_def_with_arg() {
     eval_tests(

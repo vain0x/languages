@@ -51,7 +51,7 @@ pub enum Op {
     Label(LabId),
     Jump(LabId),
     Unless(LabId),
-    Call(FunId),
+    Call(FunId, usize),
     Ret,
     Bin(&'static str, RegId),
     ToStr,
@@ -339,7 +339,16 @@ impl Compiler {
         for fun_id in 0..self.p.funs.len() {
             if name == &self.p.funs[fun_id].name {
                 let lab_id = self.p.funs[fun_id].lab_id;
-                self.push(Op::Call(lab_id), NO_REG_ID);
+                let mut arity = 0;
+                if syns.len() > 0 {
+                    let r = self.on_exp(syns[0]);
+                    self.push(Op::Push, r);
+                    arity += 1;
+                }
+                self.push(Op::Call(lab_id, arity), NO_REG_ID);
+                if arity > 0 {
+                    self.push(Op::Pop, NO_REG_ID);
+                }
                 return RET_REG_ID;
             }
         }
@@ -380,6 +389,10 @@ impl Compiler {
                 ..Fun::default()
             });
             self.cur_fun_id = self.p.funs.len() - 1;
+            for i in 1..arg_syns.len() {
+                let name = self.to_str(arg_syns[i]).to_owned();
+                self.push_var(&name);
+            }
             self.push(Op::Label(lab_id), 0);
             let l = self.on_exp(syns[1]);
             self.push(Op::Mov(l), RET_REG_ID);
@@ -549,10 +562,10 @@ impl<R: io::BufRead, W: IoWrite> Evaluator<R, W> {
                 self.stack.push(self.regs[l]);
             }
             Op::Pop => self.regs[l] = self.stack.pop().unwrap(),
-            Op::Call(lab_id) => {
+            Op::Call(lab_id, arity) => {
                 self.frames.push((self.pc, self.regs[BASE_PTR_REG_ID]));
                 self.pc = self.labels[lab_id];
-                self.regs[BASE_PTR_REG_ID] = self.stack.len() as i64;
+                self.regs[BASE_PTR_REG_ID] = (self.stack.len() - arity) as i64;
             }
             Op::Ret => {
                 let (pc, bp) = self.frames.pop().unwrap();

@@ -112,6 +112,18 @@ fn test_def_modify_global_vars() {
     )
 }
 
+#[test]
+fn test_def_with_arg() {
+    eval_tests(
+        r#"(begin
+            (let i 0)
+            (def (successor x) (+ x 1))
+            (println (to_str (successor 1)))
+        )"#,
+        &[("", "2\n")],
+    )
+}
+
 /// <https://atcoder.jp/contests/abs/tasks/practice_1?lang=en>
 #[test]
 fn test_welcome_to_atcoder() {

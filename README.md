@@ -157,7 +157,3 @@ rustup override set 1.15.1
 To build, run `cargo build`.
 
 To run tests, run `cargo test`. Tests are written in [picomet/tests/tests.rs](picomet/tests/tests.rs).
-
-## Others
-
-The `picomet` project uses *odd* code formatting rule to reduce code size. Configuration is written in [picomet/rustfmt.toml](picomet/rustfmt.toml) and [picomet/.editorconfig](picomet/.editorconfig).

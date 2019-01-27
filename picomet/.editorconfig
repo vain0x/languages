@@ -1,7 +1,0 @@
-[*.rs]
-indent_size = 2
-indent_style = tab
-
-[*.picomet]
-indent_size = 2
-indent_style = tab

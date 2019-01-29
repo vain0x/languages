@@ -263,11 +263,16 @@ impl Compiler {
     }
 
     fn gen(&mut self) {
-        self.p.reg_num += 2; // Allocate well-known registers.
+        // Allocate well-known registers.
+        self.p.reg_num += KNOWN_REG_NUM;
+
         self.p.funs.push(Fun::default()); // Entry function.
 
         let entry_syn_id = self.syns.len() - 1;
-        self.on_exp(entry_syn_id);
+
+        let exit = self.on_exp(entry_syn_id);
+        self.kill(exit);
+
         self.push(Op::Exit, NO_REG_ID, Val::None);
     }
 
@@ -275,10 +280,12 @@ impl Compiler {
         for fun_id in 0..self.p.funs.len() {
             let used = RefCell::new(vec![false; REG_NUM]);
             let mut reg_map = BTreeMap::new();
-            reg_map.insert(BASE_PTR_REG_ID, BASE_PTR_REG_ID);
-            reg_map.insert(RET_REG_ID, RET_REG_ID);
-            used.borrow_mut()[BASE_PTR_REG_ID] = true;
-            used.borrow_mut()[RET_REG_ID] = true;
+
+            // Allocate known regs. These should not be used.
+            for reg_id in 0..KNOWN_REG_NUM {
+                reg_map.insert(reg_id, reg_id);
+                used.borrow_mut()[reg_id] = true;
+            }
 
             let mut alloc = |reg_id: RegId| {
                 if reg_id == NO_REG_ID {
@@ -296,6 +303,7 @@ impl Compiler {
                 }
                 panic!("too many registers are required")
             };
+
             for ins in &mut self.p.funs[fun_id].ins {
                 if let Op::Kill = ins.0 {
                     ins.1 = alloc(ins.1);
@@ -307,6 +315,17 @@ impl Compiler {
                 if let Val::Reg(ref mut reg_id) = ins.2 {
                     *reg_id = alloc(*reg_id)
                 }
+            }
+
+            // Dispose known regs.
+            for reg_id in 0..KNOWN_REG_NUM {
+                reg_map.insert(reg_id, reg_id);
+                used.borrow_mut()[reg_id] = false;
+            }
+
+            // Verify all registered are killed.
+            for reg_id in KNOWN_REG_NUM..REG_NUM {
+                assert!(!used.borrow()[reg_id]);
             }
         }
     }

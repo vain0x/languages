@@ -82,7 +82,7 @@ const GLOBAL_FUN_ID: FunId = 0;
 const NO_REG_ID: RegId = 1 << 20;
 const BASE_PTR_REG_ID: RegId = 0;
 const RET_REG_ID: RegId = 1;
-
+const KNOWN_REG_NUM: usize = 2;
 const REG_NUM: usize = 10;
 
 type TokId = usize;

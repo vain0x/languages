@@ -1,0 +1,6 @@
+#!/bin/bash
+
+(
+    cd ../runtime
+    cargo watch -w ../runtime -w ../compiler -x test
+)

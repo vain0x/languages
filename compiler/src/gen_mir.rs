@@ -340,6 +340,9 @@ impl Compiler {
             ins.append(&mut fun.ins);
         }
 
+        // Remove NOP instructions.
+        ins.retain(|ins| ins.0 != Op::Kill);
+
         // Build jump table.
         let mut labels = vec![0; self.p.lab_num];
         for pc in 0..ins.len() {

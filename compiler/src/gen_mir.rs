@@ -276,72 +276,16 @@ impl Compiler {
         self.push(Op::Exit, NO_REG_ID, Val::None);
     }
 
-    fn alloc_regs(&mut self) {
-        for fun_id in 0..self.p.funs.len() {
-            let used = RefCell::new(vec![false; REG_NUM]);
-            let mut reg_map = BTreeMap::new();
-
-            // Allocate known regs. These should not be used.
-            for reg_id in 0..KNOWN_REG_NUM {
-                reg_map.insert(reg_id, reg_id);
-                used.borrow_mut()[reg_id] = true;
-            }
-
-            let mut alloc = |reg_id: RegId| {
-                if reg_id == NO_REG_ID {
-                    return RET_REG_ID;
-                }
-                if let Some(&reg_id) = reg_map.get(&reg_id) {
-                    return reg_id;
-                }
-                for i in 0..REG_NUM {
-                    if !used.borrow()[i] {
-                        reg_map.insert(reg_id, i);
-                        used.borrow_mut()[i] = true;
-                        return i;
-                    }
-                }
-                panic!("too many registers are required")
-            };
-
-            for ins in &mut self.p.funs[fun_id].ins {
-                if let Op::Kill = ins.0 {
-                    ins.1 = alloc(ins.1);
-                    used.borrow_mut()[ins.1] = false;
-                    continue;
-                }
-
-                ins.1 = alloc(ins.1);
-                if let Val::Reg(ref mut reg_id) = ins.2 {
-                    *reg_id = alloc(*reg_id)
-                }
-            }
-
-            // Dispose known regs.
-            for reg_id in 0..KNOWN_REG_NUM {
-                reg_map.insert(reg_id, reg_id);
-                used.borrow_mut()[reg_id] = false;
-            }
-
-            // Verify all registered are killed.
-            for reg_id in KNOWN_REG_NUM..REG_NUM {
-                assert!(!used.borrow()[reg_id]);
-            }
-        }
-    }
-
     pub fn compile(mut self) -> String {
         self.gen();
-        self.alloc_regs();
+
+        regalloc::alloc_regs(&mut self.p);
 
         // Merge instructions to the global function.
         let mut ins = vec![];
         for fun in self.p.funs.iter_mut() {
             ins.append(&mut fun.ins);
         }
-
-        // Remove NOP instructions.
-        ins.retain(|ins| ins.0 != Op::Kill);
 
         // Build jump table.
         let mut labels = vec![0; self.p.lab_num];

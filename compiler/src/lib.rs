@@ -1,8 +1,8 @@
 pub mod gen_mir;
 pub mod parse;
+pub mod regalloc;
 pub mod tokenize;
 
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::str;
 

@@ -20,12 +20,12 @@ The following code is a solution written in picomet-lang to solve this problem: 
 
 This reads two integers from STDIN and prints a word to STDOUT that indicates whether the product of two integers is even or odd.
 
-Other examples are available at the bottom of [picomet/tests/tests.rs](picomet/tests/tests.rs).
+Other examples are available at the bottom of [runtime/tests/tests.rs](runtime/tests/tests.rs).
 
 ## Document: How to Write Picomet-lang
 
 - Before read, please check last-modified date because I might forget to update the document after changes.
-- See [picomet/tests/tests.rs](picomet/tests/tests.rs) for actually working picomet-lang codes.
+- See [runtime/tests/tests.rs](runtime/tests/tests.rs) for actually working picomet-lang codes.
 
 ### Doc: Language properties
 
@@ -132,11 +132,11 @@ Other too detailed things.
 
 ## Solve
 
-To solve a problem with picomet-lang, write your code in [picomet/examples/solver.picomet](picomet/examples/solver.picomet).
+To solve a problem with picomet-lang, write your code in [runtime/examples/solver.picomet](runtime/examples/solver.picomet).
 
 To run your code, use `./run`.
 
-To submit your code, run `./build` and copy-and-paste `picomet/examples/solver.rs`.
+To submit your code, run `./build` and copy-and-paste `runtime/examples/solver.rs`.
 
 ## Develop
 
@@ -156,4 +156,4 @@ rustup override set 1.15.1
 
 To build, run `cargo build`.
 
-To run tests, run `cargo test`. Tests are written in [picomet/tests/tests.rs](picomet/tests/tests.rs).
+To run tests, run `cargo test`. Tests are written in [runtime/tests/tests.rs](runtime/tests/tests.rs).

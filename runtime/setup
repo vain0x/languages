@@ -1,0 +1,5 @@
+#!/bin/bash
+
+rustup install 1.15.1
+rustup override set 1.15.1
+cargo install cargo-watch

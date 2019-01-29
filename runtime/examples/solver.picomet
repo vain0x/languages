@@ -1,0 +1,6 @@
+(begin
+    (let a (read_int))
+    (let b (read_int))
+    (let c (read_int))
+    (let s (read_str))
+    (println (to_str (+ a b c) " " s)))

@@ -15,7 +15,7 @@ fn eval(src: &str, stdin: &str) -> String {
 
 fn eval_tests(src: &str, ios: &[(&str, &str)]) {
     let program = picomet_lang_compiler::compile(src);
-    writeln!(std::io::stderr(), "{}", program);
+    writeln!(std::io::stderr(), "{}", program).unwrap();
 
     for &(input, expected) in ios {
         let mut stdout = Vec::new();

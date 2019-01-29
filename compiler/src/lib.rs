@@ -79,11 +79,12 @@ const EOF: &'static Tok = &Tok::Eof;
 
 const GLOBAL_FUN_ID: FunId = 0;
 
-const NO_REG_ID: RegId = 1 << 20;
-const BASE_PTR_REG_ID: RegId = 0;
-const RET_REG_ID: RegId = 1;
-const KNOWN_REG_NUM: usize = 2;
-const REG_NUM: usize = 10;
+const NO_REG_ID: RegId = 0;
+const BASE_PTR_REG_ID: RegId = 1;
+const STACK_PTR_REG_ID: RegId = 2;
+const RET_REG_ID: RegId = 3;
+const KNOWN_REG_NUM: usize = 4;
+const REG_NUM: usize = 12;
 
 type TokId = usize;
 type Range = (usize, usize);
@@ -91,8 +92,10 @@ type Toks = Vec<(Tok, Range)>;
 type SynId = usize;
 type RegId = usize;
 type LabId = usize;
-type VarId = usize;
 type FunId = usize;
+
+/// Offset from base ptr.
+type VarId = i64;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Tok {

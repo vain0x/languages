@@ -7,9 +7,6 @@ struct RegAlloc {
 
 impl RegAlloc {
     fn alloc(&mut self, reg_id: RegId) -> RegId {
-        if reg_id == NO_REG_ID {
-            return RET_REG_ID;
-        }
         if let Some(&reg_id) = self.reg_map.get(&reg_id) {
             return reg_id;
         }

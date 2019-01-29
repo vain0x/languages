@@ -34,11 +34,16 @@ impl Compiler {
         self.p.strs.len() - 1
     }
 
-    fn push_var(&mut self, name: &str) {
+    fn add_name(&mut self, name: String, var_id: VarId) {
+        let fun = &mut self.p.funs[self.cur_fun_id];
+        fun.vars.insert(name, var_id);
+    }
+
+    fn add_local_var(&mut self, name: String) {
         let fun = &mut self.p.funs[self.cur_fun_id];
         fun.var_num += 1;
-        let var_id = fun.var_num - 1;
-        fun.vars.insert(name.to_owned(), var_id);
+        let var_id = (fun.var_num - 1) as i64;
+        self.add_name(name, var_id);
     }
 
     fn find_var_id(&self, name: &str) -> Option<(VarId, bool)> {
@@ -55,9 +60,9 @@ impl Compiler {
             let r = self.new_reg();
             if local {
                 self.push(Op::Mov, r, Val::Reg(BASE_PTR_REG_ID));
-                self.push(Op::AddImm, r, Val::Int(var_id as i64));
+                self.push(Op::AddImm, r, Val::Int(var_id));
             } else {
-                self.push(Op::Imm, r, Val::Int(var_id as i64));
+                self.push(Op::Imm, r, Val::Int(var_id));
             };
             Some(r)
         } else {
@@ -108,23 +113,30 @@ impl Compiler {
     }
 
     fn do_app(&mut self, name: &str, syns: &[SynId]) -> RegId {
-        // for fun_id in 0..self.p.funs.len() {
-        //     if name == &self.p.funs[fun_id].name {
-        //         let lab_id = self.p.funs[fun_id].lab_id;
-        //         let mut arity = 0;
-        //         if syns.len() > 0 {
-        //             let r = self.on_exp(syns[0]);
-        //             self.push(Op::Push, r, Val::None);
-        //             self.kill(r);
-        //             arity += 1;
-        //         }
-        //         self.push(Op::Call(lab_id, arity), NO_REG_ID);
-        //         if arity > 0 {
-        //             self.push(Op::Pop, NO_REG_ID);
-        //         }
-        //         return RET_REG_ID;
-        //     }
-        // }
+        for fun in &self.p.funs {
+            if name == fun.name {
+                let fun_lab = fun.lab_id;
+
+                // Push args to stack.
+                let mut arity = 0;
+                if syns.len() > 0 {
+                    let r = self.on_exp(syns[0]);
+                    self.push(Op::Push, r, Val::None);
+                    self.kill(r);
+                    arity += 1;
+                }
+
+                self.push(Op::Call, NO_REG_ID, Val::Lab(fun_lab));
+
+                // Pop args from stack.
+                if arity > 0 {
+                    self.push(Op::Pop, NO_REG_ID, Val::None);
+                }
+
+                // The result value must be stored in the reg.
+                return RET_REG_ID;
+            }
+        }
 
         if let Some(bin_id) = BINS.iter().position(|&(x, _)| x == name) {
             let l = self.on_exp(syns[0]);
@@ -145,12 +157,49 @@ impl Compiler {
             // Evaluate default value.
             let l = self.on_exp(syns[1]);
             // Create variable.
-            self.push_var(&name);
+            self.add_local_var(name.clone());
             // Set default value.
             let r = self.on_var(&name).unwrap();
             self.push(Op::Store, l, Val::Reg(r));
             self.kill(l);
             self.kill(r);
+            NO_REG_ID
+        } else if name == "def" {
+            let arg_syns = match self.syns[syns[0]].clone() {
+                Syn::App(arg_syns) => arg_syns,
+                _ => panic!("first arg of def must be app"),
+            };
+            let name = self.to_str(arg_syns[0]).to_owned();
+
+            // Save current context.
+            let cur_fun_id = self.cur_fun_id;
+
+            // Start function context.
+            {
+                let lab_id = self.new_lab();
+                self.p.funs.push(Fun {
+                    name: name,
+                    lab_id: lab_id,
+                    ..Fun::default()
+                });
+                self.cur_fun_id = self.p.funs.len() - 1;
+
+                // Define parameters as local variables.
+                for i in 1..arg_syns.len() {
+                    let name = self.to_str(arg_syns[i]).to_owned();
+                    let var_id = (arg_syns.len() - i) as i64 - 2;
+                    self.add_name(name, var_id);
+                }
+
+                self.push(Op::Label, 0, Val::Lab(lab_id));
+                let l = self.on_exp(syns[1]);
+                self.push(Op::Mov, RET_REG_ID, Val::Reg(l));
+                self.kill(l);
+                self.push(Op::Ret, NO_REG_ID, Val::None);
+            }
+
+            // Restore context.
+            self.cur_fun_id = cur_fun_id;
             NO_REG_ID
         } else if name == "begin" {
             let mut l = NO_REG_ID;
@@ -281,7 +330,7 @@ impl Compiler {
 
         regalloc::alloc_regs(&mut self.p);
 
-        // Merge instructions to the global function.
+        // Merge instructions.
         let mut ins = vec![];
         for fun in self.p.funs.iter_mut() {
             ins.append(&mut fun.ins);

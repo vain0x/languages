@@ -1,7 +1,9 @@
 use std::io::{self, BufRead, Write as IoWrite};
 use std::str;
 
-const REG_NUM: usize = 10;
+const BASE_PTR_REG_ID: usize = 1;
+const STACK_PTR_REG_ID: usize = 2;
+const REG_NUM: usize = 12;
 
 macro_rules! define_op {
     ($($op:ident,)*) => {
@@ -104,6 +106,7 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
     let mut regs = [0; REG_NUM];
     let mut stack = Vec::new();
     stack.resize(1024, 0);
+    let mut frames = vec![];
     let mut pc = 0;
 
     loop {
@@ -118,10 +121,26 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
                     pc = r as usize
                 }
             }
-            Op::Push => {
-                stack.push(regs[l]);
+            Op::Call => {
+                frames.push((pc, regs[BASE_PTR_REG_ID]));
+                pc = r as usize;
+                regs[BASE_PTR_REG_ID] = regs[STACK_PTR_REG_ID];
             }
-            Op::Pop => regs[l] = stack.pop().unwrap(),
+            Op::Ret => {
+                let (ret_pc, ret_bp) = frames.pop().unwrap();
+                pc = ret_pc;
+                regs[BASE_PTR_REG_ID] = ret_bp;
+            }
+            Op::Push => {
+                let sp = regs[STACK_PTR_REG_ID];
+                stack[sp as usize] = regs[l];
+                regs[STACK_PTR_REG_ID] += 1;
+            }
+            Op::Pop => {
+                regs[STACK_PTR_REG_ID] -= 1;
+                let sp = regs[STACK_PTR_REG_ID];
+                regs[l] = stack[sp as usize];
+            }
             Op::Load => regs[l] = stack[regs[r as usize] as usize],
             Op::Store => stack[regs[r as usize] as usize] = regs[l],
             Op::ToStr => {
@@ -155,8 +174,6 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
             Op::Print => write!(stdout, "{}", strs[regs[l] as usize]).unwrap(),
             Op::PrintLn => writeln!(stdout, "{}", strs[regs[l] as usize]).unwrap(),
             Op::Label | Op::Kill => {}
-            Op::Call => unimplemented!(),
-            Op::Ret => unimplemented!(),
             Op::Exit => return,
         }
         pc += 1;

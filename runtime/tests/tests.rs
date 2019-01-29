@@ -89,7 +89,6 @@ fn test_while() {
     )
 }
 
-#[ignore]
 #[test]
 fn test_def() {
     eval_tests(
@@ -102,7 +101,6 @@ fn test_def() {
     )
 }
 
-#[ignore]
 #[test]
 fn test_def_modify_global_vars() {
     eval_tests(
@@ -117,7 +115,6 @@ fn test_def_modify_global_vars() {
     )
 }
 
-#[ignore]
 #[test]
 fn test_def_with_arg() {
     eval_tests(

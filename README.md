@@ -1,5 +1,7 @@
 # PICOMET-LANG
 
+[![Build Status](https://travis-ci.org/vain0x/picomet-lang.svg?branch=master)](https://travis-ci.org/vain0x/picomet-lang)
+
 *WIP: The project is at very early stage. PRs are welcome.*
 
 **Picomet-lang** is a pico programming language. *Pico* means that the processor is written in single file.

@@ -1,0 +1,4 @@
+#!/bin/bash
+# Before this, you need to run `./docker-build` in `..`.
+
+docker run --tty --interactive --rm vain0x/picomet-lang cargo run

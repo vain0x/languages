@@ -132,13 +132,29 @@ Other too detailed things.
 
 ## Solve
 
-Work inside the [solver](solver) directory.
+To solve a problem using picomet-lang, write your code in [solver/src/main.picomet](solver/src/main.picomet).
 
-To solve a problem with picomet-lang, write your code in [solver/src/main.picomet](solver/src/main.picomet).
+In order to run, you have two options:
+
+1. Using Rust tools
+2. Using Docker
+
+### Solve: Use Rust tools
+
+See the `Develop` section below for setting up.
+
+Work inside the [solver](solver) directory.
 
 To run your code, use `cargo run`.
 
 To submit your code, run `cargo build` and copy from `solver/src/main.rs`.
+
+### Solve: Use Docker
+
+- Install Docker.
+- Build a docker image with `./docker-build`.
+
+You can run your code with `./docker-run` inside the [solver](solver) directory.
 
 ## Develop
 

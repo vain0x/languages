@@ -137,6 +137,25 @@ fn test_def_with_two_args() {
     )
 }
 
+#[test]
+fn test_def_with_local_vars() {
+    eval_tests(
+        r#"(begin
+            (def (fact n) (begin
+                (let x 1)
+                (let i 1)
+                (while (<= i n) (begin
+                    (set x (* x i))
+                    (set i (+ i 1))
+                ))
+                x
+            ))
+            (println (to_str (fact 5)))
+        )"#,
+        &[("", "120\n")],
+    )
+}
+
 /// <https://atcoder.jp/contests/abs/tasks/practice_1?lang=en>
 #[test]
 fn test_welcome_to_atcoder() {

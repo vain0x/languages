@@ -1,8 +1,12 @@
 [package]
-name = "picomet-lang-compiler"
+name = "picomet-lang-solver"
 version = "0.1.0"
 authors = ["vain0x <vainzerox@gmail.com>"]
 edition = "2018"
+build = "src/build.rs"
 
 [dependencies]
+
+[build-dependencies]
+picomet-lang-compiler = { path = "../compiler" }
 picomet-lang-runtime = { path = "../runtime" }

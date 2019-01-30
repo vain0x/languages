@@ -20,12 +20,12 @@ The following code is a solution written in picomet-lang to solve this problem: 
 
 This reads two integers from STDIN and prints a word to STDOUT that indicates whether the product of two integers is even or odd.
 
-Other examples are available at the bottom of [runtime/tests/tests.rs](runtime/tests/tests.rs).
+Other examples are available at the bottom of [compiler/tests/tests.rs](compiler/tests/tests.rs).
 
 ## Document: How to Write Picomet-lang
 
 - Before read, please check last-modified date because I might forget to update the document after changes.
-- See [runtime/tests/tests.rs](runtime/tests/tests.rs) for actually working picomet-lang codes.
+- See [compiler/tests/tests.rs](compiler/tests/tests.rs) for actually working picomet-lang codes.
 
 ### Doc: Language properties
 
@@ -132,11 +132,13 @@ Other too detailed things.
 
 ## Solve
 
-To solve a problem with picomet-lang, write your code in [runtime/examples/solver.picomet](runtime/examples/solver.picomet).
+Work inside the [solver](solver) directory.
 
-To run your code, use `./run`.
+To solve a problem with picomet-lang, write your code in [solver/src/main.picomet](solver/src/main.picomet).
 
-To submit your code, run `./build` and copy-and-paste `runtime/examples/solver.rs`.
+To run your code, use `cargo run`.
+
+To submit your code, run `cargo build` and copy from `solver/src/main.rs`.
 
 ## Develop
 
@@ -144,16 +146,8 @@ To develop this project, first install Rust.
 
 - To install Rust tools, follow the instructions written in [Rust programming language](https://www.rust-lang.org/)
 
-Second, inside the `picomet` directory, run the following command.
+Second, in both `compiler` and `runtime` directories, run `./setup` for configure your environment.
 
-```sh
-rustup install 1.15.1
-rustup override set 1.15.1
-```
+To build, run `cargo build` inside `compiler` or `runtime` directory.
 
-- Note: This command tells rust processor to use old version of Rust only for the directory. Picomet-lang is written in the version because AtCoder doesn't support newer version of Rust for now.
-- Note: Due to the version, you tend to get more compile errors than the usual. The version doesn't support "match ergonomics" and "non-lexical-lifetime" features and some of standard library APIs.
-
-To build, run `cargo build`.
-
-To run tests, run `cargo test`. Tests are written in [runtime/tests/tests.rs](runtime/tests/tests.rs).
+To run tests, run `cargo test` in `compiler` directory. Tests are written in [compiler/tests/tests.rs](compiler/tests/tests.rs).

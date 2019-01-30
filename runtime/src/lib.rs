@@ -61,7 +61,7 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
 
     // Parse.
     for line in src.split("\n") {
-        let line = line.trim_start();
+        let line = line.trim_left();
         if line.starts_with("//") || line.len() == 0 {
             continue;
         }

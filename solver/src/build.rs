@@ -1,5 +1,5 @@
 //! This program runs whenever you build this project.
-//! Compile `examples/solver.picomet` and bundle the result and the runtime code into single Rust code.
+//! Compile `main.picomet` and bundle the result and the runtime code into single Rust code.
 
 extern crate picomet_lang_compiler;
 
@@ -11,6 +11,7 @@ const TEMPLATE: &'static str = r#####"// picomet-lang <https://github.com/vain0x
 
 const PROGRAM: &'static str = r####"
 ${IR_CONTENTS}"####;
+
 pub fn main() {
     eval_with_stdio(PROGRAM);
 }
@@ -29,9 +30,13 @@ fn read_to_string(p: &Path) -> String {
 
 fn main() {
     let root_path = env!("CARGO_MANIFEST_DIR");
-    let runtime_path = Path::new(root_path).join("src").join("lib.rs");
-    let picomet_path = Path::new(root_path).join("examples").join("solver.picomet");
-    let out_path = Path::new(root_path).join("examples").join("solver.rs");
+    let runtime_path = Path::new(root_path)
+        .join("..")
+        .join("runtime")
+        .join("src")
+        .join("lib.rs");
+    let picomet_path = Path::new(root_path).join("src").join("main.picomet");
+    let out_path = Path::new(root_path).join("src").join("main.rs");
 
     let runtime_contents = read_to_string(&runtime_path);
     let picomet_contents = read_to_string(&picomet_path);

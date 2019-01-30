@@ -1,6 +1,3 @@
 #!/bin/bash
 
-(
-    cd ../runtime
-    cargo watch -w ../runtime -w ../compiler -x test
-)
+cargo watch -w ../compiler -w ../runtime -x test

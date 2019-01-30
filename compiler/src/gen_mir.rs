@@ -118,20 +118,20 @@ impl Compiler {
                 let fun_lab = fun.lab_id;
 
                 // Push args to stack.
-                let mut arity = 0;
-                if syns.len() > 0 {
-                    let r = self.on_exp(syns[0]);
+                for i in 0..syns.len() {
+                    let r = self.on_exp(syns[i]);
                     self.push(Op::Push, r, Val::None);
                     self.kill(r);
-                    arity += 1;
                 }
 
                 self.push(Op::Call, NO_REG_ID, Val::Lab(fun_lab));
 
                 // Pop args from stack.
-                if arity > 0 {
-                    self.push(Op::Pop, NO_REG_ID, Val::None);
+                let l = self.new_reg();
+                for _ in 0..syns.len() {
+                    self.push(Op::Pop, l, Val::None);
                 }
+                self.kill(l);
 
                 // The result value must be stored in the reg.
                 return RET_REG_ID;
@@ -187,7 +187,7 @@ impl Compiler {
                 // Define parameters as local variables.
                 for i in 1..arg_syns.len() {
                     let name = self.to_str(arg_syns[i]).to_owned();
-                    let var_id = (arg_syns.len() - i) as i64 - 2;
+                    let var_id = i as i64 - arg_syns.len() as i64;
                     self.add_name(name, var_id);
                 }
 

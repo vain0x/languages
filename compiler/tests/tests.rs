@@ -119,11 +119,21 @@ fn test_def_modify_global_vars() {
 fn test_def_with_arg() {
     eval_tests(
         r#"(begin
-            (let i 0)
             (def (successor x) (+ x 1))
             (println (to_str (successor 1)))
         )"#,
         &[("", "2\n")],
+    )
+}
+
+#[test]
+fn test_def_with_two_args() {
+    eval_tests(
+        r#"(begin
+            (def (div x y) (/ x y))
+            (println (to_str (div 42 6)))
+        )"#,
+        &[("", "7\n")],
     )
 }
 

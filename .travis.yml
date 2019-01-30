@@ -1,0 +1,9 @@
+name: rust
+os: linux
+language: rust
+rust: stable
+cache: cargo
+install:
+  - (cd ./solver && cargo build)
+script:
+  - (cd ./compiler && cargo test)

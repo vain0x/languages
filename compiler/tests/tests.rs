@@ -210,6 +210,18 @@ fn test_abc081_a_placing_marbles() {
     )
 }
 
+#[test]
+fn test_def_recursive() {
+    eval_tests(
+        r#"(begin
+            (def (factorial n)
+                (cond (<= n 1) 1 (* n (factorial (- n 1)))))
+            (println (to_str (factorial 5)))
+        )"#,
+        &[("", "120\n")],
+    )
+}
+
 /// <https://atcoder.jp/contests/abs/tasks/abc081_b?lang=en>
 #[test]
 fn test_abc081_b_shift_only() {

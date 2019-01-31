@@ -3,6 +3,8 @@ use std::str;
 
 const BASE_PTR_REG_ID: usize = 1;
 const STACK_PTR_REG_ID: usize = 2;
+const RET_REG_ID: usize = 3;
+const KNOWN_REG_NUM: usize = 4;
 const REG_NUM: usize = 12;
 
 macro_rules! define_op {
@@ -102,7 +104,7 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
         panic!("Expected a word but not given.");
     };
 
-    // Execution.
+    // Execute.
     let mut regs = [0; REG_NUM];
     let mut stack = Vec::new();
     stack.resize(1024, 0);
@@ -122,14 +124,16 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
                 }
             }
             Op::Call => {
-                frames.push((pc, regs[BASE_PTR_REG_ID]));
+                frames.push((pc, regs));
                 pc = r as usize;
                 regs[BASE_PTR_REG_ID] = regs[STACK_PTR_REG_ID];
             }
             Op::Ret => {
-                let (ret_pc, ret_bp) = frames.pop().unwrap();
+                let ret_val = regs[RET_REG_ID];
+                let (ret_pc, ret_regs) = frames.pop().unwrap();
                 pc = ret_pc;
-                regs[BASE_PTR_REG_ID] = ret_bp;
+                regs = ret_regs;
+                regs[RET_REG_ID] = ret_val;
             }
             Op::Push => {
                 let sp = regs[STACK_PTR_REG_ID];

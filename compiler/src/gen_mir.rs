@@ -5,6 +5,7 @@ use std::fmt::Write;
 pub struct Compiler {
     pub toks: Toks,
     pub syns: Vec<Syn>,
+    pub vars: Vec<Var>,
     pub p: Mir,
     pub cur_fun_id: FunId,
 }
@@ -42,27 +43,34 @@ impl Compiler {
     fn add_local_var(&mut self, name: String) {
         let fun = &mut self.p.funs[self.cur_fun_id];
         fun.var_num += 1;
-        let var_id = (fun.var_num - 1) as i64;
-        self.add_name(name, var_id);
+        let offset = (fun.var_num - 1) as Offset;
+        let local = self.cur_fun_id != GLOBAL_FUN_ID;
+
+        self.vars.push(Var {
+            name: name.clone(),
+            offset,
+            local,
+        });
+        self.add_name(name, self.vars.len() - 1);
     }
 
-    fn find_var_id(&self, name: &str) -> Option<(VarId, bool)> {
+    fn find_var_id(&self, name: &str) -> Option<VarId> {
         for &fun_id in &[self.cur_fun_id, GLOBAL_FUN_ID] {
             if let Some(&var_id) = self.p.funs[fun_id].vars.get(name) {
-                return Some((var_id, fun_id != GLOBAL_FUN_ID));
+                return Some(var_id);
             }
         }
         None
     }
 
     fn on_var(&mut self, name: &str) -> Option<RegId> {
-        if let Some((var_id, local)) = self.find_var_id(&name) {
+        if let Some(var_id) = self.find_var_id(&name) {
             let r = self.new_reg();
-            if local {
+            if self.vars[var_id].local {
                 self.push(Op::Mov, r, Val::Reg(BASE_PTR_REG_ID));
-                self.push(Op::AddImm, r, Val::Int(var_id));
+                self.push(Op::AddImm, r, Val::Int(self.vars[var_id].offset));
             } else {
-                self.push(Op::Imm, r, Val::Int(var_id));
+                self.push(Op::Imm, r, Val::Int(self.vars[var_id].offset));
             };
             Some(r)
         } else {
@@ -187,8 +195,13 @@ impl Compiler {
                 // Define parameters as local variables.
                 for i in 1..arg_syns.len() {
                     let name = self.to_str(arg_syns[i]).to_owned();
-                    let var_id = i as i64 - arg_syns.len() as i64;
-                    self.add_name(name, var_id);
+                    let offset = i as i64 - arg_syns.len() as i64;
+                    self.vars.push(Var {
+                        name: name.clone(),
+                        offset,
+                        local: true,
+                    });
+                    self.add_name(name, self.vars.len() - 1);
                 }
 
                 self.push(Op::Label, 0, Val::Lab(lab_id));

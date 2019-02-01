@@ -95,7 +95,9 @@ type LabId = usize;
 type FunId = usize;
 
 /// Offset from base ptr.
-type VarId = i64;
+type Offset = i64;
+
+type VarId = usize;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Tok {
@@ -112,6 +114,13 @@ pub enum Syn {
     Err(String, TokId),
     Val(TokId),
     App(Vec<SynId>),
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Var {
+    name: String,
+    offset: Offset,
+    local: bool,
 }
 
 #[derive(Clone, Copy, Debug)]

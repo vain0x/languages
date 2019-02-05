@@ -4,10 +4,16 @@ use crate::*;
 pub struct Tokenizer {
     pub src: String,
     pub cur: usize,
-    pub toks: Toks,
+    pub toks: Vec<Tok>,
+    pub tok_ranges: Vec<Range>,
 }
 
 impl Tokenizer {
+    fn push(&mut self, tok: Tok, range: Range) {
+        self.toks.push(tok);
+        self.tok_ranges.push(range);
+    }
+
     fn c(&self) -> u8 {
         if self.cur >= self.src.as_bytes().len() {
             return 0;
@@ -35,7 +41,7 @@ impl Tokenizer {
         false
     }
 
-    pub fn tokenize(mut self) -> Vec<(Tok, Range)> {
+    pub fn tokenize(&mut self) {
         't: while self.cur < self.src.len() {
             let l = self.cur;
             if self.expect("//") {
@@ -46,11 +52,11 @@ impl Tokenizer {
                 continue;
             }
             if let Some((word, range)) = self.take(is_ascii_digit) {
-                self.toks.push((Tok::Int(word.parse().unwrap_or(0)), range));
+                self.push(Tok::Int(word.parse().unwrap_or(0)), range);
                 continue;
             }
             if let Some((word, range)) = self.take(is_id_char) {
-                self.toks.push((Tok::Id(word.into()), range));
+                self.push(Tok::Id(word.into()), range);
                 continue;
             }
             if self.c() == b'"' {
@@ -62,20 +68,19 @@ impl Tokenizer {
                 let r = self.cur;
                 self.cur += 1;
                 let word = self.src[l + 1..r].into();
-                self.toks.push((Tok::Str(word), (l, r + 1)));
+                self.push(Tok::Str(word), (l, r + 1));
                 continue;
             }
             for pun in PUNS {
                 if self.expect(pun) {
-                    self.toks.push((Tok::Pun(pun), (l, self.cur)));
+                    self.push(Tok::Pun(pun), (l, self.cur));
                     continue 't;
                 }
             }
             self.cur += 1;
-            self.toks.push((Tok::Err("?".into()), (l, self.cur)));
+            self.push(Tok::Err("?".into()), (l, self.cur));
         }
-        self.toks.push((Tok::Eof, (self.cur, self.cur)));
-        self.toks
+        self.push(Tok::Eof, (self.cur, self.cur));
     }
 }
 

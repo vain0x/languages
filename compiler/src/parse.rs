@@ -2,7 +2,7 @@ use crate::*;
 
 #[derive(Default)]
 pub struct Parser {
-    pub toks: Toks,
+    pub toks: Vec<Tok>,
     pub cur: usize,
     pub syns: Vec<Syn>,
 }
@@ -12,7 +12,7 @@ impl Parser {
         if self.cur >= self.toks.len() {
             return EOF;
         }
-        &self.toks[self.cur].0
+        &self.toks[self.cur]
     }
 
     fn next_is_opening(&self) -> bool {

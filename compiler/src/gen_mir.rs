@@ -3,7 +3,7 @@ use std::fmt::Write;
 
 #[derive(Clone, Default)]
 pub struct Compiler {
-    pub toks: Toks,
+    pub toks: Vec<Tok>,
     pub syns: Vec<Syn>,
     pub vars: Vec<Var>,
     pub p: Mir,
@@ -79,7 +79,7 @@ impl Compiler {
     }
 
     fn on_tok(&mut self, tok_id: TokId) -> RegId {
-        match self.toks[tok_id].0.clone() {
+        match self.toks[tok_id].clone() {
             Tok::Err(err) => panic!("{}", err),
             Tok::Id(name) => {
                 let l = self.new_reg();
@@ -110,7 +110,7 @@ impl Compiler {
 
     fn to_str(&self, syn_id: SynId) -> &str {
         if let &Syn::Val(tok_id) = &self.syns[syn_id] {
-            match &self.toks[tok_id].0 {
+            match &self.toks[tok_id] {
                 &Tok::Id(ref id) => id,
                 &Tok::Str(ref value) => value,
                 tok => panic!("{:?} must be str or id", tok),
@@ -315,7 +315,7 @@ impl Compiler {
             Syn::Err(err, _) => panic!("{}", err),
             Syn::Val(tok_id) => self.on_tok(tok_id),
             Syn::App(syns) => match self.syns[syns[0]].clone() {
-                Syn::Val(tok_id) => match self.toks[tok_id].0.clone() {
+                Syn::Val(tok_id) => match self.toks[tok_id].clone() {
                     Tok::Id(head) => self.do_app(&head, &syns[1..]),
                     tok => panic!("{:?} callee must be identifier", &tok),
                 },

@@ -88,7 +88,6 @@ const REG_NUM: usize = 12;
 
 type TokId = usize;
 type Range = (usize, usize);
-type Toks = Vec<(Tok, Range)>;
 type SynId = usize;
 type RegId = usize;
 type LabId = usize;
@@ -153,18 +152,23 @@ pub struct Mir {
 
 pub fn compile(src: &str) -> String {
     let src = src.to_owned();
-    let toks = tokenize::Tokenizer {
+
+    let mut tokenizer = tokenize::Tokenizer {
         src: src.clone(),
         toks: vec![],
+        tok_ranges: vec![],
         cur: 0,
-    }
-    .tokenize();
+    };
+    tokenizer.tokenize();
+    let toks = tokenizer.toks;
+
     let syns = parse::Parser {
         toks: toks.clone(),
         cur: 0,
         syns: vec![],
     }
     .parse();
+
     gen_mir::Compiler {
         toks: toks,
         syns: syns,

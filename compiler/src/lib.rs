@@ -1,6 +1,7 @@
 pub mod gen_mir;
 pub mod parse;
 pub mod regalloc;
+pub mod sema;
 pub mod tokenize;
 
 use std::collections::BTreeMap;
@@ -57,23 +58,13 @@ define_op! {
 }
 
 const PUNS: &'static [&'static str] = &["(", ")"];
-const BINS: &'static [(&'static str, Op)] = &[
-    ("++", Op::StrCat),
-    ("+", Op::Add),
-    ("-", Op::Sub),
-    ("*", Op::Mul),
-    ("/", Op::Div),
-    ("%", Op::Mod),
-];
 
-const RELS: &'static [(&'static str, Op)] = &[
-    ("==", Op::Eq),
-    ("!=", Op::Ne),
-    ("<", Op::Lt),
-    ("<=", Op::Le),
-    (">", Op::Gt),
-    (">=", Op::Ge),
-];
+#[derive(Clone, Copy, Debug)]
+pub enum PrimArity {
+    Fixed(usize),
+    Infinite,
+    Bin,
+}
 
 const EOF: &'static Tok = &Tok::Eof;
 
@@ -81,6 +72,7 @@ const GLOBAL_FUN_ID: FunId = 0;
 
 const NO_REG_ID: RegId = 0;
 const BASE_PTR_REG_ID: RegId = 1;
+#[allow(unused)]
 const STACK_PTR_REG_ID: RegId = 2;
 const RET_REG_ID: RegId = 3;
 const KNOWN_REG_NUM: usize = 4;
@@ -89,14 +81,12 @@ const REG_NUM: usize = 12;
 type TokId = usize;
 type Range = (usize, usize);
 type SynId = usize;
+type ExpId = usize;
+type StrId = usize;
 type RegId = usize;
 type LabId = usize;
-type FunId = usize;
-
-/// Offset from base ptr.
-type Offset = i64;
-
 type VarId = usize;
+type FunId = usize;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Tok {
@@ -116,38 +106,31 @@ pub enum Syn {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct Var {
-    name: String,
-    offset: Offset,
-    local: bool,
+pub struct Syntax {
+    toks: Vec<Tok>,
+    syns: Vec<Syn>,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum Val {
-    None,
-    Int(i64),
-    Str(usize),
-    Reg(RegId),
-    Lab(LabId),
-}
+pub trait HaveSyntaxModel {
+    fn toks(&self) -> &[Tok];
+    fn syns(&self) -> &[Syn];
 
-type Ins = (Op, RegId, Val);
+    fn syn_as_id(&self, syn_id: SynId) -> Option<&str> {
+        match &self.syns()[syn_id] {
+            &Syn::Val(tok_id) => match &self.toks()[tok_id] {
+                Tok::Id(name) => Some(name),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
 
-#[derive(Clone, Default)]
-struct Fun {
-    name: String,
-    lab_id: LabId,
-    vars: BTreeMap<String, VarId>,
-    var_num: usize,
-    ins: Vec<Ins>,
-}
-
-#[derive(Clone, Default)]
-pub struct Mir {
-    funs: Vec<Fun>,
-    strs: Vec<String>,
-    reg_num: usize,
-    lab_num: usize,
+    fn syn_as_app(&self, syn_id: SynId) -> Option<&[SynId]> {
+        match &self.syns()[syn_id] {
+            Syn::App(syns) => Some(&syns),
+            _ => None,
+        }
+    }
 }
 
 pub fn compile(src: &str) -> String {
@@ -169,9 +152,19 @@ pub fn compile(src: &str) -> String {
     }
     .parse();
 
+    let mut sema = sema::Sema {
+        toks: toks.to_owned(),
+        syns: syns.to_owned(),
+        ..sema::Sema::default()
+    };
+    sema.sema();
+
     gen_mir::Compiler {
         toks: toks,
         syns: syns,
+        sema_vars: sema.vars,
+        sema_funs: sema.funs,
+        sema_exps: sema.exps,
         ..gen_mir::Compiler::default()
     }
     .compile()

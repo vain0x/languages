@@ -55,7 +55,16 @@ fn test_set() {
     assert_eq!(
         eval(r#"(+ (let a 2) (set a (+ a 3)) (println (to_str a)))"#, ""),
         "5\n"
-    )
+    );
+
+    eval_tests(
+        r#"(begin
+            (let a (read_int))
+            (let b (read_int))
+            (println (to_str a) " " (to_str b))
+        )"#,
+        &[("1 2\n", "1 2\n")],
+    );
 }
 
 #[test]

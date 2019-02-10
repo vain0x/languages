@@ -1,3 +1,4 @@
+use crate::gen_mir::{Ins, Val};
 use crate::*;
 
 struct RegAlloc {
@@ -7,10 +8,13 @@ struct RegAlloc {
 
 impl RegAlloc {
     fn alloc(&mut self, reg_id: RegId) -> RegId {
+        if reg_id < KNOWN_REG_NUM {
+            return reg_id;
+        }
         if let Some(&reg_id) = self.reg_map.get(&reg_id) {
             return reg_id;
         }
-        for i in 0..REG_NUM {
+        for i in KNOWN_REG_NUM..REG_NUM {
             if !self.used[i] {
                 self.reg_map.insert(reg_id, i);
                 self.used[i] = true;
@@ -21,6 +25,9 @@ impl RegAlloc {
     }
 
     fn kill(&mut self, reg_id: RegId) -> RegId {
+        if reg_id < KNOWN_REG_NUM {
+            return reg_id;
+        }
         let reg_id = self.alloc(reg_id);
         self.used[reg_id] = false;
         reg_id
@@ -29,25 +36,18 @@ impl RegAlloc {
     /// Verify all registers are killed.
     fn verify(&mut self) {
         for reg_id in KNOWN_REG_NUM..REG_NUM {
-            assert!(!self.used[reg_id]);
+            assert!(!self.used[reg_id], "reg_id = {}", reg_id);
         }
     }
 }
 
-fn alloc_regs_fun(fun: &mut Fun) {
+pub fn alloc_regs(inss: &mut Vec<Ins>) {
     let mut reg_alloc = RegAlloc {
         used: vec![false; REG_NUM],
         reg_map: BTreeMap::new(),
     };
 
-    // Allocate known regs.
-    // These register numbers must not change.
-    for reg_id in 0..KNOWN_REG_NUM {
-        let dest_reg_id = reg_alloc.alloc(reg_id);
-        assert_eq!(dest_reg_id, reg_id);
-    }
-
-    for ins in &mut fun.ins {
+    for ins in inss.iter_mut() {
         if let Op::Kill = ins.0 {
             ins.1 = reg_alloc.kill(ins.1);
             continue;
@@ -62,11 +62,5 @@ fn alloc_regs_fun(fun: &mut Fun) {
     reg_alloc.verify();
 
     // Remove NOP instructions.
-    fun.ins.retain(|ins| ins.0 != Op::Kill);
-}
-
-pub fn alloc_regs(p: &mut Mir) {
-    for fun in &mut p.funs {
-        alloc_regs_fun(fun);
-    }
+    inss.retain(|ins| ins.0 != Op::Kill);
 }

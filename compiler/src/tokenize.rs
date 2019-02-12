@@ -9,12 +9,12 @@ struct Tokenizer {
 }
 
 impl Tokenizer {
-    fn push(&mut self, token: Token, span: Span) {
+    fn add_token(&mut self, token: Token, span: Span) {
         self.tokens.push(token);
         self.token_spans.push(span);
     }
 
-    fn c(&self) -> u8 {
+    fn next_char(&self) -> u8 {
         if self.at_eof() {
             return 0;
         }
@@ -25,19 +25,19 @@ impl Tokenizer {
         self.current >= self.src.as_bytes().len()
     }
 
-    fn take<P: Fn(u8) -> bool>(&mut self, pred: P) -> Option<(String, Span)> {
+    fn read_while<P: Fn(u8) -> bool>(&mut self, pred: P) -> Option<(String, Span)> {
         let l = self.current;
-        if !pred(self.c()) {
+        if !pred(self.next_char()) {
             return None;
         }
-        while !self.at_eof() && pred(self.c()) {
+        while !self.at_eof() && pred(self.next_char()) {
             self.current += 1;
         }
         let r = self.current;
         Some((self.src[l..r].into(), (l, r)))
     }
 
-    fn expect(&mut self, prefix: &str) -> bool {
+    fn reads(&mut self, prefix: &str) -> bool {
         if self.src[self.current..].starts_with(prefix) {
             self.current += prefix.len();
             return true;
@@ -48,43 +48,43 @@ impl Tokenizer {
     pub fn tokenize(&mut self) {
         't: while self.current < self.src.len() {
             let l = self.current;
-            if self.expect("//") {
-                self.take(|c| c != b'\n');
+            if self.reads("//") {
+                self.read_while(|c| c != b'\n');
                 continue;
             }
-            if let Some(_) = self.take(is_whitespace) {
+            if let Some(_) = self.read_while(is_whitespace) {
                 continue;
             }
-            if let Some((word, span)) = self.take(is_ascii_digit) {
-                self.push(Token::Int(word.parse().unwrap_or(0)), span);
+            if let Some((word, span)) = self.read_while(is_ascii_digit) {
+                self.add_token(Token::Int(word.parse().unwrap_or(0)), span);
                 continue;
             }
-            if let Some((word, span)) = self.take(is_id_char) {
-                self.push(Token::Id(word.into()), span);
+            if let Some((word, span)) = self.read_while(is_id_char) {
+                self.add_token(Token::Id(word.into()), span);
                 continue;
             }
-            if self.c() == b'"' {
+            if self.next_char() == b'"' {
                 self.current += 1;
                 let p = |c: u8| c != b'"' && c != b'\n';
-                while p(self.c()) {
+                while p(self.next_char()) {
                     self.current += 1;
                 }
                 let r = self.current;
                 self.current += 1;
                 let word = self.src[l + 1..r].into();
-                self.push(Token::Str(word), (l, r + 1));
+                self.add_token(Token::Str(word), (l, r + 1));
                 continue;
             }
             for pun in PUNS {
-                if self.expect(pun) {
-                    self.push(Token::Pun(pun), (l, self.current));
+                if self.reads(pun) {
+                    self.add_token(Token::Pun(pun), (l, self.current));
                     continue 't;
                 }
             }
             self.current += 1;
-            self.push(Token::Err("?".into()), (l, self.current));
+            self.add_token(Token::Err("?".into()), (l, self.current));
         }
-        self.push(Token::Eof, (self.current, self.current));
+        self.add_token(Token::Eof, (self.current, self.current));
     }
 }
 

@@ -45,6 +45,21 @@ impl Tokenizer {
         false
     }
 
+    fn read_str(&mut self) {
+        assert_eq!(self.next_char(), b'"');
+
+        let l = self.current;
+        self.current += 1;
+        let p = |c: u8| c != b'"' && c != b'\n';
+        while p(self.next_char()) {
+            self.current += 1;
+        }
+        let r = self.current;
+        self.current += 1;
+        let word = self.src[l + 1..r].into();
+        self.add_token(Token::Str(word), (l, r + 1));
+    }
+
     pub fn tokenize(&mut self) {
         't: while self.current < self.src.len() {
             let l = self.current;
@@ -64,15 +79,7 @@ impl Tokenizer {
                 continue;
             }
             if self.next_char() == b'"' {
-                self.current += 1;
-                let p = |c: u8| c != b'"' && c != b'\n';
-                while p(self.next_char()) {
-                    self.current += 1;
-                }
-                let r = self.current;
-                self.current += 1;
-                let word = self.src[l + 1..r].into();
-                self.add_token(Token::Str(word), (l, r + 1));
+                self.read_str();
                 continue;
             }
             for pun in PUNS {

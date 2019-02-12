@@ -22,7 +22,7 @@ impl Tokenizer {
     }
 
     fn at_eof(&self) -> bool {
-        self.current >= self.src.as_bytes().len()
+        self.current >= self.src.len()
     }
 
     fn read_while<P: Fn(u8) -> bool>(&mut self, pred: P) -> Option<(String, Span)> {
@@ -61,7 +61,7 @@ impl Tokenizer {
     }
 
     pub fn tokenize(&mut self) {
-        't: while self.current < self.src.len() {
+        't: while !self.at_eof() {
             let l = self.current;
             if self.reads("//") {
                 self.read_while(|c| c != b'\n');

@@ -15,10 +15,14 @@ impl Tokenizer {
     }
 
     fn c(&self) -> u8 {
-        if self.current >= self.src.as_bytes().len() {
+        if self.at_eof() {
             return 0;
         }
         self.src.as_bytes()[self.current]
+    }
+
+    fn at_eof(&self) -> bool {
+        self.current >= self.src.as_bytes().len()
     }
 
     fn take<P: Fn(u8) -> bool>(&mut self, pred: P) -> Option<(String, Span)> {
@@ -26,7 +30,7 @@ impl Tokenizer {
         if !pred(self.c()) {
             return None;
         }
-        while pred(self.c()) {
+        while !self.at_eof() && pred(self.c()) {
             self.current += 1;
         }
         let r = self.current;
@@ -61,7 +65,7 @@ impl Tokenizer {
             }
             if self.c() == b'"' {
                 self.current += 1;
-                let p = |c: u8| c != b'"' && c != b'\n' && c != 0;
+                let p = |c: u8| c != b'"' && c != b'\n';
                 while p(self.c()) {
                     self.current += 1;
                 }

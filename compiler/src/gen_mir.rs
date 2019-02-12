@@ -3,34 +3,34 @@ use crate::*;
 use std::fmt::Write;
 
 #[derive(Clone, Copy, Debug)]
-pub enum Val {
+pub enum Value {
     None,
     Int(i64),
     Str(StrId),
     Reg(RegId),
-    Lab(LabId),
+    Label(LabelId),
 }
 
-pub type Ins = (Op, RegId, Val);
+pub type Ins = (Op, RegId, Value);
 
 #[derive(Clone, Default)]
 pub struct FunDef {
-    lab_id: LabId,
+    label_id: LabelId,
     ins: Vec<Ins>,
 }
 
 #[derive(Clone, Default)]
 pub struct Compiler {
-    pub toks: Vec<Tok>,
-    pub syns: Vec<Syn>,
+    pub tokens: Vec<Token>,
+    pub nodes: Vec<Node>,
     pub sema_vars: Vec<sema::VarDef>,
     pub sema_funs: Vec<sema::FunDef>,
     pub sema_exps: Vec<sema::Exp>,
     pub strs: Vec<String>,
     pub funs: Vec<FunDef>,
-    pub cur_fun_id: FunId,
-    pub reg_num: usize,
-    pub lab_num: usize,
+    pub current_fun_id: FunId,
+    pub reg_count: usize,
+    pub label_count: usize,
 }
 
 const PRIM_OP_2: &[(Prim, Op)] = &[
@@ -53,22 +53,22 @@ impl Compiler {
         &self.sema_exps[exp_id].children
     }
 
-    fn new_reg(&mut self) -> RegId {
-        self.reg_num += 1;
-        self.reg_num - 1
+    fn add_reg(&mut self) -> RegId {
+        self.reg_count += 1;
+        self.reg_count - 1
     }
 
-    fn new_lab(&mut self) -> LabId {
-        self.lab_num += 1;
-        self.lab_num - 1
+    fn add_label(&mut self) -> LabelId {
+        self.label_count += 1;
+        self.label_count - 1
     }
 
     fn kill(&mut self, reg_id: RegId) {
-        self.push(Op::Kill, reg_id, Val::None);
+        self.push(Op::Kill, reg_id, Value::None);
     }
 
-    fn push(&mut self, op: Op, l: RegId, r: Val) -> RegId {
-        self.funs[self.cur_fun_id].ins.push((op, l, r));
+    fn push(&mut self, op: Op, l: RegId, r: Value) -> RegId {
+        self.funs[self.current_fun_id].ins.push((op, l, r));
         l
     }
 
@@ -78,21 +78,21 @@ impl Compiler {
     }
 
     fn on_var(&mut self, var_id: VarId) -> RegId {
-        let r = self.new_reg();
+        let r = self.add_reg();
         let sema::VarDef { kind, index, .. } = &self.sema_vars[var_id];
         let index = *index as i64;
         match kind {
             sema::VarKind::Global | sema::VarKind::Local => {
                 // i-th local variable is located at (bp + i)
-                self.push(Op::Mov, r, Val::Reg(BASE_PTR_REG_ID));
-                self.push(Op::AddImm, r, Val::Int(index));
+                self.push(Op::Mov, r, Value::Reg(BASE_PTR_REG_ID));
+                self.push(Op::AddImm, r, Value::Int(index));
             }
             &sema::VarKind::Param(fun_id) => {
                 // i-th argument is located before bp in reversed order.
                 let arity = self.sema_funs[fun_id].arity() as i64;
                 let offset = index - arity;
-                self.push(Op::Mov, r, Val::Reg(BASE_PTR_REG_ID));
-                self.push(Op::AddImm, r, Val::Int(offset));
+                self.push(Op::Mov, r, Value::Reg(BASE_PTR_REG_ID));
+                self.push(Op::AddImm, r, Value::Int(offset));
             }
         };
         r
@@ -101,21 +101,21 @@ impl Compiler {
     fn on_exp_call(&mut self, fun_id: FunId, exp_id: ExpId) -> RegId {
         let children = self.exp_children(exp_id).to_owned();
         let fun = &self.funs[fun_id];
-        let fun_lab = fun.lab_id;
+        let fun_label = fun.label_id;
 
         // Push args to stack.
         for i in 0..children.len() {
             let r = self.on_exp(children[i]);
-            self.push(Op::Push, r, Val::None);
+            self.push(Op::Push, r, Value::None);
             self.kill(r);
         }
 
-        self.push(Op::Call, NO_REG_ID, Val::Lab(fun_lab));
+        self.push(Op::Call, NO_REG_ID, Value::Label(fun_label));
 
         // Pop args from stack.
-        let l = self.new_reg();
+        let l = self.add_reg();
         for _ in 0..children.len() {
-            self.push(Op::Pop, l, Val::None);
+            self.push(Op::Pop, l, Value::None);
         }
         self.kill(l);
 
@@ -130,7 +130,7 @@ impl Compiler {
             if PRIM_OP_2[i].0 == prim {
                 let l = self.on_exp(children[0]);
                 let r = self.on_exp(children[1]);
-                self.push(PRIM_OP_2[i].1, l, Val::Reg(r));
+                self.push(PRIM_OP_2[i].1, l, Value::Reg(r));
                 self.kill(r);
                 return l;
             }
@@ -147,58 +147,58 @@ impl Compiler {
                 l
             }
             Prim::Cond => {
-                let end_lab = Val::Lab(self.new_lab());
-                let end_reg = self.new_reg();
+                let end_label = Value::Label(self.add_label());
+                let end_reg = self.add_reg();
                 let mut i = 0;
                 while i < children.len() {
                     if i + 1 < children.len() {
                         // .. cond then_cl ..
-                        let else_lab = Val::Lab(self.new_lab());
+                        let else_label = Value::Label(self.add_label());
                         let cond = self.on_exp(children[i]);
                         // Unless cond is true, go to next clause.
-                        self.push(Op::Unless, cond, else_lab);
+                        self.push(Op::Unless, cond, else_label);
                         self.kill(cond);
                         // Evaluate the then clause.
-                        let then_cl = self.on_exp(children[i + 1]);
+                        let then_clause = self.on_exp(children[i + 1]);
                         // Set the result to the result register.
-                        self.push(Op::Mov, end_reg, Val::Reg(then_cl));
-                        self.kill(then_cl);
+                        self.push(Op::Mov, end_reg, Value::Reg(then_clause));
+                        self.kill(then_clause);
                         // Jump to the end of cond.
-                        self.push(Op::Jump, NO_REG_ID, end_lab);
+                        self.push(Op::Jump, NO_REG_ID, end_label);
                         // Come from the `unless`.
-                        self.push(Op::Label, NO_REG_ID, else_lab);
+                        self.push(Op::Label, NO_REG_ID, else_label);
                         i += 2;
                     } else {
-                        // .. else_cl
-                        let else_cl = self.on_exp(children[i]);
-                        self.push(Op::Mov, end_reg, Val::Reg(else_cl));
-                        self.kill(else_cl);
+                        // .. else_lase
+                        let else_clause = self.on_exp(children[i]);
+                        self.push(Op::Mov, end_reg, Value::Reg(else_clause));
+                        self.kill(else_clause);
                         i += 1;
                     }
                 }
-                self.push(Op::Label, NO_REG_ID, end_lab);
+                self.push(Op::Label, NO_REG_ID, end_label);
                 end_reg
             }
             Prim::While => {
-                let beg_lab = Val::Lab(self.new_lab());
-                let end_lab = Val::Lab(self.new_lab());
-                self.push(Op::Label, NO_REG_ID, beg_lab);
+                let beg_label = Value::Label(self.add_label());
+                let end_label = Value::Label(self.add_label());
+                self.push(Op::Label, NO_REG_ID, beg_label);
                 let cond = self.on_exp(children[0]);
                 // Unless cond is true, go to end.
-                self.push(Op::Unless, cond, end_lab);
+                self.push(Op::Unless, cond, end_label);
                 self.kill(cond);
                 // Evaluate the body.
                 let l = self.on_exp(children[1]);
                 self.kill(l);
                 // Jump to the begin label to continue.
-                self.push(Op::Jump, NO_REG_ID, beg_lab);
+                self.push(Op::Jump, NO_REG_ID, beg_label);
                 // Come on break.
-                self.push(Op::Label, NO_REG_ID, end_lab);
+                self.push(Op::Label, NO_REG_ID, end_label);
                 NO_REG_ID
             }
             Prim::ToStr => {
                 let l = self.on_exp(children[0]);
-                self.push(Op::ToStr, l, Val::None)
+                self.push(Op::ToStr, l, Value::None)
             }
             Prim::ReadInt | Prim::ReadStr => {
                 let op = if prim == Prim::ReadInt {
@@ -206,8 +206,8 @@ impl Compiler {
                 } else {
                     Op::ReadStr
                 };
-                let l = self.new_reg();
-                self.push(op, l, Val::None)
+                let l = self.add_reg();
+                self.push(op, l, Value::None)
             }
             Prim::Print | Prim::PrintLn => {
                 for i in 0..children.len() {
@@ -218,7 +218,7 @@ impl Compiler {
                         Op::Print
                     };
                     let l = self.on_exp(children[i]);
-                    self.push(op, l, Val::None);
+                    self.push(op, l, Value::None);
                     self.kill(l);
                 }
                 NO_REG_ID
@@ -232,18 +232,18 @@ impl Compiler {
             sema::ExpKind::Err(err) => panic!("{}", err),
             sema::ExpKind::None => NO_REG_ID,
             &sema::ExpKind::Int(value) => {
-                let l = self.new_reg();
-                self.push(Op::Imm, l, Val::Int(value))
+                let l = self.add_reg();
+                self.push(Op::Imm, l, Value::Int(value))
             }
             sema::ExpKind::Str(value) => {
                 let str_id = self.add_str(value.to_owned());
-                let l = self.new_reg();
-                self.push(Op::Imm, l, Val::Str(str_id))
+                let l = self.add_reg();
+                self.push(Op::Imm, l, Value::Str(str_id))
             }
             &sema::ExpKind::Var(var_id) => {
-                let l = self.new_reg();
+                let l = self.add_reg();
                 let r = self.on_var(var_id);
-                self.push(Op::Load, l, Val::Reg(r));
+                self.push(Op::Load, l, Value::Reg(r));
                 self.kill(r);
                 l
             }
@@ -253,7 +253,7 @@ impl Compiler {
                 let r = self.on_var(var_id);
                 let l = self.on_exp(self.exp_children(exp_id)[0]);
                 // Store the value of l to the position the register r refers to. It's absurd.
-                self.push(Op::Store, l, Val::Reg(r));
+                self.push(Op::Store, l, Value::Reg(r));
                 self.kill(r);
                 l
             }
@@ -262,13 +262,13 @@ impl Compiler {
 
     pub fn compile(mut self) -> String {
         // Allocate well-known registers.
-        self.reg_num += KNOWN_REG_NUM;
+        self.reg_count += KNOWN_REG_NUM;
 
         // Create function labels.
         for _ in 0..self.sema_funs.len() {
-            let lab_id = self.new_lab();
+            let label_id = self.add_label();
             let fun = FunDef {
-                lab_id,
+                label_id,
                 ins: vec![],
             };
             self.funs.push(fun);
@@ -277,19 +277,19 @@ impl Compiler {
 
         // Generate codes for each function.
         for fun_id in 0..self.funs.len() {
-            self.cur_fun_id = fun_id;
+            self.current_fun_id = fun_id;
 
-            self.push(Op::Label, 0, Val::Lab(self.funs[fun_id].lab_id));
+            self.push(Op::Label, 0, Value::Label(self.funs[fun_id].label_id));
 
             let last = self.on_exp(self.sema_funs[fun_id].body);
 
             if fun_id == GLOBAL_FUN_ID {
                 self.kill(last);
-                self.push(Op::Exit, NO_REG_ID, Val::None);
+                self.push(Op::Exit, NO_REG_ID, Value::None);
             } else {
-                self.push(Op::Mov, RET_REG_ID, Val::Reg(last));
+                self.push(Op::Mov, RET_REG_ID, Value::Reg(last));
                 self.kill(last);
-                self.push(Op::Ret, NO_REG_ID, Val::None);
+                self.push(Op::Ret, NO_REG_ID, Value::None);
             }
         }
 
@@ -305,17 +305,17 @@ impl Compiler {
         }
 
         // Build jump table.
-        let mut labels = vec![0; self.lab_num];
+        let mut labels = vec![0; self.label_count];
         for pc in 0..ins.len() {
-            if let (Op::Label, _, Val::Lab(r)) = ins[pc] {
+            if let (Op::Label, _, Value::Label(r)) = ins[pc] {
                 labels[r] = pc;
             }
         }
 
         // Replace label ids with pc.
         for i in 0..ins.len() {
-            if let Val::Lab(lab_id) = ins[i].2 {
-                ins[i].2 = Val::Int(labels[lab_id] as i64);
+            if let Value::Label(label_id) = ins[i].2 {
+                ins[i].2 = Value::Int(labels[label_id] as i64);
             }
         }
 
@@ -333,12 +333,12 @@ impl Compiler {
     }
 }
 
-impl Val {
+impl Value {
     fn to_i64(self) -> i64 {
         match self {
-            Val::None => 0,
-            Val::Int(value) => value,
-            Val::Reg(value) | Val::Lab(value) | Val::Str(value) => value as i64,
+            Value::None => 0,
+            Value::Int(value) => value,
+            Value::Reg(value) | Value::Label(value) | Value::Str(value) => value as i64,
         }
     }
 }

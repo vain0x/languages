@@ -1,4 +1,4 @@
-use crate::gen_mir::{Ins, Val};
+use crate::gen_mir::{Ins, Value};
 use crate::*;
 
 struct RegAlloc {
@@ -54,7 +54,7 @@ pub fn alloc_regs(inss: &mut Vec<Ins>) {
         }
 
         ins.1 = reg_alloc.alloc(ins.1);
-        if let Val::Reg(ref mut reg_id) = ins.2 {
+        if let Value::Reg(ref mut reg_id) = ins.2 {
             *reg_id = reg_alloc.alloc(*reg_id)
         }
     }

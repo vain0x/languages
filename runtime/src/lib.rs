@@ -58,7 +58,7 @@ define_op! {
 }
 
 pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
-    let mut ins = vec![];
+    let mut inss = vec![];
     let mut strs = vec![];
 
     // Parse.
@@ -83,7 +83,7 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
         let r = ops.next().and_then(|x| x.parse::<i64>().ok()).unwrap_or(0);
 
         let op = deserialize_op(op);
-        ins.push((op, l, r));
+        inss.push((op, l, r));
     }
 
     // Standard IO.
@@ -112,7 +112,7 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
     let mut pc = 0;
 
     loop {
-        let (op, l, r) = ins[pc];
+        let (op, l, r) = inss[pc];
         match op {
             Op::Imm => regs[l] = r,
             Op::AddImm => regs[l] += r,

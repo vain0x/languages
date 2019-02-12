@@ -3,47 +3,47 @@ use crate::*;
 #[derive(Default)]
 pub struct Tokenizer {
     pub src: String,
-    pub cur: usize,
-    pub toks: Vec<Tok>,
-    pub tok_ranges: Vec<Range>,
+    pub current: usize,
+    pub tokens: Vec<Token>,
+    pub token_spans: Vec<Span>,
 }
 
 impl Tokenizer {
-    fn push(&mut self, tok: Tok, range: Range) {
-        self.toks.push(tok);
-        self.tok_ranges.push(range);
+    fn push(&mut self, token: Token, span: Span) {
+        self.tokens.push(token);
+        self.token_spans.push(span);
     }
 
     fn c(&self) -> u8 {
-        if self.cur >= self.src.as_bytes().len() {
+        if self.current >= self.src.as_bytes().len() {
             return 0;
         }
-        self.src.as_bytes()[self.cur]
+        self.src.as_bytes()[self.current]
     }
 
-    fn take<P: Fn(u8) -> bool>(&mut self, pred: P) -> Option<(String, Range)> {
-        let l = self.cur;
+    fn take<P: Fn(u8) -> bool>(&mut self, pred: P) -> Option<(String, Span)> {
+        let l = self.current;
         if !pred(self.c()) {
             return None;
         }
         while pred(self.c()) {
-            self.cur += 1;
+            self.current += 1;
         }
-        let r = self.cur;
+        let r = self.current;
         Some((self.src[l..r].into(), (l, r)))
     }
 
     fn expect(&mut self, prefix: &str) -> bool {
-        if self.src[self.cur..].starts_with(prefix) {
-            self.cur += prefix.len();
+        if self.src[self.current..].starts_with(prefix) {
+            self.current += prefix.len();
             return true;
         }
         false
     }
 
     pub fn tokenize(&mut self) {
-        't: while self.cur < self.src.len() {
-            let l = self.cur;
+        't: while self.current < self.src.len() {
+            let l = self.current;
             if self.expect("//") {
                 self.take(|c| c != b'\n');
                 continue;
@@ -51,36 +51,36 @@ impl Tokenizer {
             if let Some(_) = self.take(is_whitespace) {
                 continue;
             }
-            if let Some((word, range)) = self.take(is_ascii_digit) {
-                self.push(Tok::Int(word.parse().unwrap_or(0)), range);
+            if let Some((word, span)) = self.take(is_ascii_digit) {
+                self.push(Token::Int(word.parse().unwrap_or(0)), span);
                 continue;
             }
-            if let Some((word, range)) = self.take(is_id_char) {
-                self.push(Tok::Id(word.into()), range);
+            if let Some((word, span)) = self.take(is_id_char) {
+                self.push(Token::Id(word.into()), span);
                 continue;
             }
             if self.c() == b'"' {
-                self.cur += 1;
+                self.current += 1;
                 let p = |c: u8| c != b'"' && c != b'\n' && c != 0;
                 while p(self.c()) {
-                    self.cur += 1;
+                    self.current += 1;
                 }
-                let r = self.cur;
-                self.cur += 1;
+                let r = self.current;
+                self.current += 1;
                 let word = self.src[l + 1..r].into();
-                self.push(Tok::Str(word), (l, r + 1));
+                self.push(Token::Str(word), (l, r + 1));
                 continue;
             }
             for pun in PUNS {
                 if self.expect(pun) {
-                    self.push(Tok::Pun(pun), (l, self.cur));
+                    self.push(Token::Pun(pun), (l, self.current));
                     continue 't;
                 }
             }
-            self.cur += 1;
-            self.push(Tok::Err("?".into()), (l, self.cur));
+            self.current += 1;
+            self.push(Token::Err("?".into()), (l, self.current));
         }
-        self.push(Tok::Eof, (self.cur, self.cur));
+        self.push(Token::Eof, (self.current, self.current));
     }
 }
 

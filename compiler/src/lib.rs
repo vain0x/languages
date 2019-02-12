@@ -66,7 +66,7 @@ pub enum PrimArity {
     Bin,
 }
 
-const EOF: &'static Tok = &Tok::Eof;
+const EOF: &'static Token = &Token::Eof;
 
 const GLOBAL_FUN_ID: FunId = 0;
 
@@ -78,18 +78,18 @@ const RET_REG_ID: RegId = 3;
 const KNOWN_REG_NUM: usize = 4;
 const REG_NUM: usize = 12;
 
-type TokId = usize;
-type Range = (usize, usize);
-type SynId = usize;
+type TokenId = usize;
+type Span = (usize, usize);
+type NodeId = usize;
 type ExpId = usize;
 type StrId = usize;
 type RegId = usize;
-type LabId = usize;
+type LabelId = usize;
 type VarId = usize;
 type FunId = usize;
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum Tok {
+pub enum Token {
     Err(String),
     Id(String),
     Int(i64),
@@ -98,36 +98,37 @@ pub enum Tok {
     Eof,
 }
 
+/// Node in concrete syntax tree.
 #[derive(Clone, PartialEq, Debug)]
-pub enum Syn {
-    Err(String, TokId),
-    Val(TokId),
-    App(Vec<SynId>),
+pub enum Node {
+    Err(String, TokenId),
+    Value(TokenId),
+    App(Vec<NodeId>),
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Syntax {
-    toks: Vec<Tok>,
-    syns: Vec<Syn>,
+    tokens: Vec<Token>,
+    nodes: Vec<Node>,
 }
 
 pub trait HaveSyntaxModel {
-    fn toks(&self) -> &[Tok];
-    fn syns(&self) -> &[Syn];
+    fn tokens(&self) -> &[Token];
+    fn nodes(&self) -> &[Node];
 
-    fn syn_as_id(&self, syn_id: SynId) -> Option<&str> {
-        match &self.syns()[syn_id] {
-            &Syn::Val(tok_id) => match &self.toks()[tok_id] {
-                Tok::Id(name) => Some(name),
+    fn node_as_ident(&self, node_id: NodeId) -> Option<&str> {
+        match &self.nodes()[node_id] {
+            &Node::Value(token_id) => match &self.tokens()[token_id] {
+                Token::Id(name) => Some(name),
                 _ => None,
             },
             _ => None,
         }
     }
 
-    fn syn_as_app(&self, syn_id: SynId) -> Option<&[SynId]> {
-        match &self.syns()[syn_id] {
-            Syn::App(syns) => Some(&syns),
+    fn node_as_app(&self, node_id: NodeId) -> Option<&[NodeId]> {
+        match &self.nodes()[node_id] {
+            Node::App(nodes) => Some(&nodes),
             _ => None,
         }
     }
@@ -138,30 +139,30 @@ pub fn compile(src: &str) -> String {
 
     let mut tokenizer = tokenize::Tokenizer {
         src: src.clone(),
-        toks: vec![],
-        tok_ranges: vec![],
-        cur: 0,
+        tokens: vec![],
+        token_spans: vec![],
+        current: 0,
     };
     tokenizer.tokenize();
-    let toks = tokenizer.toks;
+    let tokens = tokenizer.tokens;
 
-    let syns = parse::Parser {
-        toks: toks.clone(),
-        cur: 0,
-        syns: vec![],
+    let nodes = parse::Parser {
+        tokens: tokens.clone(),
+        current: 0,
+        nodes: vec![],
     }
     .parse();
 
     let mut sema = sema::Sema {
-        toks: toks.to_owned(),
-        syns: syns.to_owned(),
+        tokens: tokens.to_owned(),
+        nodes: nodes.to_owned(),
         ..sema::Sema::default()
     };
     sema.sema();
 
     gen_mir::Compiler {
-        toks: toks,
-        syns: syns,
+        tokens: tokens,
+        nodes: nodes,
         sema_vars: sema.vars,
         sema_funs: sema.funs,
         sema_exps: sema.exps,

@@ -1,14 +1,14 @@
 use crate::*;
 
 #[derive(Default)]
-struct Tokenizer {
-    src: String,
+struct Tokenizer<'a> {
+    src: &'a str,
     current: usize,
     tokens: Vec<Token>,
     token_spans: Vec<Span>,
 }
 
-impl Tokenizer {
+impl Tokenizer<'_> {
     fn add_token(&mut self, token: Token, span: Span) {
         self.tokens.push(token);
         self.token_spans.push(span);
@@ -108,7 +108,7 @@ fn is_whitespace(c: u8) -> bool {
     c == b' ' || c == b'\t' || c == b'\r' || c == b'\n'
 }
 
-pub fn tokenize(src: String) -> (Vec<Token>, Vec<Span>) {
+pub fn tokenize(src: &str) -> (Vec<Token>, Vec<Span>) {
     let mut tokenizer = Tokenizer {
         src,
         ..Tokenizer::default()

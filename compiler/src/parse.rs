@@ -3,8 +3,10 @@ use crate::*;
 #[derive(Default)]
 struct Parser<'a> {
     tokens: &'a [Token],
+    token_spans: &'a [Span],
     current: usize,
     nodes: Vec<Node>,
+    node_spans: Vec<Span>,
 }
 
 impl Parser<'_> {
@@ -29,13 +31,19 @@ impl Parser<'_> {
         }
     }
 
-    fn add_node(&mut self, node: Node) -> NodeId {
+    fn add_node(&mut self, node: Node, l: TokenId) -> NodeId {
+        assert!(l < self.current, "l={} r={}", l, self.current);
+        let span = (self.token_spans[l].0, self.token_spans[self.current - 1].1);
+
         let node_id = self.nodes.len();
         self.nodes.push(node);
+        self.node_spans.push(span);
         node_id
     }
 
     fn parse_node(&mut self) -> NodeId {
+        let l = self.current;
+
         if self.next_is_opening() {
             self.current += 1;
             let mut children = vec![];
@@ -45,17 +53,17 @@ impl Parser<'_> {
             if *self.next() != Token::Eof {
                 self.current += 1;
             }
-            return self.add_node(Node::App(children));
+            return self.add_node(Node::App(children), l);
         }
         if self.next_is_closing() {
             self.current += 1;
             let token_id = self.current;
-            return self.add_node(Node::Err("Unmatched bracket".into(), token_id));
+            return self.add_node(Node::Err("Unmatched bracket".into(), token_id), l);
         }
 
         let token_id = self.current;
         self.current += 1;
-        self.add_node(Node::Value(token_id))
+        self.add_node(Node::Value(token_id), l)
     }
 
     fn parse(&mut self) {
@@ -64,18 +72,23 @@ impl Parser<'_> {
 }
 
 pub fn parse(src: String) -> Syntax {
-    let (tokens, spans) = tokenize::tokenize(src);
+    let (tokens, token_spans) = tokenize::tokenize(&src);
 
-    let mut parser = Parser {
-        tokens: &tokens,
-        ..Parser::default()
+    let (nodes, node_spans) = {
+        let mut parser = Parser {
+            tokens: &tokens,
+            token_spans: &token_spans,
+            ..Parser::default()
+        };
+        parser.parse();
+        (parser.nodes, parser.node_spans)
     };
-    parser.parse();
 
-    let nodes = parser.nodes;
     Syntax {
+        src,
         tokens,
-        spans,
+        token_spans,
         nodes,
+        node_spans,
     }
 }

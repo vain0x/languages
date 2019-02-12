@@ -55,7 +55,7 @@ pub enum Prim {
 
 #[derive(Clone, Debug)]
 pub enum ExpKind {
-    Err(String),
+    Err(String, NodeId),
     None,
     Int(i64),
     Str(String),
@@ -123,8 +123,8 @@ trait AddExp {
         self.add_exp(kind, vec![])
     }
 
-    fn add_err(&mut self, message: String) -> ExpId {
-        self.add_exp(ExpKind::Err(message), vec![])
+    fn add_err(&mut self, message: String, node_id: NodeId) -> ExpId {
+        self.add_exp(ExpKind::Err(message, node_id), vec![])
     }
 }
 
@@ -238,9 +238,9 @@ impl SemanticAnalyzer {
         self.sema.add_local(self.current_fun_id, name)
     }
 
-    fn on_token(&mut self, token_id: TokenId) -> ExpId {
+    fn on_token(&mut self, token_id: TokenId, node_id: NodeId) -> ExpId {
         match &self.tokens()[token_id] {
-            Token::Err(err) => self.add_err(err.to_owned()),
+            Token::Err(err) => self.add_err(err.to_owned(), node_id),
             Token::Id(name) => {
                 if let Some(var_id) = self.find_var_id(name) {
                     self.add_term(ExpKind::Var(var_id))
@@ -249,7 +249,7 @@ impl SemanticAnalyzer {
                 } else if name == "false" {
                     self.add_term(ExpKind::Int(0))
                 } else {
-                    panic!("undefined variable {}", name)
+                    self.add_err("Undefined variable".into(), node_id)
                 }
             }
             &Token::Int(value) => self.add_term(ExpKind::Int(value)),
@@ -286,22 +286,29 @@ impl SemanticAnalyzer {
         self.current_fun_id = previous_fun_id;
     }
 
-    fn on_app(&mut self, name: &str, nodes: Vec<NodeId>) -> ExpId {
+    fn on_app(&mut self, node_id: NodeId, name: &str, nodes: Vec<NodeId>) -> ExpId {
         if name == "def" {
+            if nodes.len() != 2 {
+                return self.add_err("Expected 2 args".into(), node_id);
+            }
             let sig_nodes = match self.node_as_app(nodes[0]) {
+                None => return self.add_err("Expected a list".into(), nodes[0]),
+                Some(nodes) if nodes.len() == 0 => {
+                    return self.add_err("Expected a non-empty list".into(), nodes[0]);
+                }
                 Some(nodes) => nodes.to_owned(),
-                _ => panic!("first arg of def must be app"),
             };
             let name = match self.node_as_ident(sig_nodes[0]) {
+                None => return self.add_err("Expected an ident".into(), sig_nodes[0]),
                 Some(name) => name.to_owned(),
-                None => panic!("invalid token for fun name"),
             };
-            let params = (1..sig_nodes.len())
-                .map(|i| match self.node_as_ident(sig_nodes[i]) {
+            let mut params = vec![];
+            for i in 1..sig_nodes.len() {
+                params.push(match self.node_as_ident(sig_nodes[i]) {
+                    None => return self.add_err("Expected an ident".into(), sig_nodes[i]),
                     Some(name) => name.to_owned(),
-                    None => panic!("invalid token for param name"),
-                })
-                .collect::<Vec<_>>();
+                });
+            }
 
             self.add_fun(name, params, nodes[1]);
 
@@ -309,9 +316,12 @@ impl SemanticAnalyzer {
         }
 
         if name == "let" {
+            if nodes.len() != 2 {
+                return self.add_err("Expected 2 args".into(), node_id);
+            }
             let name = match &self.node_as_ident(nodes[0]) {
+                None => return self.add_err("Expected an ident".into(), nodes[0]),
                 &Some(name) => name.to_owned(),
-                None => panic!("expected name as first argument of let"),
             };
             let r = self.on_node(nodes[1]);
             let var_id = self.add_local(name);
@@ -319,13 +329,15 @@ impl SemanticAnalyzer {
         }
 
         if name == "set" {
+            if nodes.len() != 2 {
+                return self.add_err("Expected 2 args".into(), node_id);
+            }
             let var_id = match self
                 .node_as_ident(nodes[0])
-                .map(|name| (name, self.find_var_id(name)))
+                .and_then(|name| self.find_var_id(name))
             {
-                Some((_, Some(var_id))) => var_id,
-                Some((name, None)) => return self.add_err(format!("Undefined variable {}", name)),
-                None => return self.add_err("First arg of set must be a variable".into()),
+                None => return self.add_err("Undefined variable".into(), nodes[0]),
+                Some(var_id) => var_id,
             };
             let r = self.on_node(nodes[1]);
             return self.add_exp(ExpKind::Set(var_id), vec![r]);
@@ -339,7 +351,7 @@ impl SemanticAnalyzer {
             let fun_ref = FunRef::Prim(PRIMS[i].1);
             match PRIMS[i].2 {
                 PrimArity::Bin if nodes.len() == 0 => {
-                    return self.add_err("Expected 1+ arguments".into());
+                    return self.add_err("Expected 1+ args".into(), nodes[0]);
                 }
                 PrimArity::Bin => {
                     let mut l = self.on_node(nodes[0]);
@@ -351,7 +363,7 @@ impl SemanticAnalyzer {
                     return l;
                 }
                 PrimArity::Fixed(arity) if nodes.len() != arity => {
-                    return self.add_err(format!("Expected {} arguments", arity));
+                    return self.add_err(format!("Expected {} args", arity), node_id);
                 }
                 PrimArity::Fixed(_) | PrimArity::Infinite => {
                     let children = self.on_children(&nodes);
@@ -362,7 +374,7 @@ impl SemanticAnalyzer {
 
         let fun_ref = match self.find_fun_id(name) {
             Some(fun_id) => FunRef::Fun(fun_id),
-            None => panic!("Unknown function name {}", name),
+            None => return self.add_err("Undefined function".into(), node_id),
         };
 
         let children = self.on_children(&nodes);
@@ -371,14 +383,19 @@ impl SemanticAnalyzer {
 
     fn on_node(&mut self, node_id: NodeId) -> ExpId {
         match &self.nodes()[node_id] {
-            Node::Err(err, _) => self.add_err(err.to_owned()),
-            &Node::Value(token_id) => self.on_token(token_id),
+            Node::Err(err, _) => self.add_err(err.to_owned(), node_id),
+            &Node::Value(token_id) => self.on_token(token_id, node_id),
+            Node::App(nodes) if nodes.len() == 0 => {
+                self.add_err("Expected a non-empty list".into(), node_id)
+            }
             Node::App(nodes) => match &self.nodes()[nodes[0]] {
                 &Node::Value(token_id) => match &self.tokens()[token_id] {
-                    Token::Id(head) => self.on_app(&head.to_owned(), nodes[1..].to_owned()),
-                    token => panic!("{:?} callee must be identifier", &token),
+                    Token::Id(head) => {
+                        self.on_app(nodes[0], &head.to_owned(), nodes[1..].to_owned())
+                    }
+                    _ => self.add_err("Expected an ident".into(), nodes[0]),
                 },
-                node => panic!("callee must be identifier {:?}", node),
+                _ => self.add_err("Expected an ident".into(), nodes[0]),
             },
         }
     }

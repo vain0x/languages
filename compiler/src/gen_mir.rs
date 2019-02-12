@@ -26,6 +26,7 @@ pub struct Mir {
     pub funs: Vec<FunDef>,
     pub reg_count: usize,
     pub label_count: usize,
+    pub msgs: Vec<Msg>,
 }
 
 struct Compiler {
@@ -85,6 +86,11 @@ impl Compiler {
     fn add_str(&mut self, value: String) -> usize {
         self.mir.strs.push(value.to_owned());
         self.mir.strs.len() - 1
+    }
+
+    fn add_err(&mut self, message: String, node_id: NodeId) -> RegId {
+        self.mir.msgs.push(Msg::err(message, node_id));
+        self.push(Op::Exit, NO_REG_ID, Value::None)
     }
 
     fn on_var(&mut self, var_id: VarId) -> RegId {
@@ -239,7 +245,7 @@ impl Compiler {
 
     fn on_exp(&mut self, exp_id: ExpId) -> RegId {
         match &self.mir.sema.exps[exp_id].kind {
-            sema::ExpKind::Err(err) => panic!("{}", err),
+            sema::ExpKind::Err(err, node_id) => self.add_err(err.to_owned(), *node_id),
             sema::ExpKind::None => NO_REG_ID,
             &sema::ExpKind::Int(value) => {
                 let l = self.add_reg();
@@ -270,7 +276,7 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&mut self) -> String {
+    pub fn compile(&mut self) -> (bool, String, String) {
         // Allocate well-known registers.
         self.mir.reg_count += KNOWN_REG_NUM;
 
@@ -339,7 +345,25 @@ impl Compiler {
             writeln!(buffer, "    {} {} {}", op, l, r.to_i64()).unwrap();
         }
 
-        buffer
+        // Emit compile errors.
+        let mut success = true;
+        let mut errors = String::new();
+        for msg in &self.mir.msgs {
+            let ((ly, lx), (ry, rx)) = self.mir.sema.syntax.locate_node(msg.node_id);
+            writeln!(
+                errors,
+                "At {}:{}..{}:{} {}",
+                1 + ly,
+                1 + lx,
+                1 + ry,
+                1 + rx,
+                msg.message
+            )
+            .unwrap();
+            success = success && msg.level != MsgLevel::Err;
+        }
+
+        (success, buffer, errors)
     }
 }
 
@@ -353,7 +377,7 @@ impl Value {
     }
 }
 
-pub fn gen_mir(sema: Rc<Sema>) -> String {
+pub fn gen_mir(sema: Rc<Sema>) -> (bool, String, String) {
     let mut compiler = Compiler {
         mir: Mir {
             sema,
@@ -361,6 +385,7 @@ pub fn gen_mir(sema: Rc<Sema>) -> String {
             strs: vec![],
             reg_count: 0,
             label_count: 0,
+            msgs: vec![],
         },
         current_fun_id: GLOBAL_FUN_ID,
     };

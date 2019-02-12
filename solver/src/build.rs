@@ -42,14 +42,15 @@ fn main() {
     let picomet_contents = read_to_string(&picomet_path);
     let current_contents = read_to_string(&out_path);
 
-    // FIXME: It should not panic on compile error.
-    let ir_contents =
-        std::panic::catch_unwind(|| picomet_lang_compiler::compile(&picomet_contents))
-            .unwrap_or("  Exit 0 0".to_owned());
+    let (success, ir_contents, stderr) = picomet_lang_compiler::compile(&picomet_contents);
 
-    let out_contents = TEMPLATE
+    let out_contents = if success {
+        TEMPLATE
         .replace("${IR_CONTENTS}", &ir_contents)
-        .replace("${RUNTIME_CONTENTS}", &runtime_contents);
+        .replace("${RUNTIME_CONTENTS}", &runtime_contents)
+    } else {
+        TEMPLATE.replace("${RUNTIME_CONTENTS}", &stderr)
+    };
 
     if current_contents != out_contents {
         let mut file = fs::File::create(out_path).unwrap();

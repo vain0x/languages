@@ -4,18 +4,25 @@ extern crate picomet_lang_compiler;
 extern crate picomet_lang_runtime;
 
 use std::io;
-use std::io::Write;
 
 fn eval(src: &str, stdin: &str) -> String {
-    let program = picomet_lang_compiler::compile(src);
+    let (success, program, stderr) = picomet_lang_compiler::compile(src);
+    if !stderr.is_empty() {
+        eprintln!("{}", stderr);
+    }
+    assert!(success, "src={} stdin={} program={}", src, stdin, program);
+
     let mut stdout = Vec::new();
     picomet_lang_runtime::eval(&program, io::Cursor::new(stdin), &mut stdout);
     String::from_utf8(stdout).unwrap()
 }
 
 fn eval_tests(src: &str, ios: &[(&str, &str)]) {
-    let program = picomet_lang_compiler::compile(src);
-    writeln!(std::io::stderr(), "{}", program).unwrap();
+    let (success, program, stderr) = picomet_lang_compiler::compile(src);
+    if !stderr.is_empty() {
+        eprintln!("{}", stderr);
+    }
+    assert!(success, "src={} program={}", src, program);
 
     for &(input, expected) in ios {
         let mut stdout = Vec::new();

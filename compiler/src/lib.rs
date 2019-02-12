@@ -81,6 +81,8 @@ const REG_NUM: usize = 12;
 
 type TokenId = usize;
 type Span = (usize, usize);
+type Pos = (usize, usize);
+type Range = (Pos, Pos);
 type NodeId = usize;
 type ExpId = usize;
 type StrId = usize;
@@ -109,12 +111,59 @@ pub enum Node {
 
 #[derive(Clone, Debug, Default)]
 pub struct Syntax {
+    src: String,
     tokens: Vec<Token>,
-    spans: Vec<Span>,
+    token_spans: Vec<Span>,
     nodes: Vec<Node>,
+    node_spans: Vec<Span>,
 }
 
-pub fn compile(src: &str) -> String {
+#[derive(Clone, Debug)]
+pub struct Msg {
+    level: MsgLevel,
+    message: String,
+    node_id: NodeId,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum MsgLevel {
+    Err,
+}
+
+impl Msg {
+    pub fn err(message: String, node_id: NodeId) -> Self {
+        Msg {
+            level: MsgLevel::Err,
+            message,
+            node_id,
+        }
+    }
+}
+
+impl Syntax {
+    fn locate(&self, x: usize) -> Pos {
+        let mut line = 0;
+        let mut column = 0;
+        for &c in &self.src.as_bytes()[0..x] {
+            if c == b'\n' {
+                line += 1;
+                column = 0;
+            } else {
+                column += 1;
+            }
+        }
+        (line, column)
+    }
+
+    pub fn locate_node(&self, node_id: NodeId) -> Range {
+        let (l, r) = self.node_spans[node_id];
+        let l_pos = self.locate(l);
+        let r_pos = self.locate(r);
+        (l_pos, r_pos)
+    }
+}
+
+pub fn compile(src: &str) -> (bool, String, String) {
     let src = src.to_owned();
     let syntax = Rc::new(parse::parse(src));
     let sema = Rc::new(sema::sema(syntax));

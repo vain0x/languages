@@ -1,13 +1,13 @@
 use crate::*;
 
 #[derive(Default)]
-pub struct Parser {
-    pub tokens: Vec<Token>,
-    pub current: usize,
-    pub nodes: Vec<Node>,
+struct Parser<'a> {
+    tokens: &'a [Token],
+    current: usize,
+    nodes: Vec<Node>,
 }
 
-impl Parser {
+impl Parser<'_> {
     fn next(&self) -> &Token {
         if self.current >= self.tokens.len() {
             return EOF;
@@ -58,8 +58,24 @@ impl Parser {
         self.add_node(Node::Value(token_id))
     }
 
-    pub fn parse(mut self) -> Vec<Node> {
+    fn parse(&mut self) {
         self.parse_node();
-        self.nodes
+    }
+}
+
+pub fn parse(src: String) -> Syntax {
+    let (tokens, spans) = tokenize::tokenize(src);
+
+    let mut parser = Parser {
+        tokens: &tokens,
+        ..Parser::default()
+    };
+    parser.parse();
+
+    let nodes = parser.nodes;
+    Syntax {
+        tokens,
+        spans,
+        nodes,
     }
 }

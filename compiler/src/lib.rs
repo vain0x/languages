@@ -5,6 +5,7 @@ pub mod sema;
 pub mod tokenize;
 
 use std::collections::BTreeMap;
+use std::rc::Rc;
 use std::str;
 
 macro_rules! define_op {
@@ -109,64 +110,13 @@ pub enum Node {
 #[derive(Clone, Debug, Default)]
 pub struct Syntax {
     tokens: Vec<Token>,
+    spans: Vec<Span>,
     nodes: Vec<Node>,
-}
-
-pub trait HaveSyntaxModel {
-    fn tokens(&self) -> &[Token];
-    fn nodes(&self) -> &[Node];
-
-    fn node_as_ident(&self, node_id: NodeId) -> Option<&str> {
-        match &self.nodes()[node_id] {
-            &Node::Value(token_id) => match &self.tokens()[token_id] {
-                Token::Id(name) => Some(name),
-                _ => None,
-            },
-            _ => None,
-        }
-    }
-
-    fn node_as_app(&self, node_id: NodeId) -> Option<&[NodeId]> {
-        match &self.nodes()[node_id] {
-            Node::App(nodes) => Some(&nodes),
-            _ => None,
-        }
-    }
 }
 
 pub fn compile(src: &str) -> String {
     let src = src.to_owned();
-
-    let mut tokenizer = tokenize::Tokenizer {
-        src: src.clone(),
-        tokens: vec![],
-        token_spans: vec![],
-        current: 0,
-    };
-    tokenizer.tokenize();
-    let tokens = tokenizer.tokens;
-
-    let nodes = parse::Parser {
-        tokens: tokens.clone(),
-        current: 0,
-        nodes: vec![],
-    }
-    .parse();
-
-    let mut sema = sema::Sema {
-        tokens: tokens.to_owned(),
-        nodes: nodes.to_owned(),
-        ..sema::Sema::default()
-    };
-    sema.sema();
-
-    gen_mir::Compiler {
-        tokens: tokens,
-        nodes: nodes,
-        sema_vars: sema.vars,
-        sema_funs: sema.funs,
-        sema_exps: sema.exps,
-        ..gen_mir::Compiler::default()
-    }
-    .compile()
+    let syntax = Rc::new(parse::parse(src));
+    let sema = Rc::new(sema::sema(syntax));
+    gen_mir::gen_mir(sema)
 }

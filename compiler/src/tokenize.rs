@@ -1,11 +1,11 @@
 use crate::*;
 
 #[derive(Default)]
-pub struct Tokenizer {
-    pub src: String,
-    pub current: usize,
-    pub tokens: Vec<Token>,
-    pub token_spans: Vec<Span>,
+struct Tokenizer {
+    src: String,
+    current: usize,
+    tokens: Vec<Token>,
+    token_spans: Vec<Span>,
 }
 
 impl Tokenizer {
@@ -95,4 +95,13 @@ fn is_id_char(c: u8) -> bool {
 
 fn is_whitespace(c: u8) -> bool {
     c == b' ' || c == b'\t' || c == b'\r' || c == b'\n'
+}
+
+pub fn tokenize(src: String) -> (Vec<Token>, Vec<Span>) {
+    let mut tokenizer = Tokenizer {
+        src,
+        ..Tokenizer::default()
+    };
+    tokenizer.tokenize();
+    (tokenizer.tokens, tokenizer.token_spans)
 }

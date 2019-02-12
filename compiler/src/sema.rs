@@ -1,4 +1,5 @@
 use crate::*;
+use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub struct VarDef {
@@ -69,14 +70,16 @@ pub struct Exp {
     pub children: Vec<ExpId>,
 }
 
-#[derive(Clone, Default)]
 pub struct Sema {
-    pub tokens: Vec<Token>,
-    pub nodes: Vec<Node>,
+    pub syntax: Rc<Syntax>,
     pub vars: Vec<VarDef>,
     pub funs: Vec<FunDef>,
     pub exps: Vec<Exp>,
-    pub current_fun_id: FunId,
+}
+
+struct SemanticAnalyzer {
+    sema: Sema,
+    current_fun_id: FunId,
 }
 
 const PRIMS: &'static [(&'static str, Prim, PrimArity)] = &[
@@ -102,59 +105,72 @@ const PRIMS: &'static [(&'static str, Prim, PrimArity)] = &[
     ("while", Prim::While, PrimArity::Fixed(2)),
 ];
 
-impl HaveSyntaxModel for Sema {
-    fn tokens(&self) -> &[Token] {
-        &self.tokens
-    }
-
-    fn nodes(&self) -> &[Node] {
-        &self.nodes
-    }
-}
-
 impl FunDef {
     pub fn arity(&self) -> usize {
         self.params.len()
     }
 }
 
+trait AddExp {
+    fn exps_mut(&mut self) -> &mut Vec<Exp>;
+
+    fn add_exp(&mut self, kind: ExpKind, children: Vec<ExpId>) -> ExpId {
+        self.exps_mut().push(Exp { kind, children });
+        self.exps_mut().len() - 1
+    }
+
+    fn add_term(&mut self, kind: ExpKind) -> ExpId {
+        self.add_exp(kind, vec![])
+    }
+
+    fn add_err(&mut self, message: String) -> ExpId {
+        self.add_exp(ExpKind::Err(message), vec![])
+    }
+}
+
+impl AddExp for Sema {
+    fn exps_mut(&mut self) -> &mut Vec<Exp> {
+        &mut self.exps
+    }
+}
+
+impl AddExp for SemanticAnalyzer {
+    fn exps_mut(&mut self) -> &mut Vec<Exp> {
+        &mut self.sema.exps
+    }
+}
+
 impl Sema {
-    fn add_param(&mut self, name: String) {
-        let fun = &mut self.funs[self.current_fun_id];
-        let index = fun.params.len();
+    fn add_param(&mut self, fun_id: FunId, name: String) {
+        let index = self.funs[fun_id].params.len();
         let var_id = self.vars.len();
 
         self.vars.push(VarDef {
-            name: name.clone(),
+            name,
             index,
-            kind: VarKind::Param(self.current_fun_id),
+            kind: VarKind::Param(fun_id),
         });
 
-        fun.params.push(var_id);
+        self.funs[fun_id].params.push(var_id);
     }
 
-    fn add_local(&mut self, name: String) -> VarId {
-        let fun = &mut self.funs[self.current_fun_id];
-        let kind = if self.current_fun_id == GLOBAL_FUN_ID {
+    fn add_local(&mut self, fun_id: FunId, name: String) -> VarId {
+        let kind = if fun_id == GLOBAL_FUN_ID {
             VarKind::Global
         } else {
             VarKind::Local
         };
-        let index = fun.locals.len();
+        let index = self.funs[fun_id].locals.len();
         let var_id = self.vars.len();
 
-        self.vars.push(VarDef {
-            name: name.clone(),
-            index,
-            kind,
-        });
-        fun.locals.push(var_id);
+        self.vars.push(VarDef { name, index, kind });
+        self.funs[fun_id].locals.push(var_id);
 
         var_id
     }
 
-    fn find_var_id(&self, name: &str) -> Option<VarId> {
-        for &fun_id in &[self.current_fun_id, GLOBAL_FUN_ID] {
+    fn find_var_id(&self, fun_id: FunId, name: &str) -> Option<VarId> {
+        for &fun_id in &[fun_id, GLOBAL_FUN_ID] {
             for &var_id in self.funs[fun_id].locals.iter().rev() {
                 if self.vars[var_id].name == name {
                     return Some(var_id);
@@ -178,22 +194,52 @@ impl Sema {
         }
         None
     }
+}
 
-    fn add_exp(&mut self, kind: ExpKind, children: Vec<ExpId>) -> ExpId {
-        self.exps.push(Exp { kind, children });
-        self.exps.len() - 1
+impl SemanticAnalyzer {
+    fn tokens(&self) -> &[Token] {
+        &self.sema.syntax.tokens
     }
 
-    fn add_term(&mut self, kind: ExpKind) -> ExpId {
-        self.add_exp(kind, vec![])
+    fn nodes(&self) -> &[Node] {
+        &self.sema.syntax.nodes
     }
 
-    fn add_err(&mut self, message: String) -> ExpId {
-        self.add_exp(ExpKind::Err(message), vec![])
+    fn node_as_ident(&self, node_id: NodeId) -> Option<&str> {
+        match &self.nodes()[node_id] {
+            &Node::Value(token_id) => match &self.tokens()[token_id] {
+                Token::Id(name) => Some(name),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    fn node_as_app(&self, node_id: NodeId) -> Option<&[NodeId]> {
+        match &self.nodes()[node_id] {
+            Node::App(nodes) => Some(&nodes),
+            _ => None,
+        }
+    }
+
+    fn find_var_id(&self, name: &str) -> Option<VarId> {
+        self.sema.find_var_id(self.current_fun_id, name)
+    }
+
+    fn find_fun_id(&self, name: &str) -> Option<FunId> {
+        self.sema.find_fun_id(name)
+    }
+
+    fn add_param(&mut self, name: String) {
+        self.sema.add_param(self.current_fun_id, name);
+    }
+
+    fn add_local(&mut self, name: String) -> VarId {
+        self.sema.add_local(self.current_fun_id, name)
     }
 
     fn on_token(&mut self, token_id: TokenId) -> ExpId {
-        match &self.tokens[token_id] {
+        match &self.tokens()[token_id] {
             Token::Err(err) => self.add_err(err.to_owned()),
             Token::Id(name) => {
                 if let Some(var_id) = self.find_var_id(name) {
@@ -220,6 +266,26 @@ impl Sema {
         children
     }
 
+    fn add_fun(&mut self, name: String, params: Vec<String>, body: NodeId) {
+        let previous_fun_id = self.current_fun_id;
+
+        self.sema.funs.push(FunDef {
+            name: name,
+            ..FunDef::default()
+        });
+        self.current_fun_id = self.sema.funs.len() - 1;
+
+        for name in params {
+            self.add_param(name);
+        }
+
+        let body = self.on_node(body);
+
+        self.sema.funs[self.current_fun_id].body = body;
+
+        self.current_fun_id = previous_fun_id;
+    }
+
     fn on_app(&mut self, name: &str, nodes: Vec<NodeId>) -> ExpId {
         if name == "def" {
             let sig_nodes = match self.node_as_app(nodes[0]) {
@@ -230,26 +296,15 @@ impl Sema {
                 Some(name) => name.to_owned(),
                 None => panic!("invalid token for fun name"),
             };
-
-            let current_fun_id = self.current_fun_id;
-            self.funs.push(FunDef {
-                name: name,
-                ..FunDef::default()
-            });
-            self.current_fun_id = self.funs.len() - 1;
-
-            for i in 1..sig_nodes.len() {
-                let name = match self.node_as_ident(sig_nodes[i]) {
+            let params = (1..sig_nodes.len())
+                .map(|i| match self.node_as_ident(sig_nodes[i]) {
                     Some(name) => name.to_owned(),
                     None => panic!("invalid token for param name"),
-                };
-                self.add_param(name);
-            }
+                })
+                .collect::<Vec<_>>();
 
-            let body = self.on_node(nodes[1]);
+            self.add_fun(name, params, nodes[1]);
 
-            self.funs[self.current_fun_id].body = body;
-            self.current_fun_id = current_fun_id;
             return self.add_term(ExpKind::None);
         }
 
@@ -315,11 +370,11 @@ impl Sema {
     }
 
     fn on_node(&mut self, node_id: NodeId) -> ExpId {
-        match &self.nodes[node_id] {
+        match &self.nodes()[node_id] {
             Node::Err(err, _) => self.add_err(err.to_owned()),
             &Node::Value(token_id) => self.on_token(token_id),
-            Node::App(nodes) => match &self.nodes[nodes[0]] {
-                &Node::Value(token_id) => match &self.tokens[token_id] {
+            Node::App(nodes) => match &self.nodes()[nodes[0]] {
+                &Node::Value(token_id) => match &self.tokens()[token_id] {
                     Token::Id(head) => self.on_app(&head.to_owned(), nodes[1..].to_owned()),
                     token => panic!("{:?} callee must be identifier", &token),
                 },
@@ -329,16 +384,21 @@ impl Sema {
     }
 
     pub fn sema(&mut self) {
-        let entry_syn_id = self.nodes.len() - 1;
-
-        // Entry function.
-        self.funs.push(FunDef {
-            name: "main".into(),
-            ..FunDef::default()
-        });
-
-        let body = self.on_node(entry_syn_id);
-
-        self.funs[GLOBAL_FUN_ID].body = body;
+        let entry_syn_id = self.nodes().len() - 1;
+        self.add_fun("main".to_owned(), vec![], entry_syn_id);
     }
+}
+
+pub fn sema(syntax: Rc<Syntax>) -> Sema {
+    let mut analyzer = SemanticAnalyzer {
+        sema: Sema {
+            syntax,
+            vars: vec![],
+            funs: vec![],
+            exps: vec![],
+        },
+        current_fun_id: GLOBAL_FUN_ID,
+    };
+    analyzer.sema();
+    analyzer.sema
 }

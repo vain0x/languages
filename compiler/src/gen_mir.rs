@@ -1,4 +1,5 @@
 use crate::sema::Prim;
+use crate::sema::Sema;
 use crate::*;
 use std::fmt::Write;
 
@@ -19,18 +20,17 @@ pub struct FunDef {
     ins: Vec<Ins>,
 }
 
-#[derive(Clone, Default)]
-pub struct Compiler {
-    pub tokens: Vec<Token>,
-    pub nodes: Vec<Node>,
-    pub sema_vars: Vec<sema::VarDef>,
-    pub sema_funs: Vec<sema::FunDef>,
-    pub sema_exps: Vec<sema::Exp>,
+pub struct Mir {
+    pub sema: Rc<Sema>,
     pub strs: Vec<String>,
     pub funs: Vec<FunDef>,
-    pub current_fun_id: FunId,
     pub reg_count: usize,
     pub label_count: usize,
+}
+
+struct Compiler {
+    mir: Mir,
+    current_fun_id: FunId,
 }
 
 const PRIM_OP_2: &[(Prim, Op)] = &[
@@ -48,11 +48,7 @@ const PRIM_OP_2: &[(Prim, Op)] = &[
     (Prim::AddStr, Op::StrCat),
 ];
 
-impl Compiler {
-    fn exp_children(&self, exp_id: ExpId) -> &[ExpId] {
-        &self.sema_exps[exp_id].children
-    }
-
+impl Mir {
     fn add_reg(&mut self) -> RegId {
         self.reg_count += 1;
         self.reg_count - 1
@@ -62,24 +58,38 @@ impl Compiler {
         self.label_count += 1;
         self.label_count - 1
     }
+}
+
+impl Compiler {
+    fn exp_children(&self, exp_id: ExpId) -> &[ExpId] {
+        &self.mir.sema.exps[exp_id].children
+    }
+
+    fn add_reg(&mut self) -> RegId {
+        self.mir.add_reg()
+    }
+
+    fn add_label(&mut self) -> LabelId {
+        self.mir.add_label()
+    }
 
     fn kill(&mut self, reg_id: RegId) {
         self.push(Op::Kill, reg_id, Value::None);
     }
 
     fn push(&mut self, op: Op, l: RegId, r: Value) -> RegId {
-        self.funs[self.current_fun_id].ins.push((op, l, r));
+        self.mir.funs[self.current_fun_id].ins.push((op, l, r));
         l
     }
 
     fn add_str(&mut self, value: String) -> usize {
-        self.strs.push(value.to_owned());
-        self.strs.len() - 1
+        self.mir.strs.push(value.to_owned());
+        self.mir.strs.len() - 1
     }
 
     fn on_var(&mut self, var_id: VarId) -> RegId {
         let r = self.add_reg();
-        let sema::VarDef { kind, index, .. } = &self.sema_vars[var_id];
+        let sema::VarDef { kind, index, .. } = &self.mir.sema.vars[var_id];
         let index = *index as i64;
         match kind {
             sema::VarKind::Global | sema::VarKind::Local => {
@@ -89,7 +99,7 @@ impl Compiler {
             }
             &sema::VarKind::Param(fun_id) => {
                 // i-th argument is located before bp in reversed order.
-                let arity = self.sema_funs[fun_id].arity() as i64;
+                let arity = self.mir.sema.funs[fun_id].arity() as i64;
                 let offset = index - arity;
                 self.push(Op::Mov, r, Value::Reg(BASE_PTR_REG_ID));
                 self.push(Op::AddImm, r, Value::Int(offset));
@@ -100,7 +110,7 @@ impl Compiler {
 
     fn on_exp_call(&mut self, fun_id: FunId, exp_id: ExpId) -> RegId {
         let children = self.exp_children(exp_id).to_owned();
-        let fun = &self.funs[fun_id];
+        let fun = &self.mir.funs[fun_id];
         let fun_label = fun.label_id;
 
         // Push args to stack.
@@ -228,7 +238,7 @@ impl Compiler {
     }
 
     fn on_exp(&mut self, exp_id: ExpId) -> RegId {
-        match &self.sema_exps[exp_id].kind {
+        match &self.mir.sema.exps[exp_id].kind {
             sema::ExpKind::Err(err) => panic!("{}", err),
             sema::ExpKind::None => NO_REG_ID,
             &sema::ExpKind::Int(value) => {
@@ -260,28 +270,28 @@ impl Compiler {
         }
     }
 
-    pub fn compile(mut self) -> String {
+    pub fn compile(&mut self) -> String {
         // Allocate well-known registers.
-        self.reg_count += KNOWN_REG_NUM;
+        self.mir.reg_count += KNOWN_REG_NUM;
 
         // Create function labels.
-        for _ in 0..self.sema_funs.len() {
+        for _ in 0..self.mir.sema.funs.len() {
             let label_id = self.add_label();
             let fun = FunDef {
                 label_id,
                 ins: vec![],
             };
-            self.funs.push(fun);
+            self.mir.funs.push(fun);
         }
-        assert_eq!(self.funs.len(), self.sema_funs.len());
+        assert_eq!(self.mir.funs.len(), self.mir.sema.funs.len());
 
         // Generate codes for each function.
-        for fun_id in 0..self.funs.len() {
+        for fun_id in 0..self.mir.funs.len() {
             self.current_fun_id = fun_id;
 
-            self.push(Op::Label, 0, Value::Label(self.funs[fun_id].label_id));
+            self.push(Op::Label, 0, Value::Label(self.mir.funs[fun_id].label_id));
 
-            let last = self.on_exp(self.sema_funs[fun_id].body);
+            let last = self.on_exp(self.mir.sema.funs[fun_id].body);
 
             if fun_id == GLOBAL_FUN_ID {
                 self.kill(last);
@@ -294,18 +304,18 @@ impl Compiler {
         }
 
         // Reassign registers to finite number registers.
-        for fun_id in 0..self.funs.len() {
-            regalloc::alloc_regs(&mut self.funs[fun_id].ins);
+        for fun_id in 0..self.mir.funs.len() {
+            regalloc::alloc_regs(&mut self.mir.funs[fun_id].ins);
         }
 
         // Merge instructions.
         let mut ins = vec![];
-        for fun in self.funs.iter_mut() {
+        for fun in self.mir.funs.iter_mut() {
             ins.append(&mut fun.ins);
         }
 
         // Build jump table.
-        let mut labels = vec![0; self.label_count];
+        let mut labels = vec![0; self.mir.label_count];
         for pc in 0..ins.len() {
             if let (Op::Label, _, Value::Label(r)) = ins[pc] {
                 labels[r] = pc;
@@ -321,7 +331,7 @@ impl Compiler {
 
         // Write MIR.
         let mut buffer = String::new();
-        for value in self.strs {
+        for value in &self.mir.strs {
             writeln!(buffer, "    .text {}", value).unwrap();
         }
         for (op, l, r) in ins {
@@ -341,4 +351,18 @@ impl Value {
             Value::Reg(value) | Value::Label(value) | Value::Str(value) => value as i64,
         }
     }
+}
+
+pub fn gen_mir(sema: Rc<Sema>) -> String {
+    let mut compiler = Compiler {
+        mir: Mir {
+            sema,
+            funs: vec![],
+            strs: vec![],
+            reg_count: 0,
+            label_count: 0,
+        },
+        current_fun_id: GLOBAL_FUN_ID,
+    };
+    compiler.compile()
 }

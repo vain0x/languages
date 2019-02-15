@@ -211,6 +211,7 @@ impl SemanticAnalyzer {
                 Token::Id(name) => Some(name),
                 _ => None,
             },
+            &Node::Ann(node_id, _) => self.node_as_ident(node_id),
             _ => None,
         }
     }
@@ -397,6 +398,7 @@ impl SemanticAnalyzer {
                 },
                 _ => self.add_err("Expected an ident".into(), nodes[0]),
             },
+            &Node::Ann(value_node_id, _) => self.on_node(value_node_id),
         }
     }
 

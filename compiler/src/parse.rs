@@ -41,6 +41,16 @@ impl Parser<'_> {
         node_id
     }
 
+    fn parse_ann(&mut self, node_id: NodeId, l: usize) -> NodeId {
+        if let Token::Pun(":") = self.next() {
+            self.current += 1;
+            let ty_node_id = self.parse_node();
+            return self.add_node(Node::Ann(node_id, ty_node_id), l);
+        }
+
+        node_id
+    }
+
     fn parse_node(&mut self) -> NodeId {
         let l = self.current;
 
@@ -53,7 +63,8 @@ impl Parser<'_> {
             if *self.next() != Token::Eof {
                 self.current += 1;
             }
-            return self.add_node(Node::App(children), l);
+            let node_id = self.add_node(Node::App(children), l);
+            return self.parse_ann(node_id, l);
         }
         if self.next_is_closing() {
             self.current += 1;
@@ -63,7 +74,8 @@ impl Parser<'_> {
 
         let token_id = self.current;
         self.current += 1;
-        self.add_node(Node::Value(token_id), l)
+        let node_id = self.add_node(Node::Value(token_id), l);
+        self.parse_ann(node_id, l)
     }
 
     fn parse(&mut self) {

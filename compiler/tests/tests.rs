@@ -172,6 +172,16 @@ fn test_def_with_local_vars() {
     )
 }
 
+#[test]
+fn test_ty() {
+    eval_tests(
+        r#"(begin
+            (let a:int 1):(* void)
+        )"#,
+        &[("", "")],
+    )
+}
+
 /// <https://atcoder.jp/contests/abs/tasks/practice_1?lang=en>
 #[test]
 fn test_welcome_to_atcoder() {

@@ -58,7 +58,7 @@ define_op! {
     Exit,
 }
 
-const PUNS: &'static [&'static str] = &["(", ")"];
+const PUNS: &'static [&'static str] = &["(", ")", ":"];
 
 #[derive(Clone, Copy, Debug)]
 pub enum PrimArity {
@@ -107,6 +107,7 @@ pub enum Node {
     Err(String, TokenId),
     Value(TokenId),
     App(Vec<NodeId>),
+    Ann(NodeId, NodeId),
 }
 
 #[derive(Clone, Debug, Default)]

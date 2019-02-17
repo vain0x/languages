@@ -101,7 +101,7 @@ impl Compiler {
         let unit = size_of::<i64>() as i64;
         match kind {
             sema::VarKind::Global | sema::VarKind::Local => {
-                let offset = index * unit;
+                let offset = -(index + 1) * unit;
                 // i-th local variable is located at (bp + i)
                 self.push(Op::Mov, r, Value::Reg(BASE_PTR_REG_ID));
                 self.push(Op::AddImm, r, Value::Int(offset));
@@ -109,7 +109,7 @@ impl Compiler {
             &sema::VarKind::Param(fun_id) => {
                 // i-th argument is located before bp in reversed order.
                 let arity = self.mir.sema.funs[fun_id].arity() as i64;
-                let offset = (index - arity) * unit;
+                let offset = (arity - index - 1) * unit;
                 self.push(Op::Mov, r, Value::Reg(BASE_PTR_REG_ID));
                 self.push(Op::AddImm, r, Value::Int(offset));
             }

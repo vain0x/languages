@@ -2,6 +2,7 @@ use crate::sema::Prim;
 use crate::sema::Sema;
 use crate::*;
 use std::fmt::Write;
+use std::mem::size_of;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Value {
@@ -97,16 +98,18 @@ impl Compiler {
         let r = self.add_reg();
         let sema::VarDef { kind, index, .. } = &self.mir.sema.vars[var_id];
         let index = *index as i64;
+        let unit = size_of::<i64>() as i64;
         match kind {
             sema::VarKind::Global | sema::VarKind::Local => {
+                let offset = index * unit;
                 // i-th local variable is located at (bp + i)
                 self.push(Op::Mov, r, Value::Reg(BASE_PTR_REG_ID));
-                self.push(Op::AddImm, r, Value::Int(index));
+                self.push(Op::AddImm, r, Value::Int(offset));
             }
             &sema::VarKind::Param(fun_id) => {
                 // i-th argument is located before bp in reversed order.
                 let arity = self.mir.sema.funs[fun_id].arity() as i64;
-                let offset = index - arity;
+                let offset = (index - arity) * unit;
                 self.push(Op::Mov, r, Value::Reg(BASE_PTR_REG_ID));
                 self.push(Op::AddImm, r, Value::Int(offset));
             }

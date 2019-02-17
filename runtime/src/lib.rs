@@ -1,4 +1,5 @@
 use std::io::{self, BufRead, Write as IoWrite};
+use std::mem::{align_of, size_of};
 use std::str;
 
 const BASE_PTR_REG_ID: usize = 1;
@@ -106,10 +107,19 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
 
     // Execute.
     let mut regs = [0; REG_NUM];
-    let mut stack = Vec::new();
-    stack.resize(1024, 0);
+    let mut mem = vec![0_u8; 256 * 1024];
     let mut frames = vec![];
     let mut pc = 0;
+
+    fn read<T: Copy>(mem: &[u8], p: usize) -> T {
+        debug_assert!(p + size_of::<T>() <= mem.len());
+        unsafe { *(mem.as_ptr().add(p) as *const T) }
+    }
+
+    fn write<T: Copy>(mem: &mut [u8], p: usize, value: T) {
+        debug_assert!(p + size_of::<T>() <= mem.len());
+        unsafe { *(mem.as_mut_ptr().add(p) as *mut T) = value }
+    }
 
     loop {
         let (op, l, r) = inss[pc];
@@ -136,17 +146,17 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
                 regs[RET_REG_ID] = ret_val;
             }
             Op::Push => {
-                let sp = regs[STACK_PTR_REG_ID];
-                stack[sp as usize] = regs[l];
-                regs[STACK_PTR_REG_ID] += 1;
+                let sp = regs[STACK_PTR_REG_ID] as usize;
+                write::<i64>(&mut mem, sp, regs[l]);
+                regs[STACK_PTR_REG_ID] += size_of::<i64>() as i64;
             }
             Op::Pop => {
-                regs[STACK_PTR_REG_ID] -= 1;
-                let sp = regs[STACK_PTR_REG_ID];
-                regs[l] = stack[sp as usize];
+                regs[STACK_PTR_REG_ID] -= size_of::<i64>() as i64;
+                let sp = regs[STACK_PTR_REG_ID] as usize;
+                regs[l] = read::<i64>(&mem, sp);
             }
-            Op::Load => regs[l] = stack[regs[r as usize] as usize],
-            Op::Store => stack[regs[r as usize] as usize] = regs[l],
+            Op::Load => regs[l] = read::<i64>(&mem, regs[r as usize] as usize),
+            Op::Store => write::<i64>(&mut mem, regs[r as usize] as usize, regs[l]),
             Op::ToStr => {
                 let t = regs[l].to_string();
                 strs.push(t);

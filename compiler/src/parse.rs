@@ -37,7 +37,7 @@ impl Parser<'_> {
     fn add_exp(&mut self, kind: ExpKind, token_span: (TokenId, TokenId)) -> ExpId {
         let (l, r) = token_span;
 
-        assert!(l < self.current, "l={:?} r={:?}", l, r);
+        assert!(l < r, "{:?}..{:?}", l, r);
         let r1 = if l == r { l } else { r - 1 };
         let span = (self.tokens[&l].span.0, self.tokens[&r1].span.1);
 
@@ -59,7 +59,7 @@ impl Parser<'_> {
     }
 
     fn parse_err(&mut self, message: String) -> ExpId {
-        self.add_exp_err(message, (self.current, self.current))
+        self.add_exp_err(message, (self.current, self.current + 1))
     }
 
     fn parse_atom(&mut self) -> ExpId {
@@ -124,6 +124,7 @@ impl Parser<'_> {
             if self.next().kind != TokenKind::Pun(")") {
                 return self.parse_err("Expected ')'".to_string());
             }
+            self.current += 1;
 
             exp_l = self.add_exp(
                 ExpKind::Call {
@@ -241,8 +242,16 @@ impl Parser<'_> {
         }
     }
 
+    fn parse_eof(&mut self) {
+        if self.next().kind != TokenKind::Eof {
+            self.parse_err("Expected EOF".to_string());
+        }
+    }
+
     fn parse(&mut self) -> ExpId {
-        self.parse_exp()
+        let exp_id = self.parse_exp();
+        self.parse_eof();
+        exp_id
     }
 }
 

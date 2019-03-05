@@ -69,10 +69,23 @@ impl Compiler {
     }
 
     fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]) -> RegId {
-        let r = self.on_exp(args[0]);
-        self.push(Cmd::PrintLnInt, NO_REG_ID, CmdArg::Reg(r));
-        self.kill(r);
-        NO_REG_ID
+        match &self.exp(callee).kind {
+            ExpKind::Ident(name) => match name.as_ref() {
+                "read_int" => {
+                    let l = self.add_reg();
+                    self.push(Cmd::ReadInt, l, CmdArg::None);
+                    l
+                }
+                "println_int" => {
+                    let r = self.on_exp(args[0]);
+                    self.push(Cmd::PrintLnInt, NO_REG_ID, CmdArg::Reg(r));
+                    self.kill(r);
+                    NO_REG_ID
+                }
+                _ => unimplemented!(),
+            },
+            _ => unimplemented!(),
+        }
     }
 
     fn on_bin(&mut self, exp_id: ExpId, op: Op, exp_l: ExpId, exp_r: ExpId) -> RegId {
@@ -98,7 +111,13 @@ impl Compiler {
     }
 
     fn on_semi(&mut self, exp_id: ExpId, exps: &[ExpId]) -> RegId {
-        unimplemented!()
+        let mut reg_id = NO_REG_ID;
+        for &exp_id in exps {
+            let result = self.on_exp(exp_id);
+            self.kill(reg_id);
+            reg_id = result;
+        }
+        reg_id
     }
 
     fn on_exp(&mut self, exp_id: ExpId) -> RegId {

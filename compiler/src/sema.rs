@@ -5,23 +5,6 @@ pub struct Sema {
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum Prim {
-    Add,
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum SymbolKind {
-    Var,
-    Fun,
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct Symbol {
-    kind: SymbolKind,
-    name: String,
-}
-
 pub struct SemanticAnalyzer {
     sema: Sema,
     current_fun_id: FunId,

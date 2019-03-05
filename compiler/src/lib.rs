@@ -61,6 +61,14 @@ macro_rules! define_rich_id {
                 }
             }
 
+            impl std::ops::Add<usize> for $name {
+                type Output = Self;
+
+                fn add(self, rhs: usize) -> Self {
+                    $name(self.0 + rhs)
+                }
+            }
+
             impl std::ops::AddAssign<usize> for $name {
                 fn add_assign(&mut self, rhs: usize)  {
                     self.0 += rhs;

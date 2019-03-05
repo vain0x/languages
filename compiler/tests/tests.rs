@@ -49,3 +49,13 @@ fn test_arithmetic() {
         &[("", "7\n")],
     )
 }
+
+#[test]
+fn test_read_int() {
+    eval_tests(
+        r#"
+            println_int(read_int() + 1)
+        "#,
+        &[("41", "42\n"), ("-1", "0\n")],
+    )
+}

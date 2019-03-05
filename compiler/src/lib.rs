@@ -29,8 +29,6 @@ pub enum PrimArity {
     Bin,
 }
 
-const EOF: &'static TokenKind = &TokenKind::Eof;
-
 const GLOBAL_FUN_ID: FunId = FunId(0);
 
 const NO_REG_ID: RegId = RegId(0);
@@ -84,7 +82,6 @@ define_rich_id!(MsgId, TokenId, ExpId, RegId, LabelId, VarId, FunId);
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Op {
-    Semi,
     Set,
     Eq,
     Add,
@@ -146,13 +143,15 @@ pub struct Exp {
 }
 
 pub trait ExpVisitor {
-    fn on_err(&mut self, exp_id: ExpId, msg_id: MsgId);
-    fn on_int(&mut self, exp_id: ExpId, value: i64);
-    fn on_str(&mut self, exp_id: ExpId, value: &str);
-    fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]);
-    fn on_bin(&mut self, exp_id: ExpId, op: Op, l: ExpId, r: ExpId);
-    fn on_let(&mut self, exp_id: ExpId, pat: ExpId, init: ExpId);
-    fn on_semi(&mut self, exp_id: ExpId, exps: &[ExpId]);
+    type Output;
+
+    fn on_err(&mut self, exp_id: ExpId, msg_id: MsgId) -> Self::Output;
+    fn on_int(&mut self, exp_id: ExpId, value: i64) -> Self::Output;
+    fn on_str(&mut self, exp_id: ExpId, value: &str) -> Self::Output;
+    fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]) -> Self::Output;
+    fn on_bin(&mut self, exp_id: ExpId, op: Op, l: ExpId, r: ExpId) -> Self::Output;
+    fn on_let(&mut self, exp_id: ExpId, pat: ExpId, init: ExpId) -> Self::Output;
+    fn on_semi(&mut self, exp_id: ExpId, exps: &[ExpId]) -> Self::Output;
 }
 
 #[derive(Clone, Debug)]
@@ -162,6 +161,28 @@ pub struct Syntax {
     exps: BTreeMap<ExpId, Exp>,
     root_exp_id: ExpId,
     msgs: BTreeMap<MsgId, Msg>,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum Prim {
+    PrintLnInt,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum CallKind {
+    Prim(Prim),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum SymbolKind {
+    Var,
+    Fun,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct Symbol {
+    kind: SymbolKind,
+    name: String,
 }
 
 #[derive(Clone, Debug)]

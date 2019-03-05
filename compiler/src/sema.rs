@@ -5,6 +5,7 @@ pub struct Sema {
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub enum Prim {
     Add,
 }

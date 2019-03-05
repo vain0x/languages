@@ -78,7 +78,17 @@ impl Compiler {
     fn on_bin(&mut self, exp_id: ExpId, op: Op, exp_l: ExpId, exp_r: ExpId) -> RegId {
         let l = self.on_exp(exp_l);
         let r = self.on_exp(exp_r);
-        self.push(Cmd::Add, l, CmdArg::Reg(r));
+        let cmd = match op {
+            Op::Set => unimplemented!(),
+            Op::Eq => unimplemented!(),
+            Op::Add => Cmd::Add,
+            Op::Sub => Cmd::Sub,
+            Op::Mul => Cmd::Mul,
+            Op::Div => Cmd::Div,
+            Op::Mod => Cmd::Mod,
+        };
+
+        self.push(cmd, l, CmdArg::Reg(r));
         self.kill(r);
         l
     }

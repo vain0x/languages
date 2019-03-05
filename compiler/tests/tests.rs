@@ -22,7 +22,11 @@ fn eval_tests(src: &str, ios: &[(&str, &str)]) {
         picomet_lang_runtime::eval(&program, io::Cursor::new(input), &mut stdout);
         let actual = String::from_utf8(stdout).unwrap();
 
-        assert_eq!(actual, expected, "src={}\ninput={}\nprogram={}", src, input, program);
+        assert_eq!(
+            actual, expected,
+            "src={}\ninput={}\nprogram={}",
+            src, input, program
+        );
     }
 }
 
@@ -33,5 +37,15 @@ fn test_hello() {
             println_int(42)
         "#,
         &[("", "42\n")],
+    )
+}
+
+#[test]
+fn test_arithmetic() {
+    eval_tests(
+        r#"
+            println_int(1 + 2 * 3)
+        "#,
+        &[("", "7\n")],
     )
 }

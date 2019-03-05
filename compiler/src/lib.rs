@@ -1,68 +1,26 @@
+pub mod cmd;
 pub mod gen_mir;
 pub mod parse;
-pub mod regalloc;
 pub mod sema;
 pub mod tokenize;
 
+use crate::cmd::*;
+use std::cmp::min;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::str;
 
-macro_rules! define_op {
-    ($($op:ident,)*) => {
-        #[derive(Clone, Copy, PartialEq, Debug)]
-        pub enum Op {
-            $($op),*
-        }
+const OPS: &[(&str, Op, OpLevel)] = &[
+    ("=", Op::Set, OpLevel::Set),
+    ("==", Op::Eq, OpLevel::Cmp),
+    ("+", Op::Add, OpLevel::Add),
+    ("-", Op::Sub, OpLevel::Add),
+    ("*", Op::Mul, OpLevel::Mul),
+    ("/", Op::Div, OpLevel::Mul),
+    ("%", Op::Mod, OpLevel::Mul),
+];
 
-        pub fn serialize_op(op: Op) -> &'static str {
-            $(if op == Op::$op {
-                return stringify!($op);
-            })*
-            unreachable!()
-        }
-    };
-}
-
-define_op! {
-    Kill,
-    Imm,
-    AddImm,
-    Mov,
-    Store,
-    Store8,
-    Load,
-    Load8,
-    Push,
-    Pop,
-    Label,
-    Jump,
-    Unless,
-    Call,
-    Ret,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-    Eq,
-    Ne,
-    Lt,
-    Le,
-    Gt,
-    Ge,
-    ToStr,
-    StrCat,
-    ReadInt,
-    ReadStr,
-    Print,
-    PrintLn,
-    Alloc,
-    Write,
-    Exit,
-}
-
-const PUNS: &'static [&'static str] = &["(", ")", ":"];
+const PUNS: &'static [&'static str] = &["(", ")", "[", "]", "{", "}", ",", ";"];
 
 #[derive(Clone, Copy, Debug)]
 pub enum PrimArity {
@@ -71,63 +29,146 @@ pub enum PrimArity {
     Bin,
 }
 
-const EOF: &'static Token = &Token::Eof;
+const EOF: &'static TokenKind = &TokenKind::Eof;
 
-const GLOBAL_FUN_ID: FunId = 0;
+const GLOBAL_FUN_ID: FunId = FunId(0);
 
-const NO_REG_ID: RegId = 0;
-const BASE_PTR_REG_ID: RegId = 1;
+const NO_REG_ID: RegId = RegId(0);
+const BASE_PTR_REG_ID: RegId = RegId(1);
 #[allow(unused)]
-const STACK_PTR_REG_ID: RegId = 2;
-const RET_REG_ID: RegId = 3;
+const STACK_PTR_REG_ID: RegId = RegId(2);
+const RET_REG_ID: RegId = RegId(3);
 const KNOWN_REG_NUM: usize = 4;
 const REG_NUM: usize = 12;
 
-type TokenId = usize;
 type Span = (usize, usize);
 type Pos = (usize, usize);
 type Range = (Pos, Pos);
-type NodeId = usize;
-type ExpId = usize;
-type StrId = usize;
-type RegId = usize;
-type LabelId = usize;
-type VarId = usize;
-type FunId = usize;
 
+macro_rules! define_rich_id {
+    ($($name:ident),*) => {
+        $(
+            #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+            pub struct $name(usize);
+
+            impl From<usize> for $name {
+                fn from(id: usize) -> Self {
+                    $name(id)
+                }
+            }
+
+            impl From<$name> for usize {
+                fn from(id: $name) -> usize {
+                    id.0
+                }
+            }
+
+            impl std::ops::AddAssign<usize> for $name {
+                fn add_assign(&mut self, rhs: usize)  {
+                    self.0 += rhs;
+                }
+            }
+
+            impl std::ops::Sub<usize> for $name {
+                type Output = Self;
+
+                fn sub(self, rhs: usize) -> Self {
+                    $name(self.0 - min(self.0, rhs))
+                }
+            }
+        )*
+    };
+}
+
+define_rich_id!(MsgId, TokenId, ExpId, RegId, LabelId, VarId, FunId);
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Op {
+    Semi,
+    Set,
+    Eq,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum OpLevel {
+    Set,
+    Cmp,
+    Add,
+    Mul,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Keyword {
+    Let,
+    Def,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum TokenKind {
+    Err,
+    Eof,
+    Pun(&'static str),
+    Op(Op),
+    Keyword(Keyword),
+    Ident,
+    Int,
+    Str,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Token {
+    kind: TokenKind,
+    span: Span,
+}
+
+/// Expression in concrete syntax tree.
 #[derive(Clone, PartialEq, Debug)]
-pub enum Token {
-    Err(String),
-    Id(String),
+pub enum ExpKind {
+    Err(MsgId),
     Int(i64),
     Str(String),
-    Pun(&'static str),
-    Eof,
+    Ident(String),
+    Call { callee: ExpId, args: Vec<ExpId> },
+    Bin { op: Op, l: ExpId, r: ExpId },
+    Let { pat: ExpId, init: ExpId },
+    Semi(Vec<ExpId>),
 }
 
-/// Node in concrete syntax tree.
 #[derive(Clone, PartialEq, Debug)]
-pub enum Node {
-    Err(String, TokenId),
-    Value(TokenId),
-    App(Vec<NodeId>),
-    Ann(NodeId, NodeId),
+pub struct Exp {
+    kind: ExpKind,
+    span: Span,
 }
 
-#[derive(Clone, Debug, Default)]
+pub trait ExpVisitor {
+    fn on_err(&mut self, exp_id: ExpId, msg_id: MsgId);
+    fn on_int(&mut self, exp_id: ExpId, value: i64);
+    fn on_str(&mut self, exp_id: ExpId, value: &str);
+    fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]);
+    fn on_bin(&mut self, exp_id: ExpId, op: Op, l: ExpId, r: ExpId);
+    fn on_let(&mut self, exp_id: ExpId, pat: ExpId, init: ExpId);
+    fn on_semi(&mut self, exp_id: ExpId, exps: &[ExpId]);
+}
+
+#[derive(Clone, Debug)]
 pub struct Syntax {
     src: String,
-    tokens: Vec<Token>,
-    token_spans: Vec<Span>,
-    nodes: Vec<Node>,
-    node_spans: Vec<Span>,
+    tokens: BTreeMap<TokenId, Token>,
+    exps: BTreeMap<ExpId, Exp>,
+    root_exp_id: ExpId,
+    msgs: BTreeMap<MsgId, Msg>,
 }
 
 #[derive(Clone, Debug)]
 pub struct Msg {
     level: MsgLevel,
     message: String,
-    node_id: NodeId,
+    exp_id: ExpId,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -135,12 +176,45 @@ pub enum MsgLevel {
     Err,
 }
 
+impl OpLevel {
+    fn next_level(self) -> Option<Self> {
+        match self {
+            OpLevel::Set => Some(OpLevel::Cmp),
+            OpLevel::Cmp => Some(OpLevel::Add),
+            OpLevel::Add => Some(OpLevel::Mul),
+            OpLevel::Mul => None,
+        }
+    }
+
+    fn contains(self, the_op: Op) -> bool {
+        for &(_, op, op_level) in OPS {
+            if op == the_op && op_level == self {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+impl Keyword {
+    fn text(self) -> &'static str {
+        match self {
+            Keyword::Let => "let",
+            Keyword::Def => "def",
+        }
+    }
+
+    fn get_all() -> &'static [Keyword] {
+        &[Keyword::Let, Keyword::Def]
+    }
+}
+
 impl Msg {
-    pub fn err(message: String, node_id: NodeId) -> Self {
+    pub fn err(message: String, exp_id: ExpId) -> Self {
         Msg {
             level: MsgLevel::Err,
             message,
-            node_id,
+            exp_id,
         }
     }
 }
@@ -160,15 +234,22 @@ impl Syntax {
         (line, column)
     }
 
-    pub fn locate_node(&self, node_id: NodeId) -> Range {
-        let (l, r) = self.node_spans[node_id];
+    pub fn locate_exp(&self, exp_id: ExpId) -> Range {
+        let (l, r) = self.exps[&exp_id].span;
         let l_pos = self.locate(l);
         let r_pos = self.locate(r);
         (l_pos, r_pos)
     }
 }
 
-pub fn compile(src: &str) -> (bool, String, String) {
+#[derive(Clone)]
+pub struct CompilationResult {
+    pub success: bool,
+    pub program: String,
+    pub stderr: String,
+}
+
+pub fn compile(src: &str) -> CompilationResult {
     let src = src.to_owned();
     let syntax = Rc::new(parse::parse(src));
     let sema = Rc::new(sema::sema(syntax));

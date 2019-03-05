@@ -182,6 +182,19 @@ fn test_ty() {
     )
 }
 
+#[test]
+fn test_allow() {
+    eval_tests(
+        r#"(begin
+            (let buf (mem-alloc 2))
+            (write-byte (+ buf 0) 65)
+            (write-byte (+ buf 1) 10)
+            (stdout-write buf 2)
+        )"#,
+        &[("", "A\n")],
+    )
+}
+
 /// <https://atcoder.jp/contests/abs/tasks/practice_1?lang=en>
 #[test]
 fn test_welcome_to_atcoder() {

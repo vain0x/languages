@@ -30,7 +30,9 @@ define_op! {
     AddImm,
     Mov,
     Store,
+    Store8,
     Load,
+    Load8,
     Push,
     Pop,
     Label,
@@ -55,6 +57,8 @@ define_op! {
     ReadStr,
     Print,
     PrintLn,
+    Alloc,
+    Write,
     Exit,
 }
 

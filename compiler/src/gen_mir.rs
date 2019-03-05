@@ -242,6 +242,29 @@ impl Compiler {
                 }
                 NO_REG_ID
             }
+            Prim::MemAlloc => {
+                let r = self.on_exp(children[0]); // size
+                let l = self.add_reg();
+                self.push(Op::Alloc, l, Value::Reg(r));
+                self.kill(r);
+                l
+            }
+            Prim::WriteByte => {
+                let l = self.on_exp(children[0]); // ptr
+                let r = self.on_exp(children[1]); // value
+                self.push(Op::Store8, l, Value::Reg(r));
+                self.kill(l);
+                self.kill(r);
+                NO_REG_ID
+            }
+            Prim::StdOutWrite => {
+                let l = self.on_exp(children[0]); // ptr
+                let r = self.on_exp(children[1]); // size
+                self.push(Op::Write, l, Value::Reg(r));
+                self.kill(l);
+                self.kill(r);
+                NO_REG_ID
+            }
             _ => unreachable!("{:?}", prim),
         }
     }

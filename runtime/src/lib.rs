@@ -1,10 +1,11 @@
 use std::io::{self, BufRead, Write as IoWrite};
-use std::mem::{align_of, size_of};
+use std::mem::size_of;
 use std::str;
 
 const BASE_PTR_REG_ID: usize = 1;
 const STACK_PTR_REG_ID: usize = 2;
 const RET_REG_ID: usize = 3;
+#[allow(unused)]
 const KNOWN_REG_NUM: usize = 4;
 const REG_NUM: usize = 12;
 
@@ -29,7 +30,9 @@ define_op! {
     Imm,
     AddImm,
     Mov,
+    Store8,
     Store,
+    Load8,
     Load,
     Push,
     Pop,
@@ -55,6 +58,8 @@ define_op! {
     ReadStr,
     Print,
     PrintLn,
+    Alloc,
+    Write,
     Exit,
 }
 
@@ -109,6 +114,7 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
     let mem_size = 256 * 1024;
     let mut regs = [0_i64; REG_NUM];
     let mut mem = vec![0_u8; mem_size];
+    let mut heap_size = 0;
     let mut frames = vec![];
     let mut pc = 0_usize;
 
@@ -159,7 +165,9 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
                 regs[l] = read::<i64>(&mem, sp);
                 regs[STACK_PTR_REG_ID] += size_of::<i64>() as i64;
             }
+            Op::Load8 => regs[l] = read::<u8>(&mem, regs[r as usize] as usize) as i64,
             Op::Load => regs[l] = read::<i64>(&mem, regs[r as usize] as usize),
+            Op::Store8 => write::<u8>(&mut mem, regs[l] as usize, regs[r as usize] as u8),
             Op::Store => write::<i64>(&mut mem, regs[r as usize] as usize, regs[l]),
             Op::ToStr => {
                 let t = regs[l].to_string();
@@ -191,6 +199,17 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
             }
             Op::Print => write!(stdout, "{}", strs[regs[l] as usize]).unwrap(),
             Op::PrintLn => writeln!(stdout, "{}", strs[regs[l] as usize]).unwrap(),
+            Op::Alloc => {
+                regs[l] = heap_size as i64;
+                let size = regs[r as usize] as usize;
+                heap_size += size;
+            }
+            Op::Write => {
+                let p = regs[l] as usize;
+                let size = regs[r as usize] as usize;
+                stdout.write_all(&mem[p..p + size]).unwrap();
+                stdout.flush().unwrap();
+            }
             Op::Label | Op::Kill => {}
             Op::Exit => return,
         }

@@ -6,15 +6,6 @@ static PRIMS: &[(&str, Prim)] = &[
     ("println_int", Prim::PrintLnInt),
 ];
 
-pub struct Sema {
-    pub syntax: Rc<Syntax>,
-    pub local_count: usize,
-    pub pats: BTreeSet<ExpId>,
-    pub symbols: BTreeMap<SymbolId, Symbol>,
-    pub exp_symbols: BTreeMap<ExpId, SymbolId>,
-    pub msgs: BTreeMap<MsgId, Msg>,
-}
-
 pub struct SemanticAnalyzer {
     sema: Sema,
     env: BTreeMap<String, SymbolId>,
@@ -27,18 +18,34 @@ impl SemanticAnalyzer {
         self.sema.msgs.insert(msg_id, Msg::err(message, exp_id));
     }
 
+    fn add_fun(&mut self, name: String, exp_id: ExpId) -> FunId {
+        let fun_id = FunId(self.sema.funs.len());
+        let fun_def = FunDef {
+            name,
+            body: exp_id,
+            locals: vec![],
+        };
+        self.sema.funs.insert(fun_id, fun_def);
+        fun_id
+    }
+
     fn add_local(&mut self, name: String) -> SymbolId {
-        let index = self.sema.local_count;
-        self.sema.local_count += 1;
+        let index = self.sema.funs[&self.current_fun_id].locals.len();
+        let symbol_id = SymbolId(self.sema.symbols.len());
 
         let symbol = Symbol {
             kind: SymbolKind::Local { index },
             name,
         };
 
-        let symbol_id = SymbolId(self.sema.symbols.len());
         self.sema.symbols.insert(symbol_id, symbol);
+        self.current_fun_mut().locals.push(symbol_id);
+
         symbol_id
+    }
+
+    fn current_fun_mut(&mut self) -> &mut FunDef {
+        self.sema.funs.get_mut(&self.current_fun_id).unwrap()
     }
 
     fn is_pat(&self, exp_id: ExpId) -> bool {
@@ -65,7 +72,6 @@ impl SemanticAnalyzer {
 
     fn on_ident(&mut self, exp_id: ExpId, name: &str) {
         if self.is_pat(exp_id) {
-            let index = self.env.len();
             let symbol_id = self.add_local(name.to_string());
             self.env.insert(name.to_string(), symbol_id);
             self.sema.exp_symbols.insert(exp_id, symbol_id);
@@ -135,7 +141,12 @@ impl SemanticAnalyzer {
             self.env.insert(name.to_string(), symbol_id);
         }
 
-        self.on_exp(self.sema.syntax.root_exp_id);
+        let root_exp_id = self.sema.syntax.root_exp_id;
+        let fun_id = self.add_fun("main".to_string(), root_exp_id);
+        assert_eq!(fun_id, GLOBAL_FUN_ID);
+
+        self.current_fun_id = GLOBAL_FUN_ID;
+        self.on_exp(root_exp_id);
     }
 }
 
@@ -143,10 +154,10 @@ pub fn sema(syntax: Rc<Syntax>) -> Sema {
     let mut analyzer = SemanticAnalyzer {
         sema: Sema {
             syntax: Rc::clone(&syntax),
-            local_count: 0,
             pats: BTreeSet::new(),
             symbols: BTreeMap::new(),
             exp_symbols: BTreeMap::new(),
+            funs: BTreeMap::new(),
             msgs: syntax.msgs.clone(),
         },
         env: BTreeMap::new(),

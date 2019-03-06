@@ -1,26 +1,7 @@
 use crate::cmd::*;
-use crate::sema::Sema;
 use crate::*;
 use std::fmt::Write;
 use std::mem::size_of;
-
-#[derive(Clone, Copy, Debug)]
-pub enum CmdArg {
-    None,
-    Int(i64),
-    Reg(RegId),
-    Label(LabelId),
-}
-
-pub type Ins = (Cmd, RegId, CmdArg);
-
-pub struct Mir {
-    pub sema: Rc<Sema>,
-    pub ins: Vec<Ins>,
-    pub reg_count: usize,
-    pub label_count: usize,
-    pub msgs: BTreeMap<MsgId, Msg>,
-}
 
 struct Compiler {
     mir: Mir,
@@ -34,6 +15,11 @@ impl Compiler {
 
     fn sema(&self) -> &Sema {
         &self.mir.sema
+    }
+
+    fn current_gen_fun_mut(&mut self) -> &mut GenFunDef {
+        let fun_id = self.current_fun_id;
+        self.mir.funs.get_mut(&fun_id).unwrap()
     }
 
     fn exp(&self, exp_id: ExpId) -> &Exp {
@@ -63,7 +49,7 @@ impl Compiler {
     }
 
     fn push(&mut self, cmd: Cmd, l: RegId, r: CmdArg) {
-        self.mir.ins.push((cmd, l, r));
+        self.current_gen_fun_mut().inss.push((cmd, l, r));
     }
 
     fn on_err(&mut self, _: ExpId, _: MsgId) -> RegId {
@@ -173,21 +159,43 @@ impl Compiler {
         }
     }
 
+    pub fn gen_fun(&mut self, fun_id: FunId) {
+        let label_id = self.add_label();
+
+        self.mir.funs.insert(
+            fun_id,
+            GenFunDef {
+                label_id,
+                inss: vec![],
+            },
+        );
+
+        self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(label_id));
+
+        // Allocate local variables.
+        let local_count = self.sema().funs[&fun_id].locals.len();
+        let frame_size = (local_count * size_of::<i64>()) as i64;
+        self.push(Cmd::AddImm, BASE_PTR_REG_ID, CmdArg::Int(-frame_size));
+
+        let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
+        self.kill(final_reg_id);
+        self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
+    }
+
     pub fn compile(&mut self) -> CompilationResult {
         // Allocate well-known registers.
         self.mir.reg_count += KNOWN_REG_NUM;
 
-        // Allocate main local variables.
-        let size = (self.sema().local_count * size_of::<i64>()) as i64;
-        self.push(Cmd::AddImm, BASE_PTR_REG_ID, CmdArg::Int(-size));
+        self.gen_fun(GLOBAL_FUN_ID);
 
-        let final_reg_id = self.on_exp(self.syntax().root_exp_id);
-        self.kill(final_reg_id);
-        self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
+        let mut inss = vec![];
+        for (_, fun) in &self.mir.funs {
+            inss.extend(&fun.inss);
+        }
 
         // Write MIR.
         let mut program = String::new();
-        for &(cmd, l, r) in &self.mir.ins {
+        for &(cmd, l, r) in &inss {
             let cmd = crate::serialize_cmd(cmd);
             writeln!(program, "    {} {} {}", cmd, l.0, r.to_i64()).unwrap();
         }
@@ -233,9 +241,9 @@ pub fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
     let mut compiler = Compiler {
         mir: Mir {
             sema: Rc::clone(&sema),
-            ins: vec![],
             reg_count: 0,
             label_count: 0,
+            funs: BTreeMap::new(),
             msgs: sema.msgs.clone(),
         },
         current_fun_id: GLOBAL_FUN_ID,

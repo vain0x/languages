@@ -6,7 +6,7 @@ pub mod tokenize;
 
 use crate::cmd::*;
 use std::cmp::min;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 use std::str;
 
@@ -131,6 +131,18 @@ pub struct Token {
     span: Span,
 }
 
+#[derive(Clone, Debug)]
+pub struct Msg {
+    level: MsgLevel,
+    message: String,
+    exp_id: ExpId,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum MsgLevel {
+    Err,
+}
+
 /// Expression in concrete syntax tree.
 #[derive(Clone, PartialEq, Debug)]
 pub enum ExpKind {
@@ -195,15 +207,45 @@ pub struct Symbol {
 }
 
 #[derive(Clone, Debug)]
-pub struct Msg {
-    level: MsgLevel,
-    message: String,
-    exp_id: ExpId,
+pub struct FunDef {
+    pub name: String,
+    pub body: ExpId,
+    pub locals: Vec<SymbolId>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum MsgLevel {
-    Err,
+#[derive(Clone, Debug)]
+pub struct Sema {
+    pub syntax: Rc<Syntax>,
+    pub pats: BTreeSet<ExpId>,
+    pub symbols: BTreeMap<SymbolId, Symbol>,
+    pub exp_symbols: BTreeMap<ExpId, SymbolId>,
+    pub funs: BTreeMap<FunId, FunDef>,
+    pub msgs: BTreeMap<MsgId, Msg>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum CmdArg {
+    None,
+    Int(i64),
+    Reg(RegId),
+    Label(LabelId),
+}
+
+pub type Ins = (Cmd, RegId, CmdArg);
+
+#[derive(Clone, Debug)]
+pub struct GenFunDef {
+    pub label_id: LabelId,
+    pub inss: Vec<Ins>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Mir {
+    pub sema: Rc<Sema>,
+    pub reg_count: usize,
+    pub label_count: usize,
+    pub funs: BTreeMap<FunId, GenFunDef>,
+    pub msgs: BTreeMap<MsgId, Msg>,
 }
 
 impl OpLevel {

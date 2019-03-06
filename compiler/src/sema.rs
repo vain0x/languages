@@ -56,6 +56,43 @@ impl SemanticAnalyzer {
         &self.sema.syntax.exps[&exp_id]
     }
 
+    fn on_pat(&mut self, exp_id: ExpId) {
+        self.sema.pats.insert(exp_id);
+
+        self.on_exp(exp_id);
+    }
+
+    fn sema(&mut self) {
+        for &(name, prim) in PRIMS {
+            let symbol_id = SymbolId(self.sema.symbols.len());
+            self.sema.symbols.insert(
+                symbol_id,
+                Symbol {
+                    kind: SymbolKind::Prim(prim),
+                    name: name.to_string(),
+                },
+            );
+            self.env.insert(name.to_string(), symbol_id);
+        }
+
+        let root_exp_id = self.sema.syntax.root_exp_id;
+        let fun_id = self.add_fun("main".to_string(), root_exp_id);
+        assert_eq!(fun_id, GLOBAL_FUN_ID);
+
+        self.current_fun_id = GLOBAL_FUN_ID;
+        self.on_exp(root_exp_id);
+    }
+}
+
+impl ShareSyntax for SemanticAnalyzer {
+    fn share_syntax(&self) -> Rc<Syntax> {
+        self.sema.syntax.clone()
+    }
+}
+
+impl ExpVisitor for SemanticAnalyzer {
+    type Output = ();
+
     fn on_err(&mut self, _: ExpId, _: MsgId) {}
 
     fn on_int(&mut self, exp_id: ExpId, _: i64) {
@@ -111,49 +148,6 @@ impl SemanticAnalyzer {
         for &exp_id in exps {
             self.on_exp(exp_id);
         }
-    }
-
-    fn on_exp(&mut self, exp_id: ExpId) {
-        let syntax = Rc::clone(&self.sema.syntax);
-        let exp = &syntax.exps[&exp_id];
-        match &exp.kind {
-            &ExpKind::Err(msg_id) => self.on_err(exp_id, msg_id),
-            &ExpKind::Int(value) => self.on_int(exp_id, value),
-            ExpKind::Str(value) => self.on_str(exp_id, value),
-            ExpKind::Ident(name) => self.on_ident(exp_id, name),
-            ExpKind::Call { callee, args } => self.on_call(exp_id, *callee, &args),
-            &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
-            &ExpKind::If { cond, body, alt } => self.on_if(exp_id, cond, body, alt),
-            &ExpKind::Let { pat, init } => self.on_let(exp_id, pat, init),
-            ExpKind::Semi(exps) => self.on_semi(exp_id, &exps),
-        }
-    }
-
-    fn on_pat(&mut self, exp_id: ExpId) {
-        self.sema.pats.insert(exp_id);
-
-        self.on_exp(exp_id);
-    }
-
-    fn sema(&mut self) {
-        for &(name, prim) in PRIMS {
-            let symbol_id = SymbolId(self.sema.symbols.len());
-            self.sema.symbols.insert(
-                symbol_id,
-                Symbol {
-                    kind: SymbolKind::Prim(prim),
-                    name: name.to_string(),
-                },
-            );
-            self.env.insert(name.to_string(), symbol_id);
-        }
-
-        let root_exp_id = self.sema.syntax.root_exp_id;
-        let fun_id = self.add_fun("main".to_string(), root_exp_id);
-        assert_eq!(fun_id, GLOBAL_FUN_ID);
-
-        self.current_fun_id = GLOBAL_FUN_ID;
-        self.on_exp(root_exp_id);
     }
 }
 

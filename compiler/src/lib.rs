@@ -180,18 +180,6 @@ pub struct Exp {
     span: Span,
 }
 
-pub trait ExpVisitor {
-    type Output;
-
-    fn on_err(&mut self, exp_id: ExpId, msg_id: MsgId) -> Self::Output;
-    fn on_int(&mut self, exp_id: ExpId, value: i64) -> Self::Output;
-    fn on_str(&mut self, exp_id: ExpId, value: &str) -> Self::Output;
-    fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]) -> Self::Output;
-    fn on_bin(&mut self, exp_id: ExpId, op: Op, l: ExpId, r: ExpId) -> Self::Output;
-    fn on_let(&mut self, exp_id: ExpId, pat: ExpId, init: ExpId) -> Self::Output;
-    fn on_semi(&mut self, exp_id: ExpId, exps: &[ExpId]) -> Self::Output;
-}
-
 #[derive(Clone, Debug)]
 pub struct Syntax {
     src: String,
@@ -264,6 +252,40 @@ pub struct Mir {
     pub label_count: usize,
     pub funs: BTreeMap<FunId, GenFunDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
+}
+
+pub trait ShareSyntax {
+    fn share_syntax(&self) -> Rc<Syntax>;
+}
+
+pub trait ExpVisitor: ShareSyntax {
+    type Output;
+
+    fn on_err(&mut self, exp_id: ExpId, msg_id: MsgId) -> Self::Output;
+    fn on_int(&mut self, exp_id: ExpId, value: i64) -> Self::Output;
+    fn on_str(&mut self, exp_id: ExpId, value: &str) -> Self::Output;
+    fn on_ident(&mut self, exp_id: ExpId, name: &str) -> Self::Output;
+    fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]) -> Self::Output;
+    fn on_bin(&mut self, exp_id: ExpId, op: Op, l: ExpId, r: ExpId) -> Self::Output;
+    fn on_if(&mut self, exp_id: ExpId, cond: ExpId, body: ExpId, alt: ExpId) -> Self::Output;
+    fn on_let(&mut self, exp_id: ExpId, pat: ExpId, init: ExpId) -> Self::Output;
+    fn on_semi(&mut self, exp_id: ExpId, exps: &[ExpId]) -> Self::Output;
+
+    fn on_exp(&mut self, exp_id: ExpId) -> Self::Output {
+        let syntax = self.share_syntax();
+        let exp = &syntax.exps[&exp_id];
+        match &exp.kind {
+            &ExpKind::Err(msg_id) => self.on_err(exp_id, msg_id),
+            &ExpKind::Int(value) => self.on_int(exp_id, value),
+            ExpKind::Str(value) => self.on_str(exp_id, value),
+            ExpKind::Ident(name) => self.on_ident(exp_id, name),
+            ExpKind::Call { callee, args } => self.on_call(exp_id, *callee, &args),
+            &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
+            &ExpKind::If { cond, body, alt } => self.on_if(exp_id, cond, body, alt),
+            &ExpKind::Let { pat, init } => self.on_let(exp_id, pat, init),
+            ExpKind::Semi(exps) => self.on_semi(exp_id, &exps),
+        }
+    }
 }
 
 impl OpLevel {

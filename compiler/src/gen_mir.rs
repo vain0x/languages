@@ -52,6 +52,103 @@ impl Compiler {
         self.current_gen_fun_mut().inss.push((cmd, l, r));
     }
 
+    pub fn gen_fun(&mut self, fun_id: FunId) {
+        let label_id = self.add_label();
+
+        self.mir.funs.insert(
+            fun_id,
+            GenFunDef {
+                label_id,
+                inss: vec![],
+            },
+        );
+
+        self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(label_id));
+
+        // Allocate local variables.
+        let local_count = self.sema().funs[&fun_id].locals.len();
+        let frame_size = (local_count * size_of::<i64>()) as i64;
+        self.push(Cmd::AddImm, BASE_PTR_REG_ID, CmdArg::Int(-frame_size));
+
+        let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
+        self.kill(final_reg_id);
+        self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
+    }
+
+    pub fn compile(&mut self) -> CompilationResult {
+        // Allocate well-known registers.
+        self.mir.reg_count += KNOWN_REG_NUM;
+
+        self.gen_fun(GLOBAL_FUN_ID);
+
+        // Reassign registers to finite number registers.
+        for fun_id in 0..self.mir.funs.len() {
+            regalloc::alloc_regs(&mut self.mir.funs.get_mut(&FunId(fun_id)).unwrap().inss);
+        }
+
+        // Merge instructions.
+        let mut inss = vec![];
+        for (_, fun) in &self.mir.funs {
+            inss.extend(&fun.inss);
+        }
+
+        // Build jump table.
+        let mut labels = BTreeMap::new();
+        for pc in 0..inss.len() {
+            if let (Cmd::Label, _, CmdArg::Label(r)) = inss[pc] {
+                labels.insert(r, pc);
+            }
+        }
+
+        // Replace label ids with pc.
+        for i in 0..inss.len() {
+            if let CmdArg::Label(label_id) = inss[i].2 {
+                inss[i].2 = CmdArg::Int(labels[&label_id] as i64);
+            }
+        }
+
+        // Write MIR.
+        let mut program = String::new();
+        for &(cmd, l, r) in &inss {
+            let cmd = crate::serialize_cmd(cmd);
+            writeln!(program, "    {} {} {}", cmd, l.0, r.to_i64()).unwrap();
+        }
+
+        // Emit compile errors.
+        let mut success = true;
+        let mut stderr = String::new();
+        for (_, msg) in &self.mir.msgs {
+            let ((ly, lx), (ry, rx)) = self.mir.sema.syntax.locate_exp(msg.exp_id);
+            writeln!(
+                stderr,
+                "At {}:{}..{}:{} {}",
+                1 + ly,
+                1 + lx,
+                1 + ry,
+                1 + rx,
+                msg.message
+            )
+            .unwrap();
+            success = success && msg.level != MsgLevel::Err;
+        }
+
+        CompilationResult {
+            success,
+            program,
+            stderr,
+        }
+    }
+}
+
+impl ShareSyntax for Compiler {
+    fn share_syntax(&self) -> Rc<Syntax> {
+        Rc::clone(&self.sema().syntax)
+    }
+}
+
+impl ExpVisitor for Compiler {
+    type Output = RegId;
+
     fn on_err(&mut self, _: ExpId, _: MsgId) -> RegId {
         self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
         NO_REG_ID
@@ -166,109 +263,6 @@ impl Compiler {
             reg_id = result;
         }
         reg_id
-    }
-
-    fn on_exp(&mut self, exp_id: ExpId) -> RegId {
-        let syntax = Rc::clone(&self.mir.sema.syntax);
-        let exp = &syntax.exps[&exp_id];
-        match &exp.kind {
-            &ExpKind::Err(msg_id) => self.on_err(exp_id, msg_id),
-            &ExpKind::Int(value) => self.on_int(exp_id, value),
-            ExpKind::Str(value) => self.on_str(exp_id, value),
-            ExpKind::Ident(name) => self.on_ident(exp_id, name),
-            ExpKind::Call { callee, args } => self.on_call(exp_id, *callee, &args),
-            &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
-            &ExpKind::If { cond, body, alt } => self.on_if(exp_id, cond, body, alt),
-            &ExpKind::Let { pat, init } => self.on_let(exp_id, pat, init),
-            ExpKind::Semi(exps) => self.on_semi(exp_id, &exps),
-        }
-    }
-
-    pub fn gen_fun(&mut self, fun_id: FunId) {
-        let label_id = self.add_label();
-
-        self.mir.funs.insert(
-            fun_id,
-            GenFunDef {
-                label_id,
-                inss: vec![],
-            },
-        );
-
-        self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(label_id));
-
-        // Allocate local variables.
-        let local_count = self.sema().funs[&fun_id].locals.len();
-        let frame_size = (local_count * size_of::<i64>()) as i64;
-        self.push(Cmd::AddImm, BASE_PTR_REG_ID, CmdArg::Int(-frame_size));
-
-        let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
-        self.kill(final_reg_id);
-        self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
-    }
-
-    pub fn compile(&mut self) -> CompilationResult {
-        // Allocate well-known registers.
-        self.mir.reg_count += KNOWN_REG_NUM;
-
-        self.gen_fun(GLOBAL_FUN_ID);
-
-        // Reassign registers to finite number registers.
-        for fun_id in 0..self.mir.funs.len() {
-            regalloc::alloc_regs(&mut self.mir.funs.get_mut(&FunId(fun_id)).unwrap().inss);
-        }
-
-        // Merge instructions.
-        let mut inss = vec![];
-        for (_, fun) in &self.mir.funs {
-            inss.extend(&fun.inss);
-        }
-
-        // Build jump table.
-        let mut labels = BTreeMap::new();
-        for pc in 0..inss.len() {
-            if let (Cmd::Label, _, CmdArg::Label(r)) = inss[pc] {
-                labels.insert(r, pc);
-            }
-        }
-
-        // Replace label ids with pc.
-        for i in 0..inss.len() {
-            if let CmdArg::Label(label_id) = inss[i].2 {
-                inss[i].2 = CmdArg::Int(labels[&label_id] as i64);
-            }
-        }
-
-        // Write MIR.
-        let mut program = String::new();
-        for &(cmd, l, r) in &inss {
-            let cmd = crate::serialize_cmd(cmd);
-            writeln!(program, "    {} {} {}", cmd, l.0, r.to_i64()).unwrap();
-        }
-
-        // Emit compile errors.
-        let mut success = true;
-        let mut stderr = String::new();
-        for (_, msg) in &self.mir.msgs {
-            let ((ly, lx), (ry, rx)) = self.mir.sema.syntax.locate_exp(msg.exp_id);
-            writeln!(
-                stderr,
-                "At {}:{}..{}:{} {}",
-                1 + ly,
-                1 + lx,
-                1 + ry,
-                1 + rx,
-                msg.message
-            )
-            .unwrap();
-            success = success && msg.level != MsgLevel::Err;
-        }
-
-        CompilationResult {
-            success,
-            program,
-            stderr,
-        }
     }
 }
 

@@ -17,6 +17,8 @@ fn eval_tests(src: &str, ios: &[(&str, &str)]) {
     }
     assert!(success, "src={} program={}", src, program);
 
+    eprintln!("{}", program);
+
     for &(input, expected) in ios {
         let mut stdout = Vec::new();
         picomet_lang_runtime::eval(&program, io::Cursor::new(input), &mut stdout);
@@ -51,6 +53,16 @@ fn test_arithmetic() {
 }
 
 #[test]
+fn test_prefix_parsing() {
+    eval_tests(
+        r#"
+            println_int(-1)
+        "#,
+        &[("", "-1\n")],
+    )
+}
+
+#[test]
 fn test_read_int() {
     eval_tests(
         r#"
@@ -81,5 +93,19 @@ fn test_local_var_two() {
             println_int(b);
         "#,
         &[("", "1\n2\n")],
+    )
+}
+
+#[test]
+fn test_if() {
+    eval_tests(
+        r#"
+            println_int(if read_int() == 0 {
+                42
+            } else {
+                -1
+            })
+        "#,
+        &[("0", "42\n"), ("1", "-1\n")],
     )
 }

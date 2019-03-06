@@ -111,6 +111,8 @@ pub enum OpLevel {
 pub enum Keyword {
     Let,
     Def,
+    If,
+    Else,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -150,9 +152,24 @@ pub enum ExpKind {
     Int(i64),
     Str(String),
     Ident(String),
-    Call { callee: ExpId, args: Vec<ExpId> },
-    Bin { op: Op, l: ExpId, r: ExpId },
-    Let { pat: ExpId, init: ExpId },
+    Call {
+        callee: ExpId,
+        args: Vec<ExpId>,
+    },
+    Bin {
+        op: Op,
+        l: ExpId,
+        r: ExpId,
+    },
+    If {
+        cond: ExpId,
+        body: ExpId,
+        alt: ExpId,
+    },
+    Let {
+        pat: ExpId,
+        init: ExpId,
+    },
     Semi(Vec<ExpId>),
 }
 
@@ -273,11 +290,13 @@ impl Keyword {
         match self {
             Keyword::Let => "let",
             Keyword::Def => "def",
+            Keyword::If => "if",
+            Keyword::Else => "else",
         }
     }
 
     fn get_all() -> &'static [Keyword] {
-        &[Keyword::Let, Keyword::Def]
+        &[Keyword::Let, Keyword::Def, Keyword::If, Keyword::Else]
     }
 }
 

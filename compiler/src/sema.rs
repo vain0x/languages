@@ -96,6 +96,12 @@ impl SemanticAnalyzer {
         self.on_exp(exp_r);
     }
 
+    fn on_if(&mut self, _: ExpId, cond: ExpId, body: ExpId, alt: ExpId) {
+        self.on_exp(cond);
+        self.on_exp(body);
+        self.on_exp(alt);
+    }
+
     fn on_let(&mut self, _: ExpId, pat: ExpId, init: ExpId) {
         self.on_pat(pat);
         self.on_exp(init);
@@ -117,6 +123,7 @@ impl SemanticAnalyzer {
             ExpKind::Ident(name) => self.on_ident(exp_id, name),
             ExpKind::Call { callee, args } => self.on_call(exp_id, *callee, &args),
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
+            &ExpKind::If { cond, body, alt } => self.on_if(exp_id, cond, body, alt),
             &ExpKind::Let { pat, init } => self.on_let(exp_id, pat, init),
             ExpKind::Semi(exps) => self.on_semi(exp_id, &exps),
         }

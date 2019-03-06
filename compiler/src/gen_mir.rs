@@ -112,7 +112,7 @@ impl Compiler {
         let r_reg = self.on_exp(exp_r);
         let cmd = match op {
             Op::Set => unimplemented!(),
-            Op::Eq => unimplemented!(),
+            Op::Eq => Cmd::Eq,
             Op::Add => Cmd::Add,
             Op::Sub => Cmd::Sub,
             Op::Mul => Cmd::Mul,
@@ -123,6 +123,29 @@ impl Compiler {
         self.push(cmd, l_reg, CmdArg::Reg(r_reg));
         self.kill(r_reg);
         l_reg
+    }
+
+    fn on_if(&mut self, _: ExpId, cond: ExpId, body: ExpId, alt: ExpId) -> RegId {
+        let alt_label = CmdArg::Label(self.add_label());
+        let end_label = CmdArg::Label(self.add_label());
+        let end_reg = self.add_reg();
+
+        let cond_reg_id = self.on_exp(cond);
+        self.push(Cmd::Unless, cond_reg_id, alt_label);
+        self.kill(cond_reg_id);
+
+        let body_reg_id = self.on_exp(body);
+        self.push(Cmd::Mov, end_reg, CmdArg::Reg(body_reg_id));
+        self.kill(body_reg_id);
+        self.push(Cmd::Jump, NO_REG_ID, end_label);
+
+        self.push(Cmd::Label, NO_REG_ID, alt_label);
+        let alt_reg_id = self.on_exp(alt);
+        self.push(Cmd::Mov, end_reg, CmdArg::Reg(alt_reg_id));
+        self.kill(alt_reg_id);
+
+        self.push(Cmd::Label, NO_REG_ID, end_label);
+        end_reg
     }
 
     fn on_let(&mut self, _: ExpId, pat: ExpId, init: ExpId) -> RegId {
@@ -154,6 +177,7 @@ impl Compiler {
             ExpKind::Ident(name) => self.on_ident(exp_id, name),
             ExpKind::Call { callee, args } => self.on_call(exp_id, *callee, &args),
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
+            &ExpKind::If { cond, body, alt } => self.on_if(exp_id, cond, body, alt),
             &ExpKind::Let { pat, init } => self.on_let(exp_id, pat, init),
             ExpKind::Semi(exps) => self.on_semi(exp_id, &exps),
         }
@@ -191,6 +215,21 @@ impl Compiler {
         let mut inss = vec![];
         for (_, fun) in &self.mir.funs {
             inss.extend(&fun.inss);
+        }
+
+        // Build jump table.
+        let mut labels = BTreeMap::new();
+        for pc in 0..inss.len() {
+            if let (Cmd::Label, _, CmdArg::Label(r)) = inss[pc] {
+                labels.insert(r, pc);
+            }
+        }
+
+        // Replace label ids with pc.
+        for i in 0..inss.len() {
+            if let CmdArg::Label(label_id) = inss[i].2 {
+                inss[i].2 = CmdArg::Int(labels[&label_id] as i64);
+            }
         }
 
         // Write MIR.

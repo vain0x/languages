@@ -18,6 +18,7 @@ impl Parser<'_> {
         match self.next().kind {
             TokenKind::Err
             | TokenKind::Eof
+            | TokenKind::Keyword(Keyword::Else)
             | TokenKind::Pun(")")
             | TokenKind::Pun("]")
             | TokenKind::Pun("}")
@@ -94,6 +95,16 @@ impl Parser<'_> {
                 self.current += 1;
                 exp_id
             }
+            TokenKind::Pun("{") => {
+                self.current += 1;
+                let exp_id = self.parse_exp();
+
+                if self.next().kind != TokenKind::Pun("}") {
+                    return self.parse_err("Expected '}'".to_string());
+                }
+                self.current += 1;
+                exp_id
+            }
             TokenKind::Err => {
                 self.current += 1;
                 self.parse_err("Invalid character".to_string())
@@ -138,9 +149,21 @@ impl Parser<'_> {
         exp_l
     }
 
+    fn parse_prefix(&mut self) -> ExpId {
+        let token_l = self.current;
+        if self.next().kind == TokenKind::Op(Op::Sub) {
+            self.current += 1;
+            let l = self.add_exp(ExpKind::Int(0), (token_l, self.current));
+            let r = self.parse_suffix();
+            return self.add_exp(ExpKind::Bin { op: Op::Sub, l, r }, (token_l, self.current));
+        }
+
+        self.parse_suffix()
+    }
+
     fn parse_bin_next(&mut self, op_level: OpLevel) -> ExpId {
         match op_level.next_level() {
-            None => self.parse_suffix(),
+            None => self.parse_prefix(),
             Some(op_level) => self.parse_bin_l(op_level),
         }
     }
@@ -174,8 +197,38 @@ impl Parser<'_> {
         exp_l
     }
 
+    fn parse_if(&mut self) -> ExpId {
+        let token_l = self.current;
+        self.current += 1;
+
+        let cond = self.parse_term();
+
+        if self.next().kind != TokenKind::Pun("{") {
+            return self.parse_err("Expected '{'".to_string());
+        }
+        let body = self.parse_term();
+
+        if self.next().kind != TokenKind::Keyword(Keyword::Else) {
+            let alt = self.add_exp(ExpKind::Int(0), (token_l, self.current));
+
+            return self.add_exp(ExpKind::If { cond, body, alt }, (token_l, self.current));
+        }
+        self.current += 1;
+
+        let alt = if self.next().kind == TokenKind::Pun("{") {
+            self.parse_atom()
+        } else {
+            self.parse_term()
+        };
+
+        self.add_exp(ExpKind::If { cond, body, alt }, (token_l, self.current))
+    }
+
     fn parse_term(&mut self) -> ExpId {
-        self.parse_bin_l(OpLevel::Set)
+        match self.next().kind {
+            TokenKind::Keyword(Keyword::If) => self.parse_if(),
+            _ => self.parse_bin_l(OpLevel::Set),
+        }
     }
 
     fn parse_term_list(&mut self, items: &mut Vec<ExpId>) {

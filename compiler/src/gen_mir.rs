@@ -83,6 +83,7 @@ impl Compiler {
                 } else {
                     let reg_id = self.add_reg();
                     self.push(Cmd::Load, reg_id, CmdArg::Reg(offset_reg_id));
+                    self.kill(offset_reg_id);
                     reg_id
                 }
             }
@@ -212,6 +213,12 @@ impl Compiler {
 
         self.gen_fun(GLOBAL_FUN_ID);
 
+        // Reassign registers to finite number registers.
+        for fun_id in 0..self.mir.funs.len() {
+            regalloc::alloc_regs(&mut self.mir.funs.get_mut(&FunId(fun_id)).unwrap().inss);
+        }
+
+        // Merge instructions.
         let mut inss = vec![];
         for (_, fun) in &self.mir.funs {
             inss.extend(&fun.inss);

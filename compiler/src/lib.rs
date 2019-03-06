@@ -1,6 +1,7 @@
 pub mod cmd;
 pub mod gen_mir;
 pub mod parse;
+pub mod regalloc;
 pub mod sema;
 pub mod tokenize;
 

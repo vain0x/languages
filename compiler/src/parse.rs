@@ -215,10 +215,10 @@ impl Parser<'_> {
         }
         self.current += 1;
 
-        let alt = if self.next().kind == TokenKind::Pun("{") {
-            self.parse_atom()
-        } else {
-            self.parse_term()
+        let alt = match self.next().kind {
+            TokenKind::Pun("{") => self.parse_atom(),
+            TokenKind::Keyword(Keyword::If) => self.parse_term(),
+            _ => self.parse_err("Expected '}' or 'if'".to_string()),
         };
 
         self.add_exp(ExpKind::If { cond, body, alt }, (token_l, self.current))

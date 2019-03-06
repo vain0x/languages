@@ -59,3 +59,27 @@ fn test_read_int() {
         &[("41", "42\n"), ("-1", "0\n")],
     )
 }
+
+#[test]
+fn test_local_var() {
+    eval_tests(
+        r#"
+            let a = 1
+            println_int(a)
+        "#,
+        &[("", "1\n")],
+    )
+}
+
+#[test]
+fn test_local_var_two() {
+    eval_tests(
+        r#"
+            let a = 1;
+            let b = 2;
+            println_int(a);
+            println_int(b);
+        "#,
+        &[("", "1\n2\n")],
+    )
+}

@@ -86,7 +86,7 @@ macro_rules! define_rich_id {
     };
 }
 
-define_rich_id!(MsgId, TokenId, ExpId, RegId, LabelId, VarId, FunId);
+define_rich_id!(MsgId, TokenId, ExpId, SymbolId, RegId, LabelId, VarId, FunId);
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Op {
@@ -171,8 +171,9 @@ pub struct Syntax {
     msgs: BTreeMap<MsgId, Msg>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Prim {
+    ReadInt,
     PrintLnInt,
 }
 
@@ -183,8 +184,8 @@ pub enum CallKind {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum SymbolKind {
-    Var,
-    Fun,
+    Prim(Prim),
+    Local { index: usize },
 }
 
 #[derive(Clone, PartialEq, Debug)]

@@ -2,6 +2,7 @@ use crate::cmd::*;
 use crate::sema::Sema;
 use crate::*;
 use std::fmt::Write;
+use std::mem::size_of;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CmdArg {
@@ -27,8 +28,24 @@ struct Compiler {
 }
 
 impl Compiler {
+    fn syntax(&self) -> &Syntax {
+        &self.sema().syntax
+    }
+
+    fn sema(&self) -> &Sema {
+        &self.mir.sema
+    }
+
     fn exp(&self, exp_id: ExpId) -> &Exp {
         &self.mir.sema.syntax.exps[&exp_id]
+    }
+
+    fn get_symbol(&self, exp_id: ExpId) -> Option<&Symbol> {
+        (self.mir.sema.exp_symbols.get(&exp_id)).map(|symbol_id| &self.mir.sema.symbols[&symbol_id])
+    }
+
+    fn is_lval(&self, exp_id: ExpId) -> bool {
+        self.mir.sema.pats.contains(&exp_id)
     }
 
     fn add_reg(&mut self) -> RegId {
@@ -49,48 +66,64 @@ impl Compiler {
         self.mir.ins.push((cmd, l, r));
     }
 
-    fn on_err(&mut self, exp_id: ExpId, msg_id: MsgId) -> RegId {
+    fn on_err(&mut self, _: ExpId, _: MsgId) -> RegId {
         self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
         NO_REG_ID
     }
 
-    fn on_int(&mut self, exp_id: ExpId, value: i64) -> RegId {
+    fn on_int(&mut self, _: ExpId, value: i64) -> RegId {
         let l = self.add_reg();
         self.push(Cmd::Imm, l, CmdArg::Int(value));
         l
     }
 
-    fn on_str(&mut self, exp_id: ExpId, value: &str) -> RegId {
+    fn on_str(&mut self, _: ExpId, _: &str) -> RegId {
         unimplemented!()
     }
 
-    fn on_ident(&mut self, exp_id: ExpId, name: &str) -> RegId {
-        unimplemented!()
-    }
+    fn on_ident(&mut self, exp_id: ExpId, _: &str) -> RegId {
+        let symbol = self.get_symbol(exp_id).expect("ident should be resolved");
+        match &symbol.kind {
+            SymbolKind::Prim(..) => panic!("cannot generate primitive"),
+            SymbolKind::Local { index } => {
+                let offset = (*index * size_of::<i64>()) as i64;
 
-    fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]) -> RegId {
-        match &self.exp(callee).kind {
-            ExpKind::Ident(name) => match name.as_ref() {
-                "read_int" => {
-                    let l = self.add_reg();
-                    self.push(Cmd::ReadInt, l, CmdArg::None);
-                    l
+                let offset_reg_id = self.add_reg();
+                self.push(Cmd::Mov, offset_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
+                self.push(Cmd::AddImm, offset_reg_id, CmdArg::Int(offset));
+
+                if self.is_lval(exp_id) {
+                    offset_reg_id
+                } else {
+                    let reg_id = self.add_reg();
+                    self.push(Cmd::Load, reg_id, CmdArg::Reg(offset_reg_id));
+                    reg_id
                 }
-                "println_int" => {
-                    let r = self.on_exp(args[0]);
-                    self.push(Cmd::PrintLnInt, NO_REG_ID, CmdArg::Reg(r));
-                    self.kill(r);
-                    NO_REG_ID
-                }
-                _ => unimplemented!(),
-            },
-            _ => unimplemented!(),
+            }
         }
     }
 
-    fn on_bin(&mut self, exp_id: ExpId, op: Op, exp_l: ExpId, exp_r: ExpId) -> RegId {
-        let l = self.on_exp(exp_l);
-        let r = self.on_exp(exp_r);
+    fn on_call(&mut self, _: ExpId, callee: ExpId, args: &[ExpId]) -> RegId {
+        let symbol = &self.get_symbol(callee).expect("cannot call non-symbol");
+        match symbol.kind {
+            SymbolKind::Prim(Prim::ReadInt) => {
+                let l = self.add_reg();
+                self.push(Cmd::ReadInt, l, CmdArg::None);
+                l
+            }
+            SymbolKind::Prim(Prim::PrintLnInt) => {
+                let r = self.on_exp(args[0]);
+                self.push(Cmd::PrintLnInt, NO_REG_ID, CmdArg::Reg(r));
+                self.kill(r);
+                NO_REG_ID
+            }
+            _ => panic!("cannot call non-primitive symbol"),
+        }
+    }
+
+    fn on_bin(&mut self, _: ExpId, op: Op, exp_l: ExpId, exp_r: ExpId) -> RegId {
+        let l_reg = self.on_exp(exp_l);
+        let r_reg = self.on_exp(exp_r);
         let cmd = match op {
             Op::Set => unimplemented!(),
             Op::Eq => unimplemented!(),
@@ -101,16 +134,21 @@ impl Compiler {
             Op::Mod => Cmd::Mod,
         };
 
-        self.push(cmd, l, CmdArg::Reg(r));
-        self.kill(r);
-        l
+        self.push(cmd, l_reg, CmdArg::Reg(r_reg));
+        self.kill(r_reg);
+        l_reg
     }
 
-    fn on_let(&mut self, exp_id: ExpId, pat: ExpId, init: ExpId) -> RegId {
-        unimplemented!()
+    fn on_let(&mut self, _: ExpId, pat: ExpId, init: ExpId) -> RegId {
+        let init_reg_id = self.on_exp(init);
+        let var_reg_id = self.on_exp(pat);
+        self.push(Cmd::Store, init_reg_id, CmdArg::Reg(var_reg_id));
+        self.kill(var_reg_id);
+        self.kill(init_reg_id);
+        NO_REG_ID
     }
 
-    fn on_semi(&mut self, exp_id: ExpId, exps: &[ExpId]) -> RegId {
+    fn on_semi(&mut self, _: ExpId, exps: &[ExpId]) -> RegId {
         let mut reg_id = NO_REG_ID;
         for &exp_id in exps {
             let result = self.on_exp(exp_id);
@@ -139,7 +177,11 @@ impl Compiler {
         // Allocate well-known registers.
         self.mir.reg_count += KNOWN_REG_NUM;
 
-        let final_reg_id = self.on_exp(self.mir.sema.syntax.root_exp_id);
+        // Allocate main local variables.
+        let size = (self.sema().local_count * size_of::<i64>()) as i64;
+        self.push(Cmd::AddImm, BASE_PTR_REG_ID, CmdArg::Int(-size));
+
+        let final_reg_id = self.on_exp(self.syntax().root_exp_id);
         self.kill(final_reg_id);
         self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
 

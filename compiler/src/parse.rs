@@ -232,6 +232,10 @@ impl Parser<'_> {
 
         while self.is_followed_by_exp() {
             children.push(self.parse_stmt());
+
+            while self.next().kind == TokenKind::Pun(";") {
+                self.current += 1;
+            }
         }
 
         let token_span = (token_l, self.current);

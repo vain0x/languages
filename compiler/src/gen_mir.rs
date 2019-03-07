@@ -70,7 +70,7 @@ impl Compiler {
         let frame_size = (local_count * size_of::<i64>()) as i64;
         self.push(Cmd::AddImm, BASE_PTR_REG_ID, CmdArg::Int(-frame_size));
 
-        let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
+        let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body, ());
         self.kill(final_reg_id);
         self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
     }
@@ -147,24 +147,25 @@ impl ShareSyntax for Compiler {
 }
 
 impl ExpVisitor for Compiler {
+    type Mode = ();
     type Output = RegId;
 
-    fn on_err(&mut self, _: ExpId, _: MsgId) -> RegId {
+    fn on_err(&mut self, _: ExpId, _: (), _: MsgId) -> RegId {
         self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
         NO_REG_ID
     }
 
-    fn on_int(&mut self, _: ExpId, value: i64) -> RegId {
+    fn on_int(&mut self, _: ExpId, _: (), value: i64) -> RegId {
         let l = self.add_reg();
         self.push(Cmd::Imm, l, CmdArg::Int(value));
         l
     }
 
-    fn on_str(&mut self, _: ExpId, _: &str) -> RegId {
+    fn on_str(&mut self, _: ExpId, _: (), _: &str) -> RegId {
         unimplemented!()
     }
 
-    fn on_ident(&mut self, exp_id: ExpId, _: &str) -> RegId {
+    fn on_ident(&mut self, exp_id: ExpId, _: (), _: &str) -> RegId {
         let symbol = self.get_symbol(exp_id).expect("ident should be resolved");
         match &symbol.kind {
             SymbolKind::Prim(..) => panic!("cannot generate primitive"),
@@ -187,7 +188,7 @@ impl ExpVisitor for Compiler {
         }
     }
 
-    fn on_call(&mut self, _: ExpId, callee: ExpId, args: &[ExpId]) -> RegId {
+    fn on_call(&mut self, _: ExpId, _: (), callee: ExpId, args: &[ExpId]) -> RegId {
         let symbol = &self.get_symbol(callee).expect("cannot call non-symbol");
         match symbol.kind {
             SymbolKind::Prim(Prim::ReadInt) => {
@@ -196,7 +197,7 @@ impl ExpVisitor for Compiler {
                 l
             }
             SymbolKind::Prim(Prim::PrintLnInt) => {
-                let r = self.on_exp(args[0]);
+                let r = self.on_exp(args[0], ());
                 self.push(Cmd::PrintLnInt, NO_REG_ID, CmdArg::Reg(r));
                 self.kill(r);
                 NO_REG_ID
@@ -205,9 +206,9 @@ impl ExpVisitor for Compiler {
         }
     }
 
-    fn on_bin(&mut self, _: ExpId, op: Op, exp_l: ExpId, exp_r: ExpId) -> RegId {
-        let l_reg = self.on_exp(exp_l);
-        let r_reg = self.on_exp(exp_r);
+    fn on_bin(&mut self, _: ExpId, _: (), op: Op, exp_l: ExpId, exp_r: ExpId) -> RegId {
+        let l_reg = self.on_exp(exp_l, ());
+        let r_reg = self.on_exp(exp_r, ());
         let cmd = match op {
             Op::Set => unimplemented!(),
             Op::Eq => Cmd::Eq,
@@ -223,22 +224,22 @@ impl ExpVisitor for Compiler {
         l_reg
     }
 
-    fn on_if(&mut self, _: ExpId, cond: ExpId, body: ExpId, alt: ExpId) -> RegId {
+    fn on_if(&mut self, _: ExpId, _: (), cond: ExpId, body: ExpId, alt: ExpId) -> RegId {
         let alt_label = CmdArg::Label(self.add_label());
         let end_label = CmdArg::Label(self.add_label());
         let end_reg = self.add_reg();
 
-        let cond_reg_id = self.on_exp(cond);
+        let cond_reg_id = self.on_exp(cond, ());
         self.push(Cmd::Unless, cond_reg_id, alt_label);
         self.kill(cond_reg_id);
 
-        let body_reg_id = self.on_exp(body);
+        let body_reg_id = self.on_exp(body, ());
         self.push(Cmd::Mov, end_reg, CmdArg::Reg(body_reg_id));
         self.kill(body_reg_id);
         self.push(Cmd::Jump, NO_REG_ID, end_label);
 
         self.push(Cmd::Label, NO_REG_ID, alt_label);
-        let alt_reg_id = self.on_exp(alt);
+        let alt_reg_id = self.on_exp(alt, ());
         self.push(Cmd::Mov, end_reg, CmdArg::Reg(alt_reg_id));
         self.kill(alt_reg_id);
 
@@ -246,16 +247,16 @@ impl ExpVisitor for Compiler {
         end_reg
     }
 
-    fn on_while(&mut self, _: ExpId, cond: ExpId, body: ExpId) -> RegId {
+    fn on_while(&mut self, _: ExpId, _: (), cond: ExpId, body: ExpId) -> RegId {
         let continue_label = CmdArg::Label(self.add_label());
         let break_label = CmdArg::Label(self.add_label());
 
         self.push(Cmd::Label, NO_REG_ID, continue_label);
-        let cond_reg_id = self.on_exp(cond);
+        let cond_reg_id = self.on_exp(cond, ());
         self.push(Cmd::Unless, cond_reg_id, break_label);
         self.kill(cond_reg_id);
 
-        let body_reg_id = self.on_exp(body);
+        let body_reg_id = self.on_exp(body, ());
         self.kill(body_reg_id);
         self.push(Cmd::Jump, NO_REG_ID, continue_label);
 
@@ -263,19 +264,19 @@ impl ExpVisitor for Compiler {
         NO_REG_ID
     }
 
-    fn on_let(&mut self, _: ExpId, pat: ExpId, init: ExpId) -> RegId {
-        let init_reg_id = self.on_exp(init);
-        let var_reg_id = self.on_exp(pat);
+    fn on_let(&mut self, _: ExpId, _: (), pat: ExpId, init: ExpId) -> RegId {
+        let init_reg_id = self.on_exp(init, ());
+        let var_reg_id = self.on_exp(pat, ());
         self.push(Cmd::Store, init_reg_id, CmdArg::Reg(var_reg_id));
         self.kill(var_reg_id);
         self.kill(init_reg_id);
         NO_REG_ID
     }
 
-    fn on_semi(&mut self, _: ExpId, exps: &[ExpId]) -> RegId {
+    fn on_semi(&mut self, _: ExpId, _: (), exps: &[ExpId]) -> RegId {
         let mut reg_id = NO_REG_ID;
         for &exp_id in exps {
-            let result = self.on_exp(exp_id);
+            let result = self.on_exp(exp_id, ());
             self.kill(reg_id);
             reg_id = result;
         }

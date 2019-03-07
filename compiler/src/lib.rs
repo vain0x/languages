@@ -264,33 +264,60 @@ pub trait ShareSyntax {
 }
 
 pub trait ExpVisitor: ShareSyntax {
+    type Mode;
     type Output;
 
-    fn on_err(&mut self, exp_id: ExpId, msg_id: MsgId) -> Self::Output;
-    fn on_int(&mut self, exp_id: ExpId, value: i64) -> Self::Output;
-    fn on_str(&mut self, exp_id: ExpId, value: &str) -> Self::Output;
-    fn on_ident(&mut self, exp_id: ExpId, name: &str) -> Self::Output;
-    fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]) -> Self::Output;
-    fn on_bin(&mut self, exp_id: ExpId, op: Op, l: ExpId, r: ExpId) -> Self::Output;
-    fn on_if(&mut self, exp_id: ExpId, cond: ExpId, body: ExpId, alt: ExpId) -> Self::Output;
-    fn on_while(&mut self, exp_id: ExpId, cond: ExpId, body: ExpId) -> Self::Output;
-    fn on_let(&mut self, exp_id: ExpId, pat: ExpId, init: ExpId) -> Self::Output;
-    fn on_semi(&mut self, exp_id: ExpId, exps: &[ExpId]) -> Self::Output;
+    fn on_err(&mut self, exp_id: ExpId, mode: Self::Mode, msg_id: MsgId) -> Self::Output;
+    fn on_int(&mut self, exp_id: ExpId, mode: Self::Mode, value: i64) -> Self::Output;
+    fn on_str(&mut self, exp_id: ExpId, mode: Self::Mode, value: &str) -> Self::Output;
+    fn on_ident(&mut self, exp_id: ExpId, mode: Self::Mode, name: &str) -> Self::Output;
+    fn on_call(
+        &mut self,
+        exp_id: ExpId,
+        mode: Self::Mode,
+        callee: ExpId,
+        args: &[ExpId],
+    ) -> Self::Output;
+    fn on_bin(
+        &mut self,
+        exp_id: ExpId,
+        mode: Self::Mode,
+        op: Op,
+        l: ExpId,
+        r: ExpId,
+    ) -> Self::Output;
+    fn on_if(
+        &mut self,
+        exp_id: ExpId,
+        mode: Self::Mode,
+        cond: ExpId,
+        body: ExpId,
+        alt: ExpId,
+    ) -> Self::Output;
+    fn on_while(
+        &mut self,
+        exp_id: ExpId,
+        mode: Self::Mode,
+        cond: ExpId,
+        body: ExpId,
+    ) -> Self::Output;
+    fn on_let(&mut self, exp_id: ExpId, mode: Self::Mode, pat: ExpId, init: ExpId) -> Self::Output;
+    fn on_semi(&mut self, exp_id: ExpId, mode: Self::Mode, exps: &[ExpId]) -> Self::Output;
 
-    fn on_exp(&mut self, exp_id: ExpId) -> Self::Output {
+    fn on_exp(&mut self, exp_id: ExpId, mode: Self::Mode) -> Self::Output {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            &ExpKind::Err(msg_id) => self.on_err(exp_id, msg_id),
-            &ExpKind::Int(value) => self.on_int(exp_id, value),
-            ExpKind::Str(value) => self.on_str(exp_id, value),
-            ExpKind::Ident(name) => self.on_ident(exp_id, name),
-            ExpKind::Call { callee, args } => self.on_call(exp_id, *callee, &args),
-            &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
-            &ExpKind::If { cond, body, alt } => self.on_if(exp_id, cond, body, alt),
-            &ExpKind::While { cond, body } => self.on_while(exp_id, cond, body),
-            &ExpKind::Let { pat, init } => self.on_let(exp_id, pat, init),
-            ExpKind::Semi(exps) => self.on_semi(exp_id, &exps),
+            &ExpKind::Err(msg_id) => self.on_err(exp_id, mode, msg_id),
+            &ExpKind::Int(value) => self.on_int(exp_id, mode, value),
+            ExpKind::Str(value) => self.on_str(exp_id, mode, value),
+            ExpKind::Ident(name) => self.on_ident(exp_id, mode, name),
+            ExpKind::Call { callee, args } => self.on_call(exp_id, mode, *callee, &args),
+            &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, mode, op, l, r),
+            &ExpKind::If { cond, body, alt } => self.on_if(exp_id, mode, cond, body, alt),
+            &ExpKind::While { cond, body } => self.on_while(exp_id, mode, cond, body),
+            &ExpKind::Let { pat, init } => self.on_let(exp_id, mode, pat, init),
+            ExpKind::Semi(exps) => self.on_semi(exp_id, mode, &exps),
         }
     }
 }
@@ -327,7 +354,13 @@ impl Keyword {
     }
 
     fn get_all() -> &'static [Keyword] {
-        &[Keyword::Let, Keyword::Def, Keyword::If, Keyword::Else, Keyword::While]
+        &[
+            Keyword::Let,
+            Keyword::Def,
+            Keyword::If,
+            Keyword::Else,
+            Keyword::While,
+        ]
     }
 }
 

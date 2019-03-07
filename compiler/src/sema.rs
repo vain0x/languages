@@ -6,6 +6,13 @@ static PRIMS: &[(&str, Prim)] = &[
     ("println_int", Prim::PrintLnInt),
 ];
 
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum ExpMode {
+    Val,
+    Ref,
+    Pat,
+}
+
 pub struct SemanticAnalyzer {
     sema: Sema,
     env: BTreeMap<String, SymbolId>,
@@ -59,7 +66,15 @@ impl SemanticAnalyzer {
     fn on_pat(&mut self, exp_id: ExpId) {
         self.sema.pats.insert(exp_id);
 
-        self.on_exp(exp_id);
+        self.on_exp(exp_id, ExpMode::Pat);
+    }
+
+    fn on_ref(&mut self, exp_id: ExpId) {
+        self.on_exp(exp_id, ExpMode::Ref);
+    }
+
+    fn on_val(&mut self, exp_id: ExpId) {
+        self.on_exp(exp_id, ExpMode::Val);
     }
 
     fn sema(&mut self) {
@@ -80,7 +95,7 @@ impl SemanticAnalyzer {
         assert_eq!(fun_id, GLOBAL_FUN_ID);
 
         self.current_fun_id = GLOBAL_FUN_ID;
-        self.on_exp(root_exp_id);
+        self.on_val(root_exp_id);
     }
 }
 
@@ -91,67 +106,73 @@ impl ShareSyntax for SemanticAnalyzer {
 }
 
 impl ExpVisitor for SemanticAnalyzer {
+    type Mode = ExpMode;
     type Output = ();
 
-    fn on_err(&mut self, _: ExpId, _: MsgId) {}
+    fn on_err(&mut self, _: ExpId, _: ExpMode, _: MsgId) {}
 
-    fn on_int(&mut self, exp_id: ExpId, _: i64) {
-        if self.is_pat(exp_id) {
-            panic!("int pattern unimplemented")
+    fn on_int(&mut self, exp_id: ExpId, mode: ExpMode, _: i64) {
+        match mode {
+            ExpMode::Pat | ExpMode::Ref => unimplemented!(),
+            ExpMode::Val => {}
         }
     }
 
-    fn on_str(&mut self, exp_id: ExpId, _: &str) {
-        if self.is_pat(exp_id) {
-            panic!("str pattern unimplemented")
+    fn on_str(&mut self, exp_id: ExpId, mode: ExpMode, _: &str) {
+        match mode {
+            ExpMode::Pat | ExpMode::Ref => unimplemented!(),
+            ExpMode::Val => {}
         }
     }
 
-    fn on_ident(&mut self, exp_id: ExpId, name: &str) {
-        if self.is_pat(exp_id) {
-            let symbol_id = self.add_local(name.to_string());
-            self.env.insert(name.to_string(), symbol_id);
-            self.sema.exp_symbols.insert(exp_id, symbol_id);
-        } else {
-            if let Some(&symbol_id) = self.env.get(name) {
+    fn on_ident(&mut self, exp_id: ExpId, mode: ExpMode, name: &str) {
+        match mode {
+            ExpMode::Pat => {
+                let symbol_id = self.add_local(name.to_string());
+                self.env.insert(name.to_string(), symbol_id);
                 self.sema.exp_symbols.insert(exp_id, symbol_id);
-            } else {
-                panic!("unknown ident {}", name)
+            }
+            ExpMode::Ref | ExpMode::Val => {
+                if let Some(&symbol_id) = self.env.get(name) {
+                    self.sema.exp_symbols.insert(exp_id, symbol_id);
+                } else {
+                    panic!("unknown ident {}", name)
+                }
             }
         }
     }
 
-    fn on_call(&mut self, _: ExpId, callee: ExpId, args: &[ExpId]) {
-        self.on_exp(callee);
+    fn on_call(&mut self, _: ExpId, _: ExpMode, callee: ExpId, args: &[ExpId]) {
+        self.on_val(callee);
         for &arg in args {
-            self.on_exp(arg);
+            self.on_val(arg);
         }
     }
 
-    fn on_bin(&mut self, _: ExpId, _: Op, exp_l: ExpId, exp_r: ExpId) {
-        self.on_exp(exp_l);
-        self.on_exp(exp_r);
+    fn on_bin(&mut self, _: ExpId, _: ExpMode, _: Op, exp_l: ExpId, exp_r: ExpId) {
+        self.on_val(exp_l);
+        self.on_val(exp_r);
     }
 
-    fn on_if(&mut self, _: ExpId, cond: ExpId, body: ExpId, alt: ExpId) {
-        self.on_exp(cond);
-        self.on_exp(body);
-        self.on_exp(alt);
+    fn on_if(&mut self, _: ExpId, _: ExpMode, cond: ExpId, body: ExpId, alt: ExpId) {
+        self.on_val(cond);
+        self.on_val(body);
+        self.on_val(alt);
     }
 
-    fn on_while(&mut self, _: ExpId, cond: ExpId, body: ExpId) {
-        self.on_exp(cond);
-        self.on_exp(body);
+    fn on_while(&mut self, _: ExpId, _: ExpMode, cond: ExpId, body: ExpId) {
+        self.on_val(cond);
+        self.on_val(body);
     }
 
-    fn on_let(&mut self, _: ExpId, pat: ExpId, init: ExpId) {
+    fn on_let(&mut self, _: ExpId, _: ExpMode, pat: ExpId, init: ExpId) {
         self.on_pat(pat);
-        self.on_exp(init);
+        self.on_val(init);
     }
 
-    fn on_semi(&mut self, _: ExpId, exps: &[ExpId]) {
+    fn on_semi(&mut self, _: ExpId, _: ExpMode, exps: &[ExpId]) {
         for &exp_id in exps {
-            self.on_exp(exp_id);
+            self.on_val(exp_id);
         }
     }
 }

@@ -124,3 +124,15 @@ fn test_if_else_if_chain() {
         &[("1", "-1\n"), ("2", "-2\n"), ("3", "3\n")],
     )
 }
+
+#[test]
+fn test_while() {
+    eval_tests(
+        r#"
+            while read_int() == 0 {
+                println_int(1)
+            }
+        "#,
+        &[("0\n0\n0\n4\n0\n", "1\n1\n1\n"), ("1\n", "")],
+    )
+}

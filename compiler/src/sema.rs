@@ -139,6 +139,11 @@ impl ExpVisitor for SemanticAnalyzer {
         self.on_exp(alt);
     }
 
+    fn on_while(&mut self, _: ExpId, cond: ExpId, body: ExpId) {
+        self.on_exp(cond);
+        self.on_exp(body);
+    }
+
     fn on_let(&mut self, _: ExpId, pat: ExpId, init: ExpId) {
         self.on_pat(pat);
         self.on_exp(init);

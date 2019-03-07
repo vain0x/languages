@@ -114,6 +114,7 @@ pub enum Keyword {
     Def,
     If,
     Else,
+    While,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -166,6 +167,10 @@ pub enum ExpKind {
         cond: ExpId,
         body: ExpId,
         alt: ExpId,
+    },
+    While {
+        cond: ExpId,
+        body: ExpId,
     },
     Let {
         pat: ExpId,
@@ -268,6 +273,7 @@ pub trait ExpVisitor: ShareSyntax {
     fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]) -> Self::Output;
     fn on_bin(&mut self, exp_id: ExpId, op: Op, l: ExpId, r: ExpId) -> Self::Output;
     fn on_if(&mut self, exp_id: ExpId, cond: ExpId, body: ExpId, alt: ExpId) -> Self::Output;
+    fn on_while(&mut self, exp_id: ExpId, cond: ExpId, body: ExpId) -> Self::Output;
     fn on_let(&mut self, exp_id: ExpId, pat: ExpId, init: ExpId) -> Self::Output;
     fn on_semi(&mut self, exp_id: ExpId, exps: &[ExpId]) -> Self::Output;
 
@@ -282,6 +288,7 @@ pub trait ExpVisitor: ShareSyntax {
             ExpKind::Call { callee, args } => self.on_call(exp_id, *callee, &args),
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
             &ExpKind::If { cond, body, alt } => self.on_if(exp_id, cond, body, alt),
+            &ExpKind::While { cond, body } => self.on_while(exp_id, cond, body),
             &ExpKind::Let { pat, init } => self.on_let(exp_id, pat, init),
             ExpKind::Semi(exps) => self.on_semi(exp_id, &exps),
         }
@@ -315,11 +322,12 @@ impl Keyword {
             Keyword::Def => "def",
             Keyword::If => "if",
             Keyword::Else => "else",
+            Keyword::While => "while",
         }
     }
 
     fn get_all() -> &'static [Keyword] {
-        &[Keyword::Let, Keyword::Def, Keyword::If, Keyword::Else]
+        &[Keyword::Let, Keyword::Def, Keyword::If, Keyword::Else, Keyword::While]
     }
 }
 

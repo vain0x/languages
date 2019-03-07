@@ -246,6 +246,23 @@ impl ExpVisitor for Compiler {
         end_reg
     }
 
+    fn on_while(&mut self, _: ExpId, cond: ExpId, body: ExpId) -> RegId {
+        let continue_label = CmdArg::Label(self.add_label());
+        let break_label = CmdArg::Label(self.add_label());
+
+        self.push(Cmd::Label, NO_REG_ID, continue_label);
+        let cond_reg_id = self.on_exp(cond);
+        self.push(Cmd::Unless, cond_reg_id, break_label);
+        self.kill(cond_reg_id);
+
+        let body_reg_id = self.on_exp(body);
+        self.kill(body_reg_id);
+        self.push(Cmd::Jump, NO_REG_ID, continue_label);
+
+        self.push(Cmd::Label, NO_REG_ID, break_label);
+        NO_REG_ID
+    }
+
     fn on_let(&mut self, _: ExpId, pat: ExpId, init: ExpId) -> RegId {
         let init_reg_id = self.on_exp(init);
         let var_reg_id = self.on_exp(pat);

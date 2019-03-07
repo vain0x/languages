@@ -224,9 +224,24 @@ impl Parser<'_> {
         self.add_exp(ExpKind::If { cond, body, alt }, (token_l, self.current))
     }
 
+    fn parse_while(&mut self) -> ExpId {
+        let token_l = self.current;
+        self.current += 1;
+
+        let cond = self.parse_term();
+
+        if self.next().kind != TokenKind::Pun("{") {
+            return self.parse_err("Expected '{'".to_string());
+        }
+        let body = self.parse_term();
+
+        self.add_exp(ExpKind::While { cond, body }, (token_l, self.current))
+    }
+
     fn parse_term(&mut self) -> ExpId {
         match self.next().kind {
             TokenKind::Keyword(Keyword::If) => self.parse_if(),
+            TokenKind::Keyword(Keyword::While) => self.parse_while(),
             _ => self.parse_bin_l(OpLevel::Set),
         }
     }

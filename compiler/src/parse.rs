@@ -38,7 +38,7 @@ impl Parser<'_> {
     fn add_exp(&mut self, kind: ExpKind, token_span: (TokenId, TokenId)) -> ExpId {
         let (l, r) = token_span;
 
-        assert!(l < r, "{:?}..{:?}", l, r);
+        assert!(l <= r, "{:?}..{:?}", l, r);
         let r1 = if l == r { l } else { r - 1 };
         let span = (self.tokens[&l].span.0, self.tokens[&r1].span.1);
 

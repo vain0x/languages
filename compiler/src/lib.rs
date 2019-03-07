@@ -8,6 +8,7 @@ pub mod tokenize;
 use crate::cmd::*;
 use std::cmp::min;
 use std::collections::{BTreeMap, BTreeSet};
+use std::iter;
 use std::rc::Rc;
 use std::str;
 
@@ -219,8 +220,13 @@ pub enum Prim {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum CallKind {
-    Prim(Prim),
+pub enum Ty {
+    Err,
+    Var(ExpId),
+    Unit,
+    Int,
+    Str,
+    Fun(Vec<Ty>),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -248,6 +254,7 @@ pub struct Sema {
     pub symbols: BTreeMap<SymbolId, Symbol>,
     pub exp_symbols: BTreeMap<ExpId, SymbolId>,
     pub exp_vals: BTreeSet<ExpId>,
+    pub exp_tys: BTreeMap<ExpId, Ty>,
     pub funs: BTreeMap<FunId, FunDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }
@@ -412,6 +419,21 @@ impl Syntax {
         let l_pos = self.locate(l);
         let r_pos = self.locate(r);
         (l_pos, r_pos)
+    }
+}
+
+impl Prim {
+    fn get_ty(self) -> Ty {
+        match self {
+            Prim::PrintLnInt => Ty::Fun(vec![Ty::Int, Ty::Unit]),
+            Prim::ReadInt => Ty::Fun(vec![Ty::Int]),
+        }
+    }
+}
+
+impl Ty {
+    fn make_fun<T: Iterator<Item = Ty>>(args: T, result: Ty) -> Ty {
+        Ty::Fun(args.chain(iter::once(result)).collect())
     }
 }
 

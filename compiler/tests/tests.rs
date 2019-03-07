@@ -30,6 +30,23 @@ fn eval_tests(src: &str, ios: &[(&str, &str)]) {
     }
 }
 
+fn test_err(src: &str, expected: &str) {
+    let compress = |s: &str| s.replace(|c: char| c.is_ascii_whitespace(), "");
+
+    let CompilationResult {
+        success, stderr, ..
+    } = picomet_lang_compiler::compile(src);
+
+    assert_eq!(
+        compress(&stderr),
+        compress(expected),
+        "stderr = {}\nexpected = {}\n",
+        stderr,
+        expected
+    );
+    assert!(!success);
+}
+
 #[test]
 fn test_hello() {
     eval_tests(
@@ -76,7 +93,19 @@ fn test_comparison() {
         &[
             ("1\n1\n", "1\n0\n0\n1\n0\n1\n"),
             ("1\n2\n", "0\n1\n1\n1\n0\n0\n"),
-        ])
+        ],
+    )
+}
+
+#[test]
+fn test_arithmetic_type_error() {
+    test_err(
+        "1 + (while 0 == 0 {})",
+        r#"
+            At 1:6..1:21 Type Error
+            At 1:3..1:22 Type Error
+        "#,
+    )
 }
 
 #[test]
@@ -132,7 +161,8 @@ fn test_local_var_set_add() {
             let a = 1;
             a += 1;
             println_int(a);
-        "#, &[("", "2\n")]
+        "#,
+        &[("", "2\n")],
     )
 }
 

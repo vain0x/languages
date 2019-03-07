@@ -132,12 +132,12 @@ impl ExpVisitor for SemanticAnalyzer {
 
                     match (&self.sema.symbols[&symbol_id].kind, mode) {
                         (_, ExpMode::Pat) => unreachable!(),
-                        (SymbolKind::Prim {..}, ExpMode::Val) => {}
-                        (SymbolKind::Prim {..}, ExpMode::Ref) => unimplemented!(),
-                        (SymbolKind::Local {..}, ExpMode::Val) => {
+                        (SymbolKind::Prim { .. }, ExpMode::Val) => {}
+                        (SymbolKind::Prim { .. }, ExpMode::Ref) => unimplemented!(),
+                        (SymbolKind::Local { .. }, ExpMode::Val) => {
                             self.sema.exp_vals.insert(exp_id);
                         }
-                        (SymbolKind::Local {..}, ExpMode::Ref) => {}
+                        (SymbolKind::Local { .. }, ExpMode::Ref) => {}
                     }
                 } else {
                     panic!("unknown ident {}", name)
@@ -155,7 +155,7 @@ impl ExpVisitor for SemanticAnalyzer {
 
     fn on_bin(&mut self, _: ExpId, _: ExpMode, op: Op, exp_l: ExpId, exp_r: ExpId) {
         match op {
-            Op::Set => self.on_ref(exp_l),
+            Op::Set | Op::SetAdd => self.on_ref(exp_l),
             _ => self.on_val(exp_l),
         }
         self.on_val(exp_r);

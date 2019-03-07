@@ -126,6 +126,17 @@ fn test_local_var_set() {
 }
 
 #[test]
+fn test_local_var_set_add() {
+    eval_tests(
+        r#"
+            let a = 1;
+            a += 1;
+            println_int(a);
+        "#, &[("", "2\n")]
+    )
+}
+
+#[test]
 fn test_if() {
     eval_tests(
         r#"

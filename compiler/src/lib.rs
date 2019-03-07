@@ -13,6 +13,7 @@ use std::str;
 
 const OPS: &[(&str, Op, OpLevel)] = &[
     ("=", Op::Set, OpLevel::Set),
+    ("+=", Op::SetAdd, OpLevel::Set),
     ("==", Op::Eq, OpLevel::Cmp),
     ("!=", Op::Ne, OpLevel::Cmp),
     ("<", Op::Lt, OpLevel::Cmp),
@@ -97,6 +98,7 @@ define_rich_id!(MsgId, TokenId, ExpId, SymbolId, RegId, LabelId, VarId, FunId);
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Op {
     Set,
+    SetAdd,
     /// `==`
     Eq,
     /// `!=`

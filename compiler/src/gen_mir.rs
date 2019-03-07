@@ -212,6 +212,16 @@ impl ExpVisitor for Compiler {
                 self.kill(r_reg);
                 return NO_REG_ID;
             },
+            Op::SetAdd => {
+                let t_reg = self.add_reg();
+                self.push(Cmd::Load, t_reg, CmdArg::Reg(l_reg));
+                self.push(Cmd::Add, t_reg, CmdArg::Reg(r_reg));
+                self.push(Cmd::Store, t_reg, CmdArg::Reg(l_reg));
+                self.kill(l_reg);
+                self.kill(r_reg);
+                self.kill(t_reg);
+                return NO_REG_ID;
+            },
             Op::Eq => Cmd::Eq,
             Op::Ne => Cmd::Ne,
             Op::Lt => Cmd::Lt,

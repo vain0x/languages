@@ -30,8 +30,8 @@ impl Compiler {
         (self.mir.sema.exp_symbols.get(&exp_id)).map(|symbol_id| &self.mir.sema.symbols[&symbol_id])
     }
 
-    fn is_lval(&self, exp_id: ExpId) -> bool {
-        self.mir.sema.pats.contains(&exp_id)
+    fn is_coerced_to_val(&self, exp_id: ExpId) -> bool {
+        self.mir.sema.exp_vals.contains(&exp_id)
     }
 
     fn add_reg(&mut self) -> RegId {
@@ -176,13 +176,13 @@ impl ExpVisitor for Compiler {
                 self.push(Cmd::Mov, offset_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
                 self.push(Cmd::AddImm, offset_reg_id, CmdArg::Int(offset));
 
-                if self.is_lval(exp_id) {
-                    offset_reg_id
-                } else {
+                if self.is_coerced_to_val(exp_id) {
                     let reg_id = self.add_reg();
                     self.push(Cmd::Load, reg_id, CmdArg::Reg(offset_reg_id));
                     self.kill(offset_reg_id);
                     reg_id
+                } else {
+                    offset_reg_id
                 }
             }
         }
@@ -210,7 +210,12 @@ impl ExpVisitor for Compiler {
         let l_reg = self.on_exp(exp_l, ());
         let r_reg = self.on_exp(exp_r, ());
         let cmd = match op {
-            Op::Set => unimplemented!(),
+            Op::Set => {
+                self.push(Cmd::Store, r_reg, CmdArg::Reg(l_reg));
+                self.kill(l_reg);
+                self.kill(r_reg);
+                return NO_REG_ID;
+            },
             Op::Eq => Cmd::Eq,
             Op::Add => Cmd::Add,
             Op::Sub => Cmd::Sub,

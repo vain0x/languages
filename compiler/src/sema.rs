@@ -55,17 +55,11 @@ impl SemanticAnalyzer {
         self.sema.funs.get_mut(&self.current_fun_id).unwrap()
     }
 
-    fn is_pat(&self, exp_id: ExpId) -> bool {
-        self.sema.pats.contains(&exp_id)
-    }
-
     fn exp(&self, exp_id: ExpId) -> &Exp {
         &self.sema.syntax.exps[&exp_id]
     }
 
     fn on_pat(&mut self, exp_id: ExpId) {
-        self.sema.pats.insert(exp_id);
-
         self.on_exp(exp_id, ExpMode::Pat);
     }
 
@@ -135,6 +129,16 @@ impl ExpVisitor for SemanticAnalyzer {
             ExpMode::Ref | ExpMode::Val => {
                 if let Some(&symbol_id) = self.env.get(name) {
                     self.sema.exp_symbols.insert(exp_id, symbol_id);
+
+                    match (&self.sema.symbols[&symbol_id].kind, mode) {
+                        (_, ExpMode::Pat) => unreachable!(),
+                        (SymbolKind::Prim {..}, ExpMode::Val) => {}
+                        (SymbolKind::Prim {..}, ExpMode::Ref) => unimplemented!(),
+                        (SymbolKind::Local {..}, ExpMode::Val) => {
+                            self.sema.exp_vals.insert(exp_id);
+                        }
+                        (SymbolKind::Local {..}, ExpMode::Ref) => {}
+                    }
                 } else {
                     panic!("unknown ident {}", name)
                 }
@@ -149,8 +153,11 @@ impl ExpVisitor for SemanticAnalyzer {
         }
     }
 
-    fn on_bin(&mut self, _: ExpId, _: ExpMode, _: Op, exp_l: ExpId, exp_r: ExpId) {
-        self.on_val(exp_l);
+    fn on_bin(&mut self, _: ExpId, _: ExpMode, op: Op, exp_l: ExpId, exp_r: ExpId) {
+        match op {
+            Op::Set => self.on_ref(exp_l),
+            _ => self.on_val(exp_l),
+        }
         self.on_val(exp_r);
     }
 
@@ -181,9 +188,9 @@ pub fn sema(syntax: Rc<Syntax>) -> Sema {
     let mut analyzer = SemanticAnalyzer {
         sema: Sema {
             syntax: Rc::clone(&syntax),
-            pats: BTreeSet::new(),
             symbols: BTreeMap::new(),
             exp_symbols: BTreeMap::new(),
+            exp_vals: BTreeSet::new(),
             funs: BTreeMap::new(),
             msgs: syntax.msgs.clone(),
         },

@@ -227,9 +227,9 @@ pub struct FunDef {
 #[derive(Clone, Debug)]
 pub struct Sema {
     pub syntax: Rc<Syntax>,
-    pub pats: BTreeSet<ExpId>,
     pub symbols: BTreeMap<SymbolId, Symbol>,
     pub exp_symbols: BTreeMap<ExpId, SymbolId>,
+    pub exp_vals: BTreeSet<ExpId>,
     pub funs: BTreeMap<FunId, FunDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }

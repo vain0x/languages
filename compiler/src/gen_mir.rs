@@ -105,6 +105,10 @@ impl Compiler {
 
         // Write MIR.
         let mut program = String::new();
+        let csv_encoded_text = (self.mir.text.iter().map(|&b| b.to_string()))
+            .collect::<Vec<_>>()
+            .join(",");
+        writeln!(program, "    .text {}", csv_encoded_text).unwrap();
         for &(cmd, l, r) in &inss {
             let cmd = crate::serialize_cmd(cmd);
             writeln!(program, "    {} {} {}", cmd, l.0, r.to_i64()).unwrap();
@@ -142,8 +146,13 @@ impl ExpVisitor for Compiler {
         l
     }
 
-    fn on_str(&mut self, _: ExpId, _: (), _: &str) -> RegId {
-        unimplemented!()
+    fn on_str(&mut self, _: ExpId, _: (), value: &str) -> RegId {
+        let p = self.mir.text.len();
+        self.mir.text.extend(value.as_bytes());
+
+        let reg_id = self.add_reg();
+        self.push(Cmd::Imm, reg_id, CmdArg::Ptr(p));
+        reg_id
     }
 
     fn on_ident(&mut self, exp_id: ExpId, _: (), _: &str) -> RegId {
@@ -172,6 +181,7 @@ impl ExpVisitor for Compiler {
     fn on_call(&mut self, _: ExpId, _: (), callee: ExpId, args: &[ExpId]) -> RegId {
         let symbol = &self.get_symbol(callee).expect("cannot call non-symbol");
         match symbol.kind {
+            SymbolKind::Prim(Prim::ByteToInt) => self.on_exp(args[0], ()),
             SymbolKind::Prim(Prim::ReadInt) => {
                 let l = self.add_reg();
                 self.push(Cmd::ReadInt, l, CmdArg::None);
@@ -184,6 +194,23 @@ impl ExpVisitor for Compiler {
                 NO_REG_ID
             }
             _ => panic!("cannot call non-primitive symbol"),
+        }
+    }
+
+    fn on_index(&mut self, exp_id: ExpId, _: (), indexee: ExpId, arg: ExpId) -> RegId {
+        let indexee_reg_id = self.on_exp(indexee, ());
+        let arg_reg_id = self.on_exp(arg, ());
+
+        self.push(Cmd::Add, arg_reg_id, CmdArg::Reg(indexee_reg_id));
+        self.kill(indexee_reg_id);
+
+        if self.is_coerced_to_val(exp_id) {
+            let byte_reg_id = self.add_reg();
+            self.push(Cmd::Load8, byte_reg_id, CmdArg::Reg(arg_reg_id));
+            self.kill(arg_reg_id);
+            byte_reg_id
+        } else {
+            arg_reg_id
         }
     }
 
@@ -290,6 +317,7 @@ impl CmdArg {
         match self {
             CmdArg::None => 0,
             CmdArg::Int(value) => value,
+            CmdArg::Ptr(p) => p as i64,
             CmdArg::Reg(value) => value.0 as i64,
             CmdArg::Label(value) => value.0 as i64,
         }
@@ -302,6 +330,7 @@ pub fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
             sema: Rc::clone(&sema),
             reg_count: 0,
             label_count: 0,
+            text: vec![],
             funs: BTreeMap::new(),
             msgs: sema.msgs.clone(),
         },

@@ -177,6 +177,10 @@ pub enum ExpKind {
         callee: ExpId,
         args: Vec<ExpId>,
     },
+    Index {
+        indexee: ExpId,
+        arg: ExpId,
+    },
     Bin {
         op: Op,
         l: ExpId,
@@ -215,6 +219,7 @@ pub struct Syntax {
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Prim {
+    ByteToInt,
     ReadInt,
     PrintLnInt,
 }
@@ -224,8 +229,9 @@ pub enum Ty {
     Err,
     Var(ExpId),
     Unit,
+    Byte,
     Int,
-    Str,
+    Ptr,
     Fun(Vec<Ty>),
 }
 
@@ -263,6 +269,7 @@ pub struct Sema {
 pub enum CmdArg {
     None,
     Int(i64),
+    Ptr(usize),
     Reg(RegId),
     Label(LabelId),
 }
@@ -280,6 +287,7 @@ pub struct Mir {
     pub sema: Rc<Sema>,
     pub reg_count: usize,
     pub label_count: usize,
+    pub text: Vec<u8>,
     pub funs: BTreeMap<FunId, GenFunDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }
@@ -302,6 +310,13 @@ pub trait ExpVisitor: ShareSyntax {
         mode: Self::Mode,
         callee: ExpId,
         args: &[ExpId],
+    ) -> Self::Output;
+    fn on_index(
+        &mut self,
+        exp_id: ExpId,
+        mode: Self::Mode,
+        indexee: ExpId,
+        arg: ExpId,
     ) -> Self::Output;
     fn on_bin(
         &mut self,
@@ -338,6 +353,7 @@ pub trait ExpVisitor: ShareSyntax {
             ExpKind::Str(value) => self.on_str(exp_id, mode, value),
             ExpKind::Ident(name) => self.on_ident(exp_id, mode, name),
             ExpKind::Call { callee, args } => self.on_call(exp_id, mode, *callee, &args),
+            ExpKind::Index { indexee, arg } => self.on_index(exp_id, mode, *indexee, *arg),
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, mode, op, l, r),
             &ExpKind::If { cond, body, alt } => self.on_if(exp_id, mode, cond, body, alt),
             &ExpKind::While { cond, body } => self.on_while(exp_id, mode, cond, body),
@@ -443,6 +459,7 @@ impl Syntax {
 impl Prim {
     fn get_ty(self) -> Ty {
         match self {
+            Prim::ByteToInt => Ty::Fun(vec![Ty::Byte, Ty::Int]),
             Prim::PrintLnInt => Ty::Fun(vec![Ty::Int, Ty::Unit]),
             Prim::ReadInt => Ty::Fun(vec![Ty::Int]),
         }
@@ -450,6 +467,10 @@ impl Prim {
 }
 
 impl Ty {
+    fn make_str() -> Ty {
+        Ty::Ptr
+    }
+
     fn make_fun<T: Iterator<Item = Ty>>(args: T, result: Ty) -> Ty {
         Ty::Fun(args.chain(iter::once(result)).collect())
     }

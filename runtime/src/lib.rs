@@ -67,11 +67,21 @@ define_cmd! {
 pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
     let mut inss = vec![];
     let mut strs = vec![];
+    let mut text = vec![];
 
     // Parse.
     for line in src.split("\n") {
         let line = line.trim_left();
         if line.starts_with("//") || line.len() == 0 {
+            continue;
+        }
+
+        if line.starts_with(".text") {
+            text = line[".text ".len()..]
+                .split(",")
+                .map(|b| b.parse().ok())
+                .collect::<Option<Vec<u8>>>()
+                .unwrap_or(vec![]);
             continue;
         }
 
@@ -125,6 +135,11 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
 
     regs[STACK_PTR_REG_ID] = mem.len() as i64;
     regs[BASE_PTR_REG_ID] = mem.len() as i64;
+
+    heap_size += text.len();
+    for i in 0..text.len() {
+        mem[i] = text[i];
+    }
 
     loop {
         let (cmd, l, r) = inss[pc];

@@ -2,6 +2,7 @@ use crate::*;
 use std::collections::BTreeSet;
 
 static PRIMS: &[(&str, Prim)] = &[
+    ("byte_to_int", Prim::ByteToInt),
     ("read_int", Prim::ReadInt),
     ("println_int", Prim::PrintLnInt),
 ];
@@ -74,12 +75,11 @@ impl SemanticAnalyzer {
             (Ty::Err, _)
             | (_, Ty::Err)
             | (Ty::Unit, Ty::Unit)
+            | (Ty::Byte, Ty::Byte)
             | (Ty::Int, Ty::Int)
-            | (Ty::Str, Ty::Str) => {}
-            (Ty::Fun(l_tys), Ty::Fun(r_tys)) => {
-                self.unify_tys(exp_id, &l_tys, &r_tys);
-            }
-            (Ty::Unit, _) | (Ty::Int, _) | (Ty::Str, _) | (Ty::Fun(_), _) => {
+            | (Ty::Ptr, Ty::Ptr) => {}
+            (Ty::Fun(l_tys), Ty::Fun(r_tys)) => self.unify_tys(exp_id, &l_tys, &r_tys),
+            (Ty::Unit, _) | (Ty::Int, _) | (Ty::Byte, _) | (Ty::Ptr, _) | (Ty::Fun(_), _) => {
                 self.add_err("Type Error".to_string(), exp_id)
             }
         }
@@ -207,7 +207,7 @@ impl ExpVisitor for SemanticAnalyzer {
             ExpMode::Pat | ExpMode::Ref => unimplemented!(),
             ExpMode::Val => {}
         }
-        self.set_ty(exp_id, &ty, &Ty::Str);
+        self.set_ty(exp_id, &ty, &Ty::make_str());
     }
 
     fn on_ident(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), name: &str) {
@@ -217,13 +217,27 @@ impl ExpVisitor for SemanticAnalyzer {
         }
     }
 
-    fn on_call(&mut self, exp_id: ExpId, _: (ExpMode, Ty), callee: ExpId, args: &[ExpId]) {
-        let result_ty = Ty::Var(exp_id);
-        let callee_ty = Ty::make_fun(args.iter().cloned().map(Ty::Var), result_ty);
+    fn on_call(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), callee: ExpId, args: &[ExpId]) {
+        self.unify_ty(exp_id, &Ty::Var(exp_id), &ty);
+        let callee_ty = Ty::make_fun(args.iter().cloned().map(Ty::Var), ty);
 
         self.on_val(callee, callee_ty);
         for &arg in args {
             self.on_val(arg, Ty::Var(arg));
+        }
+    }
+
+    fn on_index(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), indexee: ExpId, arg: ExpId) {
+        self.on_val(indexee, Ty::Ptr);
+        self.on_val(arg, Ty::Int);
+        self.set_ty(exp_id, &ty, &Ty::Byte);
+
+        match mode {
+            ExpMode::Pat => panic!("no index pattern"),
+            ExpMode::Ref => {}
+            ExpMode::Val => {
+                self.sema.exp_vals.insert(exp_id);
+            }
         }
     }
 

@@ -109,6 +109,17 @@ fn test_arithmetic_type_error() {
 }
 
 #[test]
+fn test_str() {
+    eval_tests(
+        r#"
+            let i = read_int();
+            println_int(byte_to_int("Hello, world!"[i]))
+        "#,
+        &[("0", "72\n"), ("1", "101\n")],
+    )
+}
+
+#[test]
 fn test_read_int() {
     eval_tests(
         r#"

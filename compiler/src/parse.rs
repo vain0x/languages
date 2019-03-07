@@ -126,24 +126,47 @@ impl Parser<'_> {
         let token_l = self.current;
         let mut exp_l = self.parse_atom();
 
-        while self.next().kind == TokenKind::Pun("(") {
-            self.current += 1;
+        loop {
+            match self.next().kind {
+                TokenKind::Pun("(") => {
+                    self.current += 1;
 
-            let mut args = vec![];
-            self.parse_term_list(&mut args);
+                    let mut args = vec![];
+                    self.parse_term_list(&mut args);
 
-            if self.next().kind != TokenKind::Pun(")") {
-                return self.parse_err("Expected ')'".to_string());
+                    if self.next().kind != TokenKind::Pun(")") {
+                        return self.parse_err("Expected ')'".to_string());
+                    }
+                    self.current += 1;
+
+                    exp_l = self.add_exp(
+                        ExpKind::Call {
+                            callee: exp_l,
+                            args,
+                        },
+                        (token_l, self.current),
+                    );
+                }
+                TokenKind::Pun("[") => {
+                    self.current += 1;
+
+                    let arg_exp_id = self.parse_term();
+
+                    if self.next().kind != TokenKind::Pun("]") {
+                        return self.parse_err("Expected ']'".to_string());
+                    }
+                    self.current += 1;
+
+                    exp_l = self.add_exp(
+                        ExpKind::Index {
+                            indexee: exp_l,
+                            arg: arg_exp_id,
+                        },
+                        (token_l, self.current),
+                    );
+                }
+                _ => break,
             }
-            self.current += 1;
-
-            exp_l = self.add_exp(
-                ExpKind::Call {
-                    callee: exp_l,
-                    args,
-                },
-                (token_l, self.current),
-            );
         }
 
         exp_l

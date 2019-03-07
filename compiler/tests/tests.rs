@@ -61,6 +61,25 @@ fn test_prefix_parsing() {
 }
 
 #[test]
+fn test_comparison() {
+    eval_tests(
+        r#"
+            let l = read_int();
+            let r = read_int();
+            println_int(if l == r { 1 } else { 0 });
+            println_int(if l != r { 1 } else { 0 });
+            println_int(if l < r { 1 } else { 0 });
+            println_int(if l <= r { 1 } else { 0 });
+            println_int(if l > r { 1 } else { 0 });
+            println_int(if l >= r { 1 } else { 0 });
+        "#,
+        &[
+            ("1\n1\n", "1\n0\n0\n1\n0\n1\n"),
+            ("1\n2\n", "0\n1\n1\n1\n0\n0\n"),
+        ])
+}
+
+#[test]
 fn test_read_int() {
     eval_tests(
         r#"

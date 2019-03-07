@@ -105,14 +105,14 @@ impl ExpVisitor for SemanticAnalyzer {
 
     fn on_err(&mut self, _: ExpId, _: ExpMode, _: MsgId) {}
 
-    fn on_int(&mut self, exp_id: ExpId, mode: ExpMode, _: i64) {
+    fn on_int(&mut self, _: ExpId, mode: ExpMode, _: i64) {
         match mode {
             ExpMode::Pat | ExpMode::Ref => unimplemented!(),
             ExpMode::Val => {}
         }
     }
 
-    fn on_str(&mut self, exp_id: ExpId, mode: ExpMode, _: &str) {
+    fn on_str(&mut self, _: ExpId, mode: ExpMode, _: &str) {
         match mode {
             ExpMode::Pat | ExpMode::Ref => unimplemented!(),
             ExpMode::Val => {}

@@ -9,10 +9,6 @@ struct Compiler {
 }
 
 impl Compiler {
-    fn syntax(&self) -> &Syntax {
-        &self.sema().syntax
-    }
-
     fn sema(&self) -> &Sema {
         &self.mir.sema
     }
@@ -217,6 +213,11 @@ impl ExpVisitor for Compiler {
                 return NO_REG_ID;
             },
             Op::Eq => Cmd::Eq,
+            Op::Ne => Cmd::Ne,
+            Op::Lt => Cmd::Lt,
+            Op::Le => Cmd::Le,
+            Op::Gt => Cmd::Gt,
+            Op::Ge => Cmd::Ge,
             Op::Add => Cmd::Add,
             Op::Sub => Cmd::Sub,
             Op::Mul => Cmd::Mul,

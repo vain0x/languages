@@ -121,6 +121,44 @@ impl SemanticAnalyzer {
         self.on_exp(exp_id, (ExpMode::Val, ty));
     }
 
+    fn on_ident_pat(&mut self, exp_id: ExpId, ty: Ty, name: &str) {
+        let symbol_id = self.add_local(name.to_string());
+        self.env.insert(name.to_string(), symbol_id);
+        self.sema.exp_symbols.insert(exp_id, symbol_id);
+
+        // FIXME: Support other type.
+        self.set_ty(exp_id, &ty, &Ty::Int);
+    }
+
+    fn on_ident_ref_or_val(&mut self, exp_id: ExpId, mode: ExpMode, ty: Ty, name: &str) {
+        let symbol_id = match self.env.get(name) {
+            Some(&symbol_id) => symbol_id,
+            None => {
+                self.add_err("Undefined name".to_string(), exp_id);
+                return;
+            }
+        };
+
+        self.sema.exp_symbols.insert(exp_id, symbol_id);
+
+        match (&self.sema.symbols[&symbol_id].kind, mode) {
+            (_, ExpMode::Pat) => unreachable!(),
+            (SymbolKind::Prim(prim), ExpMode::Val) => {
+                self.set_ty(exp_id, &ty, &prim.get_ty());
+            }
+            (SymbolKind::Prim { .. }, ExpMode::Ref) => unimplemented!(),
+            (SymbolKind::Local { .. }, ExpMode::Val) => {
+                self.sema.exp_vals.insert(exp_id);
+                // FIXME: Support other type.
+                self.set_ty(exp_id, &ty, &Ty::Int);
+            }
+            (SymbolKind::Local { .. }, ExpMode::Ref) => {
+                // FIXME: Support other type.
+                self.set_ty(exp_id, &ty, &Ty::Int);
+            }
+        }
+    }
+
     fn sema(&mut self) {
         for &(name, prim) in PRIMS {
             let symbol_id = SymbolId(self.sema.symbols.len());
@@ -174,38 +212,8 @@ impl ExpVisitor for SemanticAnalyzer {
 
     fn on_ident(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), name: &str) {
         match mode {
-            ExpMode::Pat => {
-                let symbol_id = self.add_local(name.to_string());
-                self.env.insert(name.to_string(), symbol_id);
-                self.sema.exp_symbols.insert(exp_id, symbol_id);
-
-                // FIXME: Support other type.
-                self.set_ty(exp_id, &ty, &Ty::Int);
-            }
-            ExpMode::Ref | ExpMode::Val => {
-                if let Some(&symbol_id) = self.env.get(name) {
-                    self.sema.exp_symbols.insert(exp_id, symbol_id);
-
-                    match (&self.sema.symbols[&symbol_id].kind, mode) {
-                        (_, ExpMode::Pat) => unreachable!(),
-                        (SymbolKind::Prim(prim), ExpMode::Val) => {
-                            self.set_ty(exp_id, &ty, &prim.get_ty());
-                        }
-                        (SymbolKind::Prim { .. }, ExpMode::Ref) => unimplemented!(),
-                        (SymbolKind::Local { .. }, ExpMode::Val) => {
-                            self.sema.exp_vals.insert(exp_id);
-                            // FIXME: Support other type.
-                            self.set_ty(exp_id, &ty, &Ty::Int);
-                        }
-                        (SymbolKind::Local { .. }, ExpMode::Ref) => {
-                            // FIXME: Support other type.
-                            self.set_ty(exp_id, &ty, &Ty::Int);
-                        }
-                    }
-                } else {
-                    panic!("unknown ident {}", name)
-                }
-            }
+            ExpMode::Pat => self.on_ident_pat(exp_id, ty, name),
+            ExpMode::Ref | ExpMode::Val => self.on_ident_ref_or_val(exp_id, mode, ty, name),
         }
     }
 

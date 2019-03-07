@@ -115,7 +115,9 @@ fn test_read_int() {
             println_int(read_int() + 1)
         "#,
         &[("41", "42\n"), ("-1", "0\n")],
-    )
+    );
+
+    test_err(r#"println_int()"#, "At 1:1..1:12 Type Error");
 }
 
 #[test]

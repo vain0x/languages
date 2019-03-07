@@ -111,22 +111,7 @@ impl Compiler {
         }
 
         // Emit compile errors.
-        let mut success = true;
-        let mut stderr = String::new();
-        for (_, msg) in &self.mir.msgs {
-            let ((ly, lx), (ry, rx)) = self.mir.sema.syntax.locate_exp(msg.exp_id);
-            writeln!(
-                stderr,
-                "At {}:{}..{}:{} {}",
-                1 + ly,
-                1 + lx,
-                1 + ry,
-                1 + rx,
-                msg.message
-            )
-            .unwrap();
-            success = success && msg.level != MsgLevel::Err;
-        }
+        let (success, stderr) = Msg::summarize(self.mir.msgs.values(), &self.mir.sema.syntax);
 
         CompilationResult {
             success,
@@ -211,7 +196,7 @@ impl ExpVisitor for Compiler {
                 self.kill(l_reg);
                 self.kill(r_reg);
                 return NO_REG_ID;
-            },
+            }
             Op::SetAdd => {
                 let t_reg = self.add_reg();
                 self.push(Cmd::Load, t_reg, CmdArg::Reg(l_reg));
@@ -221,7 +206,7 @@ impl ExpVisitor for Compiler {
                 self.kill(r_reg);
                 self.kill(t_reg);
                 return NO_REG_ID;
-            },
+            }
             Op::Eq => Cmd::Eq,
             Op::Ne => Cmd::Ne,
             Op::Lt => Cmd::Lt,

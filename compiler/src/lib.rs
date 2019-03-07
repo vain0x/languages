@@ -397,6 +397,24 @@ impl Msg {
             exp_id,
         }
     }
+
+    fn is_successful(&self) -> bool {
+        self.level != MsgLevel::Err
+    }
+
+    pub fn summarize<'a, I: Iterator<Item = &'a Msg>>(msgs: I, syntax: &Syntax) -> (bool, String) {
+        use std::fmt::Write;
+
+        let mut success = true;
+        let mut stderr = String::new();
+        for msg in msgs {
+            let ((ly, lx), (ry, rx)) = syntax.locate_exp(msg.exp_id);
+            let (ly, lx, ry, rx) = (ly + 1, lx + 1, ry + 1, rx + 1);
+            writeln!(stderr, "At {}:{}..{}:{} {}", ly, lx, ry, rx, msg.message).unwrap();
+            success = success && msg.level != MsgLevel::Err;
+        }
+        (success, stderr)
+    }
 }
 
 impl Syntax {
@@ -437,6 +455,16 @@ impl Ty {
     }
 }
 
+impl Sema {
+    fn is_successful(&self) -> bool {
+        self.msgs.iter().all(|(_, msg)| msg.is_successful())
+    }
+
+    fn summarize_msgs(&self) -> (bool, String) {
+        Msg::summarize(self.msgs.values(), &self.syntax)
+    }
+}
+
 #[derive(Clone)]
 pub struct CompilationResult {
     pub success: bool,
@@ -447,6 +475,16 @@ pub struct CompilationResult {
 pub fn compile(src: &str) -> CompilationResult {
     let src = src.to_owned();
     let syntax = Rc::new(parse::parse(src));
+
     let sema = Rc::new(sema::sema(syntax));
+    if !sema.is_successful() {
+        let (success, stderr) = Msg::summarize(sema.msgs.values(), &sema.syntax);
+        return CompilationResult {
+            success,
+            stderr,
+            program: "".to_string(),
+        };
+    }
+
     gen_mir::gen_mir(sema)
 }

@@ -120,6 +120,19 @@ fn test_str() {
 }
 
 #[test]
+fn test_write() {
+    eval_tests(
+        r#"
+            let p = mem_alloc(2);
+            p[0] = "A"[0];
+            p[1] = int_to_byte(10);
+            print(p, 2);
+        "#,
+        &[("", "A\n")],
+    )
+}
+
+#[test]
 fn test_read_int() {
     eval_tests(
         r#"

@@ -178,7 +178,7 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
             Cmd::Load8 => regs[l] = read::<u8>(&mem, regs[r as usize] as usize) as i64,
             Cmd::Load => regs[l] = read::<i64>(&mem, regs[r as usize] as usize),
             Cmd::Store8 => write::<u8>(&mut mem, regs[l] as usize, regs[r as usize] as u8),
-            Cmd::Store => write::<i64>(&mut mem, regs[r as usize] as usize, regs[l]),
+            Cmd::Store => write::<i64>(&mut mem, regs[l] as usize, regs[r as usize]),
             Cmd::ToStr => {
                 let t = regs[l].to_string();
                 strs.push(t);

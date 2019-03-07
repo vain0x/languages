@@ -30,6 +30,10 @@ impl Compiler {
         self.mir.sema.exp_vals.contains(&exp_id)
     }
 
+    fn get_ty(&self, exp_id: ExpId) -> Ty {
+        self.mir.sema.get_ty(exp_id).to_owned()
+    }
+
     fn add_reg(&mut self) -> RegId {
         self.mir.reg_count += 1;
         RegId(self.mir.reg_count - 1)
@@ -181,7 +185,16 @@ impl ExpVisitor for Compiler {
     fn on_call(&mut self, _: ExpId, _: (), callee: ExpId, args: &[ExpId]) -> RegId {
         let symbol = &self.get_symbol(callee).expect("cannot call non-symbol");
         match symbol.kind {
-            SymbolKind::Prim(Prim::ByteToInt) => self.on_exp(args[0], ()),
+            SymbolKind::Prim(Prim::ByteToInt) | SymbolKind::Prim(Prim::IntToByte) => {
+                self.on_exp(args[0], ())
+            }
+            SymbolKind::Prim(Prim::MemAlloc) => {
+                let size_reg_id = self.on_exp(args[0], ());
+                let ptr_reg_id = self.add_reg();
+                self.push(Cmd::Alloc, ptr_reg_id, CmdArg::Reg(size_reg_id));
+                self.kill(size_reg_id);
+                ptr_reg_id
+            }
             SymbolKind::Prim(Prim::ReadInt) => {
                 let l = self.add_reg();
                 self.push(Cmd::ReadInt, l, CmdArg::None);
@@ -191,6 +204,14 @@ impl ExpVisitor for Compiler {
                 let r = self.on_exp(args[0], ());
                 self.push(Cmd::PrintLnInt, NO_REG_ID, CmdArg::Reg(r));
                 self.kill(r);
+                NO_REG_ID
+            }
+            SymbolKind::Prim(Prim::Print) => {
+                let ptr_reg_id = self.on_exp(args[0], ());
+                let size_reg_id = self.on_exp(args[1], ());
+                self.push(Cmd::Write, ptr_reg_id, CmdArg::Reg(size_reg_id));
+                self.kill(ptr_reg_id);
+                self.kill(size_reg_id);
                 NO_REG_ID
             }
             _ => panic!("cannot call non-primitive symbol"),
@@ -219,7 +240,13 @@ impl ExpVisitor for Compiler {
         let r_reg = self.on_exp(exp_r, ());
         let cmd = match op {
             Op::Set => {
-                self.push(Cmd::Store, r_reg, CmdArg::Reg(l_reg));
+                let size = self.get_ty(exp_l).size_of();
+                let cmd = match size {
+                    Some(1) => Cmd::Store8,
+                    Some(8) => Cmd::Store,
+                    _ => unimplemented!(),
+                };
+                self.push(cmd, l_reg, CmdArg::Reg(r_reg));
                 self.kill(l_reg);
                 self.kill(r_reg);
                 return NO_REG_ID;
@@ -228,7 +255,7 @@ impl ExpVisitor for Compiler {
                 let t_reg = self.add_reg();
                 self.push(Cmd::Load, t_reg, CmdArg::Reg(l_reg));
                 self.push(Cmd::Add, t_reg, CmdArg::Reg(r_reg));
-                self.push(Cmd::Store, t_reg, CmdArg::Reg(l_reg));
+                self.push(Cmd::Store, l_reg, CmdArg::Reg(t_reg));
                 self.kill(l_reg);
                 self.kill(r_reg);
                 self.kill(t_reg);
@@ -295,7 +322,7 @@ impl ExpVisitor for Compiler {
     fn on_let(&mut self, _: ExpId, _: (), pat: ExpId, init: ExpId) -> RegId {
         let init_reg_id = self.on_exp(init, ());
         let var_reg_id = self.on_exp(pat, ());
-        self.push(Cmd::Store, init_reg_id, CmdArg::Reg(var_reg_id));
+        self.push(Cmd::Store, var_reg_id, CmdArg::Reg(init_reg_id));
         self.kill(var_reg_id);
         self.kill(init_reg_id);
         NO_REG_ID

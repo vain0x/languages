@@ -1,12 +1,6 @@
 use crate::*;
 use std::collections::BTreeSet;
 
-static PRIMS: &[(&str, Prim)] = &[
-    ("byte_to_int", Prim::ByteToInt),
-    ("read_int", Prim::ReadInt),
-    ("println_int", Prim::PrintLnInt),
-];
-
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum ExpMode {
     Val,
@@ -52,53 +46,9 @@ impl SemanticAnalyzer {
         symbol_id
     }
 
-    fn bind_ty(&mut self, exp_id: ExpId, ty: &Ty) {
-        self.sema.exp_tys.insert(exp_id, ty.to_owned());
-    }
-
-    fn subst_ty<'a>(&'a self, ty: &'a Ty) -> &'a Ty {
-        match ty {
-            Ty::Var(exp_id) => match self.sema.exp_tys.get(&exp_id) {
-                Some(ty) => ty,
-                None => ty,
-            },
-            _ => ty,
-        }
-    }
-
-    fn unify_ty(&mut self, exp_id: ExpId, l_ty: &Ty, r_ty: &Ty) {
-        let subst_l_ty = self.subst_ty(l_ty).to_owned();
-        let subst_r_ty = self.subst_ty(r_ty).to_owned();
-        match (&subst_l_ty, &subst_r_ty) {
-            (Ty::Var(l_exp_id), Ty::Var(r_exp_id)) if l_exp_id == r_exp_id => {}
-            (&Ty::Var(exp_id), _) | (_, &Ty::Var(exp_id)) => self.bind_ty(exp_id, &subst_r_ty),
-            (Ty::Err, _)
-            | (_, Ty::Err)
-            | (Ty::Unit, Ty::Unit)
-            | (Ty::Byte, Ty::Byte)
-            | (Ty::Int, Ty::Int)
-            | (Ty::Ptr, Ty::Ptr) => {}
-            (Ty::Fun(l_tys), Ty::Fun(r_tys)) => self.unify_tys(exp_id, &l_tys, &r_tys),
-            (Ty::Unit, _) | (Ty::Int, _) | (Ty::Byte, _) | (Ty::Ptr, _) | (Ty::Fun(_), _) => {
-                self.add_err("Type Error".to_string(), exp_id)
-            }
-        }
-    }
-
-    fn unify_tys(&mut self, exp_id: ExpId, l_tys: &[Ty], r_tys: &[Ty]) {
-        if l_tys.len() != r_tys.len() {
-            self.add_err("Type Error".to_string(), exp_id);
-            return;
-        }
-
-        for (l_ty, r_ty) in l_tys.iter().zip(r_tys.iter()) {
-            self.unify_ty(exp_id, l_ty, r_ty);
-        }
-    }
-
     fn set_ty(&mut self, exp_id: ExpId, l_ty: &Ty, r_ty: &Ty) {
-        self.unify_ty(exp_id, &Ty::Var(exp_id), l_ty);
-        self.unify_ty(exp_id, l_ty, r_ty);
+        self.sema.unify_ty(exp_id, &Ty::Var(exp_id), l_ty);
+        self.sema.unify_ty(exp_id, l_ty, r_ty);
     }
 
     fn current_fun_mut(&mut self) -> &mut FunDef {
@@ -126,8 +76,7 @@ impl SemanticAnalyzer {
         self.env.insert(name.to_string(), symbol_id);
         self.sema.exp_symbols.insert(exp_id, symbol_id);
 
-        // FIXME: Support other type.
-        self.set_ty(exp_id, &ty, &Ty::Int);
+        self.set_ty(exp_id, &ty, &ty);
     }
 
     fn on_ident_ref_or_val(&mut self, exp_id: ExpId, mode: ExpMode, ty: Ty, name: &str) {
@@ -149,12 +98,10 @@ impl SemanticAnalyzer {
             (SymbolKind::Prim { .. }, ExpMode::Ref) => unimplemented!(),
             (SymbolKind::Local { .. }, ExpMode::Val) => {
                 self.sema.exp_vals.insert(exp_id);
-                // FIXME: Support other type.
-                self.set_ty(exp_id, &ty, &Ty::Int);
+                self.set_ty(exp_id, &ty, &ty);
             }
             (SymbolKind::Local { .. }, ExpMode::Ref) => {
-                // FIXME: Support other type.
-                self.set_ty(exp_id, &ty, &Ty::Int);
+                self.set_ty(exp_id, &ty, &ty);
             }
         }
     }
@@ -217,8 +164,8 @@ impl ExpVisitor for SemanticAnalyzer {
         }
     }
 
-    fn on_call(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), callee: ExpId, args: &[ExpId]) {
-        self.unify_ty(exp_id, &Ty::Var(exp_id), &ty);
+    fn on_call(&mut self, exp_id: ExpId, (_, ty): (ExpMode, Ty), callee: ExpId, args: &[ExpId]) {
+        self.set_ty(exp_id, &ty, &Ty::Var(exp_id));
         let callee_ty = Ty::make_fun(args.iter().cloned().map(Ty::Var), ty);
 
         self.on_val(callee, callee_ty);
@@ -251,9 +198,16 @@ impl ExpVisitor for SemanticAnalyzer {
     ) {
         match op {
             Op::Set | Op::SetAdd => {
-                self.on_ref(exp_l, Ty::Int);
-                self.on_val(exp_r, Ty::Int);
+                self.on_ref(exp_l, Ty::Var(exp_l));
+                self.on_val(exp_r, Ty::Var(exp_l));
                 self.set_ty(exp_id, &ty, &Ty::Unit);
+                match self.sema.subst_ty(&Ty::Var(exp_l)) {
+                    Ty::Byte | Ty::Int | Ty::Ptr => {}
+                    ty => self.add_err(
+                        format!("You cannot assign non-byte/int/ptr value for now {:?}", ty),
+                        exp_id,
+                    ),
+                }
             }
             _ => {
                 self.on_val(exp_l, Ty::Int);
@@ -295,7 +249,63 @@ impl ExpVisitor for SemanticAnalyzer {
         }
 
         let last_ty = exps.last().cloned().map(Ty::Var).unwrap_or(Ty::Unit);
-        self.unify_ty(exp_id, &ty, &last_ty);
+        self.set_ty(exp_id, &ty, &last_ty);
+    }
+}
+
+impl Sema {
+    fn add_err(&mut self, message: String, exp_id: ExpId) {
+        let msg_id = MsgId(self.msgs.len());
+        self.msgs.insert(msg_id, Msg::err(message, exp_id));
+    }
+
+    pub fn get_ty(&self, exp_id: ExpId) -> Ty {
+        self.subst_ty(&Ty::Var(exp_id)).to_owned()
+    }
+
+    fn bind_ty(&mut self, exp_id: ExpId, ty: &Ty) {
+        self.exp_tys.insert(exp_id, ty.to_owned());
+    }
+
+    fn subst_ty<'a>(&'a self, ty: &'a Ty) -> &'a Ty {
+        match ty {
+            Ty::Var(exp_id) => match self.exp_tys.get(&exp_id) {
+                Some(ty) => ty,
+                None => ty,
+            },
+            _ => ty,
+        }
+    }
+
+    fn unify_ty(&mut self, exp_id: ExpId, l_ty: &Ty, r_ty: &Ty) {
+        let subst_l_ty = self.subst_ty(l_ty).to_owned();
+        let subst_r_ty = self.subst_ty(r_ty).to_owned();
+        match (&subst_l_ty, &subst_r_ty) {
+            (Ty::Var(l_exp_id), Ty::Var(r_exp_id)) if l_exp_id == r_exp_id => {}
+            (&Ty::Var(exp_id), _) | (_, &Ty::Var(exp_id)) => self.bind_ty(exp_id, &subst_r_ty),
+            (Ty::Err, _)
+            | (_, Ty::Err)
+            | (Ty::Unit, Ty::Unit)
+            | (Ty::Byte, Ty::Byte)
+            | (Ty::Int, Ty::Int)
+            | (Ty::Ptr, Ty::Ptr) => {}
+            (Ty::Fun(l_tys), Ty::Fun(r_tys)) => self.unify_tys(exp_id, &l_tys, &r_tys),
+            (Ty::Unit, _) | (Ty::Int, _) | (Ty::Byte, _) | (Ty::Ptr, _) | (Ty::Fun(_), _) => {
+                eprintln!("Type Error left={:?} right={:?}", subst_l_ty, subst_r_ty);
+                self.add_err("Type Error".to_string(), exp_id)
+            }
+        }
+    }
+
+    fn unify_tys(&mut self, exp_id: ExpId, l_tys: &[Ty], r_tys: &[Ty]) {
+        if l_tys.len() != r_tys.len() {
+            self.add_err("Type Error".to_string(), exp_id);
+            return;
+        }
+
+        for (l_ty, r_ty) in l_tys.iter().zip(r_tys.iter()) {
+            self.unify_ty(exp_id, l_ty, r_ty);
+        }
     }
 }
 

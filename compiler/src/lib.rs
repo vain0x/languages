@@ -30,6 +30,15 @@ const OPS: &[(&str, Op, OpLevel)] = &[
 
 const PUNS: &'static [&'static str] = &["(", ")", "[", "]", "{", "}", ",", ";"];
 
+static PRIMS: &[(&str, Prim)] = &[
+    ("byte_to_int", Prim::ByteToInt),
+    ("int_to_byte", Prim::IntToByte),
+    ("read_int", Prim::ReadInt),
+    ("mem_alloc", Prim::MemAlloc),
+    ("println_int", Prim::PrintLnInt),
+    ("print", Prim::Print),
+];
+
 #[derive(Clone, Copy, Debug)]
 pub enum PrimArity {
     Fixed(usize),
@@ -220,8 +229,11 @@ pub struct Syntax {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Prim {
     ByteToInt,
+    IntToByte,
+    MemAlloc,
     ReadInt,
     PrintLnInt,
+    Print,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -460,8 +472,11 @@ impl Prim {
     fn get_ty(self) -> Ty {
         match self {
             Prim::ByteToInt => Ty::Fun(vec![Ty::Byte, Ty::Int]),
+            Prim::IntToByte => Ty::Fun(vec![Ty::Int, Ty::Byte]),
+            Prim::MemAlloc => Ty::Fun(vec![Ty::Int, Ty::Ptr]),
             Prim::PrintLnInt => Ty::Fun(vec![Ty::Int, Ty::Unit]),
             Prim::ReadInt => Ty::Fun(vec![Ty::Int]),
+            Prim::Print => Ty::Fun(vec![Ty::Ptr, Ty::Int, Ty::Unit]),
         }
     }
 }
@@ -473,6 +488,14 @@ impl Ty {
 
     fn make_fun<T: Iterator<Item = Ty>>(args: T, result: Ty) -> Ty {
         Ty::Fun(args.chain(iter::once(result)).collect())
+    }
+
+    fn size_of(&self) -> Option<usize> {
+        match self {
+            Ty::Err | Ty::Var(_) | Ty::Fun(_) => None,
+            Ty::Unit | Ty::Byte => Some(1),
+            Ty::Int | Ty::Ptr => Some(8),
+        }
     }
 }
 

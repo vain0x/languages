@@ -48,9 +48,9 @@ impl Parser<'_> {
     }
 
     fn add_exp_err(&mut self, message: String, token_span: (TokenId, TokenId)) -> ExpId {
-        let msg_id = self.msgs.len().into();
+        let msg_id = self.next_msg_id();
         let exp_id = self.add_exp(ExpKind::Err(msg_id), token_span);
-        self.msgs.insert(msg_id, Msg::err(message, exp_id));
+        self.add_err_msg(message, exp_id);
         exp_id
     }
 
@@ -363,6 +363,12 @@ impl Parser<'_> {
         let exp_id = self.parse_exp();
         self.parse_eof();
         exp_id
+    }
+}
+
+impl BorrowMutMsgs for Parser<'_> {
+    fn msgs_mut(&mut self) -> &mut Msgs {
+        &mut self.msgs
     }
 }
 

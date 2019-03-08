@@ -12,6 +12,25 @@ pub enum MsgLevel {
     Err,
 }
 
+pub(crate) type Msgs = BTreeMap<MsgId, Msg>;
+
+pub(crate) trait BorrowMutMsgs {
+    fn msgs_mut(&mut self) -> &mut Msgs;
+
+    fn next_msg_id(&mut self) -> MsgId {
+        MsgId(self.msgs_mut().len())
+    }
+
+    fn add_msg(&mut self, msg: Msg) {
+        let msg_id = self.next_msg_id();
+        self.msgs_mut().insert(msg_id, msg);
+    }
+
+    fn add_err_msg(&mut self, message: String, exp_id: ExpId) {
+        self.add_msg(Msg::err(message, exp_id));
+    }
+}
+
 impl Msg {
     pub fn err(message: String, exp_id: ExpId) -> Self {
         Msg {

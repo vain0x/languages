@@ -9,8 +9,7 @@ pub(crate) struct SemanticAnalyzer {
 
 impl SemanticAnalyzer {
     fn add_err(&mut self, message: String, exp_id: ExpId) {
-        let msg_id = MsgId(self.sema.msgs.len());
-        self.sema.msgs.insert(msg_id, Msg::err(message, exp_id));
+        self.sema.add_err_msg(message, exp_id);
     }
 
     fn add_fun(&mut self, name: String, exp_id: ExpId) -> FunId {
@@ -233,8 +232,7 @@ impl ShareSyntax for SemanticAnalyzer {
 
 impl Sema {
     fn add_err(&mut self, message: String, exp_id: ExpId) {
-        let msg_id = MsgId(self.msgs.len());
-        self.msgs.insert(msg_id, Msg::err(message, exp_id));
+        self.add_err_msg(message, exp_id);
     }
 
     pub fn get_ty(&self, exp_id: ExpId) -> Ty {

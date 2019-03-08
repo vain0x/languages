@@ -203,3 +203,9 @@ impl Syntax {
         (l_pos, r_pos)
     }
 }
+
+impl BorrowMutMsgs for Syntax {
+    fn msgs_mut(&mut self) -> &mut Msgs {
+        &mut self.msgs
+    }
+}

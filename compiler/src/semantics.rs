@@ -98,4 +98,10 @@ impl Sema {
     }
 }
 
+impl BorrowMutMsgs for Sema {
+    fn msgs_mut(&mut self) -> &mut Msgs {
+        &mut self.msgs
+    }
+}
+
 pub(crate) const GLOBAL_FUN_ID: FunId = FunId(0);

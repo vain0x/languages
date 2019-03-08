@@ -42,7 +42,9 @@ fn main() {
     let picomet_contents = read_to_string(&picomet_path);
     let current_contents = read_to_string(&out_path);
 
-    let (success, ir_contents, stderr) = picomet_lang_compiler::compile(&picomet_contents);
+    let picomet_lang_compiler::CompilationResult {
+        success, program: ir_contents, stderr
+     } = picomet_lang_compiler::compile(&picomet_contents);
 
     let out_contents = if success {
         TEMPLATE

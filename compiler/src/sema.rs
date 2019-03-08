@@ -1,13 +1,6 @@
 use crate::*;
 use std::collections::BTreeSet;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum ExpMode {
-    Val,
-    Ref,
-    Pat,
-}
-
 pub struct SemanticAnalyzer {
     sema: Sema,
     env: BTreeMap<String, SymbolId>,
@@ -60,26 +53,57 @@ impl SemanticAnalyzer {
     }
 
     fn on_pat(&mut self, exp_id: ExpId, ty: Ty) {
-        self.on_exp(exp_id, (ExpMode::Pat, ty));
+        let syntax = self.share_syntax();
+        let exp = &syntax.exps[&exp_id];
+        match &exp.kind {
+            ExpKind::Err(_) => {}
+            ExpKind::Ident(name) => {
+                let symbol_id = self.add_local(name.to_string());
+                self.env.insert(name.to_string(), symbol_id);
+                self.sema.exp_symbols.insert(exp_id, symbol_id);
+
+                self.set_ty(exp_id, &ty, &ty);
+            }
+            _ => panic!("pattern must be an ident"),
+        }
+    }
+
+    fn on_index_ref(&mut self, exp_id: ExpId, ty: Ty, indexee: ExpId, arg: ExpId) {
+        self.on_val(indexee, Ty::Ptr);
+        self.on_val(arg, Ty::Int);
+        self.set_ty(exp_id, &ty, &Ty::Byte);
     }
 
     fn on_ref(&mut self, exp_id: ExpId, ty: Ty) {
-        self.on_exp(exp_id, (ExpMode::Ref, ty));
+        let syntax = self.share_syntax();
+        let exp = &syntax.exps[&exp_id];
+        match &exp.kind {
+            ExpKind::Ident(name) => {
+                let symbol_id = match self.env.get(name) {
+                    Some(&symbol_id) => symbol_id,
+                    None => {
+                        self.add_err("Undefined name".to_string(), exp_id);
+                        return;
+                    }
+                };
+
+                self.sema.exp_symbols.insert(exp_id, symbol_id);
+
+                match &self.sema.symbols[&symbol_id].kind {
+                    SymbolKind::Prim { .. } => unimplemented!(),
+                    SymbolKind::Local { .. } => {
+                        self.set_ty(exp_id, &ty, &ty);
+                    }
+                }
+            }
+            &ExpKind::Index { indexee, arg } => {
+                self.on_index_ref(exp_id, ty, indexee, arg);
+            }
+            _ => panic!("reference must be identifier"),
+        }
     }
 
-    fn on_val(&mut self, exp_id: ExpId, ty: Ty) {
-        self.on_exp(exp_id, (ExpMode::Val, ty));
-    }
-
-    fn on_ident_pat(&mut self, exp_id: ExpId, ty: Ty, name: &str) {
-        let symbol_id = self.add_local(name.to_string());
-        self.env.insert(name.to_string(), symbol_id);
-        self.sema.exp_symbols.insert(exp_id, symbol_id);
-
-        self.set_ty(exp_id, &ty, &ty);
-    }
-
-    fn on_ident_ref_or_val(&mut self, exp_id: ExpId, mode: ExpMode, ty: Ty, name: &str) {
+    fn on_ident(&mut self, exp_id: ExpId, ty: Ty, name: &str) {
         let symbol_id = match self.env.get(name) {
             Some(&symbol_id) => symbol_id,
             None => {
@@ -90,18 +114,95 @@ impl SemanticAnalyzer {
 
         self.sema.exp_symbols.insert(exp_id, symbol_id);
 
-        match (&self.sema.symbols[&symbol_id].kind, mode) {
-            (_, ExpMode::Pat) => unreachable!(),
-            (SymbolKind::Prim(prim), ExpMode::Val) => {
+        match &self.sema.symbols[&symbol_id].kind {
+            SymbolKind::Prim(prim) => {
                 self.set_ty(exp_id, &ty, &prim.get_ty());
             }
-            (SymbolKind::Prim { .. }, ExpMode::Ref) => unimplemented!(),
-            (SymbolKind::Local { .. }, ExpMode::Val) => {
+            SymbolKind::Local { .. } => {
                 self.sema.exp_vals.insert(exp_id);
                 self.set_ty(exp_id, &ty, &ty);
+
+                self.sema.exp_vals.insert(exp_id);
             }
-            (SymbolKind::Local { .. }, ExpMode::Ref) => {
-                self.set_ty(exp_id, &ty, &ty);
+        }
+    }
+
+    fn on_call(&mut self, exp_id: ExpId, ty: Ty, callee: ExpId, args: &[ExpId]) {
+        self.set_ty(exp_id, &ty, &Ty::Var(exp_id));
+        let callee_ty = Ty::make_fun(args.iter().cloned().map(Ty::Var), ty);
+
+        self.on_val(callee, callee_ty);
+        for &arg in args {
+            self.on_val(arg, Ty::Var(arg));
+        }
+    }
+
+    fn on_index(&mut self, exp_id: ExpId, ty: Ty, indexee: ExpId, arg: ExpId) {
+        self.on_index_ref(exp_id, ty, indexee, arg);
+        self.sema.exp_vals.insert(exp_id);
+    }
+
+    fn on_bin(&mut self, exp_id: ExpId, ty: Ty, op: Op, exp_l: ExpId, exp_r: ExpId) {
+        match op {
+            Op::Set | Op::SetAdd => {
+                self.on_ref(exp_l, Ty::Var(exp_l));
+                self.on_val(exp_r, Ty::Var(exp_l));
+                self.set_ty(exp_id, &ty, &Ty::Unit);
+                match self.sema.subst_ty(&Ty::Var(exp_l)) {
+                    Ty::Byte | Ty::Int | Ty::Ptr => {}
+                    ty => self.add_err(
+                        format!("You cannot assign non-byte/int/ptr value for now {:?}", ty),
+                        exp_id,
+                    ),
+                }
+            }
+            _ => {
+                self.on_val(exp_l, Ty::Int);
+                self.on_val(exp_r, Ty::Int);
+                self.set_ty(exp_id, &ty, &Ty::Int);
+            }
+        }
+    }
+
+    fn on_val(&mut self, exp_id: ExpId, ty: Ty) {
+        let syntax = self.share_syntax();
+        let exp = &syntax.exps[&exp_id];
+        match &exp.kind {
+            &ExpKind::Err(_) => {}
+            &ExpKind::Int(_) => {
+                self.set_ty(exp_id, &ty, &Ty::Int);
+            }
+            ExpKind::Str(_) => {
+                self.set_ty(exp_id, &ty, &Ty::make_str());
+            }
+            ExpKind::Ident(name) => self.on_ident(exp_id, ty, name),
+            ExpKind::Call { callee, args } => self.on_call(exp_id, ty, *callee, &args),
+            ExpKind::Index { indexee, arg } => self.on_index(exp_id, ty, *indexee, *arg),
+            &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, ty, op, l, r),
+            ExpKind::Fun { .. } => unimplemented!(),
+            &ExpKind::If { cond, body, alt } => {
+                self.on_val(cond, Ty::Int);
+                self.on_val(body, Ty::Var(exp_id));
+                self.on_val(alt, Ty::Var(exp_id));
+                self.set_ty(exp_id, &Ty::Var(exp_id), &ty);
+            }
+            &ExpKind::While { cond, body } => {
+                self.on_val(cond, Ty::Int);
+                self.on_val(body, Ty::Unit);
+                self.set_ty(exp_id, &ty, &Ty::Unit);
+            }
+            &ExpKind::Let { pat, init } => {
+                self.on_pat(pat, Ty::Var(pat));
+                self.on_val(init, Ty::Var(pat));
+                self.set_ty(exp_id, &ty, &Ty::Unit);
+            }
+            ExpKind::Semi(exps) => {
+                for &exp_id in exps {
+                    self.on_val(exp_id, Ty::Var(exp_id));
+                }
+
+                let last_ty = exps.last().cloned().map(Ty::Var).unwrap_or(Ty::Unit);
+                self.set_ty(exp_id, &ty, &last_ty);
             }
         }
     }
@@ -131,129 +232,6 @@ impl SemanticAnalyzer {
 impl ShareSyntax for SemanticAnalyzer {
     fn share_syntax(&self) -> Rc<Syntax> {
         self.sema.syntax.clone()
-    }
-}
-
-impl ExpVisitor for SemanticAnalyzer {
-    type Mode = (ExpMode, Ty);
-    type Output = ();
-
-    fn on_err(&mut self, _: ExpId, _: (ExpMode, Ty), _: MsgId) {}
-
-    fn on_int(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), _: i64) {
-        match mode {
-            ExpMode::Pat | ExpMode::Ref => unimplemented!(),
-            ExpMode::Val => {}
-        }
-
-        self.set_ty(exp_id, &ty, &Ty::Int);
-    }
-
-    fn on_str(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), _: &str) {
-        match mode {
-            ExpMode::Pat | ExpMode::Ref => unimplemented!(),
-            ExpMode::Val => {}
-        }
-        self.set_ty(exp_id, &ty, &Ty::make_str());
-    }
-
-    fn on_ident(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), name: &str) {
-        match mode {
-            ExpMode::Pat => self.on_ident_pat(exp_id, ty, name),
-            ExpMode::Ref | ExpMode::Val => self.on_ident_ref_or_val(exp_id, mode, ty, name),
-        }
-    }
-
-    fn on_call(&mut self, exp_id: ExpId, (_, ty): (ExpMode, Ty), callee: ExpId, args: &[ExpId]) {
-        self.set_ty(exp_id, &ty, &Ty::Var(exp_id));
-        let callee_ty = Ty::make_fun(args.iter().cloned().map(Ty::Var), ty);
-
-        self.on_val(callee, callee_ty);
-        for &arg in args {
-            self.on_val(arg, Ty::Var(arg));
-        }
-    }
-
-    fn on_index(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), indexee: ExpId, arg: ExpId) {
-        self.on_val(indexee, Ty::Ptr);
-        self.on_val(arg, Ty::Int);
-        self.set_ty(exp_id, &ty, &Ty::Byte);
-
-        match mode {
-            ExpMode::Pat => panic!("no index pattern"),
-            ExpMode::Ref => {}
-            ExpMode::Val => {
-                self.sema.exp_vals.insert(exp_id);
-            }
-        }
-    }
-
-    fn on_bin(
-        &mut self,
-        exp_id: ExpId,
-        (_, ty): (ExpMode, Ty),
-        op: Op,
-        exp_l: ExpId,
-        exp_r: ExpId,
-    ) {
-        match op {
-            Op::Set | Op::SetAdd => {
-                self.on_ref(exp_l, Ty::Var(exp_l));
-                self.on_val(exp_r, Ty::Var(exp_l));
-                self.set_ty(exp_id, &ty, &Ty::Unit);
-                match self.sema.subst_ty(&Ty::Var(exp_l)) {
-                    Ty::Byte | Ty::Int | Ty::Ptr => {}
-                    ty => self.add_err(
-                        format!("You cannot assign non-byte/int/ptr value for now {:?}", ty),
-                        exp_id,
-                    ),
-                }
-            }
-            _ => {
-                self.on_val(exp_l, Ty::Int);
-                self.on_val(exp_r, Ty::Int);
-                self.set_ty(exp_id, &ty, &Ty::Int);
-            }
-        }
-    }
-
-    fn on_fun(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), pats: &[ExpId], body: ExpId) {
-        unimplemented!()
-    }
-
-    fn on_if(
-        &mut self,
-        exp_id: ExpId,
-        (_, ty): (ExpMode, Ty),
-        cond: ExpId,
-        body: ExpId,
-        alt: ExpId,
-    ) {
-        self.on_val(cond, Ty::Int);
-        self.on_val(body, Ty::Var(exp_id));
-        self.on_val(alt, Ty::Var(exp_id));
-        self.set_ty(exp_id, &Ty::Var(exp_id), &ty);
-    }
-
-    fn on_while(&mut self, exp_id: ExpId, (_, ty): (ExpMode, Ty), cond: ExpId, body: ExpId) {
-        self.on_val(cond, Ty::Int);
-        self.on_val(body, Ty::Unit);
-        self.set_ty(exp_id, &ty, &Ty::Unit);
-    }
-
-    fn on_let(&mut self, exp_id: ExpId, (_, ty): (ExpMode, Ty), pat: ExpId, init: ExpId) {
-        self.on_pat(pat, Ty::Var(pat));
-        self.on_val(init, Ty::Var(pat));
-        self.set_ty(exp_id, &ty, &Ty::Unit);
-    }
-
-    fn on_semi(&mut self, exp_id: ExpId, (_, ty): (ExpMode, Ty), exps: &[ExpId]) {
-        for &exp_id in exps {
-            self.on_val(exp_id, Ty::Var(exp_id));
-        }
-
-        let last_ty = exps.last().cloned().map(Ty::Var).unwrap_or(Ty::Unit);
-        self.set_ty(exp_id, &ty, &last_ty);
     }
 }
 

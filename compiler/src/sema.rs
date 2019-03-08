@@ -1,7 +1,7 @@
 use crate::*;
 use std::collections::BTreeSet;
 
-pub struct SemanticAnalyzer {
+pub(crate) struct SemanticAnalyzer {
     sema: Sema,
     env: BTreeMap<String, SymbolId>,
     current_fun_id: FunId,
@@ -46,10 +46,6 @@ impl SemanticAnalyzer {
 
     fn current_fun_mut(&mut self) -> &mut FunDef {
         self.sema.funs.get_mut(&self.current_fun_id).unwrap()
-    }
-
-    fn exp(&self, exp_id: ExpId) -> &Exp {
-        &self.sema.syntax.exps[&exp_id]
     }
 
     fn on_pat(&mut self, exp_id: ExpId, ty: Ty) {
@@ -291,7 +287,7 @@ impl Sema {
     }
 }
 
-pub fn sema(syntax: Rc<Syntax>) -> Sema {
+pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
     let mut analyzer = SemanticAnalyzer {
         sema: Sema {
             syntax: Rc::clone(&syntax),

@@ -40,7 +40,7 @@ impl RegAlloc {
     }
 }
 
-pub fn alloc_regs(inss: &mut Vec<Ins>) {
+pub(crate) fn alloc_regs(inss: &mut Vec<Ins>) {
     let mut reg_alloc = RegAlloc {
         used: vec![false; REG_NUM],
         reg_map: BTreeMap::new(),

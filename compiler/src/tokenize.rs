@@ -130,7 +130,7 @@ fn is_whitespace(c: u8) -> bool {
     c == b' ' || c == b'\t' || c == b'\r' || c == b'\n'
 }
 
-pub fn tokenize(src: &str) -> BTreeMap<TokenId, Token> {
+pub(crate) fn tokenize(src: &str) -> BTreeMap<TokenId, Token> {
     let mut tokenizer = Tokenizer {
         src,
         ..Tokenizer::default()

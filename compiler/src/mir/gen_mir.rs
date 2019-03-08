@@ -1,4 +1,3 @@
-use crate::cmd::*;
 use crate::*;
 use std::fmt::Write;
 use std::mem::size_of;
@@ -16,10 +15,6 @@ impl Compiler {
     fn current_gen_fun_mut(&mut self) -> &mut GenFunDef {
         let fun_id = self.current_fun_id;
         self.mir.funs.get_mut(&fun_id).unwrap()
-    }
-
-    fn exp(&self, exp_id: ExpId) -> &Exp {
-        &self.mir.sema.syntax.exps[&exp_id]
     }
 
     fn get_symbol(&self, exp_id: ExpId) -> Option<&Symbol> {
@@ -349,7 +344,7 @@ impl CmdArg {
     }
 }
 
-pub fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
+pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
     let mut compiler = Compiler {
         mir: Mir {
             sema: Rc::clone(&sema),
@@ -362,4 +357,21 @@ pub fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
         current_fun_id: GLOBAL_FUN_ID,
     };
     compiler.compile()
+}
+
+pub fn compile(src: &str) -> CompilationResult {
+    let src = src.to_owned();
+    let syntax = Rc::new(parse::parse(src));
+
+    let sema = Rc::new(sema::sema(syntax));
+    if !sema.is_successful() {
+        let (success, stderr) = Msg::summarize(sema.msgs.values(), &sema.syntax);
+        return CompilationResult {
+            success,
+            stderr,
+            program: "".to_string(),
+        };
+    }
+
+    gen_mir::gen_mir(sema)
 }

@@ -366,7 +366,7 @@ impl Parser<'_> {
     }
 }
 
-pub fn parse(src: String) -> Syntax {
+pub(crate) fn parse(src: String) -> Syntax {
     let tokens = tokenize::tokenize(&src);
 
     let (root_exp_id, exps, msgs) = {

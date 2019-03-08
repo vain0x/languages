@@ -220,6 +220,28 @@ impl Parser<'_> {
         exp_l
     }
 
+    fn parse_fun(&mut self) -> ExpId {
+        let token_l = self.current;
+        self.current += 1;
+
+        if self.next().kind != TokenKind::Pun("(") {
+            return self.parse_err("Expected '('".to_string());
+        }
+        self.current += 1;
+
+        let mut pats = vec![];
+        self.parse_term_list(&mut pats);
+
+        if self.next().kind != TokenKind::Pun(")") {
+            return self.parse_err("Expected ')'".to_string());
+        }
+        self.current += 1;
+
+        let body = self.parse_term();
+
+        self.add_exp(ExpKind::Fun { pats, body }, (token_l, self.current))
+    }
+
     fn parse_if(&mut self) -> ExpId {
         let token_l = self.current;
         self.current += 1;
@@ -263,6 +285,7 @@ impl Parser<'_> {
 
     fn parse_term(&mut self) -> ExpId {
         match self.next().kind {
+            TokenKind::Keyword(Keyword::Fun) => self.parse_fun(),
             TokenKind::Keyword(Keyword::If) => self.parse_if(),
             TokenKind::Keyword(Keyword::While) => self.parse_while(),
             _ => self.parse_bin_l(OpLevel::Set),
@@ -305,30 +328,9 @@ impl Parser<'_> {
         )
     }
 
-    fn parse_fun(&mut self) -> ExpId {
-        let token_l = self.current;
-        self.current += 1;
-
-        if self.next().kind != TokenKind::Pun("(") {
-            return self.parse_err("Expected '('".to_string());
-        }
-
-        let mut pats = vec![];
-        self.parse_term_list(&mut pats);
-
-        if self.next().kind != TokenKind::Pun(")") {
-            return self.parse_err("Expected ')'".to_string());
-        }
-
-        let body = self.parse_term();
-
-        self.add_exp(ExpKind::Fun { pats, body }, (token_l, self.current))
-    }
-
     fn parse_stmt(&mut self) -> ExpId {
         match self.next().kind {
             TokenKind::Keyword(Keyword::Let) => self.parse_let(),
-            TokenKind::Keyword(Keyword::Fun) => self.parse_fun(),
             _ => self.parse_term(),
         }
     }

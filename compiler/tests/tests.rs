@@ -234,3 +234,14 @@ fn test_while() {
         &[("0\n0\n0\n4\n0\n", "1\n1\n1\n"), ("1\n", "")],
     )
 }
+
+#[test]
+fn test_fun_with_no_args() {
+    eval_tests(
+        r#"
+            let f = fun() 1;
+            println_int(f());
+        "#,
+        &[("", "1\n")],
+    )
+}

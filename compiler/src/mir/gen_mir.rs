@@ -103,6 +103,13 @@ impl Compiler {
                 self.kill(size_reg_id);
                 NO_REG_ID
             }
+            SymbolRef::Fun(fun_id, _) => {
+                let reg_id = self.add_reg();
+                let body_label_id = self.mir.funs[&fun_id].label_id;
+                self.push(Cmd::Call, NO_REG_ID, CmdArg::Label(body_label_id));
+                self.push(Cmd::Mov, reg_id, CmdArg::Reg(RET_REG_ID));
+                reg_id
+            }
             _ => panic!("cannot call non-primitive symbol"),
         }
     }
@@ -191,7 +198,7 @@ impl Compiler {
                 }
             }
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
-            ExpKind::Fun { .. } => unimplemented!(),
+            ExpKind::Fun { .. } => NO_REG_ID,
             &ExpKind::If { cond, body, alt } => {
                 let alt_label = CmdArg::Label(self.add_label());
                 let end_label = CmdArg::Label(self.add_label());
@@ -251,15 +258,7 @@ impl Compiler {
     }
 
     pub fn gen_fun(&mut self, fun_id: FunId) {
-        let label_id = self.add_label();
-
-        self.mir.funs.insert(
-            fun_id,
-            GenFunDef {
-                label_id,
-                inss: vec![],
-            },
-        );
+        let label_id = self.mir.funs[&fun_id].label_id;
 
         self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(label_id));
 
@@ -269,15 +268,37 @@ impl Compiler {
         self.push(Cmd::AddImm, BASE_PTR_REG_ID, CmdArg::Int(-frame_size));
 
         let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
+
+        if fun_id == GLOBAL_FUN_ID {
+            self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
+        } else {
+            self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(final_reg_id));
+            self.push(Cmd::Ret, NO_REG_ID, CmdArg::None);
+        }
         self.kill(final_reg_id);
-        self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
     }
 
     pub fn compile(&mut self) -> CompilationResult {
         // Allocate well-known registers.
         self.mir.reg_count += KNOWN_REG_NUM;
 
-        self.gen_fun(GLOBAL_FUN_ID);
+        // Prepare funs.
+        let fun_ids = self.sema().funs.keys().cloned().collect::<Vec<_>>();
+        for &fun_id in &fun_ids {
+            let label_id = self.add_label();
+            self.mir.funs.insert(
+                fun_id,
+                GenFunDef {
+                    label_id,
+                    inss: vec![],
+                },
+            );
+        }
+
+        // Generate funs.
+        for &fun_id in &fun_ids {
+            self.gen_fun(fun_id);
+        }
 
         // Reassign registers to finite number registers.
         for fun_id in 0..self.mir.funs.len() {

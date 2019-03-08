@@ -17,8 +17,8 @@ impl Compiler {
         self.mir.funs.get_mut(&fun_id).unwrap()
     }
 
-    fn get_symbol(&self, exp_id: ExpId) -> Option<&Symbol> {
-        (self.mir.sema.exp_symbols.get(&exp_id)).map(|symbol_id| &self.mir.sema.symbols[&symbol_id])
+    fn get_symbol(&self, exp_id: ExpId) -> Option<SymbolRef<'_>> {
+        (self.mir.sema.exp_symbols.get(&exp_id)).map(|&symbol| self.mir.sema.get_symbol_ref(symbol))
     }
 
     fn is_coerced_to_val(&self, exp_id: ExpId) -> bool {
@@ -48,10 +48,10 @@ impl Compiler {
     }
 
     fn on_ident(&mut self, exp_id: ExpId, _: &str) -> RegId {
-        let symbol = self.get_symbol(exp_id).expect("ident should be resolved");
-        match &symbol.kind {
-            SymbolKind::Prim(..) => panic!("cannot generate primitive"),
-            SymbolKind::Local { index } => {
+        let symbol_ref = self.get_symbol(exp_id).expect("ident should be resolved");
+        match symbol_ref {
+            SymbolRef::Prim(..) => panic!("cannot generate primitive"),
+            SymbolRef::Var(_, VarDef { index, .. }) => {
                 let offset = (*index * size_of::<i64>()) as i64;
 
                 let offset_reg_id = self.add_reg();
@@ -67,34 +67,35 @@ impl Compiler {
                     offset_reg_id
                 }
             }
+            SymbolRef::Fun(..) => panic!("cannot generate function"),
         }
     }
 
     fn on_call(&mut self, _: ExpId, callee: ExpId, args: &[ExpId]) -> RegId {
-        let symbol = &self.get_symbol(callee).expect("cannot call non-symbol");
-        match symbol.kind {
-            SymbolKind::Prim(Prim::ByteToInt) | SymbolKind::Prim(Prim::IntToByte) => {
+        let symbol_ref = &self.get_symbol(callee).expect("cannot call non-symbol");
+        match symbol_ref {
+            SymbolRef::Prim(Prim::ByteToInt) | SymbolRef::Prim(Prim::IntToByte) => {
                 self.on_exp(args[0])
             }
-            SymbolKind::Prim(Prim::MemAlloc) => {
+            SymbolRef::Prim(Prim::MemAlloc) => {
                 let size_reg_id = self.on_exp(args[0]);
                 let ptr_reg_id = self.add_reg();
                 self.push(Cmd::Alloc, ptr_reg_id, CmdArg::Reg(size_reg_id));
                 self.kill(size_reg_id);
                 ptr_reg_id
             }
-            SymbolKind::Prim(Prim::ReadInt) => {
+            SymbolRef::Prim(Prim::ReadInt) => {
                 let l = self.add_reg();
                 self.push(Cmd::ReadInt, l, CmdArg::None);
                 l
             }
-            SymbolKind::Prim(Prim::PrintLnInt) => {
+            SymbolRef::Prim(Prim::PrintLnInt) => {
                 let r = self.on_exp(args[0]);
                 self.push(Cmd::PrintLnInt, NO_REG_ID, CmdArg::Reg(r));
                 self.kill(r);
                 NO_REG_ID
             }
-            SymbolKind::Prim(Prim::Print) => {
+            SymbolRef::Prim(Prim::Print) => {
                 let ptr_reg_id = self.on_exp(args[0]);
                 let size_reg_id = self.on_exp(args[1]);
                 self.push(Cmd::Write, ptr_reg_id, CmdArg::Reg(size_reg_id));
@@ -263,7 +264,7 @@ impl Compiler {
         self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(label_id));
 
         // Allocate local variables.
-        let local_count = self.sema().funs[&fun_id].locals.len();
+        let local_count = self.sema().fun_local_count(fun_id);
         let frame_size = (local_count * size_of::<i64>()) as i64;
         self.push(Cmd::AddImm, BASE_PTR_REG_ID, CmdArg::Int(-frame_size));
 

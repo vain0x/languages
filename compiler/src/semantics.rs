@@ -22,32 +22,42 @@ pub(crate) enum Prim {
     Print,
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub(crate) enum SymbolKind {
-    Prim(Prim),
-    Local { index: usize },
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub(crate) struct Symbol {
-    pub kind: SymbolKind,
+#[derive(Clone, Debug)]
+pub(crate) struct VarDef {
     pub name: String,
+    pub ty: Ty,
+    pub index: usize,
 }
 
 #[derive(Clone, Debug)]
 pub(crate) struct FunDef {
     pub name: String,
+    pub ty: Ty,
     pub body: ExpId,
-    pub locals: Vec<SymbolId>,
+    pub symbols: Vec<SymbolKind>,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) enum SymbolKind {
+    Prim(Prim),
+    Var(VarId),
+    Fun(FunId),
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum SymbolRef<'a> {
+    Prim(Prim),
+    Var(VarId, &'a VarDef),
+    Fun(FunId, &'a FunDef),
 }
 
 #[derive(Clone, Debug)]
 pub(crate) struct Sema {
     pub syntax: Rc<Syntax>,
-    pub symbols: BTreeMap<SymbolId, Symbol>,
-    pub exp_symbols: BTreeMap<ExpId, SymbolId>,
+    pub exp_symbols: BTreeMap<ExpId, SymbolKind>,
     pub exp_vals: BTreeSet<ExpId>,
     pub exp_tys: BTreeMap<ExpId, Ty>,
+    pub vars: BTreeMap<VarId, VarDef>,
     pub funs: BTreeMap<FunId, FunDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }
@@ -80,6 +90,10 @@ pub(crate) static PRIMS: &[(&str, Prim)] = &[
 ];
 
 impl Prim {
+    pub fn text(self) -> &'static str {
+        PRIMS.iter().find(|&&(_, prim)| prim == self).unwrap().0
+    }
+
     pub(crate) fn get_ty(self) -> Ty {
         match self {
             Prim::ByteToInt => Ty::Fun(vec![Ty::Byte, Ty::Int]),
@@ -88,6 +102,41 @@ impl Prim {
             Prim::PrintLnInt => Ty::Fun(vec![Ty::Int, Ty::Unit]),
             Prim::ReadInt => Ty::Fun(vec![Ty::Int]),
             Prim::Print => Ty::Fun(vec![Ty::Ptr, Ty::Int, Ty::Unit]),
+        }
+    }
+}
+
+impl SymbolKind {
+    pub fn is_var(&self) -> bool {
+        match self {
+            SymbolKind::Var(_) => true,
+            _ => false,
+        }
+    }
+}
+
+impl SymbolRef<'_> {
+    pub fn kind(&self) -> SymbolKind {
+        match self {
+            &SymbolRef::Prim(prim) => SymbolKind::Prim(prim),
+            &SymbolRef::Var(var_id, _) => SymbolKind::Var(var_id),
+            &SymbolRef::Fun(fun_id, _) => SymbolKind::Fun(fun_id),
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match self {
+            SymbolRef::Prim(prim) => prim.text(),
+            SymbolRef::Var(_, var_def) => &var_def.name,
+            SymbolRef::Fun(_, fun_def) => &fun_def.name,
+        }
+    }
+
+    pub fn get_ty(&self) -> Ty {
+        match self {
+            SymbolRef::Prim(prim) => prim.get_ty(),
+            SymbolRef::Var(_, var_def) => var_def.ty.to_owned(),
+            SymbolRef::Fun(_, fun_def) => fun_def.ty.to_owned(),
         }
     }
 }

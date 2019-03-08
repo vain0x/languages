@@ -202,6 +202,10 @@ impl Syntax {
         let r_pos = self.locate(r);
         (l_pos, r_pos)
     }
+
+    pub fn exp_kind(&self, exp_id: ExpId) -> &ExpKind {
+        &self.exps[&exp_id].kind
+    }
 }
 
 impl BorrowMutMsgs for Syntax {

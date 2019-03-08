@@ -3,48 +3,67 @@ use std::collections::BTreeSet;
 
 pub(crate) struct SemanticAnalyzer {
     sema: Sema,
-    env: BTreeMap<String, SymbolId>,
     current_fun_id: FunId,
 }
 
 impl SemanticAnalyzer {
+    fn exp(&self, exp_id: ExpId) -> &Exp {
+        &self.sema.syntax.exps[&exp_id]
+    }
+
+    fn current_fun(&self) -> &FunDef {
+        self.sema.funs.get(&self.current_fun_id).unwrap()
+    }
+
+    fn current_fun_mut(&mut self) -> &mut FunDef {
+        self.sema.funs.get_mut(&self.current_fun_id).unwrap()
+    }
+
+    fn current_fun_symbols(&self) -> Vec<SymbolRef<'_>> {
+        self.sema.fun_symbols(self.current_fun_id)
+    }
+
+    fn imported_symbols(&self) -> impl Iterator<Item = SymbolRef<'_>> {
+        (self.sema.fun_symbols(self.current_fun_id).into_iter().rev())
+            .chain(self.sema.fun_symbols(GLOBAL_FUN_ID).into_iter().rev())
+    }
+
+    fn lookup_symbol(&self, name: &str) -> Option<SymbolRef<'_>> {
+        self.imported_symbols().find(|symbol| symbol.name() == name)
+    }
+
     fn add_err(&mut self, message: String, exp_id: ExpId) {
         self.sema.add_err_msg(message, exp_id);
     }
 
-    fn add_fun(&mut self, name: String, exp_id: ExpId) -> FunId {
+    fn add_fun(&mut self, name: String, ty: Ty, exp_id: ExpId) -> FunId {
         let fun_id = FunId(self.sema.funs.len());
         let fun_def = FunDef {
             name,
+            ty,
             body: exp_id,
-            locals: vec![],
+            symbols: vec![],
         };
         self.sema.funs.insert(fun_id, fun_def);
+        self.current_fun_mut().symbols.push(SymbolKind::Fun(fun_id));
         fun_id
     }
 
-    fn add_local(&mut self, name: String) -> SymbolId {
-        let index = self.sema.funs[&self.current_fun_id].locals.len();
-        let symbol_id = SymbolId(self.sema.symbols.len());
+    fn add_local(&mut self, name: String, ty: Ty) -> VarId {
+        let index = self.sema.fun_local_count(self.current_fun_id);
+        let var_id = VarId(self.sema.vars.len());
 
-        let symbol = Symbol {
-            kind: SymbolKind::Local { index },
-            name,
-        };
+        let var = VarDef { name, ty, index };
 
-        self.sema.symbols.insert(symbol_id, symbol);
-        self.current_fun_mut().locals.push(symbol_id);
+        self.sema.vars.insert(var_id, var);
+        self.current_fun_mut().symbols.push(SymbolKind::Var(var_id));
 
-        symbol_id
+        var_id
     }
 
     fn set_ty(&mut self, exp_id: ExpId, l_ty: &Ty, r_ty: &Ty) {
         self.sema.unify_ty(exp_id, &Ty::Var(exp_id), l_ty);
         self.sema.unify_ty(exp_id, l_ty, r_ty);
-    }
-
-    fn current_fun_mut(&mut self) -> &mut FunDef {
-        self.sema.funs.get_mut(&self.current_fun_id).unwrap()
     }
 
     fn on_pat(&mut self, exp_id: ExpId, ty: Ty) {
@@ -53,9 +72,10 @@ impl SemanticAnalyzer {
         match &exp.kind {
             ExpKind::Err(_) => {}
             ExpKind::Ident(name) => {
-                let symbol_id = self.add_local(name.to_string());
-                self.env.insert(name.to_string(), symbol_id);
-                self.sema.exp_symbols.insert(exp_id, symbol_id);
+                let var_id = self.add_local(name.to_string(), ty.to_owned());
+                self.sema
+                    .exp_symbols
+                    .insert(exp_id, SymbolKind::Var(var_id));
 
                 self.set_ty(exp_id, &ty, &ty);
             }
@@ -74,21 +94,22 @@ impl SemanticAnalyzer {
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
             ExpKind::Ident(name) => {
-                let symbol_id = match self.env.get(name) {
-                    Some(&symbol_id) => symbol_id,
+                let symbol_kind = match self.lookup_symbol(name) {
+                    Some(symbol) => symbol.kind(),
                     None => {
                         self.add_err("Undefined name".to_string(), exp_id);
                         return;
                     }
                 };
 
-                self.sema.exp_symbols.insert(exp_id, symbol_id);
+                self.sema.exp_symbols.insert(exp_id, symbol_kind);
 
-                match &self.sema.symbols[&symbol_id].kind {
-                    SymbolKind::Prim { .. } => unimplemented!(),
-                    SymbolKind::Local { .. } => {
+                match symbol_kind {
+                    SymbolKind::Prim(..) => unimplemented!(),
+                    SymbolKind::Var(..) => {
                         self.set_ty(exp_id, &ty, &ty);
                     }
+                    SymbolKind::Fun(..) => unimplemented!(),
                 }
             }
             &ExpKind::Index { indexee, arg } => {
@@ -99,24 +120,21 @@ impl SemanticAnalyzer {
     }
 
     fn on_ident(&mut self, exp_id: ExpId, ty: Ty, name: &str) {
-        let symbol_id = match self.env.get(name) {
-            Some(&symbol_id) => symbol_id,
+        let (symbol_kind, symbol_ty) = match self.lookup_symbol(&name) {
+            Some(symbol) => (symbol.kind(), symbol.get_ty()),
             None => {
                 self.add_err("Undefined name".to_string(), exp_id);
                 return;
             }
         };
 
-        self.sema.exp_symbols.insert(exp_id, symbol_id);
+        self.sema.exp_symbols.insert(exp_id, symbol_kind);
 
-        match &self.sema.symbols[&symbol_id].kind {
-            SymbolKind::Prim(prim) => {
-                self.set_ty(exp_id, &ty, &prim.get_ty());
-            }
-            SymbolKind::Local { .. } => {
-                self.sema.exp_vals.insert(exp_id);
-                self.set_ty(exp_id, &ty, &ty);
+        self.set_ty(exp_id, &ty, &symbol_ty);
 
+        match symbol_kind {
+            SymbolKind::Prim(..) | SymbolKind::Fun(..) => {}
+            SymbolKind::Var(..) => {
                 self.sema.exp_vals.insert(exp_id);
             }
         }
@@ -174,7 +192,12 @@ impl SemanticAnalyzer {
             ExpKind::Call { callee, args } => self.on_call(exp_id, ty, *callee, &args),
             ExpKind::Index { indexee, arg } => self.on_index(exp_id, ty, *indexee, *arg),
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, ty, op, l, r),
-            ExpKind::Fun { .. } => unimplemented!(),
+            ExpKind::Fun { .. } => {
+                self.add_err(
+                    "`fun` expressions must appear in the form of `let name = fun ..;`".to_string(),
+                    exp_id,
+                );
+            }
             &ExpKind::If { cond, body, alt } => {
                 self.on_val(cond, Ty::Int);
                 self.on_val(body, Ty::Var(exp_id));
@@ -187,9 +210,26 @@ impl SemanticAnalyzer {
                 self.set_ty(exp_id, &ty, &Ty::Unit);
             }
             &ExpKind::Let { pat, init } => {
-                self.on_pat(pat, Ty::Var(pat));
-                self.on_val(init, Ty::Var(pat));
-                self.set_ty(exp_id, &ty, &Ty::Unit);
+                let syntax = self.share_syntax();
+                match (syntax.exp_kind(pat), syntax.exp_kind(init)) {
+                    (ExpKind::Ident(fun_name), ExpKind::Fun { body, .. }) => {
+                        self.set_ty(exp_id, &ty, &Ty::Unit);
+
+                        let fun_ty = Ty::make_fun(iter::empty(), Ty::Var(*body));
+                        self.on_pat(pat, fun_ty.to_owned());
+
+                        let outer_fun_id = self.current_fun_id;
+                        let fun_id = self.add_fun(fun_name.to_string(), fun_ty, *body);
+                        self.current_fun_id = fun_id;
+                        self.on_val(*body, Ty::Var(*body));
+                        self.current_fun_id = outer_fun_id;
+                    }
+                    _ => {
+                        self.on_pat(pat, Ty::Var(pat));
+                        self.on_val(init, Ty::Var(pat));
+                        self.set_ty(exp_id, &ty, &Ty::Unit);
+                    }
+                }
             }
             ExpKind::Semi(exps) => {
                 for &exp_id in exps {
@@ -203,23 +243,17 @@ impl SemanticAnalyzer {
     }
 
     fn sema(&mut self) {
-        for &(name, prim) in PRIMS {
-            let symbol_id = SymbolId(self.sema.symbols.len());
-            self.sema.symbols.insert(
-                symbol_id,
-                Symbol {
-                    kind: SymbolKind::Prim(prim),
-                    name: name.to_string(),
-                },
-            );
-            self.env.insert(name.to_string(), symbol_id);
+        let root_exp_id = self.sema.syntax.root_exp_id;
+
+        let main_fun_ty = Ty::make_fun(iter::empty(), Ty::Var(root_exp_id));
+        let fun_id = self.add_fun("main".to_string(), main_fun_ty, root_exp_id);
+        assert_eq!(fun_id, GLOBAL_FUN_ID);
+        self.current_fun_id = GLOBAL_FUN_ID;
+
+        for &(_, prim) in PRIMS {
+            self.current_fun_mut().symbols.push(SymbolKind::Prim(prim));
         }
 
-        let root_exp_id = self.sema.syntax.root_exp_id;
-        let fun_id = self.add_fun("main".to_string(), root_exp_id);
-        assert_eq!(fun_id, GLOBAL_FUN_ID);
-
-        self.current_fun_id = GLOBAL_FUN_ID;
         self.on_val(root_exp_id, Ty::Unit);
     }
 }
@@ -233,6 +267,29 @@ impl ShareSyntax for SemanticAnalyzer {
 impl Sema {
     fn add_err(&mut self, message: String, exp_id: ExpId) {
         self.add_err_msg(message, exp_id);
+    }
+
+    pub fn get_symbol_ref(&self, symbol_kind: SymbolKind) -> SymbolRef<'_> {
+        match symbol_kind {
+            SymbolKind::Prim(prim) => SymbolRef::Prim(prim),
+            SymbolKind::Var(var_id) => SymbolRef::Var(var_id, &self.vars[&var_id]),
+            SymbolKind::Fun(fun_id) => SymbolRef::Fun(fun_id, &self.funs[&fun_id]),
+        }
+    }
+
+    fn fun_symbols(&self, fun_id: FunId) -> Vec<SymbolRef<'_>> {
+        self.funs[&fun_id]
+            .symbols
+            .iter()
+            .map(|&symbol_kind| self.get_symbol_ref(symbol_kind))
+            .collect::<Vec<_>>()
+    }
+
+    pub fn fun_local_count(&self, fun_id: FunId) -> usize {
+        self.fun_symbols(fun_id)
+            .into_iter()
+            .filter(|symbol_ref| symbol_ref.kind().is_var())
+            .count()
     }
 
     pub fn get_ty(&self, exp_id: ExpId) -> Ty {
@@ -289,14 +346,13 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
     let mut analyzer = SemanticAnalyzer {
         sema: Sema {
             syntax: Rc::clone(&syntax),
-            symbols: BTreeMap::new(),
             exp_symbols: BTreeMap::new(),
             exp_vals: BTreeSet::new(),
             exp_tys: BTreeMap::new(),
+            vars: BTreeMap::new(),
             funs: BTreeMap::new(),
             msgs: syntax.msgs.clone(),
         },
-        env: BTreeMap::new(),
         current_fun_id: GLOBAL_FUN_ID,
     };
     analyzer.sema();

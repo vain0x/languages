@@ -267,3 +267,21 @@ fn test_fun_with_args() {
         &[("", "42\n")],
     )
 }
+
+#[test]
+fn test_fun_with_args_and_locals() {
+    eval_tests(
+        r#"
+            let digit_sum = fun(x) {
+                let s = 0;
+                while x > 0 {
+                    s += x % 10;
+                    x = x / 10;
+                }
+                s
+            };
+            println_int(digit_sum(314159));
+        "#,
+        &[("", "23\n")],
+    )
+}

@@ -217,6 +217,10 @@ impl ExpVisitor for SemanticAnalyzer {
         }
     }
 
+    fn on_fun(&mut self, exp_id: ExpId, (mode, ty): (ExpMode, Ty), pats: &[ExpId], body: ExpId) {
+        unimplemented!()
+    }
+
     fn on_if(
         &mut self,
         exp_id: ExpId,
@@ -240,7 +244,7 @@ impl ExpVisitor for SemanticAnalyzer {
     fn on_let(&mut self, exp_id: ExpId, (_, ty): (ExpMode, Ty), pat: ExpId, init: ExpId) {
         self.on_pat(pat, Ty::Var(pat));
         self.on_val(init, Ty::Var(pat));
-        self.set_ty(exp_id, &ty, &Ty::Unit)
+        self.set_ty(exp_id, &ty, &Ty::Unit);
     }
 
     fn on_semi(&mut self, exp_id: ExpId, (_, ty): (ExpMode, Ty), exps: &[ExpId]) {

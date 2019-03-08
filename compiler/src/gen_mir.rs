@@ -279,6 +279,10 @@ impl ExpVisitor for Compiler {
         l_reg
     }
 
+    fn on_fun(&mut self, exp_id: ExpId, _: (), pats: &[ExpId], body: ExpId) -> RegId {
+        unimplemented!()
+    }
+
     fn on_if(&mut self, _: ExpId, _: (), cond: ExpId, body: ExpId, alt: ExpId) -> RegId {
         let alt_label = CmdArg::Label(self.add_label());
         let end_label = CmdArg::Label(self.add_label());

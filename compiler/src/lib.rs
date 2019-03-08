@@ -139,7 +139,7 @@ pub enum OpLevel {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Keyword {
     Let,
-    Def,
+    Fun,
     If,
     Else,
     While,
@@ -194,6 +194,10 @@ pub enum ExpKind {
         op: Op,
         l: ExpId,
         r: ExpId,
+    },
+    Fun {
+        pats: Vec<ExpId>,
+        body: ExpId,
     },
     If {
         cond: ExpId,
@@ -338,6 +342,13 @@ pub trait ExpVisitor: ShareSyntax {
         l: ExpId,
         r: ExpId,
     ) -> Self::Output;
+    fn on_fun(
+        &mut self,
+        exp_id: ExpId,
+        mode: Self::Mode,
+        pats: &[ExpId],
+        body: ExpId,
+    ) -> Self::Output;
     fn on_if(
         &mut self,
         exp_id: ExpId,
@@ -367,6 +378,7 @@ pub trait ExpVisitor: ShareSyntax {
             ExpKind::Call { callee, args } => self.on_call(exp_id, mode, *callee, &args),
             ExpKind::Index { indexee, arg } => self.on_index(exp_id, mode, *indexee, *arg),
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, mode, op, l, r),
+            ExpKind::Fun { pats, body } => self.on_fun(exp_id, mode, pats, *body),
             &ExpKind::If { cond, body, alt } => self.on_if(exp_id, mode, cond, body, alt),
             &ExpKind::While { cond, body } => self.on_while(exp_id, mode, cond, body),
             &ExpKind::Let { pat, init } => self.on_let(exp_id, mode, pat, init),
@@ -399,7 +411,7 @@ impl Keyword {
     fn text(self) -> &'static str {
         match self {
             Keyword::Let => "let",
-            Keyword::Def => "def",
+            Keyword::Fun => "fun",
             Keyword::If => "if",
             Keyword::Else => "else",
             Keyword::While => "while",
@@ -409,7 +421,7 @@ impl Keyword {
     fn get_all() -> &'static [Keyword] {
         &[
             Keyword::Let,
-            Keyword::Def,
+            Keyword::Fun,
             Keyword::If,
             Keyword::Else,
             Keyword::While,

@@ -49,16 +49,24 @@ impl SemanticAnalyzer {
         fun_id
     }
 
-    fn add_local(&mut self, name: String, ty: Ty) -> VarId {
-        let index = self.sema.fun_local_count(self.current_fun_id);
+    fn add_var(&mut self, var_def: VarDef) -> VarId {
         let var_id = VarId(self.sema.vars.len());
 
-        let var = VarDef { name, ty, index };
-
-        self.sema.vars.insert(var_id, var);
+        self.sema.vars.insert(var_id, var_def);
         self.current_fun_mut().symbols.push(SymbolKind::Var(var_id));
 
         var_id
+    }
+
+    fn add_local(&mut self, name: String, ty: Ty) -> VarId {
+        let index = self.sema.fun_local_count(self.current_fun_id);
+        let kind = VarKind::Local { index };
+        self.add_var(VarDef { name, ty, kind })
+    }
+
+    fn add_arg(&mut self, name: String, ty: Ty, index: usize) -> VarId {
+        let kind = VarKind::Arg { index };
+        self.add_var(VarDef { name, ty, kind })
     }
 
     fn set_ty(&mut self, exp_id: ExpId, l_ty: &Ty, r_ty: &Ty) {
@@ -66,13 +74,17 @@ impl SemanticAnalyzer {
         self.sema.unify_ty(exp_id, l_ty, r_ty);
     }
 
-    fn on_pat(&mut self, exp_id: ExpId, ty: Ty) {
+    fn on_pat(&mut self, exp_id: ExpId, ty: Ty, arg_index: Option<usize>) {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
             ExpKind::Err(_) => {}
             ExpKind::Ident(name) => {
-                let var_id = self.add_local(name.to_string(), ty.to_owned());
+                let var_id = if let Some(index) = arg_index {
+                    self.add_arg(name.to_string(), ty.to_owned(), index)
+                } else {
+                    self.add_local(name.to_string(), ty.to_owned())
+                };
                 self.sema
                     .exp_symbols
                     .insert(exp_id, SymbolKind::Var(var_id));
@@ -212,20 +224,26 @@ impl SemanticAnalyzer {
             &ExpKind::Let { pat, init } => {
                 let syntax = self.share_syntax();
                 match (syntax.exp_kind(pat), syntax.exp_kind(init)) {
-                    (ExpKind::Ident(fun_name), ExpKind::Fun { body, .. }) => {
+                    (ExpKind::Ident(fun_name), ExpKind::Fun { pats, body }) => {
                         self.set_ty(exp_id, &ty, &Ty::Unit);
 
-                        let fun_ty = Ty::make_fun(iter::empty(), Ty::Var(*body));
-                        self.on_pat(pat, fun_ty.to_owned());
+                        let fun_ty =
+                            Ty::make_fun(pats.iter().cloned().map(Ty::Var), Ty::Var(*body));
+                        self.on_pat(pat, fun_ty.to_owned(), None);
 
                         let outer_fun_id = self.current_fun_id;
                         let fun_id = self.add_fun(fun_name.to_string(), fun_ty, *body);
                         self.current_fun_id = fun_id;
+
+                        for (i, pat) in pats.iter().cloned().enumerate() {
+                            self.on_pat(pat, Ty::Var(pat), Some(i));
+                        }
                         self.on_val(*body, Ty::Var(*body));
+
                         self.current_fun_id = outer_fun_id;
                     }
                     _ => {
-                        self.on_pat(pat, Ty::Var(pat));
+                        self.on_pat(pat, Ty::Var(pat), None);
                         self.on_val(init, Ty::Var(pat));
                         self.set_ty(exp_id, &ty, &Ty::Unit);
                     }

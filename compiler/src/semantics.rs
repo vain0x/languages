@@ -22,11 +22,17 @@ pub(crate) enum Prim {
     Print,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum VarKind {
+    Local { index: usize },
+    Arg { index: usize },
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct VarDef {
     pub name: String,
     pub ty: Ty,
-    pub index: usize,
+    pub kind: VarKind,
 }
 
 #[derive(Clone, Debug)]

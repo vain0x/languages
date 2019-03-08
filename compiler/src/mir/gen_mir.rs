@@ -51,8 +51,11 @@ impl Compiler {
         let symbol_ref = self.get_symbol(exp_id).expect("ident should be resolved");
         match symbol_ref {
             SymbolRef::Prim(..) => panic!("cannot generate primitive"),
-            SymbolRef::Var(_, VarDef { index, .. }) => {
-                let offset = (*index * size_of::<i64>()) as i64;
+            SymbolRef::Var(_, VarDef { kind, .. }) => {
+                let offset = match kind {
+                    VarKind::Local { index } => -((*index + 1) as i64) * size_of::<i64>() as i64,
+                    VarKind::Arg { index } => (*index * size_of::<i64>()) as i64,
+                };
 
                 let offset_reg_id = self.add_reg();
                 self.push(Cmd::Mov, offset_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
@@ -104,9 +107,24 @@ impl Compiler {
                 NO_REG_ID
             }
             SymbolRef::Fun(fun_id, _) => {
-                let reg_id = self.add_reg();
                 let body_label_id = self.mir.funs[&fun_id].label_id;
+
+                // Push args to stack in reversed order.
+                for arg in args.iter().cloned().rev() {
+                    let reg_id = self.on_exp(arg);
+                    self.push(Cmd::Push, reg_id, CmdArg::None);
+                    self.kill(reg_id);
+                }
+
                 self.push(Cmd::Call, NO_REG_ID, CmdArg::Label(body_label_id));
+
+                // Pop args from stack.
+                let reg_id = self.add_reg();
+                for _ in args {
+                    self.push(Cmd::Pop, reg_id, CmdArg::None);
+                }
+
+                // Copy the result.
                 self.push(Cmd::Mov, reg_id, CmdArg::Reg(RET_REG_ID));
                 reg_id
             }
@@ -265,7 +283,7 @@ impl Compiler {
         // Allocate local variables.
         let local_count = self.sema().fun_local_count(fun_id);
         let frame_size = (local_count * size_of::<i64>()) as i64;
-        self.push(Cmd::AddImm, BASE_PTR_REG_ID, CmdArg::Int(-frame_size));
+        self.push(Cmd::AddImm, STACK_PTR_REG_ID, CmdArg::Int(-frame_size));
 
         let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
 

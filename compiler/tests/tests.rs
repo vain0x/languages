@@ -245,3 +245,25 @@ fn test_fun_with_no_args() {
         &[("", "1\n")],
     )
 }
+
+#[test]
+fn test_fun_with_arg() {
+    eval_tests(
+        r#"
+            let half = fun(x) x / 2;
+            println_int(half(84));
+        "#,
+        &[("", "42\n")],
+    )
+}
+
+#[test]
+fn test_fun_with_args() {
+    eval_tests(
+        r#"
+            let div = fun(x, y) x / y;
+            println_int(div(126, 3));
+        "#,
+        &[("", "42\n")],
+    )
+}

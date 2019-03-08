@@ -285,3 +285,16 @@ fn test_fun_with_args_and_locals() {
         &[("", "23\n")],
     )
 }
+
+#[test]
+fn test_fun_to_modify_globals() {
+    eval_tests(
+        r#"
+            let x = 0;
+            let f = fun() { x += 1 };
+            f();
+            println_int(x);
+        "#,
+        &[("", "1\n")],
+    )
+}

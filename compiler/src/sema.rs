@@ -58,6 +58,12 @@ impl SemanticAnalyzer {
         var_id
     }
 
+    fn add_global(&mut self, name: String, ty: Ty) -> VarId {
+        let index = self.sema.fun_local_count(GLOBAL_FUN_ID);
+        let kind = VarKind::Global { index };
+        self.add_var(VarDef { name, ty, kind })
+    }
+
     fn add_local(&mut self, name: String, ty: Ty) -> VarId {
         let index = self.sema.fun_local_count(self.current_fun_id);
         let kind = VarKind::Local { index };
@@ -82,6 +88,8 @@ impl SemanticAnalyzer {
             ExpKind::Ident(name) => {
                 let var_id = if let Some(index) = arg_index {
                     self.add_arg(name.to_string(), ty.to_owned(), index)
+                } else if self.current_fun_id == GLOBAL_FUN_ID {
+                    self.add_global(name.to_string(), ty.to_owned())
                 } else {
                     self.add_local(name.to_string(), ty.to_owned())
                 };

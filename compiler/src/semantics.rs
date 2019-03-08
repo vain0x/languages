@@ -24,6 +24,7 @@ pub(crate) enum Prim {
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum VarKind {
+    Global { index: usize },
     Local { index: usize },
     Arg { index: usize },
 }

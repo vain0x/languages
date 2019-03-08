@@ -39,6 +39,12 @@ impl Compiler {
         LabelId(self.mir.label_count - 1)
     }
 
+    fn alloc(&mut self, data: &[u8]) -> usize {
+        let p = self.mir.text.len();
+        self.mir.text.extend(data);
+        p
+    }
+
     fn kill(&mut self, reg_id: RegId) {
         self.push(Cmd::Kill, reg_id, CmdArg::None);
     }
@@ -51,23 +57,32 @@ impl Compiler {
         let symbol_ref = self.get_symbol(exp_id).expect("ident should be resolved");
         match symbol_ref {
             SymbolRef::Prim(..) => panic!("cannot generate primitive"),
-            SymbolRef::Var(_, VarDef { kind, .. }) => {
-                let offset = match kind {
-                    VarKind::Local { index } => -((*index + 1) as i64) * size_of::<i64>() as i64,
-                    VarKind::Arg { index } => (*index * size_of::<i64>()) as i64,
+            SymbolRef::Var(_, &VarDef { kind, .. }) => {
+                let ptr_reg_id = self.add_reg();
+                match kind {
+                    VarKind::Global { index } => {
+                        let ptr = (index * size_of::<i64>()) as i64;
+                        self.push(Cmd::Imm, ptr_reg_id, CmdArg::Int(ptr));
+                    }
+                    VarKind::Local { index } => {
+                        let offset = -((index + 1) as i64) * size_of::<i64>() as i64;
+                        self.push(Cmd::Mov, ptr_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
+                        self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
+                    }
+                    VarKind::Arg { index } => {
+                        let offset = (index * size_of::<i64>()) as i64;
+                        self.push(Cmd::Mov, ptr_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
+                        self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
+                    }
                 };
-
-                let offset_reg_id = self.add_reg();
-                self.push(Cmd::Mov, offset_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
-                self.push(Cmd::AddImm, offset_reg_id, CmdArg::Int(offset));
 
                 if self.is_coerced_to_val(exp_id) {
                     let reg_id = self.add_reg();
-                    self.push(Cmd::Load, reg_id, CmdArg::Reg(offset_reg_id));
-                    self.kill(offset_reg_id);
+                    self.push(Cmd::Load, reg_id, CmdArg::Reg(ptr_reg_id));
+                    self.kill(ptr_reg_id);
                     reg_id
                 } else {
-                    offset_reg_id
+                    ptr_reg_id
                 }
             }
             SymbolRef::Fun(..) => panic!("cannot generate function"),
@@ -190,9 +205,7 @@ impl Compiler {
                 reg_id
             }
             ExpKind::Str(value) => {
-                let p = self.mir.text.len();
-                self.mir.text.extend(value.as_bytes());
-
+                let p = self.alloc(value.as_bytes());
                 let reg_id = self.add_reg();
                 self.push(Cmd::Imm, reg_id, CmdArg::Ptr(p));
                 reg_id
@@ -283,7 +296,12 @@ impl Compiler {
         // Allocate local variables.
         let local_count = self.sema().fun_local_count(fun_id);
         let frame_size = (local_count * size_of::<i64>()) as i64;
-        self.push(Cmd::AddImm, STACK_PTR_REG_ID, CmdArg::Int(-frame_size));
+        if fun_id == GLOBAL_FUN_ID {
+            let data: Vec<_> = iter::repeat(0).take(frame_size as usize).collect();
+            self.alloc(&data);
+        } else {
+            self.push(Cmd::AddImm, STACK_PTR_REG_ID, CmdArg::Int(-frame_size));
+        }
 
         let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
 

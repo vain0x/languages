@@ -447,3 +447,29 @@ fn test_abc081_a_placing_marbles() {
         ],
     )
 }
+
+/// <https://atcoder.jp/contests/abs/tasks/abc081_b?lang=en>
+#[test]
+fn test_abc081_b_shift_only() {
+    eval_tests(
+        r#"
+            let N = read_int();
+            let min_count = 1000000000;
+            let i = 0;
+            while i < N {
+                let A = read_int();
+                let count = 0;
+                while A % 2 == 0 {
+                    A = A / 2;
+                    count += 1;
+                }
+                if min_count > count {
+                    min_count = count;
+                }
+                i += 1;
+            }
+            println_int(min_count);
+        "#,
+        &[("3\n8 12 40\n", "2\n"), ("4\n5 6 8 10\n", "0\n")],
+    )
+}

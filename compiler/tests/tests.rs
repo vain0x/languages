@@ -120,6 +120,16 @@ fn test_str() {
 }
 
 #[test]
+fn test_str_literal_escape_sequence() {
+    eval_tests(
+        r#"
+            print("Hello, world!\n");
+        "#,
+        &[("", "Hello, world!\n")],
+    );
+}
+
+#[test]
 fn test_write() {
     eval_tests(
         r#"
@@ -162,7 +172,7 @@ fn test_read_str() {
             let s = read_str();
             print(s);
         "#,
-        &[("hello", "hello"), ("a", "a")]
+        &[("hello", "hello"), ("a", "a")],
     );
 }
 

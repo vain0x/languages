@@ -76,7 +76,7 @@ impl Parser<'_> {
                 self.current += 1;
                 let value = {
                     let text = self.text(token_l);
-                    text[1..text.len() - 1].to_string()
+                    text[1..text.len() - 1].replace("\\n", "\n").to_string()
                 };
                 self.add_exp(ExpKind::Str(value), (token_l, self.current))
             }

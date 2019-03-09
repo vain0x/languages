@@ -409,3 +409,17 @@ fn test_welcome_to_atcoder() {
         ],
     )
 }
+
+/// <https://atcoder.jp/contests/abs/tasks/abc086_a?lang=en>
+#[test]
+fn test_abc086_a_product() {
+    eval_tests(
+        r#"
+            let a = read_int();
+            let b = read_int();
+            print(if a * b % 2 == 0 { "Even" } else { "Odd" });
+            print("\n");
+        "#,
+        &[("3 4\n", "Even\n"), ("1 21\n", "Odd\n")],
+    )
+}

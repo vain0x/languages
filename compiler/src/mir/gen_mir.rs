@@ -134,9 +134,14 @@ impl Compiler {
                 ptr_reg_id
             }
             SymbolRef::Prim(Prim::ReadInt) => {
-                let l = self.add_reg();
-                self.push(Cmd::ReadInt, l, CmdArg::None);
-                l
+                let reg_id = self.add_reg();
+                self.push(Cmd::ReadInt, reg_id, CmdArg::None);
+                reg_id
+            }
+            SymbolRef::Prim(Prim::ReadStr) => {
+                let reg_id = self.add_reg();
+                self.push(Cmd::ReadStr, reg_id, CmdArg::None);
+                reg_id
             }
             SymbolRef::Prim(Prim::PrintLnInt) => {
                 let r = self.on_exp(args[0]);

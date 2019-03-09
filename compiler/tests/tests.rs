@@ -156,6 +156,17 @@ fn test_read_int() {
 }
 
 #[test]
+fn test_read_str() {
+    eval_tests(
+        r#"
+            let s = read_str();
+            print(s);
+        "#,
+        &[("hello", "hello"), ("a", "a")]
+    );
+}
+
+#[test]
 fn test_local_var() {
     eval_tests(
         r#"

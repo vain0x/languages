@@ -190,7 +190,15 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
             Cmd::BitAnd => regs[l] = regs[l] & regs[r as usize],
             Cmd::BitShiftR => regs[l] = (regs[l] as usize >> regs[r as usize]) as i64,
             Cmd::ReadInt => regs[l] = next_word().parse().unwrap_or(0),
-            Cmd::ReadStr => unimplemented!(),
+            Cmd::ReadStr => {
+                let word = next_word();
+                let p = heap_size;
+                for i in 0..word.as_bytes().len() {
+                    mem[p + i] = word.as_bytes()[i];
+                }
+                heap_size += word.len();
+                regs[l] = make_ptr(p, heap_size);
+            }
             Cmd::PrintLnInt => writeln!(stdout, "{}", regs[r as usize]).unwrap(),
             Cmd::Alloc => {
                 let p = heap_size;

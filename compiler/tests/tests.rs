@@ -473,3 +473,39 @@ fn test_abc081_b_shift_only() {
         &[("3\n8 12 40\n", "2\n"), ("4\n5 6 8 10\n", "0\n")],
     )
 }
+
+/// <https://atcoder.jp/contests/abs/tasks/abc087_b?lang=en>
+#[test]
+fn test_abc087_b_coins() {
+    eval_tests(
+        r#"
+            let A = read_int();
+            let B = read_int();
+            let C = read_int();
+            let X = read_int();
+            let k = 0;
+            let a = 0;
+            while a <= A {
+                let b = 0;
+                while b <= B {
+                    let Y = X - a * 500;
+                    Y = Y - b * 100;
+                    if Y >= 0 {
+                        let c = Y / 50;
+                        if c <= C {
+                            k += 1;
+                        }
+                    }
+                    b += 1;
+                }
+                a += 1;
+            }
+            println_int(k);
+        "#,
+        &[
+            ("2\n2\n2\n100\n", "2\n"),
+            ("5\n1\n0\n150\n", "0\n"),
+            ("30\n40\n50\n6000\n", "213\n"),
+        ],
+    )
+}

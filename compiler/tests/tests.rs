@@ -423,3 +423,27 @@ fn test_abc086_a_product() {
         &[("3 4\n", "Even\n"), ("1 21\n", "Odd\n")],
     )
 }
+
+/// <https://atcoder.jp/contests/abs/tasks/abc081_a?lang=en>
+#[test]
+fn test_abc081_a_placing_marbles() {
+    eval_tests(
+        r#"
+            let n = read_int();
+            let k = 0;
+            while n > 0 {
+                if n % 10 == 1 {
+                    k += 1;
+                }
+                n = n / 10;
+            }
+            println_int(k);
+        "#,
+        &[
+            ("101\n", "2\n"),
+            ("000\n", "0\n"),
+            ("111\n", "3\n"),
+            ("010\n", "1\n"),
+        ],
+    )
+}

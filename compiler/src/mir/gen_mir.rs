@@ -39,10 +39,12 @@ impl Compiler {
         LabelId(self.mir.label_count - 1)
     }
 
-    fn alloc(&mut self, data: &[u8]) -> usize {
+    /// Allocate and write global data. Return the range.
+    fn alloc(&mut self, data: &[u8]) -> (usize, usize) {
         let p = self.mir.text.len();
         self.mir.text.extend(data);
-        p
+        let q = self.mir.text.len();
+        (p, q)
     }
 
     fn kill(&mut self, reg_id: RegId) {
@@ -51,6 +53,21 @@ impl Compiler {
 
     fn push(&mut self, cmd: Cmd, l: RegId, r: CmdArg) {
         self.current_gen_fun_mut().inss.push((cmd, l, r));
+    }
+
+    fn add_cmd_lo32(&mut self, target: RegId) {
+        const MASK: i64 = 0xFFFF_FFFF;
+        let mask = self.add_reg();
+        self.push(Cmd::Imm, mask, CmdArg::Int(MASK));
+        self.push(Cmd::BitAnd, target, CmdArg::Reg(mask));
+        self.kill(mask);
+    }
+
+    fn add_cmd_hi32(&mut self, target: RegId) {
+        let offset = self.add_reg();
+        self.push(Cmd::Imm, offset, CmdArg::Int(32));
+        self.push(Cmd::BitShiftR, target, CmdArg::Reg(offset));
+        self.kill(offset);
     }
 
     fn on_ident(&mut self, exp_id: ExpId, _: &str) -> RegId {
@@ -95,6 +112,20 @@ impl Compiler {
             SymbolRef::Prim(Prim::ByteToInt) | SymbolRef::Prim(Prim::IntToByte) => {
                 self.on_exp(args[0])
             }
+            SymbolRef::Prim(Prim::SliceLen) => {
+                // len = hi32 - lo32 (in bytes)
+                let reg_id = self.on_exp(args[0]);
+                let hi_reg_id = self.add_reg();
+                let lo_reg_id = self.add_reg();
+                self.push(Cmd::Mov, hi_reg_id, CmdArg::Reg(reg_id));
+                self.add_cmd_hi32(hi_reg_id);
+                self.push(Cmd::Mov, lo_reg_id, CmdArg::Reg(reg_id));
+                self.add_cmd_lo32(lo_reg_id);
+                self.push(Cmd::Sub, hi_reg_id, CmdArg::Reg(lo_reg_id));
+                self.kill(reg_id);
+                self.kill(lo_reg_id);
+                hi_reg_id
+            }
             SymbolRef::Prim(Prim::MemAlloc) => {
                 let size_reg_id = self.on_exp(args[0]);
                 let ptr_reg_id = self.add_reg();
@@ -115,10 +146,8 @@ impl Compiler {
             }
             SymbolRef::Prim(Prim::Print) => {
                 let ptr_reg_id = self.on_exp(args[0]);
-                let size_reg_id = self.on_exp(args[1]);
-                self.push(Cmd::Write, ptr_reg_id, CmdArg::Reg(size_reg_id));
+                self.push(Cmd::Write, ptr_reg_id, CmdArg::None);
                 self.kill(ptr_reg_id);
-                self.kill(size_reg_id);
                 NO_REG_ID
             }
             SymbolRef::Fun(fun_id, _) => {
@@ -143,7 +172,7 @@ impl Compiler {
                 self.push(Cmd::Mov, reg_id, CmdArg::Reg(RET_REG_ID));
                 reg_id
             }
-            _ => panic!("cannot call non-primitive symbol"),
+            SymbolRef::Var(..) => panic!("cannot call non-primitive symbol"),
         }
     }
 
@@ -158,6 +187,7 @@ impl Compiler {
                     Some(8) => Cmd::Store,
                     _ => unimplemented!(),
                 };
+                self.add_cmd_lo32(l_reg);
                 self.push(cmd, l_reg, CmdArg::Reg(r_reg));
                 self.kill(l_reg);
                 self.kill(r_reg);
@@ -205,9 +235,9 @@ impl Compiler {
                 reg_id
             }
             ExpKind::Str(value) => {
-                let p = self.alloc(value.as_bytes());
+                let (p, q) = self.alloc(value.as_bytes());
                 let reg_id = self.add_reg();
-                self.push(Cmd::Imm, reg_id, CmdArg::Ptr(p));
+                self.push(Cmd::Imm, reg_id, CmdArg::Ptr(p, q));
                 reg_id
             }
             ExpKind::Ident(name) => self.on_ident(exp_id, name),
@@ -221,6 +251,7 @@ impl Compiler {
 
                 if self.is_coerced_to_val(exp_id) {
                     let byte_reg_id = self.add_reg();
+                    self.add_cmd_lo32(arg_reg_id); // begin of slice
                     self.push(Cmd::Load8, byte_reg_id, CmdArg::Reg(arg_reg_id));
                     self.kill(arg_reg_id);
                     byte_reg_id
@@ -395,11 +426,15 @@ impl CmdArg {
         match self {
             CmdArg::None => 0,
             CmdArg::Int(value) => value,
-            CmdArg::Ptr(p) => p as i64,
+            CmdArg::Ptr(p, q) => (lo32(q) << 32 | lo32(p)) as i64,
             CmdArg::Reg(value) => value.0 as i64,
             CmdArg::Label(value) => value.0 as i64,
         }
     }
+}
+
+fn lo32(x: usize) -> usize {
+    x & 0xFFFF_FFFF
 }
 
 pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {

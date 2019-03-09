@@ -52,6 +52,8 @@ define_cmd! {
     Le,
     Gt,
     Ge,
+    BitAnd,
+    BitShiftR,
     ToStr,
     StrCat,
     ReadInt,
@@ -201,6 +203,8 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
             Cmd::Le => regs[l] = bool_to_int(regs[l] <= regs[r as usize]),
             Cmd::Gt => regs[l] = bool_to_int(regs[l] > regs[r as usize]),
             Cmd::Ge => regs[l] = bool_to_int(regs[l] >= regs[r as usize]),
+            Cmd::BitAnd => regs[l] = regs[l] & regs[r as usize],
+            Cmd::BitShiftR => regs[l] = (regs[l] as usize >> regs[r as usize]) as i64,
             Cmd::ReadInt => regs[l] = next_word().parse().unwrap_or(0),
             Cmd::ReadStr => {
                 let word = next_word();
@@ -211,14 +215,14 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
             Cmd::PrintLn => writeln!(stdout, "{}", strs[regs[l] as usize]).unwrap(),
             Cmd::PrintLnInt => writeln!(stdout, "{}", regs[r as usize]).unwrap(),
             Cmd::Alloc => {
-                regs[l] = heap_size as i64;
-                let size = regs[r as usize] as usize;
-                heap_size += size;
+                let p = heap_size;
+                heap_size += regs[r as usize] as usize;
+                let q = heap_size;
+                regs[l] = make_ptr(p, q);
             }
             Cmd::Write => {
-                let p = regs[l] as usize;
-                let size = regs[r as usize] as usize;
-                stdout.write_all(&mem[p..p + size]).unwrap();
+                let (p, q) = decompose_ptr(regs[l]);
+                stdout.write_all(&mem[p..q]).unwrap();
                 stdout.flush().unwrap();
             }
             Cmd::Label | Cmd::Kill => {}
@@ -230,6 +234,14 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
 
 fn bool_to_int(x: bool) -> i64 {
     (if x { 1 } else { 0 })
+}
+
+fn make_ptr(p: usize, q: usize) -> i64 {
+    (q << 32 | p) as i64
+}
+
+fn decompose_ptr(x: i64) -> (usize, usize) {
+    ((x & 0xFFFF_FFFF) as usize, x as usize >> 32)
 }
 
 pub fn eval_with_stdio(src: &str) {

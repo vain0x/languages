@@ -16,6 +16,7 @@ pub(crate) enum Ty {
 pub(crate) enum Prim {
     ByteToInt,
     IntToByte,
+    SliceLen,
     MemAlloc,
     ReadInt,
     PrintLnInt,
@@ -90,6 +91,7 @@ impl Ty {
 pub(crate) static PRIMS: &[(&str, Prim)] = &[
     ("byte_to_int", Prim::ByteToInt),
     ("int_to_byte", Prim::IntToByte),
+    ("slice_len", Prim::SliceLen),
     ("read_int", Prim::ReadInt),
     ("mem_alloc", Prim::MemAlloc),
     ("println_int", Prim::PrintLnInt),
@@ -105,10 +107,11 @@ impl Prim {
         match self {
             Prim::ByteToInt => Ty::Fun(vec![Ty::Byte, Ty::Int]),
             Prim::IntToByte => Ty::Fun(vec![Ty::Int, Ty::Byte]),
+            Prim::SliceLen => Ty::Fun(vec![Ty::Ptr, Ty::Int]),
             Prim::MemAlloc => Ty::Fun(vec![Ty::Int, Ty::Ptr]),
             Prim::PrintLnInt => Ty::Fun(vec![Ty::Int, Ty::Unit]),
             Prim::ReadInt => Ty::Fun(vec![Ty::Int]),
-            Prim::Print => Ty::Fun(vec![Ty::Ptr, Ty::Int, Ty::Unit]),
+            Prim::Print => Ty::Fun(vec![Ty::Ptr, Ty::Unit]),
         }
     }
 }

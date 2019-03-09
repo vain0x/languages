@@ -46,6 +46,8 @@ define_cmd! {
     Le,
     Gt,
     Ge,
+    BitAnd,
+    BitShiftR,
     ToStr,
     StrCat,
     ReadInt,
@@ -62,7 +64,7 @@ define_cmd! {
 pub(crate) enum CmdArg {
     None,
     Int(i64),
-    Ptr(usize),
+    Ptr(usize, usize),
     Reg(RegId),
     Label(LabelId),
 }

@@ -126,9 +126,20 @@ fn test_write() {
             let p = mem_alloc(2);
             p[0] = "A"[0];
             p[1] = int_to_byte(10);
-            print(p, 2);
+            print(p);
         "#,
         &[("", "A\n")],
+    )
+}
+
+#[test]
+fn test_slice_len() {
+    eval_tests(
+        r#"
+            let s = "Hello!";
+            println_int(slice_len(s));
+        "#,
+        &[("", "6\n")],
     )
 }
 

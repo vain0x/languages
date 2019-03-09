@@ -54,12 +54,8 @@ define_cmd! {
     Ge,
     BitAnd,
     BitShiftR,
-    ToStr,
-    StrCat,
     ReadInt,
     ReadStr,
-    Print,
-    PrintLn,
     PrintLnInt,
     Alloc,
     Write,
@@ -68,7 +64,6 @@ define_cmd! {
 
 pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
     let mut inss = vec![];
-    let mut strs = vec![];
     let mut text = vec![];
 
     // Parse.
@@ -181,17 +176,6 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
             Cmd::Load => regs[l] = read::<i64>(&mem, regs[r as usize] as usize),
             Cmd::Store8 => write::<u8>(&mut mem, regs[l] as usize, regs[r as usize] as u8),
             Cmd::Store => write::<i64>(&mut mem, regs[l] as usize, regs[r as usize]),
-            Cmd::ToStr => {
-                let t = regs[l].to_string();
-                strs.push(t);
-                regs[l] = (strs.len() - 1) as i64;
-            }
-            Cmd::StrCat => {
-                let mut t = strs[regs[l] as usize].clone();
-                t += &strs[regs[r as usize] as usize];
-                strs.push(t);
-                regs[l] = (strs.len() - 1) as i64;
-            }
             Cmd::Add => regs[l] += regs[r as usize],
             Cmd::Sub => regs[l] -= regs[r as usize],
             Cmd::Mul => regs[l] *= regs[r as usize],
@@ -206,13 +190,7 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
             Cmd::BitAnd => regs[l] = regs[l] & regs[r as usize],
             Cmd::BitShiftR => regs[l] = (regs[l] as usize >> regs[r as usize]) as i64,
             Cmd::ReadInt => regs[l] = next_word().parse().unwrap_or(0),
-            Cmd::ReadStr => {
-                let word = next_word();
-                strs.push(word);
-                regs[l] = (strs.len() - 1) as i64;
-            }
-            Cmd::Print => write!(stdout, "{}", strs[regs[l] as usize]).unwrap(),
-            Cmd::PrintLn => writeln!(stdout, "{}", strs[regs[l] as usize]).unwrap(),
+            Cmd::ReadStr => unimplemented!(),
             Cmd::PrintLnInt => writeln!(stdout, "{}", regs[r as usize]).unwrap(),
             Cmd::Alloc => {
                 let p = heap_size;

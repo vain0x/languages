@@ -330,3 +330,50 @@ fn test_fun_to_modify_globals() {
         &[("", "1\n")],
     )
 }
+
+#[test]
+fn test_int_to_str() {
+    eval_tests(
+        r#"
+            let DIGIT_CHARS = "0123456789";
+            let HYPHEN_CHAR = "-"[0];
+            let calculate_digit_len = fun(x) {
+                if x == 0 {
+                    1
+                } else {
+                    let len = 0;
+                    if x < 0 {
+                        x = -x;
+                        len += 1;
+                    }
+                    while x > 0 {
+                        len += 1;
+                        x = x / 10;
+                    }
+                    len
+                }
+            };
+            let int_to_str = fun(x) {
+                let n = calculate_digit_len(x);
+                let s = mem_alloc(n);
+                if x == 0 {
+                    s[0] = DIGIT_CHARS[0];
+                } else {
+                    if x < 0 {
+                        s[0] = HYPHEN_CHAR;
+                        x = -x;
+                    }
+                    while x > 0 {
+                        n = n - 1;
+                        s[n] = DIGIT_CHARS[x % 10];
+                        x = x / 10;
+                    }
+                }
+                s
+            };
+            print(int_to_str(read_int()));
+            print("\n");
+        "#,
+        &[("314159", "314159\n"), ("0", "0\n"), ("-42", "-42\n")],
+    )
+}

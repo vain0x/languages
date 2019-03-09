@@ -254,7 +254,7 @@ impl Parser<'_> {
         let body = self.parse_term();
 
         if self.next().kind != TokenKind::Keyword(Keyword::Else) {
-            let alt = self.add_exp(ExpKind::Int(0), (token_l, self.current));
+            let alt = self.add_exp(ExpKind::Semi(vec![]), (token_l, self.current));
 
             return self.add_exp(ExpKind::If { cond, body, alt }, (token_l, self.current));
         }

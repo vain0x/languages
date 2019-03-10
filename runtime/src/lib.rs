@@ -1,4 +1,4 @@
-use std::io::{self, BufRead, Write as IoWrite};
+use std::io::{self, stderr, BufRead, Write as IoWrite};
 use std::mem::size_of;
 use std::str;
 
@@ -119,7 +119,6 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
     let mut regs = [0_i64; REG_NUM];
     let mut mem = vec![0_u8; mem_size];
     let mut heap_size = 0;
-    let mut frames = vec![];
     let mut pc = 0_usize;
 
     fn read<T: Copy>(mem: &[u8], p: usize) -> T {
@@ -153,11 +152,16 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
                 }
             }
             Cmd::Call => {
-                frames.push(pc);
+                regs[STACK_PTR_REG_ID] -= size_of::<i64>() as i64;
+                let sp = regs[STACK_PTR_REG_ID] as usize;
+                write::<usize>(&mut mem, sp, pc);
                 pc = r as usize;
             }
             Cmd::Ret => {
-                pc = frames.pop().unwrap();
+                let sp = regs[STACK_PTR_REG_ID] as usize;
+                let r = read::<usize>(&mem, sp);
+                regs[STACK_PTR_REG_ID] += size_of::<i64>() as i64;
+                pc = r;
             }
             Cmd::Push => {
                 regs[STACK_PTR_REG_ID] -= size_of::<i64>() as i64;

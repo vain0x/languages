@@ -92,9 +92,9 @@ impl Compiler {
                         self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
                     }
                     VarKind::Arg { index } => {
-                        // Before the base pointer, arguments are stacked under register values.
+                        // Before the base pointer, arguments are stacked under register values and return address.
                         let offset =
-                            ((index + (REG_NUM - KNOWN_REG_NUM + 1)) * size_of::<i64>()) as i64;
+                            ((index + (REG_NUM - KNOWN_REG_NUM + 2)) * size_of::<i64>()) as i64;
                         self.push(Cmd::Mov, ptr_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
                         self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
                     }

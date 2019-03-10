@@ -1,3 +1,7 @@
+#[macro_use]
+extern crate serde_derive;
+
+pub mod lsp;
 mod mir;
 mod msg;
 mod parse;

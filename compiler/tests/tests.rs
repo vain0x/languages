@@ -11,6 +11,7 @@ fn eval_tests(src: &str, ios: &[(&str, &str)]) {
         success,
         program,
         stderr,
+        ..
     } = picomet_lang_compiler::compile(src);
     if !stderr.is_empty() {
         eprintln!("{}", stderr);

@@ -450,6 +450,7 @@ impl Compiler {
             success,
             program,
             stderr,
+            msgs: self.mir.msgs.values().cloned().collect(),
         }
     }
 }
@@ -502,6 +503,7 @@ pub fn compile(src: &str) -> CompilationResult {
             success,
             stderr,
             program: "".to_string(),
+            msgs: sema.msgs.values().cloned().collect(),
         };
     }
 

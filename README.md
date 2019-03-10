@@ -4,9 +4,7 @@
 
 *WIP: The project is at very early stage. PRs are welcome.*
 
-**Picomet-lang** is a pico programming language. *Pico* means that the processor is written in single file.
-
-The goal is to solve competitive programming problems, especially [AtCoder Beginners Selection](https://atcoder.jp/contests/abs/tasks).
+**Picomet-lang** is a programming language. The goal is to solve competitive programming problems, especially [AtCoder Beginners Selection](https://atcoder.jp/contests/abs/tasks).
 
 ## Example
 

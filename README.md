@@ -135,13 +135,16 @@ For convenience in competitive programming, standard input is considered a list 
 - Parse
     - Tokens → Syntax tree
     - Hand-made recursively descendant parser.
+- Sema
+    - Syntax tree → Semantic Model
+    - Type checking, symbol resolution, etc.
 - Compile
-    - Syntax tree → IR instructions
-    - The IR is assembly for register machine with infinite registers.
+    - Syntax tree + Semantic Model → MIR instructions
+    - The MIR is assembly for register machine with infinite registers.
 - Optimize
     - *Not implemented yet.*
 - Evaluate
-    - Interpreter evaluates the IR instructions.
+    - Runtime evaluates the MIR instructions.
 
 ## Solve
 

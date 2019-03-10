@@ -47,6 +47,11 @@ impl Compiler {
         (p, q)
     }
 
+    fn alloc_zero(&mut self, size: usize) -> (usize, usize) {
+        let data = iter::repeat(0).take(size).collect::<Vec<_>>();
+        self.alloc(&data)
+    }
+
     fn kill(&mut self, reg_id: RegId) {
         self.push(Cmd::Kill, reg_id, CmdArg::None);
     }
@@ -333,8 +338,7 @@ impl Compiler {
         let local_count = self.sema().fun_local_count(fun_id);
         let frame_size = (local_count * size_of::<i64>()) as i64;
         if fun_id == GLOBAL_FUN_ID {
-            let data: Vec<_> = iter::repeat(0).take(frame_size as usize).collect();
-            self.alloc(&data);
+            self.alloc_zero(frame_size as usize);
         } else {
             self.push(Cmd::AddImm, STACK_PTR_REG_ID, CmdArg::Int(-frame_size));
         }

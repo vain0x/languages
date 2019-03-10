@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/vain0x/picomet-lang.svg?branch=master)](https://travis-ci.org/vain0x/picomet-lang)
 
-*WIP: The project is at very early stage. PRs are welcome.*
+*WIP: The project is at very early stage.*
 
 **Picomet-lang** is a programming language. The goal is to solve competitive programming problems, especially [AtCoder Beginners Selection](https://atcoder.jp/contests/abs/tasks).
 
@@ -180,3 +180,10 @@ Second, in both `compiler` and `runtime` directories, run `./setup` for configur
 To build, run `cargo build` inside `compiler` or `runtime` directory.
 
 To run tests, run `cargo test` in `compiler` directory. Tests are written in [compiler/tests/tests.rs](compiler/tests/tests.rs).
+
+## Contribution
+
+Pull requests are welcome.
+
+- Feel free to communicate in Japanese as well as English.
+- See [the TODO list](TODO.md) for tasks.

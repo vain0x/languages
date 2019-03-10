@@ -271,10 +271,10 @@ fn test_while() {
 fn test_fun_with_no_args() {
     eval_tests(
         r#"
-            let f = fun() 1;
-            println_int(f());
+            let f = fun() 2;
+            println_int(84 / f());
         "#,
-        &[("", "1\n")],
+        &[("", "42\n")],
     )
 }
 

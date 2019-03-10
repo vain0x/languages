@@ -92,7 +92,9 @@ impl Compiler {
                         self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
                     }
                     VarKind::Arg { index } => {
-                        let offset = (index * size_of::<i64>()) as i64;
+                        // Before the base pointer, arguments are stacked under register values.
+                        let offset =
+                            ((index + (REG_NUM - KNOWN_REG_NUM + 1)) * size_of::<i64>()) as i64;
                         self.push(Cmd::Mov, ptr_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
                         self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
                     }
@@ -329,12 +331,18 @@ impl Compiler {
         }
     }
 
-    pub fn gen_fun(&mut self, fun_id: FunId) {
-        let label_id = self.mir.funs[&fun_id].label_id;
+    fn add_cmd_save_caller_regs(&mut self) {
+        self.push(Cmd::Push, BASE_PTR_REG_ID, CmdArg::None);
+        self.push(Cmd::PushRegs, NO_REG_ID, CmdArg::None);
+        self.push(Cmd::Mov, BASE_PTR_REG_ID, CmdArg::Reg(STACK_PTR_REG_ID));
+    }
 
-        self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(label_id));
+    fn add_cmd_restore_caller_regs(&mut self) {
+        self.push(Cmd::PopRegs, NO_REG_ID, CmdArg::None);
+        self.push(Cmd::Pop, BASE_PTR_REG_ID, CmdArg::None);
+    }
 
-        // Allocate local variables.
+    fn add_cmd_allocate_locals(&mut self, fun_id: FunId) {
         let local_count = self.sema().fun_local_count(fun_id);
         let frame_size = (local_count * size_of::<i64>()) as i64;
         if fun_id == GLOBAL_FUN_ID {
@@ -342,15 +350,37 @@ impl Compiler {
         } else {
             self.push(Cmd::AddImm, STACK_PTR_REG_ID, CmdArg::Int(-frame_size));
         }
+    }
 
-        let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
+    fn add_cmd_deallocate_locals(&mut self, fun_id: FunId) {
+        if fun_id == GLOBAL_FUN_ID {
+            return;
+        }
 
+        let local_count = self.sema().fun_local_count(fun_id);
+        let frame_size = (local_count * size_of::<i64>()) as i64;
+        self.push(Cmd::AddImm, STACK_PTR_REG_ID, CmdArg::Int(frame_size));
+    }
+
+    fn add_cmd_return(&mut self, fun_id: FunId, result: RegId) {
         if fun_id == GLOBAL_FUN_ID {
             self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
         } else {
-            self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(final_reg_id));
+            self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(result));
+            self.add_cmd_deallocate_locals(fun_id);
+            self.add_cmd_restore_caller_regs();
             self.push(Cmd::Ret, NO_REG_ID, CmdArg::None);
         }
+    }
+
+    pub fn gen_fun(&mut self, fun_id: FunId) {
+        let label_id = self.mir.funs[&fun_id].label_id;
+
+        self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(label_id));
+        self.add_cmd_save_caller_regs();
+        self.add_cmd_allocate_locals(fun_id);
+        let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
+        self.add_cmd_return(fun_id, final_reg_id);
         self.kill(final_reg_id);
     }
 

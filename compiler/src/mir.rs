@@ -30,6 +30,8 @@ define_cmd! {
     Load8,
     Push,
     Pop,
+    PushRegs,
+    PopRegs,
     Label,
     Jump,
     Unless,

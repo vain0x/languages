@@ -36,6 +36,8 @@ define_cmd! {
     Load,
     Push,
     Pop,
+    PushRegs,
+    PopRegs,
     Label,
     Jump,
     Unless,
@@ -151,16 +153,11 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
                 }
             }
             Cmd::Call => {
-                frames.push((pc, regs));
+                frames.push(pc);
                 pc = r as usize;
-                regs[BASE_PTR_REG_ID] = regs[STACK_PTR_REG_ID];
             }
             Cmd::Ret => {
-                let ret_val = regs[RET_REG_ID];
-                let (ret_pc, ret_regs) = frames.pop().unwrap();
-                pc = ret_pc;
-                regs = ret_regs;
-                regs[RET_REG_ID] = ret_val;
+                pc = frames.pop().unwrap();
             }
             Cmd::Push => {
                 regs[STACK_PTR_REG_ID] -= size_of::<i64>() as i64;
@@ -171,6 +168,22 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
                 let sp = regs[STACK_PTR_REG_ID] as usize;
                 regs[l] = read::<i64>(&mem, sp);
                 regs[STACK_PTR_REG_ID] += size_of::<i64>() as i64;
+            }
+            Cmd::PushRegs => {
+                let mut sp = regs[STACK_PTR_REG_ID] as usize;
+                for i in KNOWN_REG_NUM..REG_NUM {
+                    sp -= size_of::<i64>();
+                    write::<i64>(&mut mem, sp, regs[i]);
+                }
+                regs[STACK_PTR_REG_ID] = sp as i64;
+            }
+            Cmd::PopRegs => {
+                let mut sp = regs[STACK_PTR_REG_ID] as usize;
+                for i in (KNOWN_REG_NUM..REG_NUM).rev() {
+                    regs[i] = read::<i64>(&mut mem, sp);
+                    sp += size_of::<i64>();
+                }
+                regs[STACK_PTR_REG_ID] = sp as i64;
             }
             Cmd::Load8 => regs[l] = read::<u8>(&mem, regs[r as usize] as usize) as i64,
             Cmd::Load => regs[l] = read::<i64>(&mem, regs[r as usize] as usize),

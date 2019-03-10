@@ -9,23 +9,23 @@ const RET_REG_ID: usize = 3;
 const KNOWN_REG_NUM: usize = 4;
 const REG_NUM: usize = 12;
 
-macro_rules! define_op {
-    ($($op:ident,)*) => {
+macro_rules! define_cmd {
+    ($($name:ident,)*) => {
         #[derive(Clone, Copy, PartialEq, Debug)]
-        pub enum Op {
-            $($op),*
+        pub enum Cmd {
+            $($name),*
         }
 
-        pub fn deserialize_op(op: &str) -> Op {
-            $(if op == stringify!($op) {
-                return Op::$op;
+        pub fn deserialize_cmd(cmd: &str) -> Cmd {
+            $(if cmd == stringify!($name) {
+                return Cmd::$name;
             })*
-            panic!("Unknown Op {}", op)
+            panic!("Unknown Cmd {}", cmd)
         }
     };
 }
 
-define_op! {
+define_cmd! {
     Kill,
     Imm,
     AddImm,
@@ -52,12 +52,11 @@ define_op! {
     Le,
     Gt,
     Ge,
-    ToStr,
-    StrCat,
+    BitAnd,
+    BitShiftR,
     ReadInt,
     ReadStr,
-    Print,
-    PrintLn,
+    PrintLnInt,
     Alloc,
     Write,
     Exit,
@@ -65,7 +64,7 @@ define_op! {
 
 pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
     let mut inss = vec![];
-    let mut strs = vec![];
+    let mut text = vec![];
 
     // Parse.
     for line in src.split("\n") {
@@ -75,21 +74,24 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
         }
 
         if line.starts_with(".text") {
-            let value = line[".text ".len()..].to_owned();
-            strs.push(value);
+            text = line[".text ".len()..]
+                .split(",")
+                .map(|b| b.parse().ok())
+                .collect::<Option<Vec<u8>>>()
+                .unwrap_or(vec![]);
             continue;
         }
 
-        let mut ops = line.split(" ");
-        let op = ops.next().unwrap();
-        let l = ops
+        let mut cmds = line.split(" ");
+        let cmd = cmds.next().unwrap();
+        let l = cmds
             .next()
             .and_then(|x| x.parse::<usize>().ok())
             .unwrap_or(0);
-        let r = ops.next().and_then(|x| x.parse::<i64>().ok()).unwrap_or(0);
+        let r = cmds.next().and_then(|x| x.parse::<i64>().ok()).unwrap_or(0);
 
-        let op = deserialize_op(op);
-        inss.push((op, l, r));
+        let cmd = deserialize_cmd(cmd);
+        inss.push((cmd, l, r));
     }
 
     // Standard IO.
@@ -131,87 +133,86 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
     regs[STACK_PTR_REG_ID] = mem.len() as i64;
     regs[BASE_PTR_REG_ID] = mem.len() as i64;
 
+    heap_size += text.len();
+    for i in 0..text.len() {
+        mem[i] = text[i];
+    }
+
     loop {
-        let (op, l, r) = inss[pc];
-        match op {
-            Op::Imm => regs[l] = r,
-            Op::AddImm => regs[l] += r,
-            Op::Mov => regs[l] = regs[r as usize],
-            Op::Jump => pc = r as usize,
-            Op::Unless => {
+        let (cmd, l, r) = inss[pc];
+        match cmd {
+            Cmd::Imm => regs[l] = r,
+            Cmd::AddImm => regs[l] += r,
+            Cmd::Mov => regs[l] = regs[r as usize],
+            Cmd::Jump => pc = r as usize,
+            Cmd::Unless => {
                 if regs[l] == 0 {
                     pc = r as usize
                 }
             }
-            Op::Call => {
+            Cmd::Call => {
                 frames.push((pc, regs));
                 pc = r as usize;
                 regs[BASE_PTR_REG_ID] = regs[STACK_PTR_REG_ID];
             }
-            Op::Ret => {
+            Cmd::Ret => {
                 let ret_val = regs[RET_REG_ID];
                 let (ret_pc, ret_regs) = frames.pop().unwrap();
                 pc = ret_pc;
                 regs = ret_regs;
                 regs[RET_REG_ID] = ret_val;
             }
-            Op::Push => {
+            Cmd::Push => {
                 regs[STACK_PTR_REG_ID] -= size_of::<i64>() as i64;
                 let sp = regs[STACK_PTR_REG_ID] as usize;
                 write::<i64>(&mut mem, sp, regs[l]);
             }
-            Op::Pop => {
+            Cmd::Pop => {
                 let sp = regs[STACK_PTR_REG_ID] as usize;
                 regs[l] = read::<i64>(&mem, sp);
                 regs[STACK_PTR_REG_ID] += size_of::<i64>() as i64;
             }
-            Op::Load8 => regs[l] = read::<u8>(&mem, regs[r as usize] as usize) as i64,
-            Op::Load => regs[l] = read::<i64>(&mem, regs[r as usize] as usize),
-            Op::Store8 => write::<u8>(&mut mem, regs[l] as usize, regs[r as usize] as u8),
-            Op::Store => write::<i64>(&mut mem, regs[r as usize] as usize, regs[l]),
-            Op::ToStr => {
-                let t = regs[l].to_string();
-                strs.push(t);
-                regs[l] = (strs.len() - 1) as i64;
-            }
-            Op::StrCat => {
-                let mut t = strs[regs[l] as usize].clone();
-                t += &strs[regs[r as usize] as usize];
-                strs.push(t);
-                regs[l] = (strs.len() - 1) as i64;
-            }
-            Op::Add => regs[l] += regs[r as usize],
-            Op::Sub => regs[l] -= regs[r as usize],
-            Op::Mul => regs[l] *= regs[r as usize],
-            Op::Div => regs[l] /= regs[r as usize],
-            Op::Mod => regs[l] %= regs[r as usize],
-            Op::Eq => regs[l] = bool_to_int(regs[l] == regs[r as usize]),
-            Op::Ne => regs[l] = bool_to_int(regs[l] != regs[r as usize]),
-            Op::Lt => regs[l] = bool_to_int(regs[l] < regs[r as usize]),
-            Op::Le => regs[l] = bool_to_int(regs[l] <= regs[r as usize]),
-            Op::Gt => regs[l] = bool_to_int(regs[l] > regs[r as usize]),
-            Op::Ge => regs[l] = bool_to_int(regs[l] >= regs[r as usize]),
-            Op::ReadInt => regs[l] = next_word().parse().unwrap_or(0),
-            Op::ReadStr => {
+            Cmd::Load8 => regs[l] = read::<u8>(&mem, regs[r as usize] as usize) as i64,
+            Cmd::Load => regs[l] = read::<i64>(&mem, regs[r as usize] as usize),
+            Cmd::Store8 => write::<u8>(&mut mem, regs[l] as usize, regs[r as usize] as u8),
+            Cmd::Store => write::<i64>(&mut mem, regs[l] as usize, regs[r as usize]),
+            Cmd::Add => regs[l] += regs[r as usize],
+            Cmd::Sub => regs[l] -= regs[r as usize],
+            Cmd::Mul => regs[l] *= regs[r as usize],
+            Cmd::Div => regs[l] /= regs[r as usize],
+            Cmd::Mod => regs[l] %= regs[r as usize],
+            Cmd::Eq => regs[l] = bool_to_int(regs[l] == regs[r as usize]),
+            Cmd::Ne => regs[l] = bool_to_int(regs[l] != regs[r as usize]),
+            Cmd::Lt => regs[l] = bool_to_int(regs[l] < regs[r as usize]),
+            Cmd::Le => regs[l] = bool_to_int(regs[l] <= regs[r as usize]),
+            Cmd::Gt => regs[l] = bool_to_int(regs[l] > regs[r as usize]),
+            Cmd::Ge => regs[l] = bool_to_int(regs[l] >= regs[r as usize]),
+            Cmd::BitAnd => regs[l] = regs[l] & regs[r as usize],
+            Cmd::BitShiftR => regs[l] = (regs[l] as usize >> regs[r as usize]) as i64,
+            Cmd::ReadInt => regs[l] = next_word().parse().unwrap_or(0),
+            Cmd::ReadStr => {
                 let word = next_word();
-                strs.push(word);
-                regs[l] = (strs.len() - 1) as i64;
+                let p = heap_size;
+                for i in 0..word.as_bytes().len() {
+                    mem[p + i] = word.as_bytes()[i];
+                }
+                heap_size += word.len();
+                regs[l] = make_ptr(p, heap_size);
             }
-            Op::Print => write!(stdout, "{}", strs[regs[l] as usize]).unwrap(),
-            Op::PrintLn => writeln!(stdout, "{}", strs[regs[l] as usize]).unwrap(),
-            Op::Alloc => {
-                regs[l] = heap_size as i64;
-                let size = regs[r as usize] as usize;
-                heap_size += size;
+            Cmd::PrintLnInt => writeln!(stdout, "{}", regs[r as usize]).unwrap(),
+            Cmd::Alloc => {
+                let p = heap_size;
+                heap_size += regs[r as usize] as usize;
+                let q = heap_size;
+                regs[l] = make_ptr(p, q);
             }
-            Op::Write => {
-                let p = regs[l] as usize;
-                let size = regs[r as usize] as usize;
-                stdout.write_all(&mem[p..p + size]).unwrap();
+            Cmd::Write => {
+                let (p, q) = decompose_ptr(regs[l]);
+                stdout.write_all(&mem[p..q]).unwrap();
                 stdout.flush().unwrap();
             }
-            Op::Label | Op::Kill => {}
-            Op::Exit => return,
+            Cmd::Label | Cmd::Kill => {}
+            Cmd::Exit => return,
         }
         pc += 1;
     }
@@ -219,6 +220,14 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
 
 fn bool_to_int(x: bool) -> i64 {
     (if x { 1 } else { 0 })
+}
+
+fn make_ptr(p: usize, q: usize) -> i64 {
+    (q << 32 | p) as i64
+}
+
+fn decompose_ptr(x: i64) -> (usize, usize) {
+    ((x & 0xFFFF_FFFF) as usize, x as usize >> 32)
 }
 
 pub fn eval_with_stdio(src: &str) {

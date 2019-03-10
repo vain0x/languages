@@ -12,109 +12,122 @@ The goal is to solve competitive programming problems, especially [AtCoder Begin
 
 The following code is a solution written in picomet-lang to solve this problem: [ABC086A - Product](https://atcoder.jp/contests/abs/tasks/abc086_a?lang=en).
 
-```js
-(begin
-    (let a (read_int))
-    (let b (read_int))
-    (println (cond (== (% (* a b) 2) 0) "Even" "Odd"))
-)
+```rust
+    let a = read_int();
+    let b = read_int();
+    print(if a * b % 2 == 0 { "Even\n" } else { "Odd\n" });
 ```
 
-This reads two integers from STDIN and prints a word to STDOUT that indicates whether the product of two integers is even or odd.
+This reads two integers from standard input and prints a word to standard output that indicates whether the product of two integers is even or odd.
 
 Other examples are available at the bottom of [compiler/tests/tests.rs](compiler/tests/tests.rs).
 
-## Document: How to Write Picomet-lang
+## Documents: How to Write Picomet-lang
 
 - Before read, please check last-modified date because I might forget to update the document after changes.
 - See [compiler/tests/tests.rs](compiler/tests/tests.rs) for actually working picomet-lang codes.
 
-### Doc: Language properties
+### Docs: Language properties
 
-Picomet-lang is more similar to imperative languages than LISP except for syntax.
-
-- LISP-like grammar
-- Imperative
-- Strict evaluation
-- No memory management
+- Rust-like syntax
+- C-like semantics (*Not determined yet*)
+    - Imperative
+    - Strict evaluation
+    - No garbage collection
+    - Use of pointers
 - Single-threaded
-- *Type systems are to be determined. No type checks for now!*
+- Virtual register machine
 
-### Doc: Block expression
-
-The whole picomet-lang program is an expression.
-
-It tends to start with `begin`. `(begin x y .. z)` evaluates arguments in left-to-right order. The result is the final argument.
-
-Note that `begin` is similar to block expressions in Rust. `(begin x y z)` is `{ x; y; z }` in Rust.
-
-### Doc: Common features
+### Docs: Common features
 
 These features are common in other programming languages.
 
-- Numbers: `0`, `42`, etc. (Negative numbers are not supported yet.)
-- Strings: `"Hello"`, etc. (Escape sequences are not supported yet.)
-- Comments: From `//` to end of line. (Multi-line comments will not supported.)
+- Integers: `0`, `42`, etc.
+- Strings: `"Hello!\n"`, etc.
+- Operators: `+`, `=`, etc.
+- Comments: From `//` to end of line.
 
-### Doc: Identifiers
+### Docs: Types
 
-*Identifiers* are name of variables, functions or keywords. You can use almost all ASCII symbols including `+-*/%=<>!?` etc. for names.
+There are five types in picomet-lang for now.
 
-For example, `+` is just a name of function rather than operator. There does not exist operators in picomet-lang.
+- Integer (64 bit signed)
+- Byte (8 bit unsigned)
+- Slice of byte (`&[u8]` in Rust)
+- Unit (`()` in Rust)
+- Function (not first-class)
 
-### Doc: Numeric operations
+Static type of expressions are inferred with naive unification-based inference algorithm.
 
-Instead of operators, use functions such as `+`, `-`, `*`, `/`, `%` for calculation. For example, `(+ 2 3)` means `2 + 3` (= 5).
+### Docs: Slices
 
-These arithmetic operators *fold* arguments. E.g. `(+ 2 3 4)` works the same as `((+ 2 3) 4)`, i.e. `(2 + 3) + 4`. In the same way, `(- 7 2 3)` is `((7 - 2) - 3)` (= 2).
+Slices are similar to arrays in C. They are represented as pairs of pointer to represent a range of memory.
 
-Comparison functions such as `==`, `!=`, `<`, `>=`,`<=`, `>=` don't fold arguments. Pass exactly two arguments like this: `(== x 0)`.
+For now, you can use only slices of byte.
 
-### Docs: String operations
+- String literals are slices of byte filled with ASCII codes.
+- `mem_alloc(size)` allocates a chunk of memory dynamically. (Similar to `malloc` in C.)
+- `slice[i]` gets the value of i'th element.
+- `slice[i] = value` sets a value to the i'th element.
 
-*Note that string manipulations are still in development. It will change completely.*
+### Docs: Variables
 
-- `(++ x y)` concatenates strings.
-- `(to_str x)` converts an integer `x` to string (decimal representation).
+Variables hold any value except for functions.
+
+- `let x = a;` defines new local variable named `x` with initial value `a`.
+- `x = b;` changes the value of variable `x` to `b`.
+
+You can also use `+=` that stands for `x = x + a`.
+
+### Docs: If
+
+If expressions look like `if condition { body } else { alt }`.
+
+Note that you sometimes need to wrap `if` expressions around parenthesis to combine it with binary/prefix/suffix operations. For example,
+
+```rust
+    1 + (if p { b } else { a })
+```
+
+The same goes for `while` and `fun`.
+
+### Docs: Loops
+
+While expressions look like `while condition { body }`. The result is unit.
+
+### Docs: Functions
+
+You can define functions like this:
+
+```rust
+    let fact = fun(n) {
+        let x = 1;
+        while n >= 2 {
+            x = x * n;
+            n = n - 1;
+        }
+        x
+    };
+    println_int(fact(3)); //=> 6
+```
+
+When the function body is just an expression, you don't need wrap it with braces:
+
+```rust
+    let succ = fun(x) x + 1;
+    println_int(succ(1)); //=> 2
+```
+
+- Functions are not closures for now, i.e. functions can't refer to local variables outside it. Global variables are available.
 
 ### Docs: Standard Input/Output
 
 For convenience in competitive programming, standard input is considered a list of words separated by spaces or line breaks by default.
 
-- `(read_str)` reads a word from STDIN and gets the string.
-- `(read_int)` does the same except it parses the word as integer.
-- `(print x y..)` prints strings to STDOUT.
-    - Arguments must be strings.
-- `(println x y ..)` prints strings to STDOUT.
-    - Different from `print`, it also writes a line break after all arguments and flushes.
-    - Arguments must be strings.
-
-### Doc: Variables
-
-Variables hold any kind of value (for now).
-
-- `(let x a)` defines new variable named `x` with initial value `a`.
-- `(set x b)` changes the content of variable `x` to `b`.
-
-### Doc: Conditional branches
-
-- `(cond true x y)` equals to `x`.
-- `(cond false x y)` equals to `y`.
-
-You can omit "else" part (`y`) if unnecessary.
-
-### Docs: Loops
-
-- `(while b x)` repeatedly tests `b` is true or not and if it's true, evaluates `x`.
-- Once `b` is evaluated to false, the loop ends.
-
-### Docs: Others
-
-Other too detailed things.
-
-- `cond` can take any number of condition-then part in arguments for else-if syntax. `(cond b1 x1 b2 x2 y)` is equivalent to `(cond b1 x1 (cond b2 x2 y))`.
-- The result of `(cond false x)` is indeterminate value.
-- The result of `while` is indeterminate value.
+- `read_str()` reads a word from standard input and gets the string (slice of byte).
+- `read_int()` does the same as `read_str` except it parses the word as integer.
+- `print(x)` prints a slice of byte to standard output.
+- `println_int(x)` prints an integer and a line break to standard output.
 
 ## Stages
 
@@ -123,10 +136,10 @@ Other too detailed things.
     - Hand-made tokenizer.
 - Parse
     - Tokens → Syntax tree
-    - Hand-made recursively descendant parser. Thanks to S-expression syntax, it is very simple.
+    - Hand-made recursively descendant parser.
 - Compile
     - Syntax tree → IR instructions
-    - The IR is assembly for register machines with infinite registers.
+    - The IR is assembly for register machine with infinite registers.
 - Optimize
     - *Not implemented yet.*
 - Evaluate

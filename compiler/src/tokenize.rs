@@ -4,14 +4,13 @@ use crate::*;
 struct Tokenizer<'a> {
     src: &'a str,
     current: usize,
-    tokens: Vec<Token>,
-    token_spans: Vec<Span>,
+    tokens: BTreeMap<TokenId, Token>,
 }
 
 impl Tokenizer<'_> {
-    fn add_token(&mut self, token: Token, span: Span) {
-        self.tokens.push(token);
-        self.token_spans.push(span);
+    fn add_token(&mut self, kind: TokenKind, span: Span) {
+        let token_id = TokenId(self.tokens.len());
+        self.tokens.insert(token_id, Token { kind, span });
     }
 
     fn next_char(&self) -> u8 {
@@ -34,7 +33,7 @@ impl Tokenizer<'_> {
             self.current += 1;
         }
         let r = self.current;
-        Some((self.src[l..r].into(), (l, r)))
+        Some((self.src[l..r].to_string(), (l, r)))
     }
 
     fn reads(&mut self, prefix: &str) -> bool {
@@ -56,8 +55,7 @@ impl Tokenizer<'_> {
         }
         let r = self.current;
         self.current += 1;
-        let word = self.src[l + 1..r].into();
-        self.add_token(Token::Str(word), (l, r + 1));
+        self.add_token(TokenKind::Str, (l, r + 1));
     }
 
     pub fn tokenize(&mut self) {
@@ -70,12 +68,27 @@ impl Tokenizer<'_> {
             if let Some(_) = self.read_while(is_whitespace) {
                 continue;
             }
-            if let Some((word, span)) = self.read_while(is_ascii_digit) {
-                self.add_token(Token::Int(word.parse().unwrap_or(0)), span);
+            if let Some((_, span)) = self.read_while(is_ascii_digit) {
+                self.add_token(TokenKind::Int, span);
                 continue;
             }
-            if let Some((word, span)) = self.read_while(is_id_char) {
-                self.add_token(Token::Id(word.into()), span);
+            if let Some((word, span)) = self.read_while(is_ident_char) {
+                if let Some(&keyword) = Keyword::get_all()
+                    .iter()
+                    .find(|&&keyword| keyword.text() == &word)
+                {
+                    self.add_token(TokenKind::Keyword(keyword), span);
+                } else {
+                    self.add_token(TokenKind::Ident, span);
+                }
+                continue;
+            }
+            if let Some((word, span)) = self.read_while(is_op_char) {
+                if let Some(&(_, op, _)) = OPS.iter().find(|&&(op_text, _, _)| op_text == &word) {
+                    self.add_token(TokenKind::Op(op), span);
+                } else {
+                    self.add_token(TokenKind::Err, (l, self.current));
+                }
                 continue;
             }
             if self.next_char() == b'"' {
@@ -84,14 +97,20 @@ impl Tokenizer<'_> {
             }
             for pun in PUNS {
                 if self.reads(pun) {
-                    self.add_token(Token::Pun(pun), (l, self.current));
+                    self.add_token(TokenKind::Pun(pun), (l, self.current));
                     continue 't;
                 }
             }
-            self.current += 1;
-            self.add_token(Token::Err("?".into()), (l, self.current));
+
+            let char_len = self.src[self.current..]
+                .char_indices()
+                .next()
+                .map(|(n, _)| n)
+                .unwrap_or(0);
+            self.current += char_len;
+            self.add_token(TokenKind::Err, (l, self.current));
         }
-        self.add_token(Token::Eof, (self.current, self.current));
+        self.add_token(TokenKind::Eof, (self.current, self.current));
     }
 }
 
@@ -99,20 +118,23 @@ fn is_ascii_digit(c: u8) -> bool {
     b'0' <= c && c <= b'9'
 }
 
-fn is_id_char(c: u8) -> bool {
-    (b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z' || is_ascii_digit(c))
-        || b"!#$'*+-./%<=>?@^_~".contains(&c)
+fn is_ident_char(c: u8) -> bool {
+    (b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z' || is_ascii_digit(c) || c == b'_')
+}
+
+fn is_op_char(c: u8) -> bool {
+    b"!*+-./%<=>?@^~".contains(&c)
 }
 
 fn is_whitespace(c: u8) -> bool {
     c == b' ' || c == b'\t' || c == b'\r' || c == b'\n'
 }
 
-pub fn tokenize(src: &str) -> (Vec<Token>, Vec<Span>) {
+pub(crate) fn tokenize(src: &str) -> BTreeMap<TokenId, Token> {
     let mut tokenizer = Tokenizer {
         src,
         ..Tokenizer::default()
     };
     tokenizer.tokenize();
-    (tokenizer.tokens, tokenizer.token_spans)
+    tokenizer.tokens
 }

@@ -385,6 +385,36 @@ fn test_int_to_str() {
     )
 }
 
+// Example in the README.
+#[test]
+fn test_example_fact() {
+    eval_tests(
+        r#"
+            let fact = fun(n) {
+                let x = 1;
+                while n >= 2 {
+                    x = x * n;
+                    n = n - 1;
+                }
+                x
+            };
+            println_int(fact(3)); //=> 6
+        "#,
+        &[("", "6\n")],
+    )
+}
+
+#[test]
+fn test_example_succ() {
+    eval_tests(
+        r#"
+            let succ = fun(x) x + 1;
+            println_int(succ(1)); //=> 2
+        "#,
+        &[("", "2\n")],
+    );
+}
+
 /// <https://atcoder.jp/contests/abs/tasks/practice_1?lang=en>
 #[test]
 fn test_welcome_to_atcoder() {
@@ -417,8 +447,7 @@ fn test_abc086_a_product() {
         r#"
             let a = read_int();
             let b = read_int();
-            print(if a * b % 2 == 0 { "Even" } else { "Odd" });
-            print("\n");
+            print(if a * b % 2 == 0 { "Even\n" } else { "Odd\n" });
         "#,
         &[("3 4\n", "Even\n"), ("1 21\n", "Odd\n")],
     )

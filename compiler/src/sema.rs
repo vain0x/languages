@@ -37,7 +37,7 @@ impl SemanticAnalyzer {
     }
 
     fn add_fun(&mut self, name: String, ty: Ty, exp_id: ExpId) -> FunId {
-        let fun_id = FunId(self.sema.funs.len());
+        let fun_id = FunId::new(self.sema.funs.len());
         let fun_def = FunDef {
             name,
             ty,
@@ -50,7 +50,7 @@ impl SemanticAnalyzer {
     }
 
     fn add_var(&mut self, var_def: VarDef) -> VarId {
-        let var_id = VarId(self.sema.vars.len());
+        let var_id = VarId::new(self.sema.vars.len());
 
         self.sema.vars.insert(var_id, var_def);
         self.current_fun_mut().symbols.push(SymbolKind::Var(var_id));

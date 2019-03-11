@@ -10,7 +10,7 @@ struct Parser<'a> {
 
 impl Parser<'_> {
     fn next(&self) -> &Token {
-        assert!(self.current < TokenId(self.tokens.len()));
+        assert!(self.current < TokenId::new(self.tokens.len()));
         &self.tokens[&self.current]
     }
 
@@ -381,7 +381,7 @@ pub(crate) fn parse(src: String) -> Syntax {
         let mut parser = Parser {
             src: &src,
             tokens: &tokens,
-            current: TokenId(0),
+            current: TokenId::default(),
             exps: BTreeMap::new(),
             msgs: BTreeMap::new(),
         };

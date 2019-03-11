@@ -7,7 +7,7 @@ struct RegAlloc {
 
 impl RegAlloc {
     fn alloc(&mut self, reg_id: RegId) -> RegId {
-        if reg_id < RegId(KNOWN_REG_NUM) {
+        if reg_id < RegId::new(KNOWN_REG_NUM) {
             return reg_id;
         }
         if let Some(&reg_id) = self.reg_map.get(&reg_id) {
@@ -15,16 +15,16 @@ impl RegAlloc {
         }
         for i in KNOWN_REG_NUM..REG_NUM {
             if !self.used[i] {
-                self.reg_map.insert(reg_id, RegId(i));
+                self.reg_map.insert(reg_id, RegId::new(i));
                 self.used[i] = true;
-                return RegId(i);
+                return RegId::new(i);
             }
         }
         panic!("too many registers are required")
     }
 
     fn kill(&mut self, reg_id: RegId) -> RegId {
-        if reg_id < RegId(KNOWN_REG_NUM) {
+        if reg_id < RegId::new(KNOWN_REG_NUM) {
             return reg_id;
         }
         let reg_id = self.alloc(reg_id);

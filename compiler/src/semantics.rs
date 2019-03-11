@@ -166,4 +166,4 @@ impl BorrowMutMsgs for Sema {
     }
 }
 
-pub(crate) const GLOBAL_FUN_ID: FunId = FunId(0);
+pub(crate) const GLOBAL_FUN_ID: FunId = FunId::new(0);

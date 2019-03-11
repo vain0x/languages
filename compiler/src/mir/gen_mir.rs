@@ -31,12 +31,12 @@ impl Compiler {
 
     fn add_reg(&mut self) -> RegId {
         self.mir.reg_count += 1;
-        RegId(self.mir.reg_count - 1)
+        RegId::new(self.mir.reg_count - 1)
     }
 
     fn add_label(&mut self) -> LabelId {
         self.mir.label_count += 1;
-        LabelId(self.mir.label_count - 1)
+        LabelId::new(self.mir.label_count - 1)
     }
 
     /// Allocate and write global data. Return the range.
@@ -408,7 +408,7 @@ impl Compiler {
 
         // Reassign registers to finite number registers.
         for fun_id in 0..self.mir.funs.len() {
-            regalloc::alloc_regs(&mut self.mir.funs.get_mut(&FunId(fun_id)).unwrap().inss);
+            regalloc::alloc_regs(&mut self.mir.funs.get_mut(&FunId::new(fun_id)).unwrap().inss);
         }
 
         // Merge instructions.

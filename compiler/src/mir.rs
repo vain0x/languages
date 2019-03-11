@@ -90,6 +90,7 @@ pub struct CompilationResult {
     pub success: bool,
     pub program: String,
     pub stderr: String,
+    pub msgs: Vec<Msg>,
 }
 
 pub(crate) const NO_REG_ID: RegId = RegId(0);

@@ -43,7 +43,7 @@ fn main() {
     let current_contents = read_to_string(&out_path);
 
     let picomet_lang_compiler::CompilationResult {
-        success, program: ir_contents, stderr
+        success, program: ir_contents, stderr, ..
      } = picomet_lang_compiler::compile(&picomet_contents);
 
     let out_contents = if success {

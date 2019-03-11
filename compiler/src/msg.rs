@@ -44,6 +44,10 @@ impl Msg {
         self.level != MsgLevel::Err
     }
 
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
     pub(crate) fn summarize<'a, I: Iterator<Item = &'a Msg>>(
         msgs: I,
         syntax: &Syntax,

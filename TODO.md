@@ -37,7 +37,6 @@
 - standard library
     - println, println_int, etc.
     - string manipulations
-- LSP (language server protocol) server
 
 ## Low Priority Topics
 

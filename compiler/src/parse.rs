@@ -1,4 +1,5 @@
 use crate::*;
+use std::cell::RefCell;
 
 struct Parser<'a> {
     src: &'a str,
@@ -6,10 +7,16 @@ struct Parser<'a> {
     current: TokenId,
     exps: BTreeMap<ExpId, Exp>,
     msgs: BTreeMap<MsgId, Msg>,
+    tick: RefCell<usize>,
 }
 
 impl Parser<'_> {
     fn next(&self) -> &Token {
+        debug_assert!({
+            *self.tick.borrow_mut() += 1;
+            *self.tick.borrow() < 1_000_000
+        });
+
         assert!(self.current < TokenId::new(self.tokens.len()));
         &self.tokens[&self.current]
     }
@@ -384,6 +391,7 @@ pub(crate) fn parse(src: String) -> Syntax {
             current: TokenId::default(),
             exps: BTreeMap::new(),
             msgs: BTreeMap::new(),
+            tick: RefCell::new(0),
         };
         let root_exp_id = parser.parse();
         (root_exp_id, parser.exps, parser.msgs)

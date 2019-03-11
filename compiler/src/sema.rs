@@ -7,20 +7,8 @@ pub(crate) struct SemanticAnalyzer {
 }
 
 impl SemanticAnalyzer {
-    fn exp(&self, exp_id: ExpId) -> &Exp {
-        &self.sema.syntax.exps[&exp_id]
-    }
-
-    fn current_fun(&self) -> &FunDef {
-        self.sema.funs.get(&self.current_fun_id).unwrap()
-    }
-
     fn current_fun_mut(&mut self) -> &mut FunDef {
         self.sema.funs.get_mut(&self.current_fun_id).unwrap()
-    }
-
-    fn current_fun_symbols(&self) -> Vec<SymbolRef<'_>> {
-        self.sema.fun_symbols(self.current_fun_id)
     }
 
     fn imported_symbols(&self) -> impl Iterator<Item = SymbolRef<'_>> {

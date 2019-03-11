@@ -18,7 +18,7 @@ pub(crate) trait BorrowMutMsgs {
     fn msgs_mut(&mut self) -> &mut Msgs;
 
     fn next_msg_id(&mut self) -> MsgId {
-        MsgId(self.msgs_mut().len())
+        MsgId::new(self.msgs_mut().len())
     }
 
     fn add_msg(&mut self, msg: Msg) {
@@ -32,7 +32,7 @@ pub(crate) trait BorrowMutMsgs {
 }
 
 impl Msg {
-    pub fn err(message: String, exp_id: ExpId) -> Self {
+    pub(crate) fn err(message: String, exp_id: ExpId) -> Self {
         Msg {
             level: MsgLevel::Err,
             message,

@@ -1,3 +1,3 @@
 fn main() {
-    picomet_lang_compiler::lsp::start_lsp_server();
+    picomet_lang_compiler::start_lsp_server();
 }

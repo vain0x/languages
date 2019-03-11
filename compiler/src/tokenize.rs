@@ -9,7 +9,7 @@ struct Tokenizer<'a> {
 
 impl Tokenizer<'_> {
     fn add_token(&mut self, kind: TokenKind, span: Span) {
-        let token_id = TokenId(self.tokens.len());
+        let token_id = TokenId::new(self.tokens.len());
         self.tokens.insert(token_id, Token { kind, span });
     }
 

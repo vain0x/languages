@@ -7,20 +7,8 @@ pub(crate) struct SemanticAnalyzer {
 }
 
 impl SemanticAnalyzer {
-    fn exp(&self, exp_id: ExpId) -> &Exp {
-        &self.sema.syntax.exps[&exp_id]
-    }
-
-    fn current_fun(&self) -> &FunDef {
-        self.sema.funs.get(&self.current_fun_id).unwrap()
-    }
-
     fn current_fun_mut(&mut self) -> &mut FunDef {
         self.sema.funs.get_mut(&self.current_fun_id).unwrap()
-    }
-
-    fn current_fun_symbols(&self) -> Vec<SymbolRef<'_>> {
-        self.sema.fun_symbols(self.current_fun_id)
     }
 
     fn imported_symbols(&self) -> impl Iterator<Item = SymbolRef<'_>> {
@@ -37,7 +25,7 @@ impl SemanticAnalyzer {
     }
 
     fn add_fun(&mut self, name: String, ty: Ty, exp_id: ExpId) -> FunId {
-        let fun_id = FunId(self.sema.funs.len());
+        let fun_id = FunId::new(self.sema.funs.len());
         let fun_def = FunDef {
             name,
             ty,
@@ -50,7 +38,7 @@ impl SemanticAnalyzer {
     }
 
     fn add_var(&mut self, var_def: VarDef) -> VarId {
-        let var_id = VarId(self.sema.vars.len());
+        let var_id = VarId::new(self.sema.vars.len());
 
         self.sema.vars.insert(var_id, var_def);
         self.current_fun_mut().symbols.push(SymbolKind::Var(var_id));

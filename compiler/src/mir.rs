@@ -93,11 +93,11 @@ pub struct CompilationResult {
     pub msgs: Vec<Msg>,
 }
 
-pub(crate) const NO_REG_ID: RegId = RegId(0);
-pub(crate) const BASE_PTR_REG_ID: RegId = RegId(1);
+pub(crate) const NO_REG_ID: RegId = RegId::new(0);
+pub(crate) const BASE_PTR_REG_ID: RegId = RegId::new(1);
 #[allow(unused)]
-pub(crate) const STACK_PTR_REG_ID: RegId = RegId(2);
+pub(crate) const STACK_PTR_REG_ID: RegId = RegId::new(2);
 #[allow(unused)]
-pub(crate) const RET_REG_ID: RegId = RegId(3);
+pub(crate) const RET_REG_ID: RegId = RegId::new(3);
 pub(crate) const KNOWN_REG_NUM: usize = 4;
 pub(crate) const REG_NUM: usize = 12;

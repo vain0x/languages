@@ -6,6 +6,7 @@ extern crate picomet_lang_compiler;
 use std::fs;
 use std::io::prelude::*;
 use std::path::Path;
+use picomet_lang_compiler::{compile, CompilationResult};
 
 const TEMPLATE: &'static str = r#####"// picomet-lang <https://github.com/vain0x/picomet-lang>
 
@@ -42,9 +43,9 @@ fn main() {
     let picomet_contents = read_to_string(&picomet_path);
     let current_contents = read_to_string(&out_path);
 
-    let picomet_lang_compiler::CompilationResult {
+    let CompilationResult {
         success, program: ir_contents, stderr, ..
-     } = picomet_lang_compiler::compile(&picomet_contents);
+     } = compile(&picomet_contents);
 
     let out_contents = if success {
         TEMPLATE

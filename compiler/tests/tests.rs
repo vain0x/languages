@@ -3,7 +3,7 @@
 extern crate picomet_lang_compiler;
 extern crate picomet_lang_runtime;
 
-use picomet_lang_compiler::CompilationResult;
+use picomet_lang_compiler::{compile, CompilationResult};
 use std::io;
 
 fn eval_tests(src: &str, ios: &[(&str, &str)]) {
@@ -12,7 +12,7 @@ fn eval_tests(src: &str, ios: &[(&str, &str)]) {
         program,
         stderr,
         ..
-    } = picomet_lang_compiler::compile(src);
+    } = compile(src);
     if !stderr.is_empty() {
         eprintln!("{}", stderr);
     }
@@ -36,7 +36,7 @@ fn test_err(src: &str, expected: &str) {
 
     let CompilationResult {
         success, stderr, ..
-    } = picomet_lang_compiler::compile(src);
+    } = compile(src);
 
     assert_eq!(
         compress(&stderr),

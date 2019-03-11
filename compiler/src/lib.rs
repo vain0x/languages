@@ -4,7 +4,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate log;
 
-pub mod lsp;
+mod lsp;
 mod mir;
 mod msg;
 mod parse;
@@ -13,8 +13,10 @@ mod semantics;
 mod syntax;
 mod tokenize;
 
+pub use crate::lsp::start_lsp_server;
+pub use crate::mir::gen_mir::compile;
+pub use crate::mir::CompilationResult;
 pub(crate) use crate::mir::*;
-pub use crate::mir::{gen_mir::compile, CompilationResult};
 pub(crate) use crate::msg::*;
 pub(crate) use crate::semantics::*;
 pub(crate) use crate::syntax::*;

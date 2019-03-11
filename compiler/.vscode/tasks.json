@@ -8,10 +8,10 @@
             "args": [
                 "build"
             ],
-            "options": {
-                "cwd": "../compiler"
-            },
-            "group": "build"
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
             "label": "ext:build",
@@ -20,10 +20,10 @@
             "args": [
                 "build"
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
+            "options": {
+                "cwd": "../vscode-ext"
             },
+            "group": "build",
             "dependsOn": "compiler:build"
         }
     ]

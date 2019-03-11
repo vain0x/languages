@@ -16,7 +16,7 @@ import {
 let client: LanguageClient
 
 export function activate(context: ExtensionContext) {
-  let serverPath = context.asAbsolutePath("../compiler/target/debug/lsp-server")
+  let serverPath = context.asAbsolutePath("../compiler/target/debug/lsp_server")
   let serverOptions: ServerOptions = {
     command: serverPath,
   }

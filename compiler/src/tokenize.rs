@@ -1,10 +1,12 @@
 use crate::*;
+use std::cell::RefCell;
 
 #[derive(Default)]
 struct Tokenizer<'a> {
     src: &'a str,
     current: usize,
     tokens: BTreeMap<TokenId, Token>,
+    tick: RefCell<usize>,
 }
 
 impl Tokenizer<'_> {
@@ -14,6 +16,11 @@ impl Tokenizer<'_> {
     }
 
     fn next_char(&self) -> u8 {
+        debug_assert!({
+            *self.tick.borrow_mut() += 1;
+            *self.tick.borrow() < 1_000_000
+        });
+
         if self.at_eof() {
             return 0;
         }
@@ -102,11 +109,7 @@ impl Tokenizer<'_> {
                 }
             }
 
-            let char_len = self.src[self.current..]
-                .char_indices()
-                .next()
-                .map(|(n, _)| n)
-                .unwrap_or(0);
+            let char_len = next_char_len(&self.src[self.current..]);
             self.current += char_len;
             self.add_token(TokenKind::Err, (l, self.current));
         }
@@ -130,6 +133,13 @@ fn is_whitespace(c: u8) -> bool {
     c == b' ' || c == b'\t' || c == b'\r' || c == b'\n'
 }
 
+fn next_char_len(src: &str) -> usize {
+    src.chars()
+        .next()
+        .expect("Any character is expected")
+        .len_utf8()
+}
+
 pub(crate) fn tokenize(src: &str) -> BTreeMap<TokenId, Token> {
     let mut tokenizer = Tokenizer {
         src,
@@ -137,4 +147,20 @@ pub(crate) fn tokenize(src: &str) -> BTreeMap<TokenId, Token> {
     };
     tokenizer.tokenize();
     tokenizer.tokens
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_next_char_len() {
+        assert_eq!(next_char_len("😀😀"), "😀".len());
+    }
+
+    #[test]
+    fn test_tokenizer_does_not_hang() {
+        let result = tokenize("#!/bin/bash\necho こんにちは世界😀");
+        assert!(result.len() != 0);
+    }
 }

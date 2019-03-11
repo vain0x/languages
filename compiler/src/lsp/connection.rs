@@ -1,77 +1,33 @@
 use crate::compile;
+use lsp_types::*;
 use serde_json;
 use std::io::*;
 
-struct LspMsg {
+#[derive(Serialize, Deserialize)]
+struct LspResponse<Result> {
     jsonrpc: String,
     id: i64,
+    result: Result,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct LspNotification<Params> {
     jsonrpc: String,
     method: String,
     params: Params,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DidOpenTextDocumentParams {
-    text_document: TextDocument,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DidChangeTextDocumentParams {
-    text_document: VersionedTextDocumentIdentifier,
-    content_changes: Vec<TextDocumentContentChangeEvent>,
-}
-
-#[derive(Deserialize)]
-struct TextDocumentContentChangeEvent {
-    text: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct VersionedTextDocumentIdentifier {
-    uri: String,
-    version: Option<usize>,
-}
-
-#[derive(Deserialize)]
-struct TextDocument {
-    uri: String,
-    version: i64,
-    text: String,
-}
-
-#[derive(Serialize)]
-struct Diagnostic {
-    range: Range,
-    source: String,
-    message: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Range {
-    start: Position,
-    end: Position,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Position {
-    line: usize,
-    character: usize,
-}
-
-static mut ID: usize = 1;
-
 fn send_lsp_msg(content: &str) {
     let content_length = content.len();
 
     let stdout = stdout();
     let mut stdout = BufWriter::new(stdout.lock());
-    write!(stdout, "Content-Length: {}\r\n\r\n{}", content_length, content);
+    write!(
+        stdout,
+        "Content-Length: {}\r\n\r\n{}",
+        content_length, content
+    )
+    .unwrap();
     stdout.flush().unwrap();
 
     eprintln!("Send Content-Length: {}\r\n\r\n{}", content_length, content);
@@ -89,34 +45,30 @@ fn did_receive(json: &str) {
     if json.contains("initialized") {
         // pass
     } else if json.contains("initialize") {
-        send_lsp_msg(&format!(
-            r#"
-                {{
-                    "jsonrpc": "2.0",
-                    "id": {id},
-                    "result": {{
-                        "capabilities": {{
-                            "textDocumentSync": {{
-                                "openClose": true,
-                                "change": 1
-                            }}
-                        }}
-                    }}
-                }}
-            "#,
-            id = id.unwrap()
-        ));
+        let response = LspResponse::<InitializeResult> {
+            jsonrpc: "2.0".to_string(),
+            id: id.unwrap(),
+            result: InitializeResult {
+                capabilities: ServerCapabilities {
+                    text_document_sync: Some(TextDocumentSyncCapability::Options(
+                        TextDocumentSyncOptions {
+                            open_close: Some(true),
+                            change: Some(TextDocumentSyncKind::Full),
+                            ..TextDocumentSyncOptions::default()
+                        },
+                    )),
+                    ..ServerCapabilities::default()
+                },
+            },
+        };
+        send_lsp_msg(&serde_json::to_string(&response).unwrap());
     } else if json.contains("shutdown") {
-        send_lsp_msg(&format!(
-            r#"
-                {{
-                    "jsonrpc": "2.0",
-                    "id": {},
-                    "result": null
-                }}
-            "#,
-            id = id.unwrap()
-        ))
+        let response = LspResponse::<()> {
+            jsonrpc: "2.0".to_string(),
+            id: id.unwrap(),
+            result: (),
+        };
+        send_lsp_msg(&serde_json::to_string(&response).unwrap());
     } else if json.contains("exit") {
         std::process::exit(0)
     } else if json.contains("textDocument/didOpen") {
@@ -138,7 +90,7 @@ fn did_receive(json: &str) {
     }
 }
 
-fn validate_document(uri: &str, src: &str) {
+fn validate_document(uri: &Url, src: &str) {
     let result = compile(src);
     let mut diagnostics = vec![];
     for msg in &result.msgs {
@@ -154,26 +106,21 @@ fn validate_document(uri: &str, src: &str) {
                 },
             },
             message: msg.message().to_string(),
-            source: "Picomet-lang LSP".to_string(),
+            source: Some("Picomet-lang LSP".to_string()),
+            ..Diagnostic::default()
         })
     }
 
-    let diagnostics = serde_json::to_string(&diagnostics).expect("Serialize diagnostics");
+    let n = LspNotification::<PublishDiagnosticsParams> {
+        jsonrpc: "2.0".to_string(),
+        method: "textDocument/publishDiagnostics".to_string(),
+        params: PublishDiagnosticsParams {
+            uri: uri.clone(),
+            diagnostics,
+        },
+    };
 
-    send_lsp_msg(&format!(
-        r#"
-            {{
-                "jsonrpc": "2.0",
-                "method": "textDocument/publishDiagnostics",
-                "params": {{
-                    "uri": "{uri}",
-                    "diagnostics": {diagnostics}
-                }}
-            }}
-        "#,
-        uri = uri,
-        diagnostics = diagnostics,
-    ));
+    send_lsp_msg(&serde_json::to_string(&n).unwrap());
 }
 
 pub fn start() {

@@ -1,12 +1,10 @@
 use crate::*;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 struct Parser<'a> {
-    src: &'a str,
-    tokens: &'a BTreeMap<TokenId, Token>,
+    syntax: &'a mut Syntax,
     current: TokenId,
-    exps: BTreeMap<ExpId, Exp>,
-    msgs: BTreeMap<MsgId, Msg>,
     tick: RefCell<usize>,
 }
 
@@ -17,8 +15,8 @@ impl Parser<'_> {
             *self.tick.borrow() < 1_000_000
         });
 
-        assert!(self.current < TokenId::new(self.tokens.len()));
-        &self.tokens[&self.current]
+        assert!(self.current < TokenId::new(self.syntax.tokens.len()));
+        &self.syntax.tokens[&self.current]
     }
 
     fn is_followed_by_exp(&self) -> bool {
@@ -44,26 +42,26 @@ impl Parser<'_> {
 
     fn add_exp(&mut self, kind: ExpKind, token_span: (TokenId, TokenId)) -> ExpId {
         let (l, r) = token_span;
+        let doc = Rc::clone(&self.syntax.tokens[&l].doc);
 
         assert!(l <= r, "{:?}..{:?}", l, r);
         let r1 = if l == r { l } else { r - 1 };
-        let span = (self.tokens[&l].span.0, self.tokens[&r1].span.1);
+        let span = (
+            self.syntax.tokens[&l].span.0,
+            self.syntax.tokens[&r1].span.1,
+        );
 
-        let exp_id = self.exps.len().into();
-        self.exps.insert(exp_id, Exp { kind, span });
+        let exp_id = self.syntax.exps.len().into();
+        self.syntax.exps.insert(exp_id, Exp { kind, doc, span });
         exp_id
     }
 
     fn add_exp_err(&mut self, message: String, token_span: (TokenId, TokenId)) -> ExpId {
-        let msg_id = self.next_msg_id();
-        let exp_id = self.add_exp(ExpKind::Err(msg_id), token_span);
-        self.add_err_msg(message, exp_id);
-        exp_id
+        self.add_exp(ExpKind::Err(message), token_span)
     }
 
     fn text(&self, token_id: TokenId) -> &str {
-        let token = self.tokens[&token_id];
-        &self.src[token.span.0..token.span.1]
+        self.syntax.tokens[&token_id].text()
     }
 
     fn parse_err(&mut self, message: String) -> ExpId {
@@ -375,33 +373,14 @@ impl Parser<'_> {
     }
 }
 
-impl BorrowMutMsgs for Parser<'_> {
-    fn msgs_mut(&mut self) -> &mut Msgs {
-        &mut self.msgs
-    }
-}
-
-pub(crate) fn parse(src: String) -> Syntax {
-    let tokens = tokenize::tokenize(&src);
-
-    let (root_exp_id, exps, msgs) = {
+pub(crate) fn parse(syntax: &'_ mut Syntax, root_token_id: TokenId) {
+    let root_exp_id = {
         let mut parser = Parser {
-            src: &src,
-            tokens: &tokens,
-            current: TokenId::default(),
-            exps: BTreeMap::new(),
-            msgs: BTreeMap::new(),
+            syntax,
+            current: root_token_id,
             tick: RefCell::new(0),
         };
-        let root_exp_id = parser.parse();
-        (root_exp_id, parser.exps, parser.msgs)
+        parser.parse()
     };
-
-    Syntax {
-        src,
-        tokens,
-        exps,
-        root_exp_id,
-        msgs,
-    }
+    syntax.roots.push(root_exp_id);
 }

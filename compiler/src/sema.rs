@@ -24,12 +24,12 @@ impl SemanticAnalyzer {
         self.sema.add_err_msg(message, exp_id);
     }
 
-    fn add_fun(&mut self, name: String, ty: Ty, exp_id: ExpId) -> FunId {
+    fn add_fun(&mut self, name: String, ty: Ty, bodies: Vec<ExpId>) -> FunId {
         let fun_id = FunId::new(self.sema.funs.len());
         let fun_def = FunDef {
             name,
             ty,
-            body: exp_id,
+            bodies,
             symbols: vec![],
         };
         self.sema.funs.insert(fun_id, fun_def);
@@ -72,7 +72,9 @@ impl SemanticAnalyzer {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            ExpKind::Err(_) => {}
+            ExpKind::Err(message) => {
+                self.add_err(message.to_string(), exp_id);
+            }
             ExpKind::Ident(name) => {
                 let var_id = if let Some(index) = arg_index {
                     self.add_arg(name.to_string(), ty.to_owned(), index)
@@ -101,6 +103,9 @@ impl SemanticAnalyzer {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
+            ExpKind::Err(message) => {
+                self.add_err(message.to_string(), exp_id);
+            }
             ExpKind::Ident(name) => {
                 let symbol_kind = match self.lookup_symbol(name) {
                     Some(symbol) => symbol.kind(),
@@ -189,7 +194,9 @@ impl SemanticAnalyzer {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            &ExpKind::Err(_) => {}
+            ExpKind::Err(message) => {
+                self.add_err(message.to_string(), exp_id);
+            }
             &ExpKind::Int(_) => {
                 self.set_ty(exp_id, &ty, &Ty::Int);
             }
@@ -228,7 +235,7 @@ impl SemanticAnalyzer {
                         self.on_pat(pat, fun_ty.to_owned(), None);
 
                         let outer_fun_id = self.current_fun_id;
-                        let fun_id = self.add_fun(fun_name.to_string(), fun_ty, *body);
+                        let fun_id = self.add_fun(fun_name.to_string(), fun_ty, vec![*body]);
                         self.current_fun_id = fun_id;
 
                         for (i, pat) in pats.iter().cloned().enumerate() {
@@ -246,9 +253,7 @@ impl SemanticAnalyzer {
                 }
             }
             ExpKind::Semi(exps) => {
-                for &exp_id in exps {
-                    self.on_val(exp_id, Ty::Var(exp_id));
-                }
+                self.on_vals(exps);
 
                 let last_ty = exps.last().cloned().map(Ty::Var).unwrap_or(Ty::Unit);
                 self.set_ty(exp_id, &ty, &last_ty);
@@ -256,11 +261,18 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn sema(&mut self) {
-        let root_exp_id = self.sema.syntax.root_exp_id;
+    fn on_vals(&mut self, exp_ids: &[ExpId]) {
+        for &exp_id in exp_ids {
+            self.on_val(exp_id, Ty::Var(exp_id));
+        }
+    }
 
-        let main_fun_ty = Ty::make_fun(iter::empty(), Ty::Var(root_exp_id));
-        let fun_id = self.add_fun("main".to_string(), main_fun_ty, root_exp_id);
+    fn sema(&mut self) {
+        // Link all roots to a function.
+        let roots = self.sema.syntax.roots.to_owned();
+        let last_exp_id = *roots.last().expect("At least one document");
+        let main_fun_ty = Ty::make_fun(iter::empty(), Ty::Var(last_exp_id));
+        let fun_id = self.add_fun("main".to_string(), main_fun_ty, roots.to_owned());
         assert_eq!(fun_id, GLOBAL_FUN_ID);
         self.current_fun_id = GLOBAL_FUN_ID;
 
@@ -268,7 +280,7 @@ impl SemanticAnalyzer {
             self.current_fun_mut().symbols.push(SymbolKind::Prim(prim));
         }
 
-        self.on_val(root_exp_id, Ty::Unit);
+        self.on_vals(&roots);
     }
 }
 
@@ -365,7 +377,7 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
             exp_tys: BTreeMap::new(),
             vars: BTreeMap::new(),
             funs: BTreeMap::new(),
-            msgs: syntax.msgs.clone(),
+            msgs: BTreeMap::new(),
         },
         current_fun_id: GLOBAL_FUN_ID,
     };

@@ -1,6 +1,14 @@
 use crate::*;
 
 #[derive(Clone, Debug)]
+pub struct DocMsg {
+    level: MsgLevel,
+    message: String,
+    l: Pos,
+    r: Pos,
+}
+
+#[derive(Clone, Debug)]
 pub struct Msg {
     level: MsgLevel,
     message: String,
@@ -44,24 +52,53 @@ impl Msg {
         self.level != MsgLevel::Err
     }
 
-    pub fn message(&self) -> &str {
-        &self.message
+    fn to_doc_msg(&self, syntax: &Syntax) -> DocMsg {
+        let (l, r) = syntax.locate_exp(self.exp_id);
+        DocMsg {
+            l,
+            r,
+            level: self.level,
+            message: self.message.to_string(),
+        }
     }
 
     pub(crate) fn summarize<'a, I: Iterator<Item = &'a Msg>>(
         msgs: I,
         syntax: &Syntax,
-    ) -> (bool, String) {
-        use std::fmt::Write;
-
+    ) -> (bool, Vec<DocMsg>) {
         let mut success = true;
-        let mut stderr = String::new();
+        let mut result = vec![];
         for msg in msgs {
-            let ((ly, lx), (ry, rx)) = syntax.locate_exp(msg.exp_id);
-            let (ly, lx, ry, rx) = (ly + 1, lx + 1, ry + 1, rx + 1);
-            writeln!(stderr, "At {}:{}..{}:{} {}", ly, lx, ry, rx, msg.message).unwrap();
+            result.push(msg.to_doc_msg(syntax));
             success = success && msg.level != MsgLevel::Err;
         }
-        (success, stderr)
+        (success, result)
+    }
+}
+
+impl DocMsg {
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
+    pub fn start_pos(&self) -> Pos {
+        self.l
+    }
+
+    pub fn end_pos(&self) -> Pos {
+        self.r
+    }
+
+    pub fn to_text(msgs: &[DocMsg]) -> String {
+        use std::fmt::Write as _;
+
+        let mut buffer = String::new();
+        for msg in msgs {
+            let (ly, lx) = msg.l;
+            let (ry, rx) = msg.r;
+            let (ly, lx, ry, rx) = (ly + 1, lx + 1, ry + 1, rx + 1);
+            writeln!(buffer, "At {}:{}..{}:{} {}", ly, lx, ry, rx, msg.message).unwrap();
+        }
+        buffer
     }
 }

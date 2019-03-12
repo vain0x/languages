@@ -319,16 +319,18 @@ impl Compiler {
                 self.kill(init_reg_id);
                 NO_REG_ID
             }
-            ExpKind::Semi(exps) => {
-                let mut reg_id = NO_REG_ID;
-                for &exp_id in exps {
-                    let result = self.on_exp(exp_id);
-                    self.kill(reg_id);
-                    reg_id = result;
-                }
-                reg_id
-            }
+            ExpKind::Semi(exps) => self.on_exps(exps),
         }
+    }
+
+    fn on_exps(&mut self, exps: &[ExpId]) -> RegId {
+        let mut reg_id = NO_REG_ID;
+        for &exp_id in exps {
+            let result = self.on_exp(exp_id);
+            self.kill(reg_id);
+            reg_id = result;
+        }
+        reg_id
     }
 
     fn add_cmd_save_caller_regs(&mut self) {
@@ -379,7 +381,7 @@ impl Compiler {
         self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(label_id));
         self.add_cmd_save_caller_regs();
         self.add_cmd_allocate_locals(fun_id);
-        let final_reg_id = self.on_exp(self.mir.sema.funs[&fun_id].body);
+        let final_reg_id = self.on_exps(&self.mir.sema.funs[&fun_id].bodies.to_owned());
         self.add_cmd_return(fun_id, final_reg_id);
         self.kill(final_reg_id);
     }
@@ -444,13 +446,12 @@ impl Compiler {
         }
 
         // Emit compile errors.
-        let (success, stderr) = Msg::summarize(self.mir.msgs.values(), &self.mir.sema.syntax);
+        let (success, msgs) = Msg::summarize(self.mir.msgs.values(), &self.mir.sema.syntax);
 
         CompilationResult {
             success,
             program,
-            stderr,
-            msgs: self.mir.msgs.values().cloned().collect(),
+            msgs,
         }
     }
 }
@@ -492,18 +493,28 @@ pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
     compiler.compile()
 }
 
-pub fn compile(src: &str) -> CompilationResult {
-    let src = src.to_owned();
-    let syntax = Rc::new(parse::parse(src));
+static PRELUDE: &str = r#"
+    let println_str = fun(x) {
+        print(x);
+        print("\n");
+    };
+"#;
 
-    let sema = Rc::new(sema::sema(syntax));
+pub fn compile(src: &str) -> CompilationResult {
+    let mut syntax = Syntax::default();
+    let prelude_doc = Rc::new(Doc::new("prelude".to_string(), PRELUDE.to_string()));
+    syntax.add_doc(prelude_doc);
+
+    let doc = Rc::new(Doc::new("main".to_string(), src.to_string()));
+    syntax.add_doc(doc);
+
+    let sema = Rc::new(sema::sema(Rc::new(syntax)));
     if !sema.is_successful() {
-        let (success, stderr) = Msg::summarize(sema.msgs.values(), &sema.syntax);
+        let (success, msgs) = Msg::summarize(sema.msgs.values(), &sema.syntax);
         return CompilationResult {
             success,
-            stderr,
+            msgs,
             program: "".to_string(),
-            msgs: sema.msgs.values().cloned().collect(),
         };
     }
 

@@ -3,17 +3,19 @@
 extern crate picomet_lang_compiler;
 extern crate picomet_lang_runtime;
 
-use picomet_lang_compiler::{compile, CompilationResult};
+use picomet_lang_compiler::{compile, CompilationResult, DocMsg};
 use std::io;
 
 fn eval_tests(src: &str, ios: &[(&str, &str)]) {
     let CompilationResult {
         success,
         program,
-        stderr,
+        msgs,
         ..
     } = compile(src);
-    if !stderr.is_empty() {
+
+    if !success {
+        let stderr = DocMsg::to_text(&msgs);
         eprintln!("{}", stderr);
     }
     assert!(success, "src={} program={}", src, program);
@@ -34,10 +36,9 @@ fn eval_tests(src: &str, ios: &[(&str, &str)]) {
 fn test_err(src: &str, expected: &str) {
     let compress = |s: &str| s.replace(|c: char| c.is_ascii_whitespace(), "");
 
-    let CompilationResult {
-        success, stderr, ..
-    } = compile(src);
+    let CompilationResult { success, msgs, .. } = compile(src);
 
+    let stderr = DocMsg::to_text(&msgs);
     assert_eq!(
         compress(&stderr),
         compress(expected),
@@ -104,7 +105,6 @@ fn test_arithmetic_type_error() {
         "1 + (while 0 == 0 {})",
         r#"
             At 1:6..1:21 Type Error
-            At 1:3..1:22 Type Error
         "#,
     )
 }
@@ -384,6 +384,14 @@ fn test_int_to_str() {
         ),
         &[("314159", "314159\n"), ("0", "0\n"), ("-42", "-42\n")],
     )
+}
+
+#[test]
+fn test_use_prelude() {
+    eval_tests(
+        r#"println_str("Hello, world!");"#,
+        &[("", "Hello, world!\n")],
+    );
 }
 
 // Example in the README.

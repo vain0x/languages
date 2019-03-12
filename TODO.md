@@ -3,6 +3,9 @@
 *PRs are welcome.*
 
 - block expressions
+- break
+- continue
+- return
 - subslice (`slice[l..r]`)
 - `-=` etc.
 - bit operators

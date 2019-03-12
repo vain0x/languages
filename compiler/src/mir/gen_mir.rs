@@ -493,8 +493,8 @@ pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
 }
 
 pub fn compile(src: &str) -> CompilationResult {
-    let src = src.to_owned();
-    let syntax = Rc::new(parse::parse(src));
+    let doc = Rc::new(Doc::new("main".to_string(), src.to_string()));
+    let syntax = Rc::new(parse::parse(doc));
 
     let sema = Rc::new(sema::sema(syntax));
     if !sema.is_successful() {

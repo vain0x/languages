@@ -1,18 +1,18 @@
 use crate::*;
 use std::cell::RefCell;
 
-#[derive(Default)]
-struct Tokenizer<'a> {
-    src: &'a str,
+struct Tokenizer {
+    doc: Rc<Doc>,
     current: usize,
     tokens: BTreeMap<TokenId, Token>,
     tick: RefCell<usize>,
 }
 
-impl Tokenizer<'_> {
+impl Tokenizer {
     fn add_token(&mut self, kind: TokenKind, span: Span) {
+        let doc = Rc::clone(&self.doc);
         let token_id = TokenId::new(self.tokens.len());
-        self.tokens.insert(token_id, Token { kind, span });
+        self.tokens.insert(token_id, Token { kind, doc, span });
     }
 
     fn next_char(&self) -> u8 {
@@ -24,11 +24,11 @@ impl Tokenizer<'_> {
         if self.at_eof() {
             return 0;
         }
-        self.src.as_bytes()[self.current]
+        self.src().as_bytes()[self.current]
     }
 
     fn at_eof(&self) -> bool {
-        self.current >= self.src.len()
+        self.current >= self.src().len()
     }
 
     fn read_while<P: Fn(u8) -> bool>(&mut self, pred: P) -> Option<(String, Span)> {
@@ -40,11 +40,11 @@ impl Tokenizer<'_> {
             self.current += 1;
         }
         let r = self.current;
-        Some((self.src[l..r].to_string(), (l, r)))
+        Some((self.src()[l..r].to_string(), (l, r)))
     }
 
     fn reads(&mut self, prefix: &str) -> bool {
-        if self.src[self.current..].starts_with(prefix) {
+        if self.src()[self.current..].starts_with(prefix) {
             self.current += prefix.len();
             return true;
         }
@@ -109,11 +109,17 @@ impl Tokenizer<'_> {
                 }
             }
 
-            let char_len = next_char_len(&self.src[self.current..]);
+            let char_len = next_char_len(&self.src()[self.current..]);
             self.current += char_len;
             self.add_token(TokenKind::Err, (l, self.current));
         }
         self.add_token(TokenKind::Eof, (self.current, self.current));
+    }
+}
+
+impl BorrowDoc for Tokenizer {
+    fn doc(&self) -> &Doc {
+        &self.doc
     }
 }
 
@@ -140,10 +146,12 @@ fn next_char_len(src: &str) -> usize {
         .len_utf8()
 }
 
-pub(crate) fn tokenize(src: &str) -> BTreeMap<TokenId, Token> {
+pub(crate) fn tokenize(doc: Rc<Doc>) -> BTreeMap<TokenId, Token> {
     let mut tokenizer = Tokenizer {
-        src,
-        ..Tokenizer::default()
+        doc,
+        current: 0,
+        tokens: BTreeMap::new(),
+        tick: RefCell::new(0),
     };
     tokenizer.tokenize();
     tokenizer.tokens
@@ -160,7 +168,10 @@ mod tests {
 
     #[test]
     fn test_tokenizer_does_not_hang() {
-        let result = tokenize("#!/bin/bash\necho こんにちは世界😀");
+        let result = tokenize(Rc::new(Doc::new(
+            format!("{}:{}", file!(), line!()),
+            "#!/bin/bash\necho こんにちは世界😀".to_string(),
+        )));
         assert!(result.len() != 0);
     }
 }

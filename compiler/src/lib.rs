@@ -19,6 +19,7 @@ pub use crate::mir::CompilationResult;
 pub(crate) use crate::mir::*;
 pub(crate) use crate::msg::*;
 pub(crate) use crate::semantics::*;
+pub use crate::syntax::Doc;
 pub(crate) use crate::syntax::*;
 use std::cmp::{min, Ordering};
 use std::collections::{BTreeMap, BTreeSet};

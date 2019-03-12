@@ -4,6 +4,20 @@ pub(crate) type Span = (usize, usize);
 pub(crate) type Pos = (usize, usize);
 pub(crate) type Range = (Pos, Pos);
 
+#[derive(Clone, Debug)]
+pub struct Doc {
+    uri: String,
+    src: String,
+}
+
+pub(crate) trait BorrowDoc {
+    fn doc(&self) -> &Doc;
+
+    fn src(&self) -> &str {
+        self.doc().src()
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub(crate) enum Op {
     Set,
@@ -56,9 +70,10 @@ pub(crate) enum TokenKind {
     Str,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct Token {
     pub kind: TokenKind,
+    pub doc: Rc<Doc>,
     pub span: Span,
 }
 
@@ -110,7 +125,7 @@ pub(crate) struct Exp {
 
 #[derive(Clone, Debug)]
 pub(crate) struct Syntax {
-    pub src: String,
+    pub doc: Rc<Doc>,
     pub tokens: BTreeMap<TokenId, Token>,
     pub exps: BTreeMap<ExpId, Exp>,
     pub root_exp_id: ExpId,
@@ -138,6 +153,20 @@ pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
 ];
 
 pub(crate) const PUNS: &'static [&'static str] = &["(", ")", "[", "]", "{", "}", ",", ";"];
+
+impl Doc {
+    pub fn new(uri: String, src: String) -> Self {
+        Doc { uri, src }
+    }
+
+    pub fn uri(&self) -> &str {
+        &self.uri
+    }
+
+    pub fn src(&self) -> &str {
+        &self.src
+    }
+}
 
 impl OpLevel {
     pub(crate) fn next_level(self) -> Option<Self> {
@@ -181,11 +210,18 @@ impl Keyword {
     }
 }
 
+impl Token {
+    pub fn text(&self) -> &str {
+        let (l, r) = self.span;
+        &self.doc.src()[l..r]
+    }
+}
+
 impl Syntax {
     pub(crate) fn locate(&self, x: usize) -> Pos {
         let mut line = 0;
         let mut column = 0;
-        for &c in &self.src.as_bytes()[0..x] {
+        for &c in &self.src().as_bytes()[0..x] {
             if c == b'\n' {
                 line += 1;
                 column = 0;
@@ -205,6 +241,12 @@ impl Syntax {
 
     pub fn exp_kind(&self, exp_id: ExpId) -> &ExpKind {
         &self.exps[&exp_id].kind
+    }
+}
+
+impl BorrowDoc for Syntax {
+    fn doc(&self) -> &Doc {
+        &self.doc
     }
 }
 

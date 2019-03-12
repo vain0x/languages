@@ -2,7 +2,6 @@ use crate::*;
 use std::cell::RefCell;
 
 struct Parser<'a> {
-    src: &'a str,
     tokens: &'a BTreeMap<TokenId, Token>,
     current: TokenId,
     exps: BTreeMap<ExpId, Exp>,
@@ -62,8 +61,7 @@ impl Parser<'_> {
     }
 
     fn text(&self, token_id: TokenId) -> &str {
-        let token = self.tokens[&token_id];
-        &self.src[token.span.0..token.span.1]
+        self.tokens[&token_id].text()
     }
 
     fn parse_err(&mut self, message: String) -> ExpId {
@@ -381,12 +379,11 @@ impl BorrowMutMsgs for Parser<'_> {
     }
 }
 
-pub(crate) fn parse(src: String) -> Syntax {
-    let tokens = tokenize::tokenize(&src);
+pub(crate) fn parse(doc: Rc<Doc>) -> Syntax {
+    let tokens = tokenize::tokenize(Rc::clone(&doc));
 
     let (root_exp_id, exps, msgs) = {
         let mut parser = Parser {
-            src: &src,
             tokens: &tokens,
             current: TokenId::default(),
             exps: BTreeMap::new(),
@@ -398,7 +395,7 @@ pub(crate) fn parse(src: String) -> Syntax {
     };
 
     Syntax {
-        src,
+        doc,
         tokens,
         exps,
         root_exp_id,

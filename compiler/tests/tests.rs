@@ -385,6 +385,14 @@ fn test_int_to_str() {
     )
 }
 
+#[test]
+fn test_use_prelude() {
+    eval_tests(
+        r#"println_str("Hello, world!");"#,
+        &[("", "Hello, world!\n")],
+    );
+}
+
 // Example in the README.
 #[test]
 fn test_example_fact() {

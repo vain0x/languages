@@ -494,8 +494,18 @@ pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
     compiler.compile()
 }
 
+static PRELUDE: &str = r#"
+    let println_str = fun(x) {
+        print(x);
+        print("\n");
+    };
+"#;
+
 pub fn compile(src: &str) -> CompilationResult {
     let mut syntax = Syntax::default();
+    let prelude_doc = Rc::new(Doc::new("prelude".to_string(), PRELUDE.to_string()));
+    syntax.add_doc(prelude_doc);
+
     let doc = Rc::new(Doc::new("main".to_string(), src.to_string()));
     syntax.add_doc(doc);
 

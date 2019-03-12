@@ -11,17 +11,21 @@ mod parse;
 mod sema;
 mod semantics;
 mod syntax;
+mod tests;
 mod tokenize;
 
 pub use crate::lsp::main::start_lsp_server;
 pub use crate::mir::gen_mir::compile;
 pub use crate::mir::CompilationResult;
-pub(crate) use crate::mir::*;
 pub use crate::msg::DocMsg;
+pub use crate::syntax::Doc;
+pub use crate::tests::helpers::{eval_tests, test_err};
+
+pub(crate) use crate::mir::*;
 pub(crate) use crate::msg::*;
 pub(crate) use crate::semantics::*;
-pub use crate::syntax::Doc;
 pub(crate) use crate::syntax::*;
+
 use std::cmp::{min, Ordering};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Formatter};

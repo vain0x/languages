@@ -7,10 +7,10 @@
             "name": "Launch Extension Host",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-ext"
             ],
             "env": {
-                "PICOMET_LANG_LSP_SERVER": "../compiler/target/debug/lsp_server"
+                "PICOMET_LANG_LSP_SERVER": "../solver/docker-lsp"
             },
             "preLaunchTask": "ext:build"
         }

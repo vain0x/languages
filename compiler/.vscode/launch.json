@@ -9,6 +9,9 @@
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode-ext"
             ],
+            "env": {
+                "PICOMET_LANG_LSP_SERVER": "../compiler/target/debug/lsp_server"
+            },
             "preLaunchTask": "ext:build"
         }
     ],

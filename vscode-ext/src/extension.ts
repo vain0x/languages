@@ -16,7 +16,10 @@ import {
 let client: LanguageClient
 
 export function activate(context: ExtensionContext) {
-  let serverPath = context.asAbsolutePath("../compiler/target/debug/lsp_server")
+  const path = process.env.PICOMET_LANG_LSP_SERVER || "./out/lsp_server"
+
+  let serverPath = context.asAbsolutePath(path)
+
   let serverOptions: ServerOptions = {
     command: serverPath,
   }

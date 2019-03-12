@@ -1,0 +1,17 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "ext:build",
+            "type": "shell",
+            "command": "yarn",
+            "args": [
+                "build"
+            ],
+            "options": {
+                "cwd": "../vscode-ext"
+            },
+            "group": "build"
+        }
+    ]
+}

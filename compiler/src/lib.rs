@@ -17,6 +17,7 @@ pub use crate::lsp::start_lsp_server;
 pub use crate::mir::gen_mir::compile;
 pub use crate::mir::CompilationResult;
 pub(crate) use crate::mir::*;
+pub use crate::msg::DocMsg;
 pub(crate) use crate::msg::*;
 pub(crate) use crate::semantics::*;
 pub use crate::syntax::Doc;

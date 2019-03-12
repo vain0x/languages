@@ -3,17 +3,19 @@
 extern crate picomet_lang_compiler;
 extern crate picomet_lang_runtime;
 
-use picomet_lang_compiler::{compile, CompilationResult};
+use picomet_lang_compiler::{compile, CompilationResult, DocMsg};
 use std::io;
 
 fn eval_tests(src: &str, ios: &[(&str, &str)]) {
     let CompilationResult {
         success,
         program,
-        stderr,
+        msgs,
         ..
     } = compile(src);
-    if !stderr.is_empty() {
+
+    if !success {
+        let stderr = DocMsg::to_text(&msgs);
         eprintln!("{}", stderr);
     }
     assert!(success, "src={} program={}", src, program);
@@ -34,10 +36,9 @@ fn eval_tests(src: &str, ios: &[(&str, &str)]) {
 fn test_err(src: &str, expected: &str) {
     let compress = |s: &str| s.replace(|c: char| c.is_ascii_whitespace(), "");
 
-    let CompilationResult {
-        success, stderr, ..
-    } = compile(src);
+    let CompilationResult { success, msgs, .. } = compile(src);
 
+    let stderr = DocMsg::to_text(&msgs);
     assert_eq!(
         compress(&stderr),
         compress(expected),

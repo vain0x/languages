@@ -89,8 +89,7 @@ pub(crate) struct Mir {
 pub struct CompilationResult {
     pub success: bool,
     pub program: String,
-    pub stderr: String,
-    pub msgs: Vec<Msg>,
+    pub msgs: Vec<DocMsg>,
 }
 
 pub(crate) const NO_REG_ID: RegId = RegId::new(0);

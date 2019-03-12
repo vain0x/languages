@@ -446,13 +446,12 @@ impl Compiler {
         }
 
         // Emit compile errors.
-        let (success, stderr) = Msg::summarize(self.mir.msgs.values(), &self.mir.sema.syntax);
+        let (success, msgs) = Msg::summarize(self.mir.msgs.values(), &self.mir.sema.syntax);
 
         CompilationResult {
             success,
             program,
-            stderr,
-            msgs: self.mir.msgs.values().cloned().collect(),
+            msgs,
         }
     }
 }
@@ -511,12 +510,11 @@ pub fn compile(src: &str) -> CompilationResult {
 
     let sema = Rc::new(sema::sema(Rc::new(syntax)));
     if !sema.is_successful() {
-        let (success, stderr) = Msg::summarize(sema.msgs.values(), &sema.syntax);
+        let (success, msgs) = Msg::summarize(sema.msgs.values(), &sema.syntax);
         return CompilationResult {
             success,
-            stderr,
+            msgs,
             program: "".to_string(),
-            msgs: sema.msgs.values().cloned().collect(),
         };
     }
 

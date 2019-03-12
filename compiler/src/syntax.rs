@@ -117,18 +117,18 @@ pub(crate) enum ExpKind {
     Semi(Vec<ExpId>),
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct Exp {
     pub kind: ExpKind,
+    pub doc: Rc<Doc>,
     pub span: Span,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct Syntax {
-    pub doc: Rc<Doc>,
     pub tokens: BTreeMap<TokenId, Token>,
     pub exps: BTreeMap<ExpId, Exp>,
-    pub root_exp_id: ExpId,
+    pub roots: Vec<ExpId>,
 }
 
 pub(crate) trait ShareSyntax {
@@ -216,11 +216,11 @@ impl Token {
     }
 }
 
-impl Syntax {
-    pub(crate) fn locate(&self, x: usize) -> Pos {
+impl Doc {
+    fn locate(&self, x: usize) -> Pos {
         let mut line = 0;
         let mut column = 0;
-        for &c in &self.src().as_bytes()[0..x] {
+        for &c in &self.src.as_bytes()[0..x] {
             if c == b'\n' {
                 line += 1;
                 column = 0;
@@ -230,21 +230,23 @@ impl Syntax {
         }
         (line, column)
     }
+}
+
+impl Syntax {
+    pub fn add_doc(&mut self, doc: Rc<Doc>) {
+        let root_token_id = tokenize::tokenize(self, doc);
+        parse::parse(self, root_token_id);
+    }
 
     pub(crate) fn locate_exp(&self, exp_id: ExpId) -> Range {
-        let (l, r) = self.exps[&exp_id].span;
-        let l_pos = self.locate(l);
-        let r_pos = self.locate(r);
+        let exp = &self.exps[&exp_id];
+        let (l, r) = exp.span;
+        let l_pos = exp.doc.locate(l);
+        let r_pos = exp.doc.locate(r);
         (l_pos, r_pos)
     }
 
     pub fn exp_kind(&self, exp_id: ExpId) -> &ExpKind {
         &self.exps[&exp_id].kind
-    }
-}
-
-impl BorrowDoc for Syntax {
-    fn doc(&self) -> &Doc {
-        &self.doc
     }
 }

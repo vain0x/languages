@@ -104,7 +104,6 @@ fn test_arithmetic_type_error() {
         "1 + (while 0 == 0 {})",
         r#"
             At 1:6..1:21 Type Error
-            At 1:3..1:22 Type Error
         "#,
     )
 }

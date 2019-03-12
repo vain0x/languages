@@ -1,18 +1,20 @@
 use crate::*;
 use std::cell::RefCell;
 
-struct Tokenizer {
+struct Tokenizer<'a> {
+    syntax: &'a mut Syntax,
     doc: Rc<Doc>,
     current: usize,
-    tokens: BTreeMap<TokenId, Token>,
     tick: RefCell<usize>,
 }
 
-impl Tokenizer {
+impl Tokenizer<'_> {
     fn add_token(&mut self, kind: TokenKind, span: Span) {
         let doc = Rc::clone(&self.doc);
-        let token_id = TokenId::new(self.tokens.len());
-        self.tokens.insert(token_id, Token { kind, doc, span });
+        let token_id = TokenId::new(self.syntax.tokens.len());
+        self.syntax
+            .tokens
+            .insert(token_id, Token { kind, doc, span });
     }
 
     fn next_char(&self) -> u8 {
@@ -117,7 +119,7 @@ impl Tokenizer {
     }
 }
 
-impl BorrowDoc for Tokenizer {
+impl BorrowDoc for Tokenizer<'_> {
     fn doc(&self) -> &Doc {
         &self.doc
     }
@@ -146,15 +148,16 @@ fn next_char_len(src: &str) -> usize {
         .len_utf8()
 }
 
-pub(crate) fn tokenize(doc: Rc<Doc>) -> BTreeMap<TokenId, Token> {
+pub(crate) fn tokenize(syntax: &'_ mut Syntax, doc: Rc<Doc>) -> TokenId {
+    let root_token_id = TokenId::new(syntax.tokens.len());
     let mut tokenizer = Tokenizer {
+        syntax,
         doc,
         current: 0,
-        tokens: BTreeMap::new(),
         tick: RefCell::new(0),
     };
     tokenizer.tokenize();
-    tokenizer.tokens
+    root_token_id
 }
 
 #[cfg(test)]
@@ -168,10 +171,12 @@ mod tests {
 
     #[test]
     fn test_tokenizer_does_not_hang() {
-        let result = tokenize(Rc::new(Doc::new(
+        let mut syntax = Syntax::default();
+        let doc = Rc::new(Doc::new(
             format!("{}:{}", file!(), line!()),
             "#!/bin/bash\necho こんにちは世界😀".to_string(),
-        )));
-        assert!(result.len() != 0);
+        ));
+        tokenize(&mut syntax, doc);
+        assert!(syntax.tokens.len() != 0);
     }
 }

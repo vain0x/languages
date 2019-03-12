@@ -42,7 +42,7 @@ pub(crate) struct VarDef {
 pub(crate) struct FunDef {
     pub name: String,
     pub ty: Ty,
-    pub body: ExpId,
+    pub bodies: Vec<ExpId>,
     pub symbols: Vec<SymbolKind>,
 }
 

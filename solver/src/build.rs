@@ -6,7 +6,7 @@ extern crate picomet_lang_compiler;
 use std::fs;
 use std::io::prelude::*;
 use std::path::Path;
-use picomet_lang_compiler::{compile, CompilationResult};
+use picomet_lang_compiler::{compile, CompilationResult, DocMsg};
 
 const TEMPLATE: &'static str = r#####"// picomet-lang <https://github.com/vain0x/picomet-lang>
 
@@ -44,7 +44,7 @@ fn main() {
     let current_contents = read_to_string(&out_path);
 
     let CompilationResult {
-        success, program: ir_contents, stderr, ..
+        success, program: ir_contents, msgs, ..
      } = compile(&picomet_contents);
 
     let out_contents = if success {
@@ -52,7 +52,8 @@ fn main() {
         .replace("${IR_CONTENTS}", &ir_contents)
         .replace("${RUNTIME_CONTENTS}", &runtime_contents)
     } else {
-        TEMPLATE.replace("${RUNTIME_CONTENTS}", &stderr)
+        let stderr = DocMsg::to_text(&msgs);
+        TEMPLATE.replace("${RUNTIME_CONTENTS}", &format!(r##"compile_error!(r#"{}"#)"##, &stderr))
     };
 
     if current_contents != out_contents {

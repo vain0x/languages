@@ -14,6 +14,7 @@ mod util;
 pub use crate::lsp::lsp_main::start_lsp_server;
 pub use crate::mir::gen_mir::compile;
 pub use crate::mir::CompilationResult;
+pub use crate::semantics::msg::DocMsg;
 pub use crate::syntax::Doc;
 pub use crate::tests::helpers::{eval_tests, test_err};
 

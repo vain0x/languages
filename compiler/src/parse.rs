@@ -5,7 +5,6 @@ struct Parser<'a> {
     tokens: &'a BTreeMap<TokenId, Token>,
     current: TokenId,
     exps: BTreeMap<ExpId, Exp>,
-    msgs: BTreeMap<MsgId, Msg>,
     tick: RefCell<usize>,
 }
 
@@ -54,10 +53,7 @@ impl Parser<'_> {
     }
 
     fn add_exp_err(&mut self, message: String, token_span: (TokenId, TokenId)) -> ExpId {
-        let msg_id = self.next_msg_id();
-        let exp_id = self.add_exp(ExpKind::Err(msg_id), token_span);
-        self.add_err_msg(message, exp_id);
-        exp_id
+        self.add_exp(ExpKind::Err(message), token_span)
     }
 
     fn text(&self, token_id: TokenId) -> &str {
@@ -373,25 +369,18 @@ impl Parser<'_> {
     }
 }
 
-impl BorrowMutMsgs for Parser<'_> {
-    fn msgs_mut(&mut self) -> &mut Msgs {
-        &mut self.msgs
-    }
-}
-
 pub(crate) fn parse(doc: Rc<Doc>) -> Syntax {
     let tokens = tokenize::tokenize(Rc::clone(&doc));
 
-    let (root_exp_id, exps, msgs) = {
+    let (root_exp_id, exps) = {
         let mut parser = Parser {
             tokens: &tokens,
             current: TokenId::default(),
             exps: BTreeMap::new(),
-            msgs: BTreeMap::new(),
             tick: RefCell::new(0),
         };
         let root_exp_id = parser.parse();
-        (root_exp_id, parser.exps, parser.msgs)
+        (root_exp_id, parser.exps)
     };
 
     Syntax {
@@ -399,6 +388,5 @@ pub(crate) fn parse(doc: Rc<Doc>) -> Syntax {
         tokens,
         exps,
         root_exp_id,
-        msgs,
     }
 }

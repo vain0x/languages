@@ -80,7 +80,7 @@ pub(crate) struct Token {
 /// Expression in concrete syntax tree.
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum ExpKind {
-    Err(MsgId),
+    Err(String),
     Int(i64),
     Str(String),
     Ident(String),
@@ -129,7 +129,6 @@ pub(crate) struct Syntax {
     pub tokens: BTreeMap<TokenId, Token>,
     pub exps: BTreeMap<ExpId, Exp>,
     pub root_exp_id: ExpId,
-    pub msgs: BTreeMap<MsgId, Msg>,
 }
 
 pub(crate) trait ShareSyntax {
@@ -247,11 +246,5 @@ impl Syntax {
 impl BorrowDoc for Syntax {
     fn doc(&self) -> &Doc {
         &self.doc
-    }
-}
-
-impl BorrowMutMsgs for Syntax {
-    fn msgs_mut(&mut self) -> &mut Msgs {
-        &mut self.msgs
     }
 }

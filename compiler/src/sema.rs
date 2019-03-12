@@ -72,7 +72,9 @@ impl SemanticAnalyzer {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            ExpKind::Err(_) => {}
+            ExpKind::Err(message) => {
+                self.add_err(message.to_string(), exp_id);
+            }
             ExpKind::Ident(name) => {
                 let var_id = if let Some(index) = arg_index {
                     self.add_arg(name.to_string(), ty.to_owned(), index)
@@ -101,6 +103,9 @@ impl SemanticAnalyzer {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
+            ExpKind::Err(message) => {
+                self.add_err(message.to_string(), exp_id);
+            }
             ExpKind::Ident(name) => {
                 let symbol_kind = match self.lookup_symbol(name) {
                     Some(symbol) => symbol.kind(),
@@ -189,7 +194,9 @@ impl SemanticAnalyzer {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            &ExpKind::Err(_) => {}
+            ExpKind::Err(message) => {
+                self.add_err(message.to_string(), exp_id);
+            }
             &ExpKind::Int(_) => {
                 self.set_ty(exp_id, &ty, &Ty::Int);
             }
@@ -365,7 +372,7 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
             exp_tys: BTreeMap::new(),
             vars: BTreeMap::new(),
             funs: BTreeMap::new(),
-            msgs: syntax.msgs.clone(),
+            msgs: BTreeMap::new(),
         },
         current_fun_id: GLOBAL_FUN_ID,
     };

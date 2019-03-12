@@ -57,6 +57,7 @@ pub(crate) struct Token {
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) enum ExpKind {
     Err(String),
+    Unit,
     Int(i64),
     Str(String),
     Ident(String),

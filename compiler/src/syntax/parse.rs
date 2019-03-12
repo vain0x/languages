@@ -92,6 +92,11 @@ impl Parser<'_> {
             }
             TokenKind::Pun("(") => {
                 self.current += 1;
+                if self.next().kind == TokenKind::Pun(")") {
+                    self.current += 1;
+                    return self.add_exp(ExpKind::Unit, (token_l, self.current));
+                }
+
                 let exp_id = self.parse_term();
 
                 if self.next().kind != TokenKind::Pun(")") {
@@ -259,7 +264,7 @@ impl Parser<'_> {
         let body = self.parse_term();
 
         if self.next().kind != TokenKind::Keyword(Keyword::Else) {
-            let alt = self.add_exp(ExpKind::Semi(vec![]), (token_l, self.current));
+            let alt = self.add_exp(ExpKind::Unit, (token_l, self.current));
 
             return self.add_exp(ExpKind::If { cond, body, alt }, (token_l, self.current));
         }
@@ -354,7 +359,7 @@ impl Parser<'_> {
 
         let token_span = (token_l, self.current);
         match children.len() {
-            0 => self.add_exp(ExpKind::Semi(vec![]), token_span),
+            0 => self.add_exp(ExpKind::Unit, token_span),
             1 => children[0],
             _ => self.add_exp(ExpKind::Semi(children), token_span),
         }

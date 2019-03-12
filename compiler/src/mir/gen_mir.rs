@@ -246,6 +246,7 @@ impl Compiler {
                 self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
                 NO_REG_ID
             }
+            &ExpKind::Unit => NO_REG_ID,
             &ExpKind::Int(value) => {
                 let reg_id = self.add_reg();
                 self.push(Cmd::Imm, reg_id, CmdArg::Int(value));

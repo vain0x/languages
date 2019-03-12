@@ -13,6 +13,13 @@ fn test_hello() {
 }
 
 #[test]
+fn test_unit_literal() {
+    eval_tests(r#"(); (())"#, &[("", "")]);
+
+    test_err("() + 0", "At 1:1..1:3 Type Error");
+}
+
+#[test]
 fn test_syntax_error_unexpected_eof() {
     test_err(r#"1 ++"#, "At 1:3..1:5 Expected EOF");
 }

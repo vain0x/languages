@@ -200,6 +200,9 @@ impl SemanticAnalyzer {
             ExpKind::Err(message) => {
                 self.add_err(message.to_string(), exp_id);
             }
+            &ExpKind::Unit => {
+                self.set_ty(exp_id, &ty, &Ty::Unit);
+            }
             &ExpKind::Int(_) => {
                 self.set_ty(exp_id, &ty, &Ty::Int);
             }

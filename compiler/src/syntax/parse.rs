@@ -197,8 +197,8 @@ impl Parser<'_> {
     }
 
     fn parse_bin_l(&mut self, op_level: OpLevel) -> ExpId {
-        let mut exp_l = self.parse_bin_next(op_level);
         let token_l = self.current;
+        let mut exp_l = self.parse_bin_next(op_level);
 
         while let &Token {
             kind: TokenKind::Op(op),
@@ -360,16 +360,20 @@ impl Parser<'_> {
         }
     }
 
-    fn parse_eof(&mut self) {
+    fn parse_eof(&mut self, exp_id: ExpId) -> ExpId {
         if self.next().kind != TokenKind::Eof {
-            self.parse_err("Expected EOF".to_string());
+            let exp_r = self.parse_err("Expected EOF".to_string());
+            return self.add_exp(
+                ExpKind::Semi(vec![exp_id, exp_r]),
+                (self.current, self.current),
+            );
         }
+        exp_id
     }
 
     fn parse(&mut self) -> ExpId {
         let exp_id = self.parse_exp();
-        self.parse_eof();
-        exp_id
+        self.parse_eof(exp_id)
     }
 }
 

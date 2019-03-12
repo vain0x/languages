@@ -13,6 +13,11 @@ fn test_hello() {
 }
 
 #[test]
+fn test_syntax_error_unexpected_eof() {
+    test_err(r#"1 ++"#, "At 1:3..1:5 Expected EOF");
+}
+
+#[test]
 fn test_arithmetic() {
     eval_tests(
         r#"

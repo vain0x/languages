@@ -1,4 +1,5 @@
 use crate::lsp::*;
+use std::io;
 use std::io::Write as _;
 
 pub(super) struct LspSender<W: io::Write> {

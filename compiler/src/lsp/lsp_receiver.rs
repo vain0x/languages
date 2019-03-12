@@ -1,4 +1,4 @@
-use crate::lsp::*;
+use std::io;
 use std::io::{BufRead as _, Read as _};
 
 pub(super) struct LspReceiver<R> {

@@ -1,5 +1,6 @@
 use crate::lsp::*;
 use lsp_types::*;
+use std::io;
 
 pub(super) struct LspHandler<W: io::Write> {
     sender: LspSender<W>,

@@ -13,7 +13,7 @@ mod semantics;
 mod syntax;
 mod tokenize;
 
-pub use crate::lsp::start_lsp_server;
+pub use crate::lsp::main::start_lsp_server;
 pub use crate::mir::gen_mir::compile;
 pub use crate::mir::CompilationResult;
 pub(crate) use crate::mir::*;

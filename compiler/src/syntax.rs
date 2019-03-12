@@ -1,8 +1,24 @@
-use crate::*;
+pub(crate) mod keyword;
+pub(crate) mod op;
+pub(crate) mod parse;
+pub(crate) mod tokenize;
+
+pub(crate) use self::keyword::*;
+pub(crate) use self::op::*;
+
+use crate::Id;
+use std::collections::BTreeMap;
+use std::rc::Rc;
 
 pub(crate) type Span = (usize, usize);
 pub(crate) type Pos = (usize, usize);
 pub(crate) type Range = (Pos, Pos);
+
+pub(crate) struct TokenTag;
+pub(crate) struct ExpTag;
+
+pub(crate) type TokenId = Id<TokenTag>;
+pub(crate) type ExpId = Id<ExpTag>;
 
 #[derive(Clone, Debug)]
 pub struct Doc {
@@ -16,46 +32,6 @@ pub(crate) trait BorrowDoc {
     fn src(&self) -> &str {
         self.doc().src()
     }
-}
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub(crate) enum Op {
-    Set,
-    SetAdd,
-    /// `==`
-    Eq,
-    /// `!=`
-    Ne,
-    /// `<`
-    Lt,
-    /// `<=`
-    Le,
-    /// `>`
-    Gt,
-    /// `>=`
-    Ge,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-}
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub(crate) enum OpLevel {
-    Set,
-    Cmp,
-    Add,
-    Mul,
-}
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub(crate) enum Keyword {
-    Let,
-    Fun,
-    If,
-    Else,
-    While,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -135,22 +111,6 @@ pub(crate) trait ShareSyntax {
     fn share_syntax(&self) -> Rc<Syntax>;
 }
 
-pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
-    ("=", Op::Set, OpLevel::Set),
-    ("+=", Op::SetAdd, OpLevel::Set),
-    ("==", Op::Eq, OpLevel::Cmp),
-    ("!=", Op::Ne, OpLevel::Cmp),
-    ("<", Op::Lt, OpLevel::Cmp),
-    ("<=", Op::Le, OpLevel::Cmp),
-    (">", Op::Gt, OpLevel::Cmp),
-    (">=", Op::Ge, OpLevel::Cmp),
-    ("+", Op::Add, OpLevel::Add),
-    ("-", Op::Sub, OpLevel::Add),
-    ("*", Op::Mul, OpLevel::Mul),
-    ("/", Op::Div, OpLevel::Mul),
-    ("%", Op::Mod, OpLevel::Mul),
-];
-
 pub(crate) const PUNS: &'static [&'static str] = &["(", ")", "[", "]", "{", "}", ",", ";"];
 
 impl Doc {
@@ -165,58 +125,7 @@ impl Doc {
     pub fn src(&self) -> &str {
         &self.src
     }
-}
 
-impl OpLevel {
-    pub(crate) fn next_level(self) -> Option<Self> {
-        match self {
-            OpLevel::Set => Some(OpLevel::Cmp),
-            OpLevel::Cmp => Some(OpLevel::Add),
-            OpLevel::Add => Some(OpLevel::Mul),
-            OpLevel::Mul => None,
-        }
-    }
-
-    pub(crate) fn contains(self, the_op: Op) -> bool {
-        for &(_, op, op_level) in OPS {
-            if op == the_op && op_level == self {
-                return true;
-            }
-        }
-        false
-    }
-}
-
-impl Keyword {
-    pub(crate) fn text(self) -> &'static str {
-        match self {
-            Keyword::Let => "let",
-            Keyword::Fun => "fun",
-            Keyword::If => "if",
-            Keyword::Else => "else",
-            Keyword::While => "while",
-        }
-    }
-
-    pub(crate) fn get_all() -> &'static [Keyword] {
-        &[
-            Keyword::Let,
-            Keyword::Fun,
-            Keyword::If,
-            Keyword::Else,
-            Keyword::While,
-        ]
-    }
-}
-
-impl Token {
-    pub fn text(&self) -> &str {
-        let (l, r) = self.span;
-        &self.doc.src()[l..r]
-    }
-}
-
-impl Doc {
     fn locate(&self, x: usize) -> Pos {
         let mut line = 0;
         let mut column = 0;
@@ -229,6 +138,13 @@ impl Doc {
             }
         }
         (line, column)
+    }
+}
+
+impl Token {
+    pub fn text(&self) -> &str {
+        let (l, r) = self.span;
+        &self.doc.src()[l..r]
     }
 }
 

@@ -1,5 +1,8 @@
-use crate::*;
-use std::collections::BTreeSet;
+use super::*;
+use crate::syntax::*;
+use std::collections::{BTreeMap, BTreeSet};
+use std::iter;
+use std::rc::Rc;
 
 pub(crate) struct SemanticAnalyzer {
     sema: Sema,

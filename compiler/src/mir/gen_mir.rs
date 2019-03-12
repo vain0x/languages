@@ -1,6 +1,11 @@
-use crate::*;
+use super::*;
+use crate::semantics::*;
+use crate::syntax::*;
+use std::collections::BTreeMap;
 use std::fmt::Write;
+use std::iter;
 use std::mem::size_of;
+use std::rc::Rc;
 
 struct Compiler {
     mir: Mir,
@@ -441,8 +446,8 @@ impl Compiler {
             .join(",");
         writeln!(program, "    .text {}", csv_encoded_text).unwrap();
         for &(cmd, l, r) in &inss {
-            let cmd = crate::serialize_cmd(cmd);
-            writeln!(program, "    {} {} {}", cmd, l.0, r.to_i64()).unwrap();
+            let cmd = serialize_cmd(cmd);
+            writeln!(program, "    {} {} {}", cmd, l, r.to_i64()).unwrap();
         }
 
         // Emit compile errors.
@@ -468,8 +473,8 @@ impl CmdArg {
             CmdArg::None => 0,
             CmdArg::Int(value) => value,
             CmdArg::Ptr(p, q) => (lo32(q) << 32 | lo32(p)) as i64,
-            CmdArg::Reg(value) => value.0 as i64,
-            CmdArg::Label(value) => value.0 as i64,
+            CmdArg::Reg(value) => usize::from(value) as i64,
+            CmdArg::Label(value) => usize::from(value) as i64,
         }
     }
 }
@@ -508,7 +513,7 @@ pub fn compile(src: &str) -> CompilationResult {
     let doc = Rc::new(Doc::new("main".to_string(), src.to_string()));
     syntax.add_doc(doc);
 
-    let sema = Rc::new(sema::sema(Rc::new(syntax)));
+    let sema = Rc::new(analyze::sema(Rc::new(syntax)));
     if !sema.is_successful() {
         let (success, msgs) = Msg::summarize(sema.msgs.values(), &sema.syntax);
         return CompilationResult {

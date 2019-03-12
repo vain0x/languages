@@ -1,11 +1,23 @@
-mod features;
-mod lsp_handler;
-mod lsp_receiver;
-mod lsp_sender;
-pub(super) mod main;
-mod types;
+pub(super) mod features;
+pub(super) mod lsp_handler;
+pub(super) mod lsp_main;
+pub(super) mod lsp_receiver;
+pub(super) mod lsp_sender;
 
-pub(self) use self::types::*;
 pub(self) use lsp_handler::LspHandler;
 pub(self) use lsp_receiver::LspReceiver;
 pub(self) use lsp_sender::LspSender;
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct LspResponse<Result> {
+    pub jsonrpc: String,
+    pub id: i64,
+    pub result: Result,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct LspNotification<Params> {
+    pub jsonrpc: String,
+    pub method: String,
+    pub params: Params,
+}

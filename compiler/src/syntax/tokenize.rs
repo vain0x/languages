@@ -1,5 +1,6 @@
-use crate::*;
+use super::*;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 struct Tokenizer<'a> {
     syntax: &'a mut Syntax,

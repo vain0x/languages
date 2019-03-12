@@ -1,62 +1,18 @@
+pub(crate) mod cmd;
 pub(crate) mod gen_mir;
 pub(crate) mod regalloc;
 
-use crate::*;
+pub(crate) use self::cmd::*;
+use crate::semantics::*;
+use crate::Id;
+use std::collections::BTreeMap;
+use std::rc::Rc;
 
-macro_rules! define_cmd {
-    ($($name:ident,)*) => {
-        #[derive(Clone, Copy, PartialEq, Debug)]
-        pub(crate) enum Cmd {
-            $($name),*
-        }
+pub(crate) struct RegTag;
+pub(crate) type RegId = Id<RegTag>;
 
-        pub(crate) fn serialize_cmd(cmd: Cmd) -> &'static str {
-            $(if cmd == Cmd::$name {
-                return stringify!($name);
-            })*
-            unreachable!()
-        }
-    };
-}
-
-define_cmd! {
-    Kill,
-    Imm,
-    AddImm,
-    Mov,
-    Store,
-    Store8,
-    Load,
-    Load8,
-    Push,
-    Pop,
-    PushRegs,
-    PopRegs,
-    Label,
-    Jump,
-    Unless,
-    Call,
-    Ret,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-    Eq,
-    Ne,
-    Lt,
-    Le,
-    Gt,
-    Ge,
-    BitAnd,
-    BitShiftR,
-    ReadInt,
-    ReadStr,
-    PrintLnInt,
-    Alloc,
-    Write,
-    Exit,
-}
+pub(crate) struct LabelTag;
+pub(crate) type LabelId = Id<LabelTag>;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum CmdArg {

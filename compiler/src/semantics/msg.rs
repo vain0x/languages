@@ -1,4 +1,6 @@
-use crate::*;
+use super::*;
+use crate::syntax::*;
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub struct DocMsg {
@@ -9,7 +11,7 @@ pub struct DocMsg {
 }
 
 #[derive(Clone, Debug)]
-pub struct Msg {
+pub(crate) struct Msg {
     level: MsgLevel,
     message: String,
     exp_id: ExpId,

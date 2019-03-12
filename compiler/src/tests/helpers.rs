@@ -1,6 +1,6 @@
 use crate::mir::gen_mir::compile;
 use crate::mir::CompilationResult;
-use crate::msg::DocMsg;
+use crate::semantics::DocMsg;
 use std::io;
 
 pub fn eval_tests(src: &str, ios: &[(&str, &str)]) {

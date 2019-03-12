@@ -1,4 +1,5 @@
-use crate::*;
+use super::*;
+use std::collections::BTreeMap;
 
 struct RegAlloc {
     used: Vec<bool>,
@@ -28,7 +29,7 @@ impl RegAlloc {
             return reg_id;
         }
         let reg_id = self.alloc(reg_id);
-        self.used[reg_id.0] = false;
+        self.used[usize::from(reg_id)] = false;
         reg_id
     }
 

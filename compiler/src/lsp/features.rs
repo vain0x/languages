@@ -1,4 +1,4 @@
-use crate::DocMsg;
+use crate::semantics::DocMsg;
 use lsp_types::*;
 
 fn msg_to_diagnostic(msg: &DocMsg) -> Diagnostic {

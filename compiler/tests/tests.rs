@@ -20,6 +20,11 @@ fn test_unit_literal() {
 }
 
 #[test]
+fn test_trailing_semicolons_discard_result() {
+    test_err(r#"if 0 == 0 { 0; } else { 0 }"#, "At 1:25..1:26 Type Error");
+}
+
+#[test]
 fn test_syntax_error_unexpected_eof() {
     test_err(r#"1 ++"#, "At 1:3..1:5 Expected EOF");
 }

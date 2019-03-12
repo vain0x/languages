@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 struct Parser<'a> {
     syntax: &'a mut Syntax,
+    first: TokenId,
     current: TokenId,
     tick: RefCell<usize>,
 }
@@ -17,6 +18,13 @@ impl Parser<'_> {
 
         assert!(self.current < TokenId::new(self.syntax.tokens.len()));
         &self.syntax.tokens[&self.current]
+    }
+
+    fn prev(&self) -> Option<&Token> {
+        if self.current == self.first {
+            return None;
+        }
+        Some(&self.syntax.tokens[&(self.current - 1)])
     }
 
     fn is_followed_by_exp(&self) -> bool {
@@ -357,6 +365,11 @@ impl Parser<'_> {
             }
         }
 
+        // Trailing semicolons discard the result.
+        if let Some(TokenKind::Pun(";")) = self.prev().map(|t| t.kind) {
+            children.push(self.add_exp(ExpKind::Unit, (self.current - 1, self.current - 1)));
+        }
+
         let token_span = (token_l, self.current);
         match children.len() {
             0 => self.add_exp(ExpKind::Unit, token_span),
@@ -386,6 +399,7 @@ pub(crate) fn parse(syntax: &'_ mut Syntax, root_token_id: TokenId) {
     let root_exp_id = {
         let mut parser = Parser {
             syntax,
+            first: root_token_id,
             current: root_token_id,
             tick: RefCell::new(0),
         };

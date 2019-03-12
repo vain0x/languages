@@ -2,7 +2,6 @@
 
 *PRs are welcome.*
 
-- semicolon discarding value (`{ a }` is `a` but `{ a; }` is unit)
 - block expressions
 - subslice (`slice[l..r]`)
 - `-=` etc.

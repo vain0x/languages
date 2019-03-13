@@ -424,6 +424,19 @@ fn test_fun_rec() {
     );
 }
 
+#[test]
+fn test_fun_shadowing() {
+    eval_tests(
+        r#"
+            let f = || 2;
+            println_int(f());
+            let f = || 3 * f();
+            println_int(f());
+        "#,
+        &[("", "2\n6\n")],
+    )
+}
+
 static STDLIB: &str = r#"
     let DIGIT_CHARS = "0123456789";
     let HYPHEN_CHAR = "-"[0];

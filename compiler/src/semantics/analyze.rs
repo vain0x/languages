@@ -46,7 +46,6 @@ impl SemanticAnalyzer {
             symbols: vec![],
         };
         self.sema.funs.insert(fun_id, fun_def);
-        self.current_fun_mut().symbols.push(SymbolKind::Fun(fun_id));
         fun_id
     }
 
@@ -324,6 +323,8 @@ impl SemanticAnalyzer {
 
                         self.current_fun_id = outer_fun_id;
                         self.current_loop_id = outer_loop_id;
+
+                        self.current_fun_mut().symbols.push(SymbolKind::Fun(fun_id));
                     }
                     _ => {
                         self.on_pat(pat, Ty::Var(pat), None);
@@ -352,7 +353,8 @@ impl SemanticAnalyzer {
             _ => return,
         };
 
-        self.add_fun_decl(pat, name, Ty::Var(pat));
+        let fun_id = self.add_fun_decl(pat, name, Ty::Var(pat));
+        self.current_fun_mut().symbols.push(SymbolKind::Fun(fun_id));
     }
 
     fn on_vals(&mut self, exp_ids: &[ExpId]) {

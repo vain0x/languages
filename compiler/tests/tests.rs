@@ -449,6 +449,18 @@ fn test_fun_shadowing() {
     )
 }
 
+#[test]
+fn test_fun_rec_must_have_unique_name() {
+    // FIXME: Clearer message
+    test_err(
+        r#"
+            let rec f = || 1;
+            let rec f = || 2;
+        "#,
+        "At 2:21..2:22 Function not defined",
+    );
+}
+
 static STDLIB: &str = r#"
     let DIGIT_CHARS = "0123456789";
     let HYPHEN_CHAR = "-"[0];

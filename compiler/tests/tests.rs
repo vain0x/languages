@@ -425,6 +425,18 @@ fn test_fun_rec() {
 }
 
 #[test]
+fn test_fun_rec_mutually() {
+    eval_tests(
+        r#"
+            let rec even = |x| if x > 0 { odd(x - 1) } else { 1 };
+            let rec odd = |x| if x > 0 { even(x - 1) } else { 0 };
+            println_int(even(8));
+        "#,
+        &[("", "1\n")],
+    )
+}
+
+#[test]
 fn test_fun_shadowing() {
     eval_tests(
         r#"

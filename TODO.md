@@ -15,9 +15,6 @@
     - `as byte`
 - `for`
     - `for x in l..r { body }` ---> `let x = l; while x < r { body; x += 1 }`
-- `let rec`
-    - `let rec` is same as `let` except that the declaration is hoisted to the top of the scope
-    - `let rec f = || g(); let rec g = || f()` ---> `let f; let g; f = || g(); g = || f()`
 - block expressions
 
 ## Heavy Topics

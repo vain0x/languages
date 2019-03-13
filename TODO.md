@@ -9,8 +9,6 @@
 - pipeline operator (`x |> f(y)` ---> `f(x, y)`)
 - address-of (`&x`)
     - slice of one element
-- char literals
-    - `'a'` : byte type
 - lambda syntax
     - `fun() x` → `|| x` or `| | x`
     - `fun(x, y) x + y` → `|x, y| x + y`

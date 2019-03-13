@@ -85,6 +85,10 @@ impl Parser<'_> {
                 let value = self.text(token_l).parse::<i64>().ok().unwrap_or(-1);
                 self.add_exp(ExpKind::Int(value), (token_l, self.current))
             }
+            TokenKind::Char(c) => {
+                self.current += 1;
+                self.add_exp(ExpKind::Byte(c), (token_l, self.current))
+            }
             TokenKind::Str => {
                 self.current += 1;
                 let value = {

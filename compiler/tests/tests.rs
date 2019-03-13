@@ -101,6 +101,20 @@ fn test_str_literal_escape_sequence() {
 }
 
 #[test]
+fn test_char_literal_escape_sequence() {
+    eval_tests(
+        r#"
+            println_int(byte_to_int('A'));
+            println_int(byte_to_int('\0'));
+            println_int(byte_to_int('\n'));
+            println_int(byte_to_int('\r'));
+            println_int(byte_to_int('\''));
+        "#,
+        &[("", "65\n0\n10\n13\n39\n")],
+    );
+}
+
+#[test]
 fn test_write() {
     eval_tests(
         r#"

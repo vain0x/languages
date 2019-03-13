@@ -227,6 +227,9 @@ impl SemanticAnalyzer {
             &ExpKind::Int(_) => {
                 self.set_ty(exp_id, &ty, &Ty::Int);
             }
+            &ExpKind::Byte(_) => {
+                self.set_ty(exp_id, &ty, &Ty::Byte);
+            }
             ExpKind::Str(_) => {
                 self.set_ty(exp_id, &ty, &Ty::make_str());
             }

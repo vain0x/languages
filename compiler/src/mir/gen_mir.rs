@@ -261,6 +261,11 @@ impl Compiler {
                 self.push(Cmd::Imm, reg_id, CmdArg::Int(value));
                 reg_id
             }
+            &ExpKind::Byte(value) => {
+                let reg_id = self.add_reg();
+                self.push(Cmd::Imm, reg_id, CmdArg::Int(value as i64));
+                reg_id
+            }
             ExpKind::Str(value) => {
                 let (p, q) = self.alloc(value.as_bytes());
                 let reg_id = self.add_reg();

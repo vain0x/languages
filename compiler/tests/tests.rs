@@ -302,6 +302,37 @@ fn test_fun_to_modify_globals() {
     )
 }
 
+#[test]
+fn test_fun_return() {
+    eval_tests(
+        r#"
+            let f = fun(x) {
+                if x % 2 == 0 { return x / 2 }
+                x * 3 + 1
+            };
+            println_int(1 + f(1) + 1);
+            println_int(4 + f(4) + 4);
+            if 0 == 0 { return }
+            println_int(-1)
+        "#,
+        &[("", "6\n10\n")],
+    )
+}
+
+#[test]
+fn test_fun_return_same_type() {
+    test_err(
+        r#"
+            let f = fun(x) {
+                if x == 0 { return }
+                0
+            };
+            f(0);
+        "#,
+        "At 3:17..4:18 Type Error",
+    )
+}
+
 static STDLIB: &str = r#"
     let DIGIT_CHARS = "0123456789";
     let HYPHEN_CHAR = "-"[0];

@@ -2,6 +2,7 @@
 pub(crate) enum Keyword {
     Let,
     Fun,
+    Return,
     If,
     Else,
     While,
@@ -12,6 +13,7 @@ impl Keyword {
         match self {
             Keyword::Let => "let",
             Keyword::Fun => "fun",
+            Keyword::Return => "return",
             Keyword::If => "if",
             Keyword::Else => "else",
             Keyword::While => "while",
@@ -22,6 +24,7 @@ impl Keyword {
         &[
             Keyword::Let,
             Keyword::Fun,
+            Keyword::Return,
             Keyword::If,
             Keyword::Else,
             Keyword::While,

@@ -27,7 +27,8 @@ pub(crate) type Ins = (Cmd, RegId, CmdArg);
 
 #[derive(Clone, Debug)]
 pub(crate) struct GenFunDef {
-    pub label_id: LabelId,
+    pub body_label_id: LabelId,
+    pub end_label_id: LabelId,
     pub inss: Vec<Ins>,
 }
 

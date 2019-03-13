@@ -44,7 +44,7 @@ impl SymbolRef<'_> {
         match self {
             SymbolRef::Prim(prim) => prim.get_ty(),
             SymbolRef::Var(_, var_def) => var_def.ty.to_owned(),
-            SymbolRef::Fun(_, fun_def) => fun_def.ty.to_owned(),
+            SymbolRef::Fun(_, fun_def) => fun_def.ty().to_owned(),
         }
     }
 }

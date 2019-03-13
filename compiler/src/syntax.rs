@@ -78,6 +78,7 @@ pub(crate) enum ExpKind {
         pats: Vec<ExpId>,
         body: ExpId,
     },
+    Return(ExpId),
     If {
         cond: ExpId,
         body: ExpId,

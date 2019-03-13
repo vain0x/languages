@@ -1,7 +1,6 @@
 use super::*;
 use crate::syntax::*;
 use std::collections::{BTreeMap, BTreeSet};
-use std::iter;
 use std::rc::Rc;
 
 pub(crate) struct SemanticAnalyzer {
@@ -10,6 +9,10 @@ pub(crate) struct SemanticAnalyzer {
 }
 
 impl SemanticAnalyzer {
+    fn current_fun(&self) -> &FunDef {
+        self.sema.funs.get(&self.current_fun_id).unwrap()
+    }
+
     fn current_fun_mut(&mut self) -> &mut FunDef {
         self.sema.funs.get_mut(&self.current_fun_id).unwrap()
     }
@@ -27,11 +30,18 @@ impl SemanticAnalyzer {
         self.sema.add_err_msg(message, exp_id);
     }
 
-    fn add_fun(&mut self, name: String, ty: Ty, bodies: Vec<ExpId>) -> FunId {
+    fn add_fun(
+        &mut self,
+        name: String,
+        arg_tys: Vec<Ty>,
+        result_ty: Ty,
+        bodies: Vec<ExpId>,
+    ) -> FunId {
         let fun_id = FunId::new(self.sema.funs.len());
         let fun_def = FunDef {
             name,
-            ty,
+            arg_tys,
+            result_ty,
             bodies,
             symbols: vec![],
         };
@@ -210,6 +220,11 @@ impl SemanticAnalyzer {
                 self.set_ty(exp_id, &ty, &Ty::make_str());
             }
             ExpKind::Ident(name) => self.on_ident(exp_id, ty, name),
+            &ExpKind::Return(result) => {
+                let result_ty = self.current_fun().result_ty.to_owned();
+                self.on_val(result, result_ty);
+                self.set_ty(exp_id, &ty, &Ty::Unit);
+            }
             ExpKind::Call { callee, args } => self.on_call(exp_id, ty, *callee, &args),
             ExpKind::Index { indexee, arg } => self.on_index(exp_id, ty, *indexee, *arg),
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, ty, op, l, r),
@@ -236,12 +251,14 @@ impl SemanticAnalyzer {
                     (ExpKind::Ident(fun_name), ExpKind::Fun { pats, body }) => {
                         self.set_ty(exp_id, &ty, &Ty::Unit);
 
-                        let fun_ty =
-                            Ty::make_fun(pats.iter().cloned().map(Ty::Var), Ty::Var(*body));
-                        self.on_pat(pat, fun_ty.to_owned(), None);
+                        let arg_tys = pats.iter().cloned().map(Ty::Var).collect::<Vec<_>>();
+                        let result_ty = Ty::Var(*body);
+                        let fun_ty = Ty::make_fun(arg_tys.iter().cloned(), result_ty.to_owned());
+                        self.on_pat(pat, fun_ty, None);
 
                         let outer_fun_id = self.current_fun_id;
-                        let fun_id = self.add_fun(fun_name.to_string(), fun_ty, vec![*body]);
+                        let fun_id =
+                            self.add_fun(fun_name.to_string(), arg_tys, result_ty, vec![*body]);
                         self.current_fun_id = fun_id;
 
                         for (i, pat) in pats.iter().cloned().enumerate() {
@@ -277,8 +294,13 @@ impl SemanticAnalyzer {
         // Link all roots to a function.
         let roots = self.sema.syntax.roots.to_owned();
         let last_exp_id = *roots.last().expect("At least one document");
-        let main_fun_ty = Ty::make_fun(iter::empty(), Ty::Var(last_exp_id));
-        let fun_id = self.add_fun("main".to_string(), main_fun_ty, roots.to_owned());
+        let main_fun_result_ty = Ty::Var(last_exp_id);
+        let fun_id = self.add_fun(
+            "main".to_string(),
+            vec![],
+            main_fun_result_ty,
+            roots.to_owned(),
+        );
         assert_eq!(fun_id, GLOBAL_FUN_ID);
         self.current_fun_id = GLOBAL_FUN_ID;
 

@@ -35,7 +35,8 @@ pub(crate) struct VarDef {
 #[derive(Clone, Debug)]
 pub(crate) struct FunDef {
     pub name: String,
-    pub ty: Ty,
+    pub arg_tys: Vec<Ty>,
+    pub result_ty: Ty,
     pub bodies: Vec<ExpId>,
     pub symbols: Vec<SymbolKind>,
 }
@@ -49,6 +50,12 @@ pub(crate) struct Sema {
     pub vars: BTreeMap<VarId, VarDef>,
     pub funs: BTreeMap<FunId, FunDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
+}
+
+impl FunDef {
+    pub(crate) fn ty(&self) -> Ty {
+        Ty::make_fun(self.arg_tys.iter().cloned(), self.result_ty.to_owned())
+    }
 }
 
 impl Sema {

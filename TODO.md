@@ -2,28 +2,28 @@
 
 *PRs are welcome.*
 
-- block expressions
 - subslice (`slice[l..r]`)
 - `-=` etc.
 - bit operators
 - `&&`, `||`
 - pipeline operator (`x |> f(y)` ---> `f(x, y)`)
 - address-of (`&x`)
-- type annotations (`fun(x: int): unit { .. }`)
-
-## To Be Determined
-
-- int/byte conversion
-- int/ptr cast
-- for expressions (to be determined)
-    - `for x in l..r { }` where `l`, `r`: int
-    - how to iterate over slices or vectors?
-- recursive functions
+    - slice of one element
 - char literals
-    - whether support non-utf8 Unicode or not
-- Rust-style function/lambda syntax
-- abstraction (trait, class or nothing?)
-- rename of the language
+    - `'a'` : byte type
+- lambda syntax
+    - `fun() x` → `|| x` or `| | x`
+    - `fun(x, y) x + y` → `|x, y| x + y`
+- type annotations (`|x: int| -> unit { .. }`)
+- numeric cast
+    - `as int`
+    - `as byte`
+- `for`
+    - `for x in l..r { body }` ---> `let x = l; while x < r { body; x += 1 }`
+- `let rec`
+    - `let rec` is same as `let` except that the declaration is hoisted to the top of the scope
+    - `let rec f = fun() g(); let rec g = fun() f()` ---> `let f; let g; f = fun() g(); g = fun() f()`
+- block expressions
 
 ## Heavy Topics
 
@@ -47,3 +47,10 @@
     - Currently only `\n` is supported.
 - 64bit float
 - Optimization
+
+## To Be Determined
+
+- int/slice cast
+- for expressions to iterate over slices or vectors?
+- abstraction (trait, class or nothing?)
+- rename the language

@@ -409,6 +409,21 @@ fn test_fun_return_same_type() {
     )
 }
 
+#[test]
+fn test_fun_rec() {
+    eval_tests(
+        r#"
+            let rec fact = |x| if x <= 1 {
+                1
+            } else {
+                x * fact(x - 1)
+            };
+            println_int(fact(read_int()));
+        "#,
+        &[("1", "1\n"), ("5", "120\n")],
+    );
+}
+
 static STDLIB: &str = r#"
     let DIGIT_CHARS = "0123456789";
     let HYPHEN_CHAR = "-"[0];

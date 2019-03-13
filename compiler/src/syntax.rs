@@ -95,6 +95,7 @@ pub(crate) enum ExpKind {
     Let {
         pat: ExpId,
         init: ExpId,
+        rec: bool,
     },
     Semi(Vec<ExpId>),
 }

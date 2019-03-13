@@ -362,6 +362,13 @@ impl Parser<'_> {
         let token_l = self.current;
         self.current += 1;
 
+        let rec = if self.next().kind == TokenKind::Keyword(Keyword::Rec) {
+            self.current += 1;
+            true
+        } else {
+            false
+        };
+
         let pat_exp_id = self.parse_atom();
 
         if self.next().kind != TokenKind::Op(Op::Set) {
@@ -375,6 +382,7 @@ impl Parser<'_> {
             ExpKind::Let {
                 pat: pat_exp_id,
                 init: init_exp_id,
+                rec,
             },
             (token_l, self.current),
         )

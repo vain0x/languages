@@ -33,12 +33,21 @@ pub(crate) struct VarDef {
     pub kind: VarKind,
 }
 
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) enum FunKind {
+    Decl(ExpId),
+    Def {
+        /// A function can have 1+ bodies.
+        /// These expressions are combined with `;`.
+        bodies: Vec<ExpId>,
+    },
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct FunDef {
     pub name: String,
-    pub arg_tys: Vec<Ty>,
-    pub result_ty: Ty,
-    pub bodies: Vec<ExpId>,
+    pub kind: FunKind,
+    pub ty: Ty,
     pub symbols: Vec<SymbolKind>,
 }
 
@@ -50,25 +59,64 @@ pub(crate) struct LoopDef {
 #[derive(Clone, Debug)]
 pub(crate) struct Sema {
     pub syntax: Rc<Syntax>,
+
+    /// Exp to related symbol mapping.
     pub exp_symbols: BTreeMap<ExpId, SymbolKind>,
+
+    /// Exp to related loop mapping.
     pub exp_loops: BTreeMap<ExpId, LoopId>,
+
+    /// Expressions that may be a reference but is a value.
     pub exp_vals: BTreeSet<ExpId>,
+
+    /// Expressions that does nothing on runtime.
+    pub exp_decls: BTreeSet<ExpId>,
+
+    /// Type of expressions.
     pub exp_tys: BTreeMap<ExpId, Ty>,
+
     pub vars: BTreeMap<VarId, VarDef>,
     pub funs: BTreeMap<FunId, FunDef>,
     pub loops: BTreeMap<LoopId, LoopDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 
+impl FunKind {
+    pub(crate) fn is_decl(&self) -> bool {
+        match self {
+            FunKind::Decl(_) => true,
+            _ => false,
+        }
+    }
+}
+
 impl FunDef {
     pub(crate) fn ty(&self) -> Ty {
-        Ty::make_fun(self.arg_tys.iter().cloned(), self.result_ty.to_owned())
+        self.ty.to_owned()
+    }
+
+    pub(crate) fn result_ty(&self) -> Option<&Ty> {
+        match &self.ty {
+            Ty::Fun(tys) => tys.last(),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn bodies(&self) -> Vec<ExpId> {
+        match &self.kind {
+            FunKind::Decl(..) => vec![],
+            FunKind::Def { bodies } => bodies.to_owned(),
+        }
     }
 }
 
 impl Sema {
     pub(crate) fn is_successful(&self) -> bool {
         self.msgs.iter().all(|(_, msg)| msg.is_successful())
+    }
+
+    pub(crate) fn all_fun_ids(&self) -> Vec<FunId> {
+        self.funs.keys().cloned().collect()
     }
 }
 

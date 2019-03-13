@@ -409,6 +409,58 @@ fn test_fun_return_same_type() {
     )
 }
 
+#[test]
+fn test_fun_rec() {
+    eval_tests(
+        r#"
+            let rec fact = |x| if x <= 1 {
+                1
+            } else {
+                x * fact(x - 1)
+            };
+            println_int(fact(read_int()));
+        "#,
+        &[("1", "1\n"), ("5", "120\n")],
+    );
+}
+
+#[test]
+fn test_fun_rec_mutually() {
+    eval_tests(
+        r#"
+            let rec even = |x| if x > 0 { odd(x - 1) } else { 1 };
+            let rec odd = |x| if x > 0 { even(x - 1) } else { 0 };
+            println_int(even(8));
+        "#,
+        &[("", "1\n")],
+    )
+}
+
+#[test]
+fn test_fun_shadowing() {
+    eval_tests(
+        r#"
+            let f = || 2;
+            println_int(f());
+            let f = || 3 * f();
+            println_int(f());
+        "#,
+        &[("", "2\n6\n")],
+    )
+}
+
+#[test]
+fn test_fun_rec_must_have_unique_name() {
+    // FIXME: Clearer message
+    test_err(
+        r#"
+            let rec f = || 1;
+            let rec f = || 2;
+        "#,
+        "At 2:21..2:22 Function not defined",
+    );
+}
+
 static STDLIB: &str = r#"
     let DIGIT_CHARS = "0123456789";
     let HYPHEN_CHAR = "-"[0];

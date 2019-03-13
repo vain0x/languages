@@ -356,7 +356,10 @@ impl Compiler {
                 self.push(Cmd::Jump, NO_REG_ID, continue_label);
                 NO_REG_ID
             }
-            &ExpKind::Let { pat, init } => {
+            &ExpKind::Let { pat, init, .. } => {
+                if self.sema().exp_decls.contains(&exp_id) {
+                    return NO_REG_ID;
+                }
                 let init_reg_id = self.on_exp(init);
                 let var_reg_id = self.on_exp(pat);
                 self.push(Cmd::Store, var_reg_id, CmdArg::Reg(init_reg_id));
@@ -431,7 +434,7 @@ impl Compiler {
         self.add_cmd_save_caller_regs();
         self.add_cmd_allocate_locals(fun_id);
 
-        let final_reg_id = self.on_exps(&self.mir.sema.funs[&fun_id].bodies.to_owned());
+        let final_reg_id = self.on_exps(&self.mir.sema.funs[&fun_id].bodies().to_owned());
         self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(final_reg_id));
         self.kill(final_reg_id);
 

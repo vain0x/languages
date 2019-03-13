@@ -17,6 +17,10 @@ impl Compiler {
         &self.mir.sema
     }
 
+    fn current_gen_fun(&self) -> &GenFunDef {
+        &self.mir.funs[&self.current_fun_id]
+    }
+
     fn current_gen_fun_mut(&mut self) -> &mut GenFunDef {
         let fun_id = self.current_fun_id;
         self.mir.funs.get_mut(&fun_id).unwrap()
@@ -24,6 +28,11 @@ impl Compiler {
 
     fn get_symbol(&self, exp_id: ExpId) -> Option<SymbolRef<'_>> {
         (self.mir.sema.exp_symbols.get(&exp_id)).map(|&symbol| self.mir.sema.get_symbol_ref(symbol))
+    }
+
+    fn get_loop(&self, exp_id: ExpId) -> Option<&GenLoopDef> {
+        let loop_id = self.sema().exp_loops.get(&exp_id)?;
+        self.mir.loops.get(&loop_id)
     }
 
     fn is_coerced_to_val(&self, exp_id: ExpId) -> bool {
@@ -168,7 +177,7 @@ impl Compiler {
                 NO_REG_ID
             }
             SymbolRef::Fun(fun_id, _) => {
-                let body_label_id = self.mir.funs[&fun_id].label_id;
+                let body_label_id = self.mir.funs[&fun_id].body_label_id;
 
                 // Push args to stack in reversed order.
                 for arg in args.iter().cloned().rev() {
@@ -279,6 +288,14 @@ impl Compiler {
             }
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
             ExpKind::Fun { .. } => NO_REG_ID,
+            &ExpKind::Return(result) => {
+                let end_label_id = self.current_gen_fun().end_label_id;
+                let reg_id = self.on_exp(result);
+                self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(reg_id));
+                self.push(Cmd::Jump, NO_REG_ID, CmdArg::Label(end_label_id));
+                self.kill(reg_id);
+                NO_REG_ID
+            }
             &ExpKind::If { cond, body, alt } => {
                 let alt_label = CmdArg::Label(self.add_label());
                 let end_label = CmdArg::Label(self.add_label());
@@ -302,8 +319,10 @@ impl Compiler {
                 end_reg
             }
             &ExpKind::While { cond, body } => {
-                let continue_label = CmdArg::Label(self.add_label());
-                let break_label = CmdArg::Label(self.add_label());
+                let loop_def = self.get_loop(exp_id).expect("Missing loop def");
+
+                let break_label = CmdArg::Label(loop_def.break_label_id);
+                let continue_label = CmdArg::Label(loop_def.continue_label_id);
 
                 self.push(Cmd::Label, NO_REG_ID, continue_label);
                 let cond_reg_id = self.on_exp(cond);
@@ -315,6 +334,20 @@ impl Compiler {
                 self.push(Cmd::Jump, NO_REG_ID, continue_label);
 
                 self.push(Cmd::Label, NO_REG_ID, break_label);
+                NO_REG_ID
+            }
+            &ExpKind::Break => {
+                let loop_def = self.get_loop(exp_id).expect("Missing loop def");
+                let break_label = CmdArg::Label(loop_def.break_label_id);
+
+                self.push(Cmd::Jump, NO_REG_ID, break_label);
+                NO_REG_ID
+            }
+            &ExpKind::Continue => {
+                let loop_def = self.get_loop(exp_id).expect("Missing loop def");
+                let continue_label = CmdArg::Label(loop_def.continue_label_id);
+
+                self.push(Cmd::Jump, NO_REG_ID, continue_label);
                 NO_REG_ID
             }
             &ExpKind::Let { pat, init } => {
@@ -370,11 +403,14 @@ impl Compiler {
         self.push(Cmd::AddImm, STACK_PTR_REG_ID, CmdArg::Int(frame_size));
     }
 
-    fn add_cmd_return(&mut self, fun_id: FunId, result: RegId) {
+    fn add_cmd_fun_end(&mut self, fun_id: FunId) {
+        let end_label_id = self.mir.funs[&fun_id].end_label_id;
+
+        self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(end_label_id));
+
         if fun_id == GLOBAL_FUN_ID {
             self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
         } else {
-            self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(result));
             self.add_cmd_deallocate_locals(fun_id);
             self.add_cmd_restore_caller_regs();
             self.push(Cmd::Ret, NO_REG_ID, CmdArg::None);
@@ -382,14 +418,18 @@ impl Compiler {
     }
 
     pub fn gen_fun(&mut self, fun_id: FunId) {
-        let label_id = self.mir.funs[&fun_id].label_id;
+        self.current_fun_id = fun_id;
+        let body_label_id = self.mir.funs[&fun_id].body_label_id;
 
-        self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(label_id));
+        self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(body_label_id));
         self.add_cmd_save_caller_regs();
         self.add_cmd_allocate_locals(fun_id);
+
         let final_reg_id = self.on_exps(&self.mir.sema.funs[&fun_id].bodies.to_owned());
-        self.add_cmd_return(fun_id, final_reg_id);
+        self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(final_reg_id));
         self.kill(final_reg_id);
+
+        self.add_cmd_fun_end(fun_id);
     }
 
     pub fn compile(&mut self) -> CompilationResult {
@@ -399,12 +439,28 @@ impl Compiler {
         // Prepare funs.
         let fun_ids = self.sema().funs.keys().cloned().collect::<Vec<_>>();
         for &fun_id in &fun_ids {
-            let label_id = self.add_label();
+            let body_label_id = self.add_label();
+            let end_label_id = self.add_label();
             self.mir.funs.insert(
                 fun_id,
                 GenFunDef {
-                    label_id,
+                    body_label_id,
+                    end_label_id,
                     inss: vec![],
+                },
+            );
+        }
+
+        // Prepare loops.
+        let loop_ids = self.sema().loops.keys().cloned().collect::<Vec<_>>();
+        for &loop_id in &loop_ids {
+            let break_label_id = self.add_label();
+            let continue_label_id = self.add_label();
+            (self.mir.loops).insert(
+                loop_id,
+                GenLoopDef {
+                    break_label_id,
+                    continue_label_id,
                 },
             );
         }
@@ -492,6 +548,7 @@ pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
             label_count: 0,
             text: vec![],
             funs: BTreeMap::new(),
+            loops: BTreeMap::new(),
             msgs: sema.msgs.clone(),
         },
         current_fun_id: GLOBAL_FUN_ID,

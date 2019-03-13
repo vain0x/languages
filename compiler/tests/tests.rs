@@ -239,6 +239,63 @@ fn test_while() {
 }
 
 #[test]
+fn test_break() {
+    eval_tests(
+        r#"
+            let i = 0;
+            while i < 4 {
+                i += 1;
+                if i == 3 { break }
+                println_int(i);
+            }
+        "#,
+        &[("", "1\n2\n")],
+    );
+
+    test_err("break", "At 1:1..1:6 Out of loop");
+
+    test_err(
+        r#"
+            while 0 != 0 {
+                let f = fun() { break };
+            }
+        "#,
+        "At 3:33..3:38 Out of loop",
+    )
+}
+
+#[test]
+fn test_continue() {
+    eval_tests(
+        r#"
+            let i = 0;
+            while i < 4 {
+                i += 1;
+                if i == 2 { continue }
+                println_int(i);
+            }
+        "#,
+        &[("", "1\n3\n4\n")],
+    );
+
+    test_err("continue", "At 1:1..1:9 Out of loop");
+
+    test_err(
+        r#"
+            while 0 != 0 {
+                let f = fun() { continue };
+            }
+        "#,
+        "At 3:33..3:41 Out of loop",
+    );
+}
+
+#[test]
+fn test_continue_in_nested_loop() {
+    eval_tests(r#""#, &[("", "")])
+}
+
+#[test]
 fn test_fun_with_no_args() {
     eval_tests(
         r#"
@@ -299,6 +356,37 @@ fn test_fun_to_modify_globals() {
             println_int(x);
         "#,
         &[("", "1\n")],
+    )
+}
+
+#[test]
+fn test_fun_return() {
+    eval_tests(
+        r#"
+            let f = fun(x) {
+                if x % 2 == 0 { return x / 2 }
+                x * 3 + 1
+            };
+            println_int(1 + f(1) + 1);
+            println_int(4 + f(4) + 4);
+            if 0 == 0 { return }
+            println_int(-1)
+        "#,
+        &[("", "6\n10\n")],
+    )
+}
+
+#[test]
+fn test_fun_return_same_type() {
+    test_err(
+        r#"
+            let f = fun(x) {
+                if x == 0 { return }
+                0
+            };
+            f(0);
+        "#,
+        "At 3:17..4:18 Type Error",
     )
 }
 

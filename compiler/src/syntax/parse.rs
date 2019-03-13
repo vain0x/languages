@@ -260,6 +260,19 @@ impl Parser<'_> {
         self.add_exp(ExpKind::Fun { pats, body }, (token_l, self.current))
     }
 
+    fn parse_return(&mut self) -> ExpId {
+        let token_l = self.current;
+        self.current += 1;
+
+        let exp_id = if self.is_followed_by_term() {
+            self.parse_term()
+        } else {
+            self.add_exp(ExpKind::Unit, (token_l, token_l))
+        };
+
+        self.add_exp(ExpKind::Return(exp_id), (token_l, self.current))
+    }
+
     fn parse_if(&mut self) -> ExpId {
         let token_l = self.current;
         self.current += 1;
@@ -301,11 +314,26 @@ impl Parser<'_> {
         self.add_exp(ExpKind::While { cond, body }, (token_l, self.current))
     }
 
+    fn parse_break(&mut self) -> ExpId {
+        self.current += 1;
+
+        self.add_exp(ExpKind::Break, (self.current - 1, self.current))
+    }
+
+    fn parse_continue(&mut self) -> ExpId {
+        self.current += 1;
+
+        self.add_exp(ExpKind::Continue, (self.current - 1, self.current))
+    }
+
     fn parse_term(&mut self) -> ExpId {
         match self.next().kind {
             TokenKind::Keyword(Keyword::Fun) => self.parse_fun(),
+            TokenKind::Keyword(Keyword::Return) => self.parse_return(),
             TokenKind::Keyword(Keyword::If) => self.parse_if(),
             TokenKind::Keyword(Keyword::While) => self.parse_while(),
+            TokenKind::Keyword(Keyword::Break) => self.parse_break(),
+            TokenKind::Keyword(Keyword::Continue) => self.parse_continue(),
             _ => self.parse_bin_l(OpLevel::Set),
         }
     }

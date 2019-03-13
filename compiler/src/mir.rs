@@ -27,8 +27,15 @@ pub(crate) type Ins = (Cmd, RegId, CmdArg);
 
 #[derive(Clone, Debug)]
 pub(crate) struct GenFunDef {
-    pub label_id: LabelId,
+    pub body_label_id: LabelId,
+    pub end_label_id: LabelId,
     pub inss: Vec<Ins>,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct GenLoopDef {
+    pub break_label_id: LabelId,
+    pub continue_label_id: LabelId,
 }
 
 #[derive(Clone, Debug)]
@@ -38,6 +45,7 @@ pub(crate) struct Mir {
     pub label_count: usize,
     pub text: Vec<u8>,
     pub funs: BTreeMap<FunId, GenFunDef>,
+    pub loops: BTreeMap<LoopId, GenLoopDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 

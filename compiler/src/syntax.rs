@@ -78,6 +78,7 @@ pub(crate) enum ExpKind {
         pats: Vec<ExpId>,
         body: ExpId,
     },
+    Return(ExpId),
     If {
         cond: ExpId,
         body: ExpId,
@@ -87,6 +88,8 @@ pub(crate) enum ExpKind {
         cond: ExpId,
         body: ExpId,
     },
+    Break,
+    Continue,
     Let {
         pat: ExpId,
         init: ExpId,

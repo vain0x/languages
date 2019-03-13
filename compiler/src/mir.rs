@@ -33,12 +33,18 @@ pub(crate) struct GenFunDef {
 }
 
 #[derive(Clone, Debug)]
+pub(crate) struct GenLoopDef {
+    pub continue_label_id: LabelId,
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct Mir {
     pub sema: Rc<Sema>,
     pub reg_count: usize,
     pub label_count: usize,
     pub text: Vec<u8>,
     pub funs: BTreeMap<FunId, GenFunDef>,
+    pub loops: BTreeMap<LoopId, GenLoopDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 

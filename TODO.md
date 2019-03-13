@@ -4,7 +4,6 @@
 
 - block expressions
 - break
-- continue
 - subslice (`slice[l..r]`)
 - `-=` etc.
 - bit operators

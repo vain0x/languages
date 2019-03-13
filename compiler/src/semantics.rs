@@ -17,6 +17,7 @@ use std::rc::Rc;
 pub(crate) type MsgId = Id<Msg>;
 pub(crate) type VarId = Id<VarDef>;
 pub(crate) type FunId = Id<FunDef>;
+pub(crate) type LoopId = Id<LoopDef>;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum VarKind {
@@ -42,13 +43,20 @@ pub(crate) struct FunDef {
 }
 
 #[derive(Clone, Debug)]
+pub(crate) struct LoopDef {
+    pub body: ExpId,
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct Sema {
     pub syntax: Rc<Syntax>,
     pub exp_symbols: BTreeMap<ExpId, SymbolKind>,
+    pub exp_loops: BTreeMap<ExpId, LoopId>,
     pub exp_vals: BTreeSet<ExpId>,
     pub exp_tys: BTreeMap<ExpId, Ty>,
     pub vars: BTreeMap<VarId, VarDef>,
     pub funs: BTreeMap<FunId, FunDef>,
+    pub loops: BTreeMap<LoopId, LoopDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 

@@ -314,12 +314,19 @@ impl Parser<'_> {
         self.add_exp(ExpKind::While { cond, body }, (token_l, self.current))
     }
 
+    fn parse_continue(&mut self) -> ExpId {
+        self.current += 1;
+
+        self.add_exp(ExpKind::Continue, (self.current - 1, self.current))
+    }
+
     fn parse_term(&mut self) -> ExpId {
         match self.next().kind {
             TokenKind::Keyword(Keyword::Fun) => self.parse_fun(),
             TokenKind::Keyword(Keyword::Return) => self.parse_return(),
             TokenKind::Keyword(Keyword::If) => self.parse_if(),
             TokenKind::Keyword(Keyword::While) => self.parse_while(),
+            TokenKind::Keyword(Keyword::Continue) => self.parse_continue(),
             _ => self.parse_bin_l(OpLevel::Set),
         }
     }

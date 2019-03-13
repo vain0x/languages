@@ -239,6 +239,37 @@ fn test_while() {
 }
 
 #[test]
+fn test_continue() {
+    eval_tests(
+        r#"
+            let i = 0;
+            while i < 4 {
+                i += 1;
+                if i == 2 { continue }
+                println_int(i);
+            }
+        "#,
+        &[("", "1\n3\n4\n")],
+    );
+
+    test_err("continue", "At 1:1..1:9 Can't continue out of loop");
+
+    test_err(
+        r#"
+            while 0 != 0 {
+                let f = fun() { continue };
+            }
+        "#,
+        "At 3:33..3:41 Can't continue out of loop",
+    );
+}
+
+#[test]
+fn test_continue_in_nested_loop() {
+    eval_tests(r#""#, &[("", "")])
+}
+
+#[test]
 fn test_fun_with_no_args() {
     eval_tests(
         r#"

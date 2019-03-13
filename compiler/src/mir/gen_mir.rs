@@ -30,6 +30,11 @@ impl Compiler {
         (self.mir.sema.exp_symbols.get(&exp_id)).map(|&symbol| self.mir.sema.get_symbol_ref(symbol))
     }
 
+    fn get_loop(&self, exp_id: ExpId) -> Option<&GenLoopDef> {
+        let loop_id = self.sema().exp_loops.get(&exp_id)?;
+        self.mir.loops.get(&loop_id)
+    }
+
     fn is_coerced_to_val(&self, exp_id: ExpId) -> bool {
         self.mir.sema.exp_vals.contains(&exp_id)
     }
@@ -314,7 +319,9 @@ impl Compiler {
                 end_reg
             }
             &ExpKind::While { cond, body } => {
-                let continue_label = CmdArg::Label(self.add_label());
+                let loop_def = self.get_loop(exp_id).expect("Missing loop def");
+
+                let continue_label = CmdArg::Label(loop_def.continue_label_id);
                 let break_label = CmdArg::Label(self.add_label());
 
                 self.push(Cmd::Label, NO_REG_ID, continue_label);
@@ -327,6 +334,13 @@ impl Compiler {
                 self.push(Cmd::Jump, NO_REG_ID, continue_label);
 
                 self.push(Cmd::Label, NO_REG_ID, break_label);
+                NO_REG_ID
+            }
+            &ExpKind::Continue => {
+                let loop_def = self.get_loop(exp_id).expect("Missing loop def");
+                let continue_label = CmdArg::Label(loop_def.continue_label_id);
+
+                self.push(Cmd::Jump, NO_REG_ID, continue_label);
                 NO_REG_ID
             }
             &ExpKind::Let { pat, init } => {
@@ -430,6 +444,13 @@ impl Compiler {
             );
         }
 
+        // Prepare loops.
+        let loop_ids = self.sema().loops.keys().cloned().collect::<Vec<_>>();
+        for &loop_id in &loop_ids {
+            let continue_label_id = self.add_label();
+            (self.mir.loops).insert(loop_id, GenLoopDef { continue_label_id });
+        }
+
         // Generate funs.
         for &fun_id in &fun_ids {
             self.gen_fun(fun_id);
@@ -513,6 +534,7 @@ pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
             label_count: 0,
             text: vec![],
             funs: BTreeMap::new(),
+            loops: BTreeMap::new(),
             msgs: sema.msgs.clone(),
         },
         current_fun_id: GLOBAL_FUN_ID,

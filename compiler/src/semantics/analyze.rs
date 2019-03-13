@@ -261,10 +261,10 @@ impl SemanticAnalyzer {
 
                 self.current_loop_id = outer_loop_id;
             }
-            &ExpKind::Continue => {
+            &ExpKind::Break | &ExpKind::Continue => {
                 let loop_id = match self.current_loop_id {
                     None => {
-                        self.add_err("Can't continue out of loop".to_string(), exp_id);
+                        self.add_err("Out of loop".to_string(), exp_id);
                         return;
                     }
                     Some(loop_id) => loop_id,

@@ -6,6 +6,7 @@ pub(crate) enum Keyword {
     If,
     Else,
     While,
+    Break,
     Continue,
 }
 
@@ -18,6 +19,7 @@ impl Keyword {
             Keyword::If => "if",
             Keyword::Else => "else",
             Keyword::While => "while",
+            Keyword::Break => "break",
             Keyword::Continue => "continue",
         }
     }
@@ -30,6 +32,7 @@ impl Keyword {
             Keyword::If,
             Keyword::Else,
             Keyword::While,
+            Keyword::Break,
             Keyword::Continue,
         ]
     }

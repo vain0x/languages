@@ -239,6 +239,32 @@ fn test_while() {
 }
 
 #[test]
+fn test_break() {
+    eval_tests(
+        r#"
+            let i = 0;
+            while i < 4 {
+                i += 1;
+                if i == 3 { break }
+                println_int(i);
+            }
+        "#,
+        &[("", "1\n2\n")],
+    );
+
+    test_err("break", "At 1:1..1:6 Out of loop");
+
+    test_err(
+        r#"
+            while 0 != 0 {
+                let f = fun() { break };
+            }
+        "#,
+        "At 3:33..3:38 Out of loop",
+    )
+}
+
+#[test]
 fn test_continue() {
     eval_tests(
         r#"
@@ -252,7 +278,7 @@ fn test_continue() {
         &[("", "1\n3\n4\n")],
     );
 
-    test_err("continue", "At 1:1..1:9 Can't continue out of loop");
+    test_err("continue", "At 1:1..1:9 Out of loop");
 
     test_err(
         r#"
@@ -260,7 +286,7 @@ fn test_continue() {
                 let f = fun() { continue };
             }
         "#,
-        "At 3:33..3:41 Can't continue out of loop",
+        "At 3:33..3:41 Out of loop",
     );
 }
 

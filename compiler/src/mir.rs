@@ -34,6 +34,7 @@ pub(crate) struct GenFunDef {
 
 #[derive(Clone, Debug)]
 pub(crate) struct GenLoopDef {
+    pub break_label_id: LabelId,
     pub continue_label_id: LabelId,
 }
 

@@ -314,6 +314,12 @@ impl Parser<'_> {
         self.add_exp(ExpKind::While { cond, body }, (token_l, self.current))
     }
 
+    fn parse_break(&mut self) -> ExpId {
+        self.current += 1;
+
+        self.add_exp(ExpKind::Break, (self.current - 1, self.current))
+    }
+
     fn parse_continue(&mut self) -> ExpId {
         self.current += 1;
 
@@ -326,6 +332,7 @@ impl Parser<'_> {
             TokenKind::Keyword(Keyword::Return) => self.parse_return(),
             TokenKind::Keyword(Keyword::If) => self.parse_if(),
             TokenKind::Keyword(Keyword::While) => self.parse_while(),
+            TokenKind::Keyword(Keyword::Break) => self.parse_break(),
             TokenKind::Keyword(Keyword::Continue) => self.parse_continue(),
             _ => self.parse_bin_l(OpLevel::Set),
         }

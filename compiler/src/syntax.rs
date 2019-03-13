@@ -88,6 +88,7 @@ pub(crate) enum ExpKind {
         cond: ExpId,
         body: ExpId,
     },
+    Break,
     Continue,
     Let {
         pat: ExpId,

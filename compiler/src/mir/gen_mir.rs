@@ -321,8 +321,8 @@ impl Compiler {
             &ExpKind::While { cond, body } => {
                 let loop_def = self.get_loop(exp_id).expect("Missing loop def");
 
+                let break_label = CmdArg::Label(loop_def.break_label_id);
                 let continue_label = CmdArg::Label(loop_def.continue_label_id);
-                let break_label = CmdArg::Label(self.add_label());
 
                 self.push(Cmd::Label, NO_REG_ID, continue_label);
                 let cond_reg_id = self.on_exp(cond);
@@ -334,6 +334,13 @@ impl Compiler {
                 self.push(Cmd::Jump, NO_REG_ID, continue_label);
 
                 self.push(Cmd::Label, NO_REG_ID, break_label);
+                NO_REG_ID
+            }
+            &ExpKind::Break => {
+                let loop_def = self.get_loop(exp_id).expect("Missing loop def");
+                let break_label = CmdArg::Label(loop_def.break_label_id);
+
+                self.push(Cmd::Jump, NO_REG_ID, break_label);
                 NO_REG_ID
             }
             &ExpKind::Continue => {
@@ -447,8 +454,15 @@ impl Compiler {
         // Prepare loops.
         let loop_ids = self.sema().loops.keys().cloned().collect::<Vec<_>>();
         for &loop_id in &loop_ids {
+            let break_label_id = self.add_label();
             let continue_label_id = self.add_label();
-            (self.mir.loops).insert(loop_id, GenLoopDef { continue_label_id });
+            (self.mir.loops).insert(
+                loop_id,
+                GenLoopDef {
+                    break_label_id,
+                    continue_label_id,
+                },
+            );
         }
 
         // Generate funs.

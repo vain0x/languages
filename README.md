@@ -98,7 +98,7 @@ While expressions look like `while condition { body }`. The result is unit.
 You can define functions like this:
 
 ```rust
-    let fact = fun(n) {
+    let fact = |n| {
         let x = 1;
         while n >= 2 {
             x = x * n;
@@ -112,7 +112,7 @@ You can define functions like this:
 When the function body is just an expression, you don't need wrap it with braces:
 
 ```rust
-    let succ = fun(x) x + 1;
+    let succ = |x| x + 1;
     println_int(succ(1)); //=> 2
 ```
 

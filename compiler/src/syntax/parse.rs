@@ -196,14 +196,39 @@ impl Parser<'_> {
 
     fn parse_prefix(&mut self) -> ExpId {
         let token_l = self.current;
-        if self.next().kind == TokenKind::Op(Op::Sub) {
-            self.current += 1;
-            let l = self.add_exp(ExpKind::Int(0), (token_l, self.current));
-            let r = self.parse_suffix();
-            return self.add_exp(ExpKind::Bin { op: Op::Sub, l, r }, (token_l, self.current));
-        }
+        match self.next().kind {
+            TokenKind::Op(Op::Sub) => {
+                self.current += 1;
+                let l = self.add_exp(ExpKind::Int(0), (token_l, self.current));
+                let r = self.parse_prefix();
+                self.add_exp(ExpKind::Bin { op: Op::Sub, l, r }, (token_l, self.current))
+            }
+            // No parameter lambda.
+            TokenKind::Op(Op::LogOr) => {
+                self.current += 1;
+                let body = self.parse_term();
+                self.add_exp(ExpKind::Fun { pats: vec![], body }, (token_l, self.current))
+            }
+            // Lambda.
+            TokenKind::Op(Op::BitOr) => {
+                self.current += 1;
 
-        self.parse_suffix()
+                let mut pats = vec![];
+                if self.next().kind != TokenKind::Op(Op::BitOr) {
+                    self.parse_atom_list(&mut pats);
+                }
+
+                if self.next().kind != TokenKind::Op(Op::BitOr) {
+                    return self.parse_err("Expected '|'".to_string());
+                }
+                self.current += 1;
+
+                let body = self.parse_term();
+
+                self.add_exp(ExpKind::Fun { pats, body }, (token_l, self.current))
+            }
+            _ => self.parse_suffix(),
+        }
     }
 
     fn parse_bin_next(&mut self, op_level: OpLevel) -> ExpId {
@@ -240,28 +265,6 @@ impl Parser<'_> {
         }
 
         exp_l
-    }
-
-    fn parse_fun(&mut self) -> ExpId {
-        let token_l = self.current;
-        self.current += 1;
-
-        if self.next().kind != TokenKind::Pun("(") {
-            return self.parse_err("Expected '('".to_string());
-        }
-        self.current += 1;
-
-        let mut pats = vec![];
-        self.parse_term_list(&mut pats);
-
-        if self.next().kind != TokenKind::Pun(")") {
-            return self.parse_err("Expected ')'".to_string());
-        }
-        self.current += 1;
-
-        let body = self.parse_term();
-
-        self.add_exp(ExpKind::Fun { pats, body }, (token_l, self.current))
     }
 
     fn parse_return(&mut self) -> ExpId {
@@ -332,7 +335,6 @@ impl Parser<'_> {
 
     fn parse_term(&mut self) -> ExpId {
         match self.next().kind {
-            TokenKind::Keyword(Keyword::Fun) => self.parse_fun(),
             TokenKind::Keyword(Keyword::Return) => self.parse_return(),
             TokenKind::Keyword(Keyword::If) => self.parse_if(),
             TokenKind::Keyword(Keyword::While) => self.parse_while(),
@@ -407,6 +409,20 @@ impl Parser<'_> {
             0 => self.add_exp(ExpKind::Unit, token_span),
             1 => children[0],
             _ => self.add_exp(ExpKind::Semi(children), token_span),
+        }
+    }
+
+    fn parse_atom_list(&mut self, items: &mut Vec<ExpId>) {
+        while self.is_followed_by_term() {
+            items.push(self.parse_atom());
+
+            match self.next().kind {
+                TokenKind::Pun(",") => {
+                    self.current += 1;
+                    continue;
+                }
+                _ => break,
+            }
         }
     }
 

@@ -240,6 +240,7 @@ impl Compiler {
             Op::Mul => Cmd::Mul,
             Op::Div => Cmd::Div,
             Op::Mod => Cmd::Mod,
+            Op::LogOr | Op::BitOr => unimplemented!(),
         };
 
         self.push(cmd, l_reg, CmdArg::Reg(r_reg));
@@ -562,7 +563,7 @@ pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
 }
 
 static PRELUDE: &str = r#"
-    let println_str = fun(x) {
+    let println_str = |x| {
         print(x);
         print("\n");
     };

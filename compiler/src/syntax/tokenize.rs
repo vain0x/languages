@@ -172,7 +172,7 @@ fn is_ident_char(c: u8) -> bool {
 }
 
 fn is_op_char(c: u8) -> bool {
-    b"!*+-./%<=>?@^~".contains(&c)
+    b"!*+-./%<=>?@^~&|".contains(&c)
 }
 
 fn is_whitespace(c: u8) -> bool {

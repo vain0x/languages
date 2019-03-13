@@ -101,6 +101,20 @@ fn test_str_literal_escape_sequence() {
 }
 
 #[test]
+fn test_char_literal_escape_sequence() {
+    eval_tests(
+        r#"
+            println_int(byte_to_int('A'));
+            println_int(byte_to_int('\0'));
+            println_int(byte_to_int('\n'));
+            println_int(byte_to_int('\r'));
+            println_int(byte_to_int('\''));
+        "#,
+        &[("", "65\n0\n10\n13\n39\n")],
+    );
+}
+
+#[test]
 fn test_write() {
     eval_tests(
         r#"
@@ -257,10 +271,10 @@ fn test_break() {
     test_err(
         r#"
             while 0 != 0 {
-                let f = fun() { break };
+                let f = || break;
             }
         "#,
-        "At 3:33..3:38 Out of loop",
+        "At 3:28..3:33 Out of loop",
     )
 }
 
@@ -283,10 +297,10 @@ fn test_continue() {
     test_err(
         r#"
             while 0 != 0 {
-                let f = fun() { continue };
+                let f = || continue;
             }
         "#,
-        "At 3:33..3:41 Out of loop",
+        "At 3:28..3:36 Out of loop",
     );
 }
 
@@ -299,10 +313,13 @@ fn test_continue_in_nested_loop() {
 fn test_fun_with_no_args() {
     eval_tests(
         r#"
-            let f = fun() 2;
+            let f = || 2;
             println_int(84 / f());
+
+            let g = | | 2;
+            println_int(84 / g());
         "#,
-        &[("", "42\n")],
+        &[("", "42\n42\n")],
     )
 }
 
@@ -310,7 +327,7 @@ fn test_fun_with_no_args() {
 fn test_fun_with_arg() {
     eval_tests(
         r#"
-            let half = fun(x) x / 2;
+            let half = |x| x / 2;
             println_int(half(84));
         "#,
         &[("", "42\n")],
@@ -321,7 +338,7 @@ fn test_fun_with_arg() {
 fn test_fun_with_args() {
     eval_tests(
         r#"
-            let div = fun(x, y) x / y;
+            let div = |x, y| x / y;
             println_int(div(126, 3));
         "#,
         &[("", "42\n")],
@@ -332,7 +349,7 @@ fn test_fun_with_args() {
 fn test_fun_with_args_and_locals() {
     eval_tests(
         r#"
-            let digit_sum = fun(x) {
+            let digit_sum = |x| {
                 let s = 0;
                 while x > 0 {
                     s += x % 10;
@@ -351,7 +368,7 @@ fn test_fun_to_modify_globals() {
     eval_tests(
         r#"
             let x = 0;
-            let f = fun() { x += 1 };
+            let f = || x += 1;
             f();
             println_int(x);
         "#,
@@ -363,8 +380,10 @@ fn test_fun_to_modify_globals() {
 fn test_fun_return() {
     eval_tests(
         r#"
-            let f = fun(x) {
-                if x % 2 == 0 { return x / 2 }
+            let f = |x| {
+                if x % 2 == 0 {
+                    return x / 2;
+                }
                 x * 3 + 1
             };
             println_int(1 + f(1) + 1);
@@ -380,7 +399,7 @@ fn test_fun_return() {
 fn test_fun_return_same_type() {
     test_err(
         r#"
-            let f = fun(x) {
+            let f = |x| {
                 if x == 0 { return }
                 0
             };
@@ -393,7 +412,7 @@ fn test_fun_return_same_type() {
 static STDLIB: &str = r#"
     let DIGIT_CHARS = "0123456789";
     let HYPHEN_CHAR = "-"[0];
-    let calculate_digit_len = fun(x) {
+    let calculate_digit_len = |x| {
         if x == 0 {
             1
         } else {
@@ -409,7 +428,7 @@ static STDLIB: &str = r#"
             len
         }
     };
-    let int_to_str = fun(x) {
+    let int_to_str = |x| {
         let n = calculate_digit_len(x);
         let s = mem_alloc(n);
         if x == 0 {
@@ -457,7 +476,7 @@ fn test_use_prelude() {
 fn test_example_fact() {
     eval_tests(
         r#"
-            let fact = fun(n) {
+            let fact = |n| {
                 let x = 1;
                 while n >= 2 {
                     x = x * n;
@@ -475,7 +494,7 @@ fn test_example_fact() {
 fn test_example_succ() {
     eval_tests(
         r#"
-            let succ = fun(x) x + 1;
+            let succ = |x| x + 1;
             println_int(succ(1)); //=> 2
         "#,
         &[("", "2\n")],

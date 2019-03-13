@@ -43,6 +43,7 @@ pub(crate) enum TokenKind {
     Keyword(Keyword),
     Ident,
     Int,
+    Char(u8),
     Str,
 }
 
@@ -59,6 +60,7 @@ pub(crate) enum ExpKind {
     Err(String),
     Unit,
     Int(i64),
+    Byte(u8),
     Str(String),
     Ident(String),
     Call {

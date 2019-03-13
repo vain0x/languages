@@ -240,6 +240,7 @@ impl Compiler {
             Op::Mul => Cmd::Mul,
             Op::Div => Cmd::Div,
             Op::Mod => Cmd::Mod,
+            Op::LogOr | Op::BitOr => unimplemented!(),
         };
 
         self.push(cmd, l_reg, CmdArg::Reg(r_reg));
@@ -259,6 +260,11 @@ impl Compiler {
             &ExpKind::Int(value) => {
                 let reg_id = self.add_reg();
                 self.push(Cmd::Imm, reg_id, CmdArg::Int(value));
+                reg_id
+            }
+            &ExpKind::Byte(value) => {
+                let reg_id = self.add_reg();
+                self.push(Cmd::Imm, reg_id, CmdArg::Int(value as i64));
                 reg_id
             }
             ExpKind::Str(value) => {
@@ -557,7 +563,7 @@ pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
 }
 
 static PRELUDE: &str = r#"
-    let println_str = fun(x) {
+    let println_str = |x| {
         print(x);
         print("\n");
     };

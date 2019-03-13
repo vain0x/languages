@@ -9,11 +9,6 @@
 - pipeline operator (`x |> f(y)` ---> `f(x, y)`)
 - address-of (`&x`)
     - slice of one element
-- char literals
-    - `'a'` : byte type
-- lambda syntax
-    - `fun() x` → `|| x` or `| | x`
-    - `fun(x, y) x + y` → `|x, y| x + y`
 - type annotations (`|x: int| -> unit { .. }`)
 - numeric cast
     - `as int`
@@ -22,7 +17,7 @@
     - `for x in l..r { body }` ---> `let x = l; while x < r { body; x += 1 }`
 - `let rec`
     - `let rec` is same as `let` except that the declaration is hoisted to the top of the scope
-    - `let rec f = fun() g(); let rec g = fun() f()` ---> `let f; let g; f = fun() g(); g = fun() f()`
+    - `let rec f = || g(); let rec g = || f()` ---> `let f; let g; f = || g(); g = || f()`
 - block expressions
 
 ## Heavy Topics

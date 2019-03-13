@@ -54,6 +54,39 @@ impl Tokenizer<'_> {
         false
     }
 
+    fn look_esc(&self) -> (u8, usize) {
+        assert_eq!(self.next_char(), b'\\');
+
+        match self.src().as_bytes()[self.current + 1] {
+            b'\0' => (b'\0', 1),
+            b'0' => (b'\0', 2),
+            b'r' => (b'\r', 2),
+            b'n' => (b'\n', 2),
+            b't' => (b'\t', 2),
+            c => (c, 2),
+        }
+    }
+
+    fn read_char(&mut self) {
+        assert_eq!(self.next_char(), b'\'');
+
+        let l = self.current;
+        self.current += 1;
+
+        let (c, n) = match self.next_char() {
+            b'\0' | b'\r' | b'\n' => (b'\0', 0),
+            b'\\' => self.look_esc(),
+            c => (c, 1),
+        };
+        self.current += n;
+
+        if !self.reads("'") {
+            self.add_token(TokenKind::Err, (l, self.current));
+            return;
+        }
+        self.add_token(TokenKind::Char(c), (l, self.current))
+    }
+
     fn read_str(&mut self) {
         assert_eq!(self.next_char(), b'"');
 
@@ -101,6 +134,10 @@ impl Tokenizer<'_> {
                 }
                 continue;
             }
+            if self.next_char() == b'\'' {
+                self.read_char();
+                continue;
+            }
             if self.next_char() == b'"' {
                 self.read_str();
                 continue;
@@ -135,7 +172,7 @@ fn is_ident_char(c: u8) -> bool {
 }
 
 fn is_op_char(c: u8) -> bool {
-    b"!*+-./%<=>?@^~".contains(&c)
+    b"!*+-./%<=>?@^~&|".contains(&c)
 }
 
 fn is_whitespace(c: u8) -> bool {

@@ -28,5 +28,23 @@
     "postinstall": "vscode-install",
     "build": "tsc -b",
     "watch": "tsc -w"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "picomet-lang",
+        "extensions": [
+          ".picomet"
+        ],
+        "configuration": "./syntaxes/picomet-lang-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "picomet-lang",
+        "scopeName": "source.picomet-lang",
+        "path": "./syntaxes/picomet-lang.tmGrammar.json"
+      }
+    ]
   }
 }

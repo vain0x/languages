@@ -28,5 +28,40 @@
     "postinstall": "vscode-install",
     "build": "tsc -b",
     "watch": "tsc -w"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "picomet-lang",
+        "extensions": [
+          ".picomet"
+        ],
+        "configuration": "./syntaxes/picomet-lang-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "picomet-lang",
+        "scopeName": "source.picomet-lang",
+        "path": "./syntaxes/picomet-lang.tmGrammar.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Picomet-lang config",
+      "properties": {
+        "picomet-lang.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace picomet-lang LSP server.",
+          "scope": "window"
+        }
+      }
+    }
   }
 }

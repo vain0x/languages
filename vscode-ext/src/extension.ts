@@ -26,7 +26,7 @@ export function activate(context: ExtensionContext) {
 
   let clientOptions: LanguageClientOptions = {
     documentSelector: [
-      { scheme: "file" },
+      { scheme: "file", language: "picomet-lang" },
     ],
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),

@@ -254,13 +254,6 @@ impl SemanticAnalyzer {
                 self.set_ty(exp_id, &ty, &Ty::make_str());
             }
             ExpKind::Ident(name) => self.on_ident(exp_id, ty, name),
-            &ExpKind::Return(result) => {
-                let result_ty = (self.current_fun().result_ty())
-                    .expect("It must not be an incomplete function because here's the definition")
-                    .to_owned();
-                self.on_val(result, result_ty);
-                self.set_ty(exp_id, &ty, &Ty::Unit);
-            }
             ExpKind::Call { callee, args } => self.on_call(exp_id, ty, *callee, &args),
             ExpKind::Index { indexee, arg } => self.on_index(exp_id, ty, *indexee, *arg),
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, ty, op, l, r),
@@ -269,6 +262,13 @@ impl SemanticAnalyzer {
                     "`fun` expressions must appear in the form of `let name = fun ..;`".to_string(),
                     exp_id,
                 );
+            }
+            &ExpKind::Return(result) => {
+                let result_ty = (self.current_fun().result_ty())
+                    .expect("It must not be an incomplete function because here's the definition")
+                    .to_owned();
+                self.on_val(result, result_ty);
+                self.set_ty(exp_id, &ty, &Ty::Unit);
             }
             &ExpKind::If { cond, body, alt } => {
                 self.on_val(cond, Ty::Int);

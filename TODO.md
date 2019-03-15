@@ -2,7 +2,6 @@
 
 *PRs are welcome.*
 
-- subslice (`slice[l..r]`)
 - `-=` etc.
 - bit operators
 - `&&`, `||`

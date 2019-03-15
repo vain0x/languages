@@ -1,6 +1,7 @@
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub(crate) enum OpLevel {
     Set,
+    Range,
     LogOr,
     Cmp,
     Add,
@@ -11,6 +12,7 @@ pub(crate) enum OpLevel {
 pub(crate) enum Op {
     Set,
     SetAdd,
+    Range,
     // `||`
     LogOr,
     /// `==`
@@ -37,6 +39,7 @@ pub(crate) enum Op {
 pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
     ("=", Op::Set, OpLevel::Set),
     ("+=", Op::SetAdd, OpLevel::Set),
+    ("..", Op::Range, OpLevel::Range),
     ("||", Op::LogOr, OpLevel::LogOr),
     ("==", Op::Eq, OpLevel::Cmp),
     ("!=", Op::Ne, OpLevel::Cmp),
@@ -55,7 +58,8 @@ pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
 impl OpLevel {
     pub(crate) fn next_level(self) -> Option<Self> {
         match self {
-            OpLevel::Set => Some(OpLevel::LogOr),
+            OpLevel::Set => Some(OpLevel::Range),
+            OpLevel::Range => Some(OpLevel::LogOr),
             OpLevel::LogOr => Some(OpLevel::Cmp),
             OpLevel::Cmp => Some(OpLevel::Add),
             OpLevel::Add => Some(OpLevel::Mul),

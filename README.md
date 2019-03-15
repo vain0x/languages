@@ -67,6 +67,7 @@ For now, you can use only slices of byte.
 - `mem_alloc(size)` allocates a chunk of memory dynamically. (Similar to `malloc` in C.)
 - `slice[i]` gets the value of i'th element.
 - `slice[i] = value` sets a value to the i'th element.
+- `slice[l..r]` makes a sub-slice tha spans over l to r elements (exclusive).
 
 ### Docs: Variables
 

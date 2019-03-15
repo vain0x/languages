@@ -69,6 +69,9 @@ pub(crate) struct Sema {
     /// Expressions that may be a reference but is a value.
     pub exp_vals: BTreeSet<ExpId>,
 
+    /// Expressions that may be a range.
+    pub exp_ranges: BTreeMap<ExpId, (ExpId, ExpId)>,
+
     /// Expressions that does nothing on runtime.
     pub exp_decls: BTreeSet<ExpId>,
 

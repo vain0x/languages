@@ -74,19 +74,32 @@ impl Compiler {
         self.current_gen_fun_mut().inss.push((cmd, l, r));
     }
 
+    fn add_reg_imm(&mut self, value: i64) -> RegId {
+        let reg_id = self.add_reg();
+        self.push(Cmd::Imm, reg_id, CmdArg::Int(value));
+        reg_id
+    }
+
     fn add_cmd_lo32(&mut self, target: RegId) {
         const MASK: i64 = 0xFFFF_FFFF;
-        let mask = self.add_reg();
-        self.push(Cmd::Imm, mask, CmdArg::Int(MASK));
+        let mask = self.add_reg_imm(MASK);
         self.push(Cmd::BitAnd, target, CmdArg::Reg(mask));
         self.kill(mask);
     }
 
     fn add_cmd_hi32(&mut self, target: RegId) {
-        let offset = self.add_reg();
-        self.push(Cmd::Imm, offset, CmdArg::Int(32));
+        let offset = self.add_reg_imm(32);
         self.push(Cmd::BitShiftR, target, CmdArg::Reg(offset));
         self.kill(offset);
+    }
+
+    fn add_cmd_make_slice(&mut self, l: RegId, r: RegId) -> RegId {
+        let offset = self.add_reg_imm(32);
+        self.push(Cmd::BitShiftL, r, CmdArg::Reg(offset));
+        self.push(Cmd::BitOr, l, CmdArg::Reg(r));
+        self.kill(offset);
+        self.kill(r);
+        l
     }
 
     fn on_ident(&mut self, exp_id: ExpId, _: &str) -> RegId {
@@ -241,6 +254,7 @@ impl Compiler {
             Op::Div => Cmd::Div,
             Op::Mod => Cmd::Mod,
             Op::LogOr | Op::BitOr => unimplemented!(),
+            Op::Range => panic!("Can't generate range operation"),
         };
 
         self.push(cmd, l_reg, CmdArg::Reg(r_reg));
@@ -277,20 +291,32 @@ impl Compiler {
             ExpKind::Call { callee, args } => self.on_call(exp_id, *callee, args),
             &ExpKind::Index { indexee, arg } => {
                 let indexee_reg_id = self.on_exp(indexee);
-                let arg_reg_id = self.on_exp(arg);
 
+                if let Some(&(l, r)) = self.sema().exp_ranges.get(&arg) {
+                    // x[l..r] ---> slice(begin(x) + l, begin(x) + r)
+                    let l_reg_id = self.on_exp(l);
+                    let r_reg_id = self.on_exp(r);
+                    self.add_cmd_lo32(indexee_reg_id);
+                    self.push(Cmd::Add, l_reg_id, CmdArg::Reg(indexee_reg_id));
+                    self.push(Cmd::Add, r_reg_id, CmdArg::Reg(indexee_reg_id));
+                    let slice_reg_id = self.add_cmd_make_slice(l_reg_id, r_reg_id);
+                    self.kill(indexee_reg_id);
+                    return slice_reg_id;
+                }
+
+                let arg_reg_id = self.on_exp(arg);
                 self.push(Cmd::Add, arg_reg_id, CmdArg::Reg(indexee_reg_id));
                 self.kill(indexee_reg_id);
 
-                if self.is_coerced_to_val(exp_id) {
-                    let byte_reg_id = self.add_reg();
-                    self.add_cmd_lo32(arg_reg_id); // begin of slice
-                    self.push(Cmd::Load8, byte_reg_id, CmdArg::Reg(arg_reg_id));
-                    self.kill(arg_reg_id);
-                    byte_reg_id
-                } else {
-                    arg_reg_id
+                if !self.is_coerced_to_val(exp_id) {
+                    return arg_reg_id;
                 }
+
+                let byte_reg_id = self.add_reg();
+                self.add_cmd_lo32(arg_reg_id); // begin of slice
+                self.push(Cmd::Load8, byte_reg_id, CmdArg::Reg(arg_reg_id));
+                self.kill(arg_reg_id);
+                byte_reg_id
             }
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
             ExpKind::Fun { .. } => NO_REG_ID,

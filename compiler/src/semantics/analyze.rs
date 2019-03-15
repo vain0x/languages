@@ -137,6 +137,26 @@ impl SemanticAnalyzer {
         }
     }
 
+    fn on_range_or_int_val(&mut self, arg: ExpId) -> bool {
+        match &self.exp(arg).kind {
+            &ExpKind::Bin {
+                op: Op::Range,
+                l,
+                r,
+                ..
+            } => {
+                self.on_val(l, Ty::Int);
+                self.on_val(r, Ty::Int);
+                self.sema.exp_ranges.insert(arg, (l, r));
+                true
+            }
+            _ => {
+                self.on_val(arg, Ty::Int);
+                false
+            }
+        }
+    }
+
     fn on_index_ref(&mut self, exp_id: ExpId, ty: Ty, indexee: ExpId, arg: ExpId) {
         self.on_val(indexee, Ty::Ptr);
         self.on_val(arg, Ty::Int);
@@ -208,7 +228,12 @@ impl SemanticAnalyzer {
     }
 
     fn on_index(&mut self, exp_id: ExpId, ty: Ty, indexee: ExpId, arg: ExpId) {
-        self.on_index_ref(exp_id, ty, indexee, arg);
+        self.on_val(indexee, Ty::Ptr);
+        let range = self.on_range_or_int_val(arg);
+
+        let result_ty = if range { Ty::Ptr } else { Ty::Byte };
+        self.set_ty(exp_id, &ty, &result_ty);
+
         self.sema.exp_vals.insert(exp_id);
     }
 
@@ -226,6 +251,7 @@ impl SemanticAnalyzer {
                     ),
                 }
             }
+            Op::Range => self.add_err("Invalid use of range".to_string(), exp_id),
             _ => {
                 self.on_val(exp_l, Ty::Int);
                 self.on_val(exp_r, Ty::Int);
@@ -492,6 +518,7 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
             exp_symbols: BTreeMap::new(),
             exp_loops: BTreeMap::new(),
             exp_vals: BTreeSet::new(),
+            exp_ranges: BTreeMap::new(),
             exp_decls: BTreeSet::new(),
             exp_tys: BTreeMap::new(),
             vars: BTreeMap::new(),

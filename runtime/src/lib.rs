@@ -55,6 +55,8 @@ define_cmd! {
     Gt,
     Ge,
     BitAnd,
+    BitOr,
+    BitShiftL,
     BitShiftR,
     ReadInt,
     ReadStr,
@@ -205,6 +207,8 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
             Cmd::Gt => regs[l] = bool_to_int(regs[l] > regs[r as usize]),
             Cmd::Ge => regs[l] = bool_to_int(regs[l] >= regs[r as usize]),
             Cmd::BitAnd => regs[l] = regs[l] & regs[r as usize],
+            Cmd::BitOr => regs[l] = regs[l] | regs[r as usize],
+            Cmd::BitShiftL => regs[l] = ((regs[l] as usize) << regs[r as usize]) as i64,
             Cmd::BitShiftR => regs[l] = (regs[l] as usize >> regs[r as usize]) as i64,
             Cmd::ReadInt => regs[l] = next_word().parse().unwrap_or(0),
             Cmd::ReadStr => {

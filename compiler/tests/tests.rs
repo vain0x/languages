@@ -139,6 +139,19 @@ fn test_slice_len() {
 }
 
 #[test]
+fn test_slice_subslice() {
+    eval_tests(
+        r#"
+            print("Happy"[1..1 + 3]);
+            print("\n");
+        "#,
+        &[("", "app\n")],
+    );
+
+    test_err("0..0", "At 1:1..1:5 Invalid use of range");
+}
+
+#[test]
 fn test_read_int() {
     eval_tests(
         r#"

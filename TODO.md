@@ -16,6 +16,7 @@
 - `for`
     - `for x in l..r { body }` ---> `let x = l; while x < r { body; x += 1 }`
 - block expressions
+- block-local scope
 
 ## Heavy Topics
 
@@ -27,7 +28,6 @@
 - standard library
     - println, println_int, etc.
     - string manipulations
-- vscode-ext syntax highlights
 - docker
     - it is good if solver works with docker, without rust/node.js/etc.
 

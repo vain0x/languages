@@ -128,25 +128,6 @@ For convenience in competitive programming, standard input is considered a list 
 - `print(x)` prints a slice of byte to standard output.
 - `println_int(x)` prints an integer and a line break to standard output.
 
-## Stages
-
-- Tokenize
-    - Source → Tokens
-    - Hand-made tokenizer.
-- Parse
-    - Tokens → Syntax tree
-    - Hand-made recursively descendant parser.
-- Sema
-    - Syntax tree → Semantic Model
-    - Type checking, symbol resolution, etc.
-- Compile
-    - Syntax tree + Semantic Model → MIR instructions
-    - The MIR is assembly for register machine with infinite registers.
-- Optimize
-    - *Not implemented yet.*
-- Evaluate
-    - Runtime evaluates the MIR instructions.
-
 ## Solve
 
 To solve a problem using picomet-lang, write your code in [solver/src/main.picomet](solver/src/main.picomet).
@@ -184,6 +165,27 @@ Second, in both `compiler` and `runtime` directories, run `./setup` for configur
 To build, run `cargo build` inside `compiler` or `runtime` directory.
 
 To run tests, run `cargo test` in `compiler` directory. Tests are written in [compiler/tests/tests.rs](compiler/tests/tests.rs).
+
+## Internals
+
+### Internals: Stages
+
+- Tokenize
+    - Source → Tokens
+    - Hand-made tokenizer.
+- Parse
+    - Tokens → Syntax tree
+    - Hand-made recursively descendant parser.
+- Sema
+    - Syntax tree → Semantic Model
+    - Type checking, symbol resolution, etc.
+- MIR
+    - Syntax tree + Semantic Model → MIR instructions
+    - The MIR is assembly for register machine with infinite registers.
+- Optimize
+    - *Not implemented yet.*
+- Evaluate
+    - Runtime evaluates the MIR instructions.
 
 ## Contribution
 

@@ -32,3 +32,32 @@ pub(crate) fn sema_to_diagnostics(sema: &Sema) -> Vec<Diagnostic> {
     }
     diagnostics
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::semantics::analyze;
+
+    fn make_range(ly: u64, lx: u64, ry: u64, rx: u64) -> Range {
+        Range::new(Position::new(ly, lx), Position::new(ry, rx))
+    }
+
+    #[test]
+    fn test_validate() {
+        let sema = analyze::analyze_str("0 + ()");
+
+        let diagnostics = sema_to_diagnostics(&sema);
+
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(
+            diagnostics[0],
+            Diagnostic {
+                severity: Some(DiagnosticSeverity::Error),
+                message: "Type Error".to_string(),
+                range: make_range(0, 4, 0, 6),
+                source: Some("Picomet-lang LSP".to_string()),
+                ..Diagnostic::default()
+            }
+        );
+    }
+}

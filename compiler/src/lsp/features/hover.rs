@@ -38,7 +38,6 @@ mod tests {
     use super::*;
     use crate::semantics::analyze;
     use crate::syntax::DocId;
-    use std::rc::Rc;
 
     #[test]
     fn test_hover() {
@@ -47,7 +46,7 @@ mod tests {
             println_int(num);
         "#;
         let doc_id = DocId::new(0);
-        let sema = analyze::analyze_str(doc_id, Rc::new(SRC.to_string()));
+        let sema = analyze::analyze_str(SRC);
 
         // On `num`.
         let hover = do_hover(doc_id, &sema, Position::new(1, 16)).expect("Some(Hover)");

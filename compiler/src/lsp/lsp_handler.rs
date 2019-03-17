@@ -23,6 +23,7 @@ impl<W: io::Write> LspHandler<W> {
                             ..TextDocumentSyncOptions::default()
                         },
                     )),
+                    hover_provider: Some(true),
                     ..ServerCapabilities::default()
                 },
             },
@@ -70,6 +71,26 @@ impl<W: io::Write> LspHandler<W> {
         );
     }
 
+    fn text_document_did_hover(&mut self, json: &str) {
+        let request: LspRequest<TextDocumentPositionParams> = serde_json::from_str(json).unwrap();
+
+        let uri = request.params.text_document.uri;
+        let position = request.params.position;
+        let text = if position.line % 2 == 0 {
+            Some(Hover {
+                contents: HoverContents::Scalar(MarkedString::String(format!(
+                    "{}:{}:{}",
+                    uri, position.line, position.character
+                ))),
+                range: None,
+            })
+        } else {
+            None
+        };
+
+        self.sender.send_response(request.id, text);
+    }
+
     fn did_receive(&mut self, json: &str) {
         let mut id = None;
         if let Some(mut l) = json.find(r#""id":"#) {
@@ -79,6 +100,7 @@ impl<W: io::Write> LspHandler<W> {
             }
         }
 
+        // FIXME: use deserializer
         if json.contains("initialized") {
             // Pass.
         } else if json.contains("initialize") {
@@ -91,6 +113,8 @@ impl<W: io::Write> LspHandler<W> {
             self.text_document_did_open(json);
         } else if json.contains("textDocument/didChange") {
             self.text_document_did_change(json);
+        } else if json.contains("textDocument/hover") {
+            self.text_document_did_hover(json);
         } else {
             warn!("Msg unresolved.")
         }

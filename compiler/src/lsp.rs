@@ -9,6 +9,14 @@ pub(self) use lsp_receiver::LspReceiver;
 pub(self) use lsp_sender::LspSender;
 
 #[derive(Serialize, Deserialize)]
+pub(super) struct LspRequest<Params> {
+    pub jsonrpc: String,
+    pub id: i64,
+    pub method: String,
+    pub params: Params,
+}
+
+#[derive(Serialize, Deserialize)]
 pub(super) struct LspResponse<Result> {
     pub jsonrpc: String,
     pub id: i64,

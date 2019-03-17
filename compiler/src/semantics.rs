@@ -29,8 +29,8 @@ pub(crate) enum VarKind {
 #[derive(Clone, Debug)]
 pub(crate) struct VarDef {
     pub name: String,
-    pub ty: Ty,
     pub kind: VarKind,
+    pub ty: Ty,
 }
 
 #[derive(Clone, PartialEq, Debug)]

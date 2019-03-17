@@ -4,18 +4,14 @@ extern crate serde_derive;
 #[macro_use]
 extern crate log;
 
+mod exports;
 mod lsp;
 mod mir;
 mod semantics;
 mod syntax;
-mod tests;
 mod util;
 
-pub use crate::lsp::lsp_main::start_lsp_server;
-pub use crate::mir::gen_mir::compile;
-pub use crate::mir::CompilationResult;
-pub use crate::semantics::msg::DocMsg;
-pub use crate::syntax::Doc;
-pub use crate::tests::helpers::{eval_tests, test_err};
-
 pub(crate) use crate::util::id::Id;
+
+// Export the module as top level of the library.
+pub use crate::exports::*;

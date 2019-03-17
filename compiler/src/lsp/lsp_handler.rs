@@ -4,11 +4,15 @@ use std::io;
 
 pub(super) struct LspHandler<W: io::Write> {
     sender: LspSender<W>,
+    model: LspModel,
 }
 
 impl<W: io::Write> LspHandler<W> {
     pub fn new(sender: LspSender<W>) -> Self {
-        Self { sender }
+        Self {
+            sender,
+            model: LspModel::new(),
+        }
     }
 
     fn did_initialize(&mut self, id: i64) {
@@ -41,26 +45,32 @@ impl<W: io::Write> LspHandler<W> {
     fn text_document_did_open(&mut self, json: &str) {
         let n: LspNotification<DidOpenTextDocumentParams> =
             serde_json::from_str(&json).expect("did open notification");
+        let doc = n.params.text_document;
+        let uri = doc.uri.to_owned();
+        self.model.open_doc(doc.uri, doc.text);
 
-        self.text_document_did_open_or_change(
-            &n.params.text_document.uri,
-            &n.params.text_document.text,
-        );
+        self.text_document_did_open_or_change(&uri);
     }
 
     fn text_document_did_change(&mut self, json: &str) {
         let n: LspNotification<DidChangeTextDocumentParams> =
             serde_json::from_str(&json).expect("did change notification");
 
-        let text = (n.params.content_changes.first())
-            .map(|c| c.text.as_ref())
-            .unwrap_or("");
+        let text = (n.params.content_changes.into_iter())
+            .next()
+            .map(|c| c.text)
+            .unwrap_or("".to_string());
 
-        self.text_document_did_open_or_change(&n.params.text_document.uri, text);
+        let doc = n.params.text_document;
+        let uri = doc.uri.to_owned();
+
+        self.model.change_doc(doc.uri, text);
+
+        self.text_document_did_open_or_change(&uri);
     }
 
-    fn text_document_did_open_or_change(&mut self, uri: &Url, src: &str) {
-        let diagnostics = features::validate_document(src);
+    fn text_document_did_open_or_change(&mut self, uri: &Url) {
+        let diagnostics = self.model.validate(uri);
 
         self.sender.send_notification(
             "textDocument/publishDiagnostics",

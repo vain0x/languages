@@ -1,10 +1,13 @@
 use crate::semantics::{DocMsg, Sema};
 use lsp_types::*;
 
+const DIAGNOSTIC_SOURCE: &str = "Picomet-lang LSP";
+
 fn msg_to_diagnostic(msg: &DocMsg) -> Diagnostic {
     let (ly, lx) = msg.start_pos();
     let (ry, rx) = msg.end_pos();
     Diagnostic {
+        severity: Some(DiagnosticSeverity::Error),
         range: Range {
             start: Position {
                 line: ly as u64,
@@ -16,7 +19,7 @@ fn msg_to_diagnostic(msg: &DocMsg) -> Diagnostic {
             },
         },
         message: msg.message().to_string(),
-        source: Some("Picomet-lang".to_string()),
+        source: Some(DIAGNOSTIC_SOURCE.to_string()),
         ..Diagnostic::default()
     }
 }

@@ -23,7 +23,7 @@ pub fn main() {
 ${RUNTIME}"#####;
 
 /// Compile the picomet code and bundle it with runtime code.
-/// The result is single Rust code that interpret the given picomet code.
+/// The result is single Rust code that interprets the given picomet code.
 fn gen_rust(picomet_code: String, runtime_code: String) -> String {
     let result = compile(&picomet_code);
     if result.success {

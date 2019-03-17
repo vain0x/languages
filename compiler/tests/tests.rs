@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use picomet_lang_compiler::{eval_tests, test_err};
+use picomet_lang_compiler::tests::{eval_tests, test_err};
 
 #[test]
 fn test_hello() {

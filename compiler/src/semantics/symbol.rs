@@ -47,4 +47,12 @@ impl SymbolRef<'_> {
             SymbolRef::Fun(_, fun_def) => fun_def.ty(),
         }
     }
+
+    pub(crate) fn def_exp_id(&self) -> Option<ExpId> {
+        match self {
+            SymbolRef::Prim(_) => None,
+            SymbolRef::Var(_, var_def) => Some(var_def.def_exp_id),
+            SymbolRef::Fun(..) => None,
+        }
+    }
 }

@@ -31,6 +31,7 @@ pub(crate) struct VarDef {
     pub name: String,
     pub kind: VarKind,
     pub ty: Ty,
+    pub def_exp_id: ExpId,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -77,6 +78,8 @@ pub(crate) struct Sema {
 
     /// Type of expressions.
     pub exp_tys: BTreeMap<ExpId, Ty>,
+
+    pub exp_parent: BTreeMap<ExpId, ExpId>,
 
     pub vars: BTreeMap<VarId, VarDef>,
     pub funs: BTreeMap<FunId, FunDef>,
@@ -134,6 +137,21 @@ impl Sema {
         &self.syntax.exps[&exp_id]
     }
 
+    pub(crate) fn exp_text(&self, exp_id: ExpId) -> &str {
+        let exp = self.exp(exp_id);
+        let (l, r) = exp.span;
+        let module = &self.syntax.modules[&exp.module_id];
+        &module.doc().src()[l..r]
+    }
+
+    pub(crate) fn symbol_ref(&self, symbol: SymbolKind) -> SymbolRef<'_> {
+        match symbol {
+            SymbolKind::Prim(prim) => SymbolRef::Prim(prim),
+            SymbolKind::Var(var_id) => SymbolRef::Var(var_id, &self.vars[&var_id]),
+            SymbolKind::Fun(fun_id) => SymbolRef::Fun(fun_id, &self.funs[&fun_id]),
+        }
+    }
+
     pub(crate) fn find_symbol_at(
         &self,
         module_id: ModuleId,
@@ -152,6 +170,20 @@ impl Sema {
                 }
             })
             .next()
+    }
+
+    /// Find the lowest ancestor let expression of the specified expression.
+    pub(crate) fn find_ancestor_let(&self, mut exp_id: ExpId) -> Option<ExpId> {
+        loop {
+            if let ExpKind::Let { .. } = self.exp(exp_id).kind {
+                return Some(exp_id);
+            }
+
+            match self.exp_parent.get(&exp_id) {
+                None => return None,
+                Some(&parent) => exp_id = parent,
+            }
+        }
     }
 }
 

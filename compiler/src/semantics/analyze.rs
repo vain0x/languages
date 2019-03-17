@@ -79,21 +79,36 @@ impl SemanticAnalyzer {
         var_id
     }
 
-    fn add_global(&mut self, name: String, ty: Ty) -> VarId {
+    fn add_global(&mut self, name: String, ty: Ty, def_exp_id: ExpId) -> VarId {
         let index = self.sema.fun_local_count(GLOBAL_FUN_ID);
         let kind = VarKind::Global { index };
-        self.add_var(VarDef { name, ty, kind })
+        self.add_var(VarDef {
+            name,
+            ty,
+            kind,
+            def_exp_id,
+        })
     }
 
-    fn add_local(&mut self, name: String, ty: Ty) -> VarId {
+    fn add_local(&mut self, name: String, ty: Ty, def_exp_id: ExpId) -> VarId {
         let index = self.sema.fun_local_count(self.current_fun_id);
         let kind = VarKind::Local { index };
-        self.add_var(VarDef { name, ty, kind })
+        self.add_var(VarDef {
+            name,
+            ty,
+            kind,
+            def_exp_id,
+        })
     }
 
-    fn add_arg(&mut self, name: String, ty: Ty, index: usize) -> VarId {
+    fn add_arg(&mut self, name: String, ty: Ty, index: usize, def_exp_id: ExpId) -> VarId {
         let kind = VarKind::Arg { index };
-        self.add_var(VarDef { name, ty, kind })
+        self.add_var(VarDef {
+            name,
+            ty,
+            kind,
+            def_exp_id,
+        })
     }
 
     fn add_loop(&mut self, exp_id: ExpId, body: ExpId) -> LoopId {
@@ -123,11 +138,11 @@ impl SemanticAnalyzer {
             }
             ExpKind::Ident(name) => {
                 let var_id = if let Some(index) = arg_index {
-                    self.add_arg(name.to_string(), ty.to_owned(), index)
+                    self.add_arg(name.to_string(), ty.to_owned(), index, exp_id)
                 } else if self.current_fun_id == GLOBAL_FUN_ID {
-                    self.add_global(name.to_string(), ty.to_owned())
+                    self.add_global(name.to_string(), ty.to_owned(), exp_id)
                 } else {
-                    self.add_local(name.to_string(), ty.to_owned())
+                    self.add_local(name.to_string(), ty.to_owned(), exp_id)
                 };
                 self.set_symbol(exp_id, SymbolKind::Var(var_id));
 
@@ -509,6 +524,15 @@ impl Sema {
             self.unify_ty(exp_id, l_ty, r_ty);
         }
     }
+
+    fn calculate_parents(&mut self) {
+        for &parent in Rc::clone(&self.syntax).exps.keys() {
+            let children = self.exp(parent).kind.children();
+            for child_id in children {
+                self.exp_parent.insert(child_id, parent);
+            }
+        }
+    }
 }
 
 pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
@@ -521,6 +545,7 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
             exp_ranges: BTreeMap::new(),
             exp_decls: BTreeSet::new(),
             exp_tys: BTreeMap::new(),
+            exp_parent: BTreeMap::new(),
             vars: BTreeMap::new(),
             funs: BTreeMap::new(),
             loops: BTreeMap::new(),
@@ -530,6 +555,7 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
         current_loop_id: None,
     };
     analyzer.sema();
+    analyzer.sema.calculate_parents();
     analyzer.sema
 }
 

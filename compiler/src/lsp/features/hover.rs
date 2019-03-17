@@ -14,14 +14,28 @@ fn marked_str(value: String) -> MarkedString {
 pub(crate) fn do_hover(doc_id: DocId, sema: &Sema, position: Position) -> Option<Vec<String>> {
     let line = position.line as usize;
     let column = position.character as usize;
+    let mut contents = vec![];
 
     let (module_id, module) = sema.find_module_by_doc_id(doc_id)?;
 
+    // Find type.
     let i = module.doc().unlocate(line, column);
     let (exp_id, symbol) = sema.find_symbol_at(module_id, i)?;
 
     let ty = format!("{}", sema.get_ty(exp_id));
-    Some(vec![ty, format!("{:?}", symbol)])
+    contents.push(ty);
+
+    // Find definition expression text.
+    let symbol = sema.symbol_ref(symbol);
+    let def_text = symbol
+        .def_exp_id()
+        .and_then(|def_exp_id| sema.find_ancestor_let(def_exp_id))
+        .map(|let_exp_id| sema.exp_text(let_exp_id));
+    if let Some(text) = def_text {
+        contents.push(text.to_string());
+    }
+
+    Some(contents)
 }
 
 pub(crate) fn hover(doc_id: DocId, sema: &Sema, position: Position) -> Option<Hover> {
@@ -51,6 +65,7 @@ mod tests {
         // On `num`.
         let hover = do_hover(doc_id, &sema, Position::new(1, 16)).expect("Some(Hover)");
         assert_eq!(hover[0], "int");
+        assert_eq!(hover[1], "let num = 1");
 
         // On nothing.
         let hover = do_hover(doc_id, &sema, Position::new(0, 0));

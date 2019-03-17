@@ -403,7 +403,7 @@ impl SemanticAnalyzer {
 
     fn sema(&mut self) {
         // Merge all top-level expressions into single function.
-        let roots = self.sema.syntax.roots.to_owned();
+        let roots = self.sema.syntax.module_root_exps().collect::<Vec<_>>();
         let last_exp_id = *roots.last().expect("At least one document");
         let main_fun_ty = Ty::make_fun(iter::empty(), Ty::Var(last_exp_id));
         let fun_id = self.add_fun_def(
@@ -533,15 +533,19 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
     analyzer.sema
 }
 
-pub(crate) fn analyze_str(src: &str) -> Sema {
+pub(crate) fn analyze_str(doc_id: DocId, src: Rc<String>) -> Sema {
     static PRELUDE: &str = include_str!("../../stdlib/prelude.picomet");
 
     let mut syntax = Syntax::default();
-    let prelude_doc = Rc::new(Doc::new("prelude".to_string(), PRELUDE.to_string()));
-    syntax.add_doc(prelude_doc);
+    let prelude_doc = Rc::new(Doc::new(
+        DocId::new(std::usize::MAX),
+        "prelude".to_string(),
+        Rc::new(PRELUDE.to_string()),
+    ));
+    syntax.add_module(prelude_doc);
 
-    let doc = Rc::new(Doc::new("main".to_string(), src.to_string()));
-    syntax.add_doc(doc);
+    let doc = Rc::new(Doc::new(doc_id, "main".to_string(), src));
+    syntax.add_module(doc);
 
     sema(Rc::new(syntax))
 }

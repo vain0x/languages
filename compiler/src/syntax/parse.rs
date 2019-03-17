@@ -1,9 +1,9 @@
 use super::*;
 use std::cell::RefCell;
-use std::rc::Rc;
 
 struct Parser<'a> {
     syntax: &'a mut Syntax,
+    module_id: ModuleId,
     first: TokenId,
     current: TokenId,
     tick: RefCell<usize>,
@@ -50,7 +50,6 @@ impl Parser<'_> {
 
     fn add_exp(&mut self, kind: ExpKind, token_span: (TokenId, TokenId)) -> ExpId {
         let (l, r) = token_span;
-        let doc = Rc::clone(&self.syntax.tokens[&l].doc);
 
         assert!(l <= r, "{:?}..{:?}", l, r);
         let r1 = if l == r { l } else { r - 1 };
@@ -59,8 +58,16 @@ impl Parser<'_> {
             self.syntax.tokens[&r1].span.1,
         );
 
+        let module_id = self.module_id;
         let exp_id = self.syntax.exps.len().into();
-        self.syntax.exps.insert(exp_id, Exp { kind, doc, span });
+        self.syntax.exps.insert(
+            exp_id,
+            Exp {
+                kind,
+                module_id,
+                span,
+            },
+        );
         exp_id
     }
 
@@ -69,7 +76,7 @@ impl Parser<'_> {
     }
 
     fn text(&self, token_id: TokenId) -> &str {
-        self.syntax.tokens[&token_id].text()
+        self.syntax.token_text(token_id)
     }
 
     fn parse_err(&mut self, message: String) -> ExpId {
@@ -451,15 +458,13 @@ impl Parser<'_> {
     }
 }
 
-pub(crate) fn parse(syntax: &'_ mut Syntax, root_token_id: TokenId) {
-    let root_exp_id = {
-        let mut parser = Parser {
-            syntax,
-            first: root_token_id,
-            current: root_token_id,
-            tick: RefCell::new(0),
-        };
-        parser.parse()
+pub(crate) fn parse(syntax: &'_ mut Syntax, module_id: ModuleId, root_token_id: TokenId) -> ExpId {
+    let mut parser = Parser {
+        syntax,
+        module_id,
+        first: root_token_id,
+        current: root_token_id,
+        tick: RefCell::new(0),
     };
-    syntax.roots.push(root_exp_id);
+    parser.parse()
 }

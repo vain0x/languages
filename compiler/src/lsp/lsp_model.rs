@@ -47,7 +47,7 @@ impl LspModel {
             Some(analysis) => analysis,
         };
 
-        features::sema_to_diagnostics(&analysis.sema)
+        features::diagnostics::sema_to_diagnostics(&analysis.sema)
     }
 }
 

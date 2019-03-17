@@ -1,6 +1,7 @@
 //! Export specific use cases of the library.
 
 pub mod tests;
+pub mod gen_rust;
 
 // Export LSP entry point.
 pub use crate::lsp::lsp_main::start_lsp_server;

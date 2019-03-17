@@ -84,21 +84,11 @@ impl<W: io::Write> LspHandler<W> {
     fn text_document_did_hover(&mut self, json: &str) {
         let request: LspRequest<TextDocumentPositionParams> = serde_json::from_str(json).unwrap();
 
-        let uri = request.params.text_document.uri;
-        let position = request.params.position;
-        let text = if position.line % 2 == 0 {
-            Some(Hover {
-                contents: HoverContents::Scalar(MarkedString::String(format!(
-                    "{}:{}:{}",
-                    uri, position.line, position.character
-                ))),
-                range: None,
-            })
-        } else {
-            None
-        };
+        let hover: Option<Hover> = self
+            .model
+            .hover(&request.params.text_document.uri, request.params.position);
 
-        self.sender.send_response(request.id, text);
+        self.sender.send_response(request.id, hover);
     }
 
     fn did_receive(&mut self, json: &str) {

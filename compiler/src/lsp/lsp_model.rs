@@ -38,8 +38,16 @@ impl LspModel {
         self.open_doc(uri, text);
     }
 
+    fn doc_analysis(&mut self, uri: &Url) -> Option<&DocAnalysis> {
+        self.docs.get(uri)
+    }
+
+    pub(super) fn hover(&mut self, _uri: &Url, position: Position) -> Option<Hover> {
+        features::hover::hover(position)
+    }
+
     pub(super) fn validate(&mut self, uri: &Url) -> Vec<Diagnostic> {
-        let analysis = match self.docs.get(uri) {
+        let analysis = match self.doc_analysis(uri) {
             None => {
                 debug!("Doc {} is not compiled yet.", uri);
                 return vec![];

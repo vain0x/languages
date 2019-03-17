@@ -114,6 +114,10 @@ impl FunDef {
 }
 
 impl Sema {
+    pub(crate) fn to_doc_msgs(&self) -> Vec<DocMsg> {
+        Msg::summarize(self.msgs.values(), &self.syntax).1
+    }
+
     pub(crate) fn is_successful(&self) -> bool {
         self.msgs.iter().all(|(_, msg)| msg.is_successful())
     }

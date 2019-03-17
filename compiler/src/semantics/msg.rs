@@ -3,7 +3,7 @@ use crate::syntax::*;
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
-pub struct DocMsg {
+pub(crate) struct DocMsg {
     level: MsgLevel,
     message: String,
     l: Pos,
@@ -18,7 +18,7 @@ pub(crate) struct Msg {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum MsgLevel {
+pub(crate) enum MsgLevel {
     Err,
 }
 
@@ -50,7 +50,7 @@ impl Msg {
         }
     }
 
-    pub fn is_successful(&self) -> bool {
+    pub(crate) fn is_successful(&self) -> bool {
         self.level != MsgLevel::Err
     }
 
@@ -79,19 +79,19 @@ impl Msg {
 }
 
 impl DocMsg {
-    pub fn message(&self) -> &str {
+    pub(crate) fn message(&self) -> &str {
         &self.message
     }
 
-    pub fn start_pos(&self) -> Pos {
+    pub(crate) fn start_pos(&self) -> Pos {
         self.l
     }
 
-    pub fn end_pos(&self) -> Pos {
+    pub(crate) fn end_pos(&self) -> Pos {
         self.r
     }
 
-    pub fn to_text(msgs: &[DocMsg]) -> String {
+    pub(crate) fn to_text(msgs: &[DocMsg]) -> String {
         use std::fmt::Write as _;
 
         let mut buffer = String::new();

@@ -125,10 +125,6 @@ impl Doc {
         Doc { uri, src }
     }
 
-    pub fn uri(&self) -> &str {
-        &self.uri
-    }
-
     pub fn src(&self) -> &str {
         &self.src
     }

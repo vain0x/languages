@@ -451,15 +451,12 @@ impl Parser<'_> {
     }
 }
 
-pub(crate) fn parse(syntax: &'_ mut Syntax, root_token_id: TokenId) {
-    let root_exp_id = {
-        let mut parser = Parser {
-            syntax,
-            first: root_token_id,
-            current: root_token_id,
-            tick: RefCell::new(0),
-        };
-        parser.parse()
+pub(crate) fn parse(syntax: &'_ mut Syntax, root_token_id: TokenId) -> ExpId {
+    let mut parser = Parser {
+        syntax,
+        first: root_token_id,
+        current: root_token_id,
+        tick: RefCell::new(0),
     };
-    syntax.roots.push(root_exp_id);
+    parser.parse()
 }

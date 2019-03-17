@@ -17,6 +17,7 @@ pub(crate) type Range = (Pos, Pos);
 pub(crate) struct TokenTag;
 pub(crate) struct ExpTag;
 
+pub(crate) type ModuleId = Id<Module>;
 pub(crate) type TokenId = Id<TokenTag>;
 pub(crate) type ExpId = Id<ExpTag>;
 
@@ -24,6 +25,13 @@ pub(crate) type ExpId = Id<ExpTag>;
 pub struct Doc {
     uri: String,
     src: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct Module {
+    doc: Rc<Doc>,
+    root_token_id: TokenId,
+    root_exp_id: ExpId,
 }
 
 pub(crate) trait BorrowDoc {
@@ -109,9 +117,9 @@ pub(crate) struct Exp {
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Syntax {
+    pub modules: BTreeMap<ModuleId, Module>,
     pub tokens: BTreeMap<TokenId, Token>,
     pub exps: BTreeMap<ExpId, Exp>,
-    pub roots: Vec<ExpId>,
 }
 
 pub(crate) trait ShareSyntax {
@@ -152,9 +160,25 @@ impl Token {
 }
 
 impl Syntax {
-    pub fn add_doc(&mut self, doc: Rc<Doc>) {
-        let root_token_id = tokenize::tokenize(self, doc);
-        parse::parse(self, root_token_id);
+    pub(crate) fn add_module(&mut self, doc: Rc<Doc>) {
+        let root_token_id = tokenize::tokenize(self, Rc::clone(&doc));
+        let root_exp_id = parse::parse(self, root_token_id);
+
+        let module_id = ModuleId::new(self.modules.len());
+        self.modules.insert(
+            module_id,
+            Module {
+                doc,
+                root_token_id,
+                root_exp_id,
+            },
+        );
+    }
+
+    pub(crate) fn module_root_exps<'a>(&'a self) -> impl Iterator<Item = ExpId> + 'a {
+        self.modules
+            .values()
+            .map(|module: &'a _| module.root_exp_id)
     }
 
     pub(crate) fn locate_exp(&self, exp_id: ExpId) -> Range {

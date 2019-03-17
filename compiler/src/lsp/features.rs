@@ -1,3 +1,4 @@
+use crate::mir::gen_mir::compile;
 use crate::semantics::DocMsg;
 use lsp_types::*;
 
@@ -22,7 +23,7 @@ fn msg_to_diagnostic(msg: &DocMsg) -> Diagnostic {
 }
 
 pub(super) fn validate_document(src: &str) -> Vec<Diagnostic> {
-    let result = crate::compile(src);
+    let result = compile(src);
     let mut diagnostics = vec![];
     for msg in &result.msgs {
         diagnostics.push(msg_to_diagnostic(msg))

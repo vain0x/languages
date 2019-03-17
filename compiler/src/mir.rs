@@ -50,7 +50,7 @@ pub(crate) struct Mir {
 }
 
 #[derive(Clone)]
-pub struct CompilationResult {
+pub(crate) struct CompilationResult {
     pub success: bool,
     pub program: String,
     pub msgs: Vec<DocMsg>,

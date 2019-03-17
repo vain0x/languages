@@ -1,6 +1,7 @@
 //! Convert picomet-lang code to a string to execute with Rust tools.
 
-use crate::{compile, DocMsg};
+use crate::mir::gen_mir::compile;
+use crate::semantics::msg::DocMsg;
 use std::fs;
 use std::io;
 use std::io::prelude::*;

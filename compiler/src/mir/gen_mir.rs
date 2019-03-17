@@ -598,7 +598,7 @@ static PRELUDE: &str = r#"
     };
 "#;
 
-pub fn compile(src: &str) -> CompilationResult {
+pub(crate) fn compile(src: &str) -> CompilationResult {
     let mut syntax = Syntax::default();
     let prelude_doc = Rc::new(Doc::new("prelude".to_string(), PRELUDE.to_string()));
     syntax.add_doc(prelude_doc);

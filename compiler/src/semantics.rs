@@ -129,6 +129,30 @@ impl Sema {
     pub(crate) fn find_module_by_doc_id(&self, doc_id: DocId) -> Option<(ModuleId, &Module)> {
         self.syntax.find_module_by_doc_id(doc_id)
     }
+
+    pub(crate) fn exp(&self, exp_id: ExpId) -> &Exp {
+        &self.syntax.exps[&exp_id]
+    }
+
+    pub(crate) fn find_symbol_at(
+        &self,
+        module_id: ModuleId,
+        i: usize,
+    ) -> Option<(ExpId, SymbolKind)> {
+        self.exp_symbols
+            .iter()
+            .filter_map(|(&exp_id, symbol)| {
+                let exp = self.exp(exp_id);
+                let (l, r) = exp.span;
+                match exp.kind {
+                    ExpKind::Ident(_) if exp.module_id == module_id && l <= i && i <= r => {
+                        Some((exp_id, symbol.clone()))
+                    }
+                    _ => None,
+                }
+            })
+            .next()
+    }
 }
 
 impl BorrowMutMsgs for Sema {

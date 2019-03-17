@@ -24,7 +24,7 @@ pub(crate) type ExpId = Id<ExpTag>;
 #[derive(Clone, Debug)]
 pub struct Doc {
     uri: String,
-    src: String,
+    src: Rc<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -129,7 +129,7 @@ pub(crate) trait ShareSyntax {
 pub(crate) const PUNS: &'static [&'static str] = &["(", ")", "[", "]", "{", "}", ",", ";"];
 
 impl Doc {
-    pub fn new(uri: String, src: String) -> Self {
+    pub fn new(uri: String, src: Rc<String>) -> Self {
         Doc { uri, src }
     }
 

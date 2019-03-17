@@ -219,7 +219,7 @@ mod tests {
         let mut syntax = Syntax::default();
         let doc = Rc::new(Doc::new(
             format!("{}:{}", file!(), line!()),
-            "#!/bin/bash\necho こんにちは世界😀".to_string(),
+            Rc::new("#!/bin/bash\necho こんにちは世界😀".to_string()),
         ));
         tokenize(&mut syntax, ModuleId::new(0), doc);
         assert!(syntax.tokens.len() != 0);

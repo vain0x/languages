@@ -1,6 +1,7 @@
 use crate::semantics::analyze;
 use crate::semantics::DocMsg;
 use lsp_types::*;
+use std::rc::Rc;
 
 fn msg_to_diagnostic(msg: &DocMsg) -> Diagnostic {
     let (ly, lx) = msg.start_pos();
@@ -23,7 +24,7 @@ fn msg_to_diagnostic(msg: &DocMsg) -> Diagnostic {
 }
 
 pub(super) fn validate_document(src: &str) -> Vec<Diagnostic> {
-    let sema = analyze::analyze_str(src);
+    let sema = analyze::analyze_str(Rc::new(src.to_string()));
     let msgs = sema.to_doc_msgs();
 
     let mut diagnostics = vec![];

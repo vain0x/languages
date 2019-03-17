@@ -152,6 +152,33 @@ impl Doc {
         }
         (line, column)
     }
+
+    /// Convert (line, column) to byte index in the source code.
+    pub(crate) fn unlocate(&self, mut line: usize, column: usize) -> usize {
+        let src = self.src().as_bytes();
+        let mut i = 0;
+        while i < src.len() && line > 0 {
+            if src[i] == b'\n' {
+                line -= 1;
+            }
+            i += 1;
+        }
+
+        // FIXME: The result is incorrect if the line contains non-ASCII chars.
+        i += column;
+
+        i
+    }
+}
+
+impl Module {
+    fn doc_id(&self) -> DocId {
+        self.doc.doc_id
+    }
+
+    pub(crate) fn doc(&self) -> &Doc {
+        &self.doc
+    }
 }
 
 impl Syntax {
@@ -186,6 +213,14 @@ impl Syntax {
         self.modules
             .values()
             .map(|module: &'a _| module.root_exp_id)
+    }
+
+    pub(crate) fn find_module_by_doc_id(&self, doc_id: DocId) -> Option<(ModuleId, &Module)> {
+        self.modules
+            .iter()
+            .filter(|&(_, module)| module.doc_id() == doc_id)
+            .map(|(&module_id, module)| (module_id, module))
+            .next()
     }
 
     pub(crate) fn locate_exp(&self, exp_id: ExpId) -> Range {

@@ -1,9 +1,9 @@
-use crate::syntax::DocId;
 use crate::lsp::features;
 use crate::semantics::{analyze, Sema};
+use crate::syntax::DocId;
 use lsp_types::*;
-use std::rc::Rc;
 use std::collections::BTreeMap;
+use std::rc::Rc;
 
 pub(super) struct DocAnalysis {
     doc_id: DocId,
@@ -42,8 +42,9 @@ impl LspModel {
         self.docs.get(uri)
     }
 
-    pub(super) fn hover(&mut self, _uri: &Url, position: Position) -> Option<Hover> {
-        features::hover::hover(position)
+    pub(super) fn hover(&mut self, uri: &Url, position: Position) -> Option<Hover> {
+        let analysis = self.doc_analysis(uri)?;
+        features::hover::hover(analysis.doc_id, &analysis.sema, position)
     }
 
     pub(super) fn validate(&mut self, uri: &Url) -> Vec<Diagnostic> {

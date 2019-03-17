@@ -125,6 +125,10 @@ impl Sema {
     pub(crate) fn all_fun_ids(&self) -> Vec<FunId> {
         self.funs.keys().cloned().collect()
     }
+
+    pub(crate) fn find_module_by_doc_id(&self, doc_id: DocId) -> Option<(ModuleId, &Module)> {
+        self.syntax.find_module_by_doc_id(doc_id)
+    }
 }
 
 impl BorrowMutMsgs for Sema {

@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 struct Tokenizer<'a> {
     syntax: &'a mut Syntax,
+    module_id: ModuleId,
     doc: Rc<Doc>,
     current: usize,
     tick: RefCell<usize>,
@@ -11,11 +12,16 @@ struct Tokenizer<'a> {
 
 impl Tokenizer<'_> {
     fn add_token(&mut self, kind: TokenKind, span: Span) {
-        let doc = Rc::clone(&self.doc);
+        let module_id = self.module_id;
         let token_id = TokenId::new(self.syntax.tokens.len());
-        self.syntax
-            .tokens
-            .insert(token_id, Token { kind, doc, span });
+        self.syntax.tokens.insert(
+            token_id,
+            Token {
+                kind,
+                module_id,
+                span,
+            },
+        );
     }
 
     fn next_char(&self) -> u8 {
@@ -186,10 +192,11 @@ fn next_char_len(src: &str) -> usize {
         .len_utf8()
 }
 
-pub(crate) fn tokenize(syntax: &'_ mut Syntax, doc: Rc<Doc>) -> TokenId {
+pub(crate) fn tokenize(syntax: &'_ mut Syntax, module_id: ModuleId, doc: Rc<Doc>) -> TokenId {
     let root_token_id = TokenId::new(syntax.tokens.len());
     let mut tokenizer = Tokenizer {
         syntax,
+        module_id,
         doc,
         current: 0,
         tick: RefCell::new(0),
@@ -214,7 +221,7 @@ mod tests {
             format!("{}:{}", file!(), line!()),
             "#!/bin/bash\necho こんにちは世界😀".to_string(),
         ));
-        tokenize(&mut syntax, doc);
+        tokenize(&mut syntax, ModuleId::new(0), doc);
         assert!(syntax.tokens.len() != 0);
     }
 }

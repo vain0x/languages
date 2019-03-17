@@ -58,7 +58,7 @@ pub(crate) enum TokenKind {
 #[derive(Clone, Debug)]
 pub(crate) struct Token {
     pub kind: TokenKind,
-    pub doc: Rc<Doc>,
+    pub module_id: ModuleId,
     pub span: Span,
 }
 
@@ -111,7 +111,7 @@ pub(crate) enum ExpKind {
 #[derive(Clone, Debug)]
 pub(crate) struct Exp {
     pub kind: ExpKind,
-    pub doc: Rc<Doc>,
+    pub module_id: ModuleId,
     pub span: Span,
 }
 
@@ -152,27 +152,32 @@ impl Doc {
     }
 }
 
-impl Token {
-    pub fn text(&self) -> &str {
-        let (l, r) = self.span;
-        &self.doc.src()[l..r]
-    }
-}
-
 impl Syntax {
-    pub(crate) fn add_module(&mut self, doc: Rc<Doc>) {
-        let root_token_id = tokenize::tokenize(self, Rc::clone(&doc));
-        let root_exp_id = parse::parse(self, root_token_id);
+    pub(crate) fn token_text(&self, token_id: TokenId) -> &str {
+        let token = &self.tokens[&token_id];
+        let (l, r) = token.span;
+        let doc = &self.modules[&token.module_id].doc;
+        &doc.src[l..r]
+    }
 
+    pub(crate) fn add_module(&mut self, doc: Rc<Doc>) {
         let module_id = ModuleId::new(self.modules.len());
         self.modules.insert(
             module_id,
             Module {
-                doc,
-                root_token_id,
-                root_exp_id,
+                doc: Rc::clone(&doc),
+                root_token_id: TokenId::new(0),
+                root_exp_id: ExpId::new(0),
             },
         );
+
+        let root_token_id = tokenize::tokenize(self, module_id, Rc::clone(&doc));
+        let root_exp_id = parse::parse(self, module_id, root_token_id);
+
+        self.modules.entry(module_id).and_modify(|module| {
+            module.root_token_id = root_token_id;
+            module.root_exp_id = root_exp_id;
+        });
     }
 
     pub(crate) fn module_root_exps<'a>(&'a self) -> impl Iterator<Item = ExpId> + 'a {
@@ -183,9 +188,10 @@ impl Syntax {
 
     pub(crate) fn locate_exp(&self, exp_id: ExpId) -> Range {
         let exp = &self.exps[&exp_id];
+        let doc = &self.modules[&exp.module_id].doc;
         let (l, r) = exp.span;
-        let l_pos = exp.doc.locate(l);
-        let r_pos = exp.doc.locate(r);
+        let l_pos = doc.locate(l);
+        let r_pos = doc.locate(r);
         (l_pos, r_pos)
     }
 

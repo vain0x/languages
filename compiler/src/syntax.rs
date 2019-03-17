@@ -17,12 +17,14 @@ pub(crate) type Range = (Pos, Pos);
 pub(crate) struct TokenTag;
 pub(crate) struct ExpTag;
 
+pub(crate) type DocId = Id<Doc>;
 pub(crate) type ModuleId = Id<Module>;
 pub(crate) type TokenId = Id<TokenTag>;
 pub(crate) type ExpId = Id<ExpTag>;
 
 #[derive(Clone, Debug)]
 pub struct Doc {
+    doc_id: DocId,
     uri: String,
     src: Rc<String>,
 }
@@ -129,8 +131,8 @@ pub(crate) trait ShareSyntax {
 pub(crate) const PUNS: &'static [&'static str] = &["(", ")", "[", "]", "{", "}", ",", ";"];
 
 impl Doc {
-    pub fn new(uri: String, src: Rc<String>) -> Self {
-        Doc { uri, src }
+    pub(crate) fn new(doc_id: DocId, uri: String, src: Rc<String>) -> Self {
+        Doc { doc_id, uri, src }
     }
 
     pub fn src(&self) -> &str {

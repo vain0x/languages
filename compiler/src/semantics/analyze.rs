@@ -533,17 +533,18 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
     analyzer.sema
 }
 
-pub(crate) fn analyze_str(src: Rc<String>) -> Sema {
+pub(crate) fn analyze_str(doc_id: DocId, src: Rc<String>) -> Sema {
     static PRELUDE: &str = include_str!("../../stdlib/prelude.picomet");
 
     let mut syntax = Syntax::default();
     let prelude_doc = Rc::new(Doc::new(
+        DocId::new(std::usize::MAX),
         "prelude".to_string(),
         Rc::new(PRELUDE.to_string()),
     ));
     syntax.add_module(prelude_doc);
 
-    let doc = Rc::new(Doc::new("main".to_string(), src));
+    let doc = Rc::new(Doc::new(doc_id, "main".to_string(), src));
     syntax.add_module(doc);
 
     sema(Rc::new(syntax))

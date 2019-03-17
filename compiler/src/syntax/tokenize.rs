@@ -218,6 +218,7 @@ mod tests {
     fn test_tokenizer_does_not_hang() {
         let mut syntax = Syntax::default();
         let doc = Rc::new(Doc::new(
+            DocId::new(0),
             format!("{}:{}", file!(), line!()),
             Rc::new("#!/bin/bash\necho こんにちは世界😀".to_string()),
         ));

@@ -83,10 +83,6 @@ pub(crate) struct Sema {
 }
 
 impl FunDef {
-    pub(crate) fn ty(&self) -> Ty {
-        self.ty.to_owned()
-    }
-
     pub(crate) fn result_ty(&self) -> Option<&Ty> {
         match &self.ty {
             Ty::Fun(tys) => tys.last(),
@@ -108,10 +104,6 @@ impl Sema {
         self.msgs.iter().all(|(_, msg)| msg.is_successful())
     }
 
-    pub(crate) fn all_fun_ids(&self) -> Vec<FunId> {
-        self.funs.keys().cloned().collect()
-    }
-
     pub(crate) fn find_module_by_doc_id(&self, doc_id: DocId) -> Option<(ModuleId, &Module)> {
         self.syntax.find_module_by_doc_id(doc_id)
     }
@@ -131,7 +123,6 @@ impl Sema {
         match symbol {
             SymbolKind::Prim(prim) => SymbolRef::Prim(prim),
             SymbolKind::Var(var_id) => SymbolRef::Var(var_id, &self.vars[&var_id]),
-            SymbolKind::Fun(fun_id) => SymbolRef::Fun(fun_id, &self.funs[&fun_id]),
         }
     }
 

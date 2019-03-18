@@ -216,7 +216,6 @@ impl SemanticAnalyzer {
                     SymbolKind::Var(..) => {
                         self.set_ty(exp_id, &ty, &ty);
                     }
-                    SymbolKind::Fun(..) => unimplemented!(),
                 }
             }
             &ExpKind::Index { indexee, arg } => {
@@ -240,7 +239,7 @@ impl SemanticAnalyzer {
         self.set_ty(exp_id, &ty, &symbol_ty);
 
         match symbol_kind {
-            SymbolKind::Prim(..) | SymbolKind::Fun(..) => {}
+            SymbolKind::Prim(..) => {}
             SymbolKind::Var(..) => {
                 self.sema.exp_vals.insert(exp_id);
             }
@@ -471,7 +470,6 @@ impl Sema {
         match symbol_kind {
             SymbolKind::Prim(prim) => SymbolRef::Prim(prim),
             SymbolKind::Var(var_id) => SymbolRef::Var(var_id, &self.vars[&var_id]),
-            SymbolKind::Fun(fun_id) => SymbolRef::Fun(fun_id, &self.funs[&fun_id]),
         }
     }
 

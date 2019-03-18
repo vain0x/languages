@@ -161,7 +161,6 @@ impl Compiler {
                     ptr_reg_id
                 }
             }
-            SymbolRef::Fun(..) => panic!("cannot generate function"),
         }
     }
 
@@ -214,7 +213,6 @@ impl Compiler {
                 self.kill(ptr_reg_id);
                 NO_REG_ID
             }
-            SymbolRef::Fun(fun_id, _) => self.add_cmd_call_fun(args, fun_id),
             SymbolRef::Var(
                 _,
                 &VarDef {

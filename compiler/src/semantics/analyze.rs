@@ -37,44 +37,50 @@ impl SemanticAnalyzer {
         self.sema.add_err_msg(message, exp_id);
     }
 
-    fn add_fun_decl(&mut self, exp_id: ExpId, name: String, ty: Ty) -> FunId {
-        let fun_id = FunId::new(self.sema.funs.len());
+    fn add_fun(&mut self, _: ExpId, name: String, ty: Ty, bodies: Vec<ExpId>) -> FunId {
         let fun_def = FunDef {
             name,
             ty,
-            kind: FunKind::Decl(exp_id),
+            bodies,
             symbols: vec![],
         };
+
+        let fun_id = FunId::new(self.sema.funs.len());
         self.sema.funs.insert(fun_id, fun_def);
+
         fun_id
     }
 
-    fn add_fun_def(&mut self, exp_id: ExpId, name: String, ty: Ty, bodies: Vec<ExpId>) -> FunId {
-        // Find or create the declaration.
-        let fun_id = match self.lookup_symbol(&name) {
-            Some(SymbolRef::Fun(fun_id, fun_def)) if fun_def.kind.is_decl() => fun_id,
-            _ => self.add_fun_decl(exp_id, name.to_string(), ty.to_owned()),
+    /// Define a variable that is defined with `let rec` before analysis.
+    fn add_var_rec(&mut self, exp_id: ExpId, name: String) -> VarId {
+        let var_def = VarDef {
+            name: name.to_string(),
+            ty: Ty::Var(exp_id),
+            kind: VarKind::Rec(exp_id),
+            def_exp_id: exp_id,
         };
 
-        let fun_ty = {
-            let fun_def = self.sema.funs.get_mut(&fun_id).unwrap();
-            assert!(fun_def.kind.is_decl());
-            fun_def.kind = FunKind::Def { bodies };
+        let var_id = VarId::new(self.sema.vars.len());
+        self.sema.vars.insert(var_id, var_def);
+        self.current_fun_mut().symbols.push(SymbolKind::Var(var_id));
 
-            let fun_ty = mem::replace(&mut fun_def.ty, ty.to_owned());
-            fun_ty
-        };
-
-        self.sema.unify_ty(exp_id, &fun_ty, &ty);
-
-        fun_id
+        var_id
     }
 
     fn add_var(&mut self, var_def: VarDef) -> VarId {
-        let var_id = VarId::new(self.sema.vars.len());
+        // If the variable is defined with `let rec`,
+        // it already has var id.
+
+        let var_id = match self.sema.exp_symbols.get(&var_def.def_exp_id) {
+            Some(&SymbolKind::Var(var_id)) => var_id,
+            _ => {
+                let var_id = VarId::new(self.sema.vars.len());
+                self.current_fun_mut().symbols.push(SymbolKind::Var(var_id));
+                var_id
+            }
+        };
 
         self.sema.vars.insert(var_id, var_def);
-        self.current_fun_mut().symbols.push(SymbolKind::Var(var_id));
 
         var_id
     }
@@ -107,6 +113,15 @@ impl SemanticAnalyzer {
             name,
             ty,
             kind,
+            def_exp_id,
+        })
+    }
+
+    fn add_var_fun(&mut self, name: String, fun_id: FunId, def_exp_id: ExpId) -> VarId {
+        self.add_var(VarDef {
+            name,
+            ty: Ty::Var(def_exp_id),
+            kind: VarKind::Fun(fun_id),
             def_exp_id,
         })
     }
@@ -351,8 +366,7 @@ impl SemanticAnalyzer {
                             let result_ty = Ty::Var(*body);
                             Ty::make_fun(arg_tys, result_ty)
                         };
-                        let fun_id =
-                            self.add_fun_def(pat, fun_name.to_string(), fun_ty, vec![*body]);
+                        let fun_id = self.add_fun(pat, fun_name.to_string(), fun_ty, vec![*body]);
 
                         let outer_fun_id = mem::replace(&mut self.current_fun_id, fun_id);
                         let outer_loop_id = mem::replace(&mut self.current_loop_id, None);
@@ -365,7 +379,7 @@ impl SemanticAnalyzer {
                         self.current_fun_id = outer_fun_id;
                         self.current_loop_id = outer_loop_id;
 
-                        self.current_fun_mut().symbols.push(SymbolKind::Fun(fun_id));
+                        self.add_var_fun(fun_name.to_string(), fun_id, pat);
                     }
                     _ => {
                         self.on_pat(pat, Ty::Var(pat), None);
@@ -394,8 +408,9 @@ impl SemanticAnalyzer {
             _ => return,
         };
 
-        let fun_id = self.add_fun_decl(pat, name, Ty::Var(pat));
-        self.current_fun_mut().symbols.push(SymbolKind::Fun(fun_id));
+        let var_id = self.add_var_rec(pat, name);
+        self.current_fun_mut().symbols.push(SymbolKind::Var(var_id));
+        self.set_symbol(pat, SymbolKind::Var(var_id));
     }
 
     fn on_vals(&mut self, exp_ids: &[ExpId]) {
@@ -409,9 +424,10 @@ impl SemanticAnalyzer {
     }
 
     fn verify(&mut self) {
-        for fun_id in self.sema.all_fun_ids() {
-            if let FunKind::Decl(exp_id) = self.sema.funs[&fun_id].kind {
-                self.add_err("Function not defined".to_string(), exp_id);
+        let var_ids = self.sema.vars.keys().cloned().collect::<Vec<_>>();
+        for var_id in var_ids {
+            if let VarKind::Rec(exp_id) = self.sema.vars[&var_id].kind {
+                self.add_err("Unresolved let-rec variable".to_string(), exp_id);
             }
         }
     }
@@ -421,7 +437,7 @@ impl SemanticAnalyzer {
         let roots = self.sema.syntax.module_root_exps().collect::<Vec<_>>();
         let last_exp_id = *roots.last().expect("At least one document");
         let main_fun_ty = Ty::make_fun(iter::empty(), Ty::Var(last_exp_id));
-        let fun_id = self.add_fun_def(
+        let fun_id = self.add_fun(
             last_exp_id,
             "main".to_string(),
             main_fun_ty,

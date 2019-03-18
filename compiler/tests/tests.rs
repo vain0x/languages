@@ -463,14 +463,16 @@ fn test_fun_shadowing() {
 }
 
 #[test]
-fn test_fun_rec_must_have_unique_name() {
-    // FIXME: Clearer message
-    test_err(
+fn test_fun_rec_allow_name_conflict() {
+    eval_tests(
         r#"
+            println_int(f());
             let rec f = || 1;
+            println_int(f());
             let rec f = || 2;
+            println_int(f());
         "#,
-        "At 2:21..2:22 Function not defined",
+        &[("", "2\n2\n2\n")],
     );
 }
 

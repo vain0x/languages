@@ -24,6 +24,8 @@ pub(crate) enum VarKind {
     Global { index: usize },
     Local { index: usize },
     Arg { index: usize },
+    Rec(ExpId),
+    Fun(FunId),
 }
 
 #[derive(Clone, Debug)]
@@ -34,22 +36,15 @@ pub(crate) struct VarDef {
     pub def_exp_id: ExpId,
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub(crate) enum FunKind {
-    Decl(ExpId),
-    Def {
-        /// A function can have 1+ bodies.
-        /// These expressions are combined with `;`.
-        bodies: Vec<ExpId>,
-    },
-}
-
 #[derive(Clone, Debug)]
 pub(crate) struct FunDef {
     pub name: String,
-    pub kind: FunKind,
     pub ty: Ty,
     pub symbols: Vec<SymbolKind>,
+
+    /// A function can have 1+ bodies.
+    /// These expressions are combined with `;`.
+    bodies: Vec<ExpId>,
 }
 
 #[derive(Clone, Debug)]
@@ -87,15 +82,6 @@ pub(crate) struct Sema {
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 
-impl FunKind {
-    pub(crate) fn is_decl(&self) -> bool {
-        match self {
-            FunKind::Decl(_) => true,
-            _ => false,
-        }
-    }
-}
-
 impl FunDef {
     pub(crate) fn ty(&self) -> Ty {
         self.ty.to_owned()
@@ -109,10 +95,7 @@ impl FunDef {
     }
 
     pub(crate) fn bodies(&self) -> Vec<ExpId> {
-        match &self.kind {
-            FunKind::Decl(..) => vec![],
-            FunKind::Def { bodies } => bodies.to_owned(),
-        }
+        self.bodies.clone()
     }
 }
 

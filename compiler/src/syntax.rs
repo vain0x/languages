@@ -1,8 +1,10 @@
+pub(crate) mod exp;
 pub(crate) mod keyword;
 pub(crate) mod op;
 pub(crate) mod parse;
 pub(crate) mod tokenize;
 
+pub(crate) use self::exp::*;
 pub(crate) use self::keyword::*;
 pub(crate) use self::op::*;
 
@@ -64,59 +66,6 @@ pub(crate) struct Token {
     pub span: Span,
 }
 
-/// Expression in concrete syntax tree.
-#[derive(Clone, PartialEq, Debug)]
-pub(crate) enum ExpKind {
-    Err(String),
-    Unit,
-    Int(i64),
-    Byte(u8),
-    Str(String),
-    Ident(String),
-    Call {
-        callee: ExpId,
-        args: Vec<ExpId>,
-    },
-    Index {
-        indexee: ExpId,
-        arg: ExpId,
-    },
-    Bin {
-        op: Op,
-        l: ExpId,
-        r: ExpId,
-    },
-    Fun {
-        pats: Vec<ExpId>,
-        body: ExpId,
-    },
-    Return(ExpId),
-    If {
-        cond: ExpId,
-        body: ExpId,
-        alt: ExpId,
-    },
-    While {
-        cond: ExpId,
-        body: ExpId,
-    },
-    Break,
-    Continue,
-    Let {
-        pat: ExpId,
-        init: ExpId,
-        rec: bool,
-    },
-    Semi(Vec<ExpId>),
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct Exp {
-    pub kind: ExpKind,
-    pub module_id: ModuleId,
-    pub span: Span,
-}
-
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Syntax {
     pub modules: BTreeMap<ModuleId, Module>,
@@ -152,6 +101,33 @@ impl Doc {
         }
         (line, column)
     }
+
+    /// Convert (line, column) to byte index in the source code.
+    pub(crate) fn unlocate(&self, mut line: usize, column: usize) -> usize {
+        let src = self.src().as_bytes();
+        let mut i = 0;
+        while i < src.len() && line > 0 {
+            if src[i] == b'\n' {
+                line -= 1;
+            }
+            i += 1;
+        }
+
+        // FIXME: The result is incorrect if the line contains non-ASCII chars.
+        i += column;
+
+        i
+    }
+}
+
+impl Module {
+    fn doc_id(&self) -> DocId {
+        self.doc.doc_id
+    }
+
+    pub(crate) fn doc(&self) -> &Doc {
+        &self.doc
+    }
 }
 
 impl Syntax {
@@ -186,6 +162,14 @@ impl Syntax {
         self.modules
             .values()
             .map(|module: &'a _| module.root_exp_id)
+    }
+
+    pub(crate) fn find_module_by_doc_id(&self, doc_id: DocId) -> Option<(ModuleId, &Module)> {
+        self.modules
+            .iter()
+            .filter(|&(_, module)| module.doc_id() == doc_id)
+            .map(|(&module_id, module)| (module_id, module))
+            .next()
     }
 
     pub(crate) fn locate_exp(&self, exp_id: ExpId) -> Range {

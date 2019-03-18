@@ -592,7 +592,7 @@ pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
 }
 
 pub(crate) fn compile(src: &str) -> CompilationResult {
-    let sema = Rc::new(analyze::analyze_str(DocId::new(0), Rc::new(src.to_string())));
+    let sema = Rc::new(analyze::analyze_str(src));
     if !sema.is_successful() {
         let (success, msgs) = Msg::summarize(sema.msgs.values(), &sema.syntax);
         return CompilationResult {

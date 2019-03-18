@@ -416,7 +416,7 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn sema(&mut self) {
+    fn analyze(&mut self) {
         // Merge all top-level expressions into single function.
         let roots = self.sema.syntax.module_root_exps().collect::<Vec<_>>();
         let last_exp_id = *roots.last().expect("At least one document");
@@ -554,7 +554,7 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
         current_fun_id: GLOBAL_FUN_ID,
         current_loop_id: None,
     };
-    analyzer.sema();
+    analyzer.analyze();
     analyzer.sema.calculate_parents();
     analyzer.sema
 }

@@ -201,8 +201,8 @@ impl SemanticAnalyzer {
                 self.add_err(message.to_string(), exp_id);
             }
             ExpKind::Ident(name) => {
-                let symbol_kind = match self.lookup_symbol(name) {
-                    Some(symbol) => symbol.kind(),
+                let (symbol_kind, symbol_ty) = match self.lookup_symbol(name) {
+                    Some(symbol) => (symbol.kind(), symbol.get_ty()),
                     None => {
                         self.add_err("Undefined name".to_string(), exp_id);
                         return;
@@ -210,13 +210,7 @@ impl SemanticAnalyzer {
                 };
 
                 self.set_symbol(exp_id, symbol_kind);
-
-                match symbol_kind {
-                    SymbolKind::Prim(..) => unimplemented!(),
-                    SymbolKind::Var(..) => {
-                        self.set_ty(exp_id, &ty, &ty);
-                    }
-                }
+                self.set_ty(exp_id, &ty, &symbol_ty);
             }
             &ExpKind::Index { indexee, arg } => {
                 self.on_index_ref(exp_id, ty, indexee, arg);
@@ -234,8 +228,7 @@ impl SemanticAnalyzer {
             }
         };
 
-        self.sema.exp_symbols.insert(exp_id, symbol_kind);
-
+        self.set_symbol(exp_id, symbol_kind);
         self.set_ty(exp_id, &ty, &symbol_ty);
 
         match symbol_kind {

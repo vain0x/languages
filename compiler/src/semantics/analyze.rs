@@ -507,6 +507,7 @@ impl Sema {
                 self.exp_tys.borrow_mut().insert(exp_id, ty.clone());
                 ty
             }
+            Ty::Fun(tys) => Ty::Fun(tys.into_iter().map(|ty| self.subst_ty(ty)).collect()),
             _ => ty.clone(),
         }
     }

@@ -55,6 +55,18 @@ pub(crate) struct Exp {
 }
 
 impl ExpKind {
+    pub(crate) fn is_stmt(&self) -> bool {
+        match self {
+            ExpKind::Return(..)
+            | ExpKind::While { .. }
+            | ExpKind::Break
+            | ExpKind::Continue
+            | ExpKind::Let { .. }
+            | ExpKind::Semi(_) => true,
+            _ => false,
+        }
+    }
+
     pub(crate) fn children(&self) -> Vec<ExpId> {
         match self {
             ExpKind::Err(_)

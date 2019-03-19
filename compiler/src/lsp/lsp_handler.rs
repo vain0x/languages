@@ -28,6 +28,8 @@ impl<W: io::Write> LspHandler<W> {
                         },
                     )),
                     hover_provider: Some(true),
+                    references_provider: Some(true),
+                    rename_provider: Some(RenameProviderCapability::Simple(true)),
                     ..ServerCapabilities::default()
                 },
             },
@@ -47,7 +49,7 @@ impl<W: io::Write> LspHandler<W> {
             serde_json::from_str(&json).expect("did open notification");
         let doc = n.params.text_document;
         let uri = doc.uri.to_owned();
-        self.model.open_doc(doc.uri, doc.text);
+        self.model.open_doc(doc.uri, doc.version, doc.text);
 
         self.text_document_did_open_or_change(&uri);
     }
@@ -63,8 +65,9 @@ impl<W: io::Write> LspHandler<W> {
 
         let doc = n.params.text_document;
         let uri = doc.uri.to_owned();
+        let version = doc.version.unwrap_or(0);
 
-        self.model.change_doc(doc.uri, text);
+        self.model.change_doc(doc.uri, version, text);
 
         self.text_document_did_open_or_change(&uri);
     }
@@ -81,7 +84,7 @@ impl<W: io::Write> LspHandler<W> {
         );
     }
 
-    fn text_document_did_hover(&mut self, json: &str) {
+    fn text_document_hover(&mut self, json: &str) {
         let request: LspRequest<TextDocumentPositionParams> = serde_json::from_str(json).unwrap();
 
         let hover: Option<Hover> = self
@@ -89,6 +92,30 @@ impl<W: io::Write> LspHandler<W> {
             .hover(&request.params.text_document.uri, request.params.position);
 
         self.sender.send_response(request.id, hover);
+    }
+
+    fn text_document_references(&mut self, json: &str) {
+        let request: LspRequest<ReferenceParams> = serde_json::from_str(json).unwrap();
+
+        let locations: Vec<Location> = self.model.references(
+            &request.params.text_document.uri,
+            request.params.position,
+            request.params.context.include_declaration,
+        );
+
+        self.sender.send_response(request.id, locations);
+    }
+
+    fn text_document_rename(&mut self, json: &str) {
+        let request: LspRequest<RenameParams> = serde_json::from_str(json).unwrap();
+
+        let edit: Option<WorkspaceEdit> = self.model.rename(
+            &request.params.text_document.uri,
+            request.params.position,
+            request.params.new_name,
+        );
+
+        self.sender.send_response(request.id, edit);
     }
 
     fn did_receive(&mut self, json: &str) {
@@ -114,7 +141,11 @@ impl<W: io::Write> LspHandler<W> {
         } else if json.contains("textDocument/didChange") {
             self.text_document_did_change(json);
         } else if json.contains("textDocument/hover") {
-            self.text_document_did_hover(json);
+            self.text_document_hover(json);
+        } else if json.contains("textDocument/references") {
+            self.text_document_references(json);
+        } else if json.contains("textDocument/rename") {
+            self.text_document_rename(json);
         } else {
             warn!("Msg unresolved.")
         }

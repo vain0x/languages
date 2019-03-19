@@ -102,6 +102,29 @@ impl Compiler {
         l
     }
 
+    fn add_cmd_call_fun(&mut self, args: &[ExpId], fun_id: FunId) -> RegId {
+        let body_label_id = self.mir.funs[&fun_id].body_label_id;
+
+        // Push args to stack in reversed order.
+        for arg in args.iter().cloned().rev() {
+            let reg_id = self.on_exp(arg);
+            self.push(Cmd::Push, reg_id, CmdArg::None);
+            self.kill(reg_id);
+        }
+
+        self.push(Cmd::Call, NO_REG_ID, CmdArg::Label(body_label_id));
+
+        // Pop args from stack.
+        let reg_id = self.add_reg();
+        for _ in args {
+            self.push(Cmd::Pop, reg_id, CmdArg::None);
+        }
+
+        // Copy the result.
+        self.push(Cmd::Mov, reg_id, CmdArg::Reg(RET_REG_ID));
+        reg_id
+    }
+
     fn on_ident(&mut self, exp_id: ExpId, _: &str) -> RegId {
         let symbol_ref = self.get_symbol(exp_id).expect("ident should be resolved");
         match symbol_ref {
@@ -125,6 +148,8 @@ impl Compiler {
                         self.push(Cmd::Mov, ptr_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
                         self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
                     }
+                    VarKind::Fun(..) => panic!("cannot generate fun"),
+                    VarKind::Rec(_) => unreachable!("VarKind::Rec is resolved during analysis"),
                 };
 
                 if self.is_coerced_to_val(exp_id) {
@@ -136,12 +161,11 @@ impl Compiler {
                     ptr_reg_id
                 }
             }
-            SymbolRef::Fun(..) => panic!("cannot generate function"),
         }
     }
 
     fn on_call(&mut self, _: ExpId, callee: ExpId, args: &[ExpId]) -> RegId {
-        let symbol_ref = &self.get_symbol(callee).expect("cannot call non-symbol");
+        let symbol_ref = self.get_symbol(callee).expect("cannot call non-symbol");
         match symbol_ref {
             SymbolRef::Prim(Prim::ByteToInt) | SymbolRef::Prim(Prim::IntToByte) => {
                 self.on_exp(args[0])
@@ -189,29 +213,14 @@ impl Compiler {
                 self.kill(ptr_reg_id);
                 NO_REG_ID
             }
-            SymbolRef::Fun(fun_id, _) => {
-                let body_label_id = self.mir.funs[&fun_id].body_label_id;
-
-                // Push args to stack in reversed order.
-                for arg in args.iter().cloned().rev() {
-                    let reg_id = self.on_exp(arg);
-                    self.push(Cmd::Push, reg_id, CmdArg::None);
-                    self.kill(reg_id);
-                }
-
-                self.push(Cmd::Call, NO_REG_ID, CmdArg::Label(body_label_id));
-
-                // Pop args from stack.
-                let reg_id = self.add_reg();
-                for _ in args {
-                    self.push(Cmd::Pop, reg_id, CmdArg::None);
-                }
-
-                // Copy the result.
-                self.push(Cmd::Mov, reg_id, CmdArg::Reg(RET_REG_ID));
-                reg_id
-            }
-            SymbolRef::Var(..) => panic!("cannot call non-primitive symbol"),
+            SymbolRef::Var(
+                _,
+                &VarDef {
+                    kind: VarKind::Fun(fun_id),
+                    ..
+                },
+            ) => self.add_cmd_call_fun(args, fun_id),
+            SymbolRef::Var(..) => panic!("cannot call on non-primitive/function value"),
         }
     }
 

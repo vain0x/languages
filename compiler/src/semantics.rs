@@ -24,6 +24,8 @@ pub(crate) enum VarKind {
     Global { index: usize },
     Local { index: usize },
     Arg { index: usize },
+    Rec(ExpId),
+    Fun(FunId),
 }
 
 #[derive(Clone, Debug)]
@@ -34,22 +36,15 @@ pub(crate) struct VarDef {
     pub def_exp_id: ExpId,
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub(crate) enum FunKind {
-    Decl(ExpId),
-    Def {
-        /// A function can have 1+ bodies.
-        /// These expressions are combined with `;`.
-        bodies: Vec<ExpId>,
-    },
-}
-
 #[derive(Clone, Debug)]
 pub(crate) struct FunDef {
     pub name: String,
-    pub kind: FunKind,
     pub ty: Ty,
     pub symbols: Vec<SymbolKind>,
+
+    /// A function can have 1+ bodies.
+    /// These expressions are combined with `;`.
+    bodies: Vec<ExpId>,
 }
 
 #[derive(Clone, Debug)]
@@ -87,20 +82,7 @@ pub(crate) struct Sema {
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 
-impl FunKind {
-    pub(crate) fn is_decl(&self) -> bool {
-        match self {
-            FunKind::Decl(_) => true,
-            _ => false,
-        }
-    }
-}
-
 impl FunDef {
-    pub(crate) fn ty(&self) -> Ty {
-        self.ty.to_owned()
-    }
-
     pub(crate) fn result_ty(&self) -> Option<&Ty> {
         match &self.ty {
             Ty::Fun(tys) => tys.last(),
@@ -109,10 +91,7 @@ impl FunDef {
     }
 
     pub(crate) fn bodies(&self) -> Vec<ExpId> {
-        match &self.kind {
-            FunKind::Decl(..) => vec![],
-            FunKind::Def { bodies } => bodies.to_owned(),
-        }
+        self.bodies.clone()
     }
 }
 
@@ -123,10 +102,6 @@ impl Sema {
 
     pub(crate) fn is_successful(&self) -> bool {
         self.msgs.iter().all(|(_, msg)| msg.is_successful())
-    }
-
-    pub(crate) fn all_fun_ids(&self) -> Vec<FunId> {
-        self.funs.keys().cloned().collect()
     }
 
     pub(crate) fn find_module_by_doc_id(&self, doc_id: DocId) -> Option<(ModuleId, &Module)> {
@@ -148,7 +123,6 @@ impl Sema {
         match symbol {
             SymbolKind::Prim(prim) => SymbolRef::Prim(prim),
             SymbolKind::Var(var_id) => SymbolRef::Var(var_id, &self.vars[&var_id]),
-            SymbolKind::Fun(fun_id) => SymbolRef::Fun(fun_id, &self.funs[&fun_id]),
         }
     }
 

@@ -181,6 +181,20 @@ impl Syntax {
         (l_pos, r_pos)
     }
 
+    /// Find a token that touches the span.
+    pub(crate) fn touch_token(&self, module_id: ModuleId, span: Span) -> Option<TokenId> {
+        let (sl, sr) = span;
+        let mut token_id = self.modules[&module_id].root_token_id;
+        while self.tokens[&token_id].kind != TokenKind::Eof {
+            let (tl, tr) = self.tokens[&token_id].span;
+            if sl < tr && tl < sr {
+                return Some(token_id);
+            }
+            token_id += 1;
+        }
+        None
+    }
+
     /// Find an expression that is lowest among from exprsesions
     /// that touches the specified span.
     pub(crate) fn touch_lowest(&self, module_id: ModuleId, span: Span) -> ExpId {

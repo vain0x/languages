@@ -21,8 +21,9 @@ pub(crate) fn do_hover(doc_id: DocId, sema: &Sema, position: Position) -> Option
     // Find type.
     let i = module.doc().unlocate(line, column);
     let exp_id = sema.syntax.touch_lowest(module_id, (i, i + 1));
+    let token_id = sema.syntax.touch_token(module_id, (i, i + 1));
 
-    if !sema.exp(exp_id).kind.is_stmt() {
+    if token_id.is_some() && !sema.exp(exp_id).kind.is_stmt() {
         let ty = format!("{}", sema.get_ty(exp_id));
         contents.push(ty);
     }
@@ -80,5 +81,9 @@ mod tests {
         // On `+`.
         let hover = do_hover(doc_id, &sema, Position::new(2, 28)).expect("Some(Hover)");
         assert_eq!(hover[0], "int");
+
+        // On space.
+        let hover = do_hover(doc_id, &sema, Position::new(2, 29));
+        assert!(hover.is_none());
     }
 }

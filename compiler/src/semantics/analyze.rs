@@ -201,8 +201,8 @@ impl SemanticAnalyzer {
                 self.add_err(message.to_string(), exp_id);
             }
             ExpKind::Ident(name) => {
-                let symbol_kind = match self.lookup_symbol(name) {
-                    Some(symbol) => symbol.kind(),
+                let (symbol_kind, symbol_ty) = match self.lookup_symbol(name) {
+                    Some(symbol) => (symbol.kind(), symbol.get_ty()),
                     None => {
                         self.add_err("Undefined name".to_string(), exp_id);
                         return;
@@ -210,13 +210,7 @@ impl SemanticAnalyzer {
                 };
 
                 self.set_symbol(exp_id, symbol_kind);
-
-                match symbol_kind {
-                    SymbolKind::Prim(..) => unimplemented!(),
-                    SymbolKind::Var(..) => {
-                        self.set_ty(exp_id, &ty, &ty);
-                    }
-                }
+                self.set_ty(exp_id, &ty, &symbol_ty);
             }
             &ExpKind::Index { indexee, arg } => {
                 self.on_index_ref(exp_id, ty, indexee, arg);
@@ -234,8 +228,7 @@ impl SemanticAnalyzer {
             }
         };
 
-        self.sema.exp_symbols.insert(exp_id, symbol_kind);
-
+        self.set_symbol(exp_id, symbol_kind);
         self.set_ty(exp_id, &ty, &symbol_ty);
 
         match symbol_kind {
@@ -365,6 +358,7 @@ impl SemanticAnalyzer {
                             let result_ty = Ty::Var(*body);
                             Ty::make_fun(arg_tys, result_ty)
                         };
+                        self.set_ty(pat, &fun_ty, &fun_ty);
                         let fun_id = self.add_fun(pat, fun_name.to_string(), fun_ty, vec![*body]);
 
                         let outer_fun_id = mem::replace(&mut self.current_fun_id, fun_id);
@@ -491,26 +485,36 @@ impl Sema {
     }
 
     pub fn get_ty(&self, exp_id: ExpId) -> Ty {
-        self.subst_ty(&Ty::Var(exp_id)).to_owned()
+        self.subst_ty(&Ty::Var(exp_id))
     }
 
     fn bind_ty(&mut self, exp_id: ExpId, ty: &Ty) {
-        self.exp_tys.insert(exp_id, ty.to_owned());
+        self.exp_tys.borrow_mut().insert(exp_id, ty.to_owned());
     }
 
-    fn subst_ty<'a>(&'a self, ty: &'a Ty) -> &'a Ty {
+    fn subst_ty(&self, ty: &Ty) -> Ty {
         match ty {
-            Ty::Var(exp_id) => match self.exp_tys.get(&exp_id) {
-                Some(ty) => ty,
-                None => ty,
-            },
-            _ => ty,
+            &Ty::Var(exp_id) => {
+                let next = {
+                    match self.exp_tys.borrow().get(&exp_id) {
+                        None => return ty.clone(),
+                        Some(&Ty::Var(x)) if x == exp_id => return ty.clone(),
+                        Some(next) => next.clone(),
+                    }
+                };
+
+                let ty = self.subst_ty(&next);
+                self.exp_tys.borrow_mut().insert(exp_id, ty.clone());
+                ty
+            }
+            Ty::Fun(tys) => Ty::Fun(tys.into_iter().map(|ty| self.subst_ty(ty)).collect()),
+            _ => ty.clone(),
         }
     }
 
     fn unify_ty(&mut self, exp_id: ExpId, l_ty: &Ty, r_ty: &Ty) {
-        let subst_l_ty = self.subst_ty(l_ty).to_owned();
-        let subst_r_ty = self.subst_ty(r_ty).to_owned();
+        let subst_l_ty = self.subst_ty(l_ty);
+        let subst_r_ty = self.subst_ty(r_ty);
         match (&subst_l_ty, &subst_r_ty) {
             (Ty::Var(l_exp_id), Ty::Var(r_exp_id)) if l_exp_id == r_exp_id => {}
             (&Ty::Var(exp_id), _) | (_, &Ty::Var(exp_id)) => self.bind_ty(exp_id, &subst_r_ty),
@@ -558,7 +562,7 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
             exp_vals: BTreeSet::new(),
             exp_ranges: BTreeMap::new(),
             exp_decls: BTreeSet::new(),
-            exp_tys: BTreeMap::new(),
+            exp_tys: RefCell::new(BTreeMap::new()),
             exp_parent: BTreeMap::new(),
             vars: BTreeMap::new(),
             funs: BTreeMap::new(),

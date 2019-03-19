@@ -13,6 +13,7 @@ use crate::syntax::*;
 use crate::Id;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
+use std::cell::RefCell;
 
 pub(crate) type MsgId = Id<Msg>;
 pub(crate) type VarId = Id<VarDef>;
@@ -72,7 +73,7 @@ pub(crate) struct Sema {
     pub exp_decls: BTreeSet<ExpId>,
 
     /// Type of expressions.
-    pub exp_tys: BTreeMap<ExpId, Ty>,
+    pub exp_tys: RefCell<BTreeMap<ExpId, Ty>>,
 
     pub exp_parent: BTreeMap<ExpId, ExpId>,
 

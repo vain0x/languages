@@ -47,6 +47,25 @@ impl LspModel {
         features::hover::hover(analysis.doc_id, &analysis.sema, position)
     }
 
+    pub(super) fn references(
+        &mut self,
+        uri: &Url,
+        position: Position,
+        include_definition: bool,
+    ) -> Vec<Location> {
+        let analysis = match self.doc_analysis(uri) {
+            None => return vec![],
+            Some(analysis) => analysis,
+        };
+        features::references::references(
+            analysis.doc_id,
+            &analysis.sema,
+            uri,
+            position,
+            include_definition,
+        )
+    }
+
     pub(super) fn validate(&mut self, uri: &Url) -> Vec<Diagnostic> {
         let analysis = match self.doc_analysis(uri) {
             None => {

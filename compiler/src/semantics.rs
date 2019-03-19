@@ -151,6 +151,21 @@ impl Sema {
             exp_id = *self.exp_parent.get(&exp_id)?;
         }
     }
+
+    /// Find all symbol occurrances.
+    pub(crate) fn find_symbol_occurrances(
+        &self,
+        module_id: ModuleId,
+        symbol_kind: SymbolKind,
+    ) -> Vec<ExpId> {
+        self.exp_symbols
+            .iter()
+            .filter(|&(&exp_id, &x_symbol_kind)| {
+                self.exp(exp_id).module_id == module_id && symbol_kind == x_symbol_kind
+            })
+            .map(|(&exp_id, _)| exp_id)
+            .collect()
+    }
 }
 
 impl BorrowMutMsgs for Sema {

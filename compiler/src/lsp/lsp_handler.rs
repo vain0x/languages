@@ -28,6 +28,7 @@ impl<W: io::Write> LspHandler<W> {
                         },
                     )),
                     hover_provider: Some(true),
+                    references_provider: Some(true),
                     ..ServerCapabilities::default()
                 },
             },
@@ -91,6 +92,18 @@ impl<W: io::Write> LspHandler<W> {
         self.sender.send_response(request.id, hover);
     }
 
+    fn text_document_references(&mut self, json: &str) {
+        let request: LspRequest<ReferenceParams> = serde_json::from_str(json).unwrap();
+
+        let locations: Vec<Location> = self.model.references(
+            &request.params.text_document.uri,
+            request.params.position,
+            request.params.context.include_declaration,
+        );
+
+        self.sender.send_response(request.id, locations);
+    }
+
     fn did_receive(&mut self, json: &str) {
         let mut id = None;
         if let Some(mut l) = json.find(r#""id":"#) {
@@ -115,6 +128,8 @@ impl<W: io::Write> LspHandler<W> {
             self.text_document_did_change(json);
         } else if json.contains("textDocument/hover") {
             self.text_document_did_hover(json);
+        } else if json.contains("textDocument/references") {
+            self.text_document_references(json);
         } else {
             warn!("Msg unresolved.")
         }

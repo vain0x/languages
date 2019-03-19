@@ -358,6 +358,7 @@ impl SemanticAnalyzer {
                             let result_ty = Ty::Var(*body);
                             Ty::make_fun(arg_tys, result_ty)
                         };
+                        self.set_ty(pat, &fun_ty, &fun_ty);
                         let fun_id = self.add_fun(pat, fun_name.to_string(), fun_ty, vec![*body]);
 
                         let outer_fun_id = mem::replace(&mut self.current_fun_id, fun_id);

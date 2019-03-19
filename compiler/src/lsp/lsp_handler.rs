@@ -48,7 +48,7 @@ impl<W: io::Write> LspHandler<W> {
             serde_json::from_str(&json).expect("did open notification");
         let doc = n.params.text_document;
         let uri = doc.uri.to_owned();
-        self.model.open_doc(doc.uri, doc.text);
+        self.model.open_doc(doc.uri, doc.version, doc.text);
 
         self.text_document_did_open_or_change(&uri);
     }
@@ -64,8 +64,9 @@ impl<W: io::Write> LspHandler<W> {
 
         let doc = n.params.text_document;
         let uri = doc.uri.to_owned();
+        let version = doc.version.unwrap_or(0);
 
-        self.model.change_doc(doc.uri, text);
+        self.model.change_doc(doc.uri, version, text);
 
         self.text_document_did_open_or_change(&uri);
     }

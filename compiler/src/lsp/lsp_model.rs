@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 pub(super) struct DocAnalysis {
     doc_id: DocId,
+    version: u64,
     sema: Sema,
 }
 
@@ -28,14 +29,21 @@ impl LspModel {
         self.next_doc_id
     }
 
-    pub(super) fn open_doc(&mut self, uri: Url, text: String) {
+    pub(super) fn open_doc(&mut self, uri: Url, version: u64, text: String) {
         let doc_id = self.fresh_doc_id();
         let sema = analyze::analyze_doc(doc_id, Rc::new(text));
-        self.docs.insert(uri, DocAnalysis { doc_id, sema });
+        self.docs.insert(
+            uri,
+            DocAnalysis {
+                doc_id,
+                version,
+                sema,
+            },
+        );
     }
 
-    pub(super) fn change_doc(&mut self, uri: Url, text: String) {
-        self.open_doc(uri, text);
+    pub(super) fn change_doc(&mut self, uri: Url, version: u64, text: String) {
+        self.open_doc(uri, version, text);
     }
 
     fn doc_analysis(&mut self, uri: &Url) -> Option<&DocAnalysis> {

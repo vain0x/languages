@@ -29,7 +29,7 @@ pub(crate) fn do_hover(doc_id: DocId, sema: &Sema, position: Position) -> Option
     }
 
     // Find definition expression text.
-    // FIXME: This may be unnecessary becauase VSCode provide `peek defintion`.
+    // FIXME: This may be unnecessary because VSCode provide `peek definition`.
     let def_text = sema
         .find_symbol_at(module_id, i)
         .and_then(|(_, symbol)| sema.symbol_ref(symbol).def_exp_id())

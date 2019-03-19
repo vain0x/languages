@@ -152,8 +152,8 @@ impl Sema {
         }
     }
 
-    /// Find all symbol occurrances.
-    pub(crate) fn find_symbol_occurrances(
+    /// Find all symbol occurrences.
+    pub(crate) fn find_symbol_occurrences(
         &self,
         module_id: ModuleId,
         symbol_kind: SymbolKind,

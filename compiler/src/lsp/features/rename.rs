@@ -22,14 +22,14 @@ pub(crate) fn do_rename(
     }
 
     let ranges = sema
-        .find_symbol_occurrances(module_id, symbol_kind)
+        .find_symbol_occurrences(module_id, symbol_kind)
         .into_iter()
         .map(|exp_id| sema.syntax.locate_exp(exp_id))
         .collect();
     Some(ranges)
 }
 
-// FIXME: This doesn't rename occurranges in other documents.
+// FIXME: This doesn't rename occurrences in other documents.
 pub(crate) fn rename(
     doc_id: DocId,
     sema: &Sema,

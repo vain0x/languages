@@ -21,7 +21,7 @@ pub(crate) fn do_references(
     let def_exp_id = sema.symbol_ref(symbol_kind).def_exp_id();
 
     let locations = sema
-        .find_symbol_occurrances(module_id, symbol_kind)
+        .find_symbol_occurrences(module_id, symbol_kind)
         .into_iter()
         .filter_map(|exp_id| {
             if !include_definition && def_exp_id.map(|x| x == exp_id).unwrap_or(false) {
@@ -85,7 +85,7 @@ mod tests {
         let references = do_references(doc_id, &sema, Position::new(2, 24), true).unwrap();
         assert_eq!(references.len(), 3);
 
-        // On `num` without defintion.
+        // On `num` without definition.
         let references = do_references(doc_id, &sema, Position::new(1, 16), false).unwrap();
         assert_eq!(references.len(), 2);
     }

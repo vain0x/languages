@@ -84,7 +84,7 @@ impl<W: io::Write> LspHandler<W> {
         );
     }
 
-    fn text_document_did_hover(&mut self, json: &str) {
+    fn text_document_hover(&mut self, json: &str) {
         let request: LspRequest<TextDocumentPositionParams> = serde_json::from_str(json).unwrap();
 
         let hover: Option<Hover> = self
@@ -141,7 +141,7 @@ impl<W: io::Write> LspHandler<W> {
         } else if json.contains("textDocument/didChange") {
             self.text_document_did_change(json);
         } else if json.contains("textDocument/hover") {
-            self.text_document_did_hover(json);
+            self.text_document_hover(json);
         } else if json.contains("textDocument/references") {
             self.text_document_references(json);
         } else if json.contains("textDocument/rename") {

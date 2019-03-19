@@ -29,6 +29,7 @@ impl<W: io::Write> LspHandler<W> {
                     )),
                     hover_provider: Some(true),
                     references_provider: Some(true),
+                    rename_provider: Some(RenameProviderCapability::Simple(true)),
                     ..ServerCapabilities::default()
                 },
             },
@@ -105,6 +106,18 @@ impl<W: io::Write> LspHandler<W> {
         self.sender.send_response(request.id, locations);
     }
 
+    fn text_document_rename(&mut self, json: &str) {
+        let request: LspRequest<RenameParams> = serde_json::from_str(json).unwrap();
+
+        let edit: Option<WorkspaceEdit> = self.model.rename(
+            &request.params.text_document.uri,
+            request.params.position,
+            request.params.new_name,
+        );
+
+        self.sender.send_response(request.id, edit);
+    }
+
     fn did_receive(&mut self, json: &str) {
         let mut id = None;
         if let Some(mut l) = json.find(r#""id":"#) {
@@ -131,6 +144,8 @@ impl<W: io::Write> LspHandler<W> {
             self.text_document_did_hover(json);
         } else if json.contains("textDocument/references") {
             self.text_document_references(json);
+        } else if json.contains("textDocument/rename") {
+            self.text_document_rename(json);
         } else {
             warn!("Msg unresolved.")
         }

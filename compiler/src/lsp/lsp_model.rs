@@ -74,6 +74,23 @@ impl LspModel {
         )
     }
 
+    pub(super) fn rename(
+        &mut self,
+        uri: &Url,
+        position: Position,
+        new_name: String,
+    ) -> Option<WorkspaceEdit> {
+        let analysis = self.doc_analysis(uri)?;
+        features::rename::rename(
+            analysis.doc_id,
+            &analysis.sema,
+            uri,
+            analysis.version,
+            position,
+            new_name,
+        )
+    }
+
     pub(super) fn validate(&mut self, uri: &Url) -> Vec<Diagnostic> {
         let analysis = match self.doc_analysis(uri) {
             None => {

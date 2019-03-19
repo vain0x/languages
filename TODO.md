@@ -16,6 +16,9 @@
     - `for x in l..r { body }` ---> `let x = l; while x < r { body; x += 1 }`
 - block expressions
 - block-local scope
+- update README
+    - let rec
+    - lsp
 
 ## Heavy Topics
 

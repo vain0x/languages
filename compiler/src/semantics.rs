@@ -131,19 +131,15 @@ impl Sema {
         module_id: ModuleId,
         i: usize,
     ) -> Option<(ExpId, SymbolKind)> {
-        self.exp_symbols
-            .iter()
-            .filter_map(|(&exp_id, symbol)| {
-                let exp = self.exp(exp_id);
-                let (l, r) = exp.span;
-                match exp.kind {
-                    ExpKind::Ident(_) if exp.module_id == module_id && l <= i && i <= r => {
-                        Some((exp_id, symbol.clone()))
-                    }
-                    _ => None,
-                }
-            })
-            .next()
+        let mut exp_id = self.syntax.touch_lowest(module_id, (i, i + 1));
+
+        // Bubble to find corresponding symbol.
+        loop {
+            if let Some(symbol) = self.exp_symbols.get(&exp_id) {
+                return Some((exp_id, symbol.clone()));
+            }
+            exp_id = *self.exp_parent.get(&exp_id)?;
+        }
     }
 
     /// Find the lowest ancestor let expression of the specified expression.
@@ -152,11 +148,7 @@ impl Sema {
             if let ExpKind::Let { .. } = self.exp(exp_id).kind {
                 return Some(exp_id);
             }
-
-            match self.exp_parent.get(&exp_id) {
-                None => return None,
-                Some(&parent) => exp_id = parent,
-            }
+            exp_id = *self.exp_parent.get(&exp_id)?;
         }
     }
 }

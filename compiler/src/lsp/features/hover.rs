@@ -20,21 +20,27 @@ pub(crate) fn do_hover(doc_id: DocId, sema: &Sema, position: Position) -> Option
 
     // Find type.
     let i = module.doc().unlocate(line, column);
-    let (exp_id, symbol) = sema.find_symbol_at(module_id, i)?;
+    let exp_id = sema.syntax.touch_lowest(module_id, (i, i + 1));
 
-    let ty = format!("{}", sema.get_ty(exp_id));
-    contents.push(ty);
+    if !sema.exp(exp_id).kind.is_stmt() {
+        let ty = format!("{}", sema.get_ty(exp_id));
+        contents.push(ty);
+    }
 
     // Find definition expression text.
-    let symbol = sema.symbol_ref(symbol);
-    let def_text = symbol
-        .def_exp_id()
-        .and_then(|def_exp_id| sema.find_ancestor_let(def_exp_id))
+    // FIXME: This may be unnecessary becauase VSCode provide `peek defintion`.
+    let def_text = sema
+        .find_symbol_at(module_id, i)
+        .and_then(|(_, symbol)| sema.symbol_ref(symbol).def_exp_id())
+        .and_then(|exp_id| sema.find_ancestor_let(exp_id))
         .map(|let_exp_id| sema.exp_text(let_exp_id));
     if let Some(text) = def_text {
         contents.push(text.to_string());
     }
 
+    if contents.is_empty() {
+        return None;
+    }
     Some(contents)
 }
 
@@ -57,7 +63,7 @@ mod tests {
     fn test_hover() {
         const SRC: &str = r#"
             let num = 1;
-            println_int(num);
+            println_int(num + 1);
         "#;
         let doc_id = DocId::new(0);
         let sema = analyze::analyze_str(SRC);
@@ -70,5 +76,9 @@ mod tests {
         // On nothing.
         let hover = do_hover(doc_id, &sema, Position::new(0, 0));
         assert!(hover.is_none());
+
+        // On `+`.
+        let hover = do_hover(doc_id, &sema, Position::new(2, 28)).expect("Some(Hover)");
+        assert_eq!(hover[0], "int");
     }
 }

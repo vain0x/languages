@@ -181,6 +181,28 @@ impl Syntax {
         (l_pos, r_pos)
     }
 
+    /// Find an expression that is lowest among from exprsesions
+    /// that touches the specified span.
+    pub(crate) fn touch_lowest(&self, module_id: ModuleId, span: Span) -> ExpId {
+        fn dfs(it: &Syntax, exp_id: ExpId, span: Span) -> Option<ExpId> {
+            let (sl, sr) = span;
+            let (xl, xr) = it.exps[&exp_id].span;
+            if xr <= sl || sr <= xl {
+                return None;
+            }
+
+            Some(
+                (it.exps[&exp_id].kind.children().into_iter())
+                    .filter_map(|child| dfs(it, child, span))
+                    .next()
+                    .unwrap_or(exp_id),
+            )
+        }
+
+        let module = &self.modules[&module_id];
+        dfs(self, module.root_exp_id, span).unwrap_or(module.root_exp_id)
+    }
+
     pub fn exp_kind(&self, exp_id: ExpId) -> &ExpKind {
         &self.exps[&exp_id].kind
     }

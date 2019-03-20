@@ -29,6 +29,10 @@ impl<W: io::Write> LspHandler<W> {
                             ..TextDocumentSyncOptions::default()
                         },
                     )),
+                    completion_provider: Some(CompletionOptions {
+                        resolve_provider: Some(true),
+                        trigger_characters: None,
+                    }),
                     hover_provider: Some(true),
                     references_provider: Some(true),
                     rename_provider: Some(RenameProviderCapability::Simple(true)),
@@ -97,6 +101,24 @@ impl<W: io::Write> LspHandler<W> {
         self.model.close_doc(&msg.params.text_document.uri);
     }
 
+    fn text_document_completion(&mut self, json: &str) {
+        let msg = serde_json::from_str::<LspRequest<CompletionParams>>(json).unwrap();
+        let (id, params) = (msg.id, msg.params);
+
+        let completion_list: CompletionList = self
+            .model
+            .completion(&params.text_document.uri, params.position);
+
+        self.sender.send_response(id, completion_list);
+    }
+
+    fn completion_item_resolve(&mut self, json: &str) {
+        let msg = serde_json::from_str::<LspRequest<CompletionItem>>(json).unwrap();
+        let (id, completion_item) = (msg.id, msg.params);
+
+        self.sender.send_response(id, completion_item);
+    }
+
     fn text_document_hover(&mut self, json: &str) {
         let request: LspRequest<TextDocumentPositionParams> = serde_json::from_str(json).unwrap();
 
@@ -142,6 +164,8 @@ impl<W: io::Write> LspHandler<W> {
             "textDocument/didOpen" => self.text_document_did_open(json),
             "textDocument/didChange" => self.text_document_did_change(json),
             "textDocument/didClose" => self.text_document_did_close(json),
+            "textDocument/completion" => self.text_document_completion(json),
+            "completionItem/resolve" => self.completion_item_resolve(json),
             "textDocument/hover" => self.text_document_hover(json),
             "textDocument/references" => self.text_document_references(json),
             "textDocument/rename" => self.text_document_rename(json),

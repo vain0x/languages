@@ -54,6 +54,20 @@ impl LspModel {
         self.docs.get(uri)
     }
 
+    pub(super) fn completion(&mut self, uri: &Url, position: Position) -> CompletionList {
+        let analysis = match self.doc_analysis(uri) {
+            None => {
+                return CompletionList {
+                    is_incomplete: true,
+                    items: vec![],
+                };
+            }
+            Some(analysis) => analysis,
+        };
+
+        features::completion::completion(&analysis.sema, position)
+    }
+
     pub(super) fn hover(&mut self, uri: &Url, position: Position) -> Option<Hover> {
         let analysis = self.doc_analysis(uri)?;
         features::hover::hover(analysis.doc_id, &analysis.sema, position)

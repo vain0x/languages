@@ -11,9 +11,9 @@ pub(crate) use self::ty::*;
 
 use crate::syntax::*;
 use crate::Id;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
-use std::cell::RefCell;
 
 pub(crate) type MsgId = Id<Msg>;
 pub(crate) type VarId = Id<VarDef>;
@@ -166,6 +166,10 @@ impl Sema {
             })
             .map(|(&exp_id, _)| exp_id)
             .collect()
+    }
+
+    pub(crate) fn all_var_names(&self) -> Vec<String> {
+        self.vars.values().map(|var| var.name.clone()).collect()
     }
 }
 

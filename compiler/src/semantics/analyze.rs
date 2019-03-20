@@ -375,8 +375,8 @@ impl SemanticAnalyzer {
                         self.add_var_fun(fun_name.to_string(), fun_id, pat);
                     }
                     _ => {
-                        self.on_pat(pat, Ty::Var(pat), None);
                         self.on_val(init, Ty::Var(pat));
+                        self.on_pat(pat, Ty::Var(pat), None);
                         self.set_ty(exp_id, &ty, &Ty::Unit);
                     }
                 }

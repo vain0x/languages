@@ -199,6 +199,21 @@ fn test_local_var_two() {
 }
 
 #[test]
+fn test_local_var_shadowing() {
+    eval_tests(
+        r#"
+            let a = 1;
+            let a = {
+                println_int(a);
+                2
+            };
+            println_int(a);
+        "#,
+        &[("", "1\n2\n")],
+    )
+}
+
+#[test]
 fn test_local_var_set() {
     eval_tests(
         r#"

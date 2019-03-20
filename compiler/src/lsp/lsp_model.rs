@@ -46,6 +46,10 @@ impl LspModel {
         self.open_doc(uri, version, text);
     }
 
+    pub(super) fn close_doc(&mut self, uri: &Url) {
+        self.docs.remove(&uri);
+    }
+
     fn doc_analysis(&mut self, uri: &Url) -> Option<&DocAnalysis> {
         self.docs.get(uri)
     }

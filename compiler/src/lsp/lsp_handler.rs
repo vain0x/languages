@@ -91,6 +91,12 @@ impl<W: io::Write> LspHandler<W> {
         );
     }
 
+    fn text_document_did_close(&mut self, json: &str) {
+        let msg =
+            serde_json::from_str::<LspNotification<DidCloseTextDocumentParams>>(json).unwrap();
+        self.model.close_doc(&msg.params.text_document.uri);
+    }
+
     fn text_document_hover(&mut self, json: &str) {
         let request: LspRequest<TextDocumentPositionParams> = serde_json::from_str(json).unwrap();
 
@@ -135,6 +141,7 @@ impl<W: io::Write> LspHandler<W> {
             "exit" => self.did_exit(json),
             "textDocument/didOpen" => self.text_document_did_open(json),
             "textDocument/didChange" => self.text_document_did_change(json),
+            "textDocument/didClose" => self.text_document_did_close(json),
             "textDocument/hover" => self.text_document_hover(json),
             "textDocument/references" => self.text_document_references(json),
             "textDocument/rename" => self.text_document_rename(json),

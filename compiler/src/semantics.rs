@@ -11,9 +11,9 @@ pub(crate) use self::ty::*;
 
 use crate::syntax::*;
 use crate::Id;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
-use std::cell::RefCell;
 
 pub(crate) type MsgId = Id<Msg>;
 pub(crate) type VarId = Id<VarDef>;
@@ -166,6 +166,19 @@ impl Sema {
             })
             .map(|(&exp_id, _)| exp_id)
             .collect()
+    }
+
+    pub(crate) fn all_var_id_names(&self) -> Vec<(VarId, String)> {
+        self.vars
+            .iter()
+            .map(|(&var_id, var)| (var_id, var.name.clone()))
+            .collect()
+    }
+
+    pub(crate) fn symbol_definition_text(&self, symbol_kind: SymbolKind) -> Option<&str> {
+        let def_exp_id = self.symbol_ref(symbol_kind).def_exp_id()?;
+        let let_exp_id = self.find_ancestor_let(def_exp_id)?;
+        Some(self.exp_text(let_exp_id))
     }
 }
 

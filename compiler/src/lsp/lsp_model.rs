@@ -46,8 +46,38 @@ impl LspModel {
         self.open_doc(uri, version, text);
     }
 
+    pub(super) fn close_doc(&mut self, uri: &Url) {
+        self.docs.remove(&uri);
+    }
+
     fn doc_analysis(&mut self, uri: &Url) -> Option<&DocAnalysis> {
         self.docs.get(uri)
+    }
+
+    pub(super) fn completion(&mut self, uri: &Url, position: Position) -> CompletionList {
+        let analysis = match self.doc_analysis(uri) {
+            None => {
+                return CompletionList {
+                    is_incomplete: true,
+                    items: vec![],
+                };
+            }
+            Some(analysis) => analysis,
+        };
+
+        features::completion::completion(uri, &analysis.sema, position)
+    }
+
+    pub(super) fn completion_resolve(
+        &mut self,
+        completion_item: &mut CompletionItem,
+        data: features::completion::CompletionItemData,
+    ) {
+        let analysis = match self.doc_analysis(data.uri()) {
+            None => return,
+            Some(analysis) => analysis,
+        };
+        features::completion::resolve(&analysis.sema, completion_item, data);
     }
 
     pub(super) fn hover(&mut self, uri: &Url, position: Position) -> Option<Hover> {

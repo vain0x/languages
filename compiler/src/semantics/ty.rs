@@ -29,6 +29,11 @@ impl Ty {
             Ty::Int | Ty::Ptr => Some(8),
         }
     }
+
+    pub(crate) fn primitive_ty_names() -> Vec<String> {
+        const NAMES: &[&str] = &["unit", "byte", "int"];
+        NAMES.iter().map(|name| name.to_string()).collect()
+    }
 }
 
 impl std::fmt::Display for Ty {

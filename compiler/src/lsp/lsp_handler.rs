@@ -114,7 +114,13 @@ impl<W: io::Write> LspHandler<W> {
 
     fn completion_item_resolve(&mut self, json: &str) {
         let msg = serde_json::from_str::<LspRequest<CompletionItem>>(json).unwrap();
-        let (id, completion_item) = (msg.id, msg.params);
+        let (id, mut completion_item) = (msg.id, msg.params);
+
+        completion_item.data.take().and_then(|data| -> Option<()> {
+            let data = features::completion::parse_data(data)?;
+            self.model.completion_resolve(&mut completion_item, data);
+            Some(())
+        });
 
         self.sender.send_response(id, completion_item);
     }

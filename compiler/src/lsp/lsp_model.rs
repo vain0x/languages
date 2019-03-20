@@ -65,7 +65,19 @@ impl LspModel {
             Some(analysis) => analysis,
         };
 
-        features::completion::completion(&analysis.sema, position)
+        features::completion::completion(uri, &analysis.sema, position)
+    }
+
+    pub(super) fn completion_resolve(
+        &mut self,
+        completion_item: &mut CompletionItem,
+        data: features::completion::CompletionItemData,
+    ) {
+        let analysis = match self.doc_analysis(data.uri()) {
+            None => return,
+            Some(analysis) => analysis,
+        };
+        features::completion::resolve(&analysis.sema, completion_item, data);
     }
 
     pub(super) fn hover(&mut self, uri: &Url, position: Position) -> Option<Hover> {

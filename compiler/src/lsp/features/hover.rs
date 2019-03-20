@@ -1,15 +1,7 @@
 use crate::semantics::Sema;
 use crate::syntax::DocId;
 use lsp_types::*;
-
-const PICOMET_LANG_ID: &str = "picomet-lang";
-
-fn marked_str(value: String) -> MarkedString {
-    MarkedString::LanguageString(LanguageString {
-        language: PICOMET_LANG_ID.to_string(),
-        value,
-    })
-}
+use super::*;
 
 pub(crate) fn do_hover(doc_id: DocId, sema: &Sema, position: Position) -> Option<Vec<String>> {
     let line = position.line as usize;
@@ -32,9 +24,7 @@ pub(crate) fn do_hover(doc_id: DocId, sema: &Sema, position: Position) -> Option
     // FIXME: This may be unnecessary because VSCode provide `peek definition`.
     let def_text = sema
         .find_symbol_at(module_id, i)
-        .and_then(|(_, symbol)| sema.symbol_ref(symbol).def_exp_id())
-        .and_then(|exp_id| sema.find_ancestor_let(exp_id))
-        .map(|let_exp_id| sema.exp_text(let_exp_id));
+        .and_then(|(_, symbol)| sema.symbol_definition_text(symbol));
     if let Some(text) = def_text {
         contents.push(text.to_string());
     }

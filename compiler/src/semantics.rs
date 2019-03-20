@@ -168,8 +168,17 @@ impl Sema {
             .collect()
     }
 
-    pub(crate) fn all_var_names(&self) -> Vec<String> {
-        self.vars.values().map(|var| var.name.clone()).collect()
+    pub(crate) fn all_var_id_names(&self) -> Vec<(VarId, String)> {
+        self.vars
+            .iter()
+            .map(|(&var_id, var)| (var_id, var.name.clone()))
+            .collect()
+    }
+
+    pub(crate) fn symbol_definition_text(&self, symbol_kind: SymbolKind) -> Option<&str> {
+        let def_exp_id = self.symbol_ref(symbol_kind).def_exp_id()?;
+        let let_exp_id = self.find_ancestor_let(def_exp_id)?;
+        Some(self.exp_text(let_exp_id))
     }
 }
 

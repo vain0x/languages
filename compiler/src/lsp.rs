@@ -31,3 +31,10 @@ pub(super) struct LspNotification<Params> {
     pub method: String,
     pub params: Params,
 }
+
+/// LSP message (request or notification) without results/params
+/// just for deserialization.
+#[derive(Deserialize)]
+pub(super) struct LspMessageOpaque {
+    pub method: String,
+}

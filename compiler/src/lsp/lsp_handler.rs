@@ -15,9 +15,11 @@ impl<W: io::Write> LspHandler<W> {
         }
     }
 
-    fn did_initialize(&mut self, id: i64) {
+    fn initialize(&mut self, json: &str) {
+        let msg = serde_json::from_str::<LspRequest<InitializeParams>>(json).unwrap();
+
         self.sender.send_response(
-            id,
+            msg.id,
             InitializeResult {
                 capabilities: ServerCapabilities {
                     text_document_sync: Some(TextDocumentSyncCapability::Options(
@@ -36,11 +38,16 @@ impl<W: io::Write> LspHandler<W> {
         );
     }
 
-    fn did_shutdown(&mut self, id: i64) {
-        self.sender.send_response(id, ());
+    fn did_initialize(&self, _json: &str) {
+        // Pass
     }
 
-    fn did_exit(&mut self) {
+    fn shutdown(&mut self, json: &str) {
+        let msg = serde_json::from_str::<LspRequest<()>>(json).unwrap();
+        self.sender.send_response(msg.id, ());
+    }
+
+    fn did_exit(&mut self, _json: &str) {
         std::process::exit(0)
     }
 
@@ -119,35 +126,19 @@ impl<W: io::Write> LspHandler<W> {
     }
 
     fn did_receive(&mut self, json: &str) {
-        let mut id = None;
-        if let Some(mut l) = json.find(r#""id":"#) {
-            l += r#""id":"#.len();
-            if let Some(n) = json[l..].find(",") {
-                id = json[l..l + n].trim().parse::<i64>().ok();
-            }
-        }
+        let msg = serde_json::from_str::<LspMessageOpaque>(json).unwrap();
 
-        // FIXME: use deserializer
-        if json.contains("initialized") {
-            // Pass.
-        } else if json.contains("initialize") {
-            self.did_initialize(id.unwrap());
-        } else if json.contains("shutdown") {
-            self.did_shutdown(id.unwrap());
-        } else if json.contains("exit") {
-            self.did_exit();
-        } else if json.contains("textDocument/didOpen") {
-            self.text_document_did_open(json);
-        } else if json.contains("textDocument/didChange") {
-            self.text_document_did_change(json);
-        } else if json.contains("textDocument/hover") {
-            self.text_document_hover(json);
-        } else if json.contains("textDocument/references") {
-            self.text_document_references(json);
-        } else if json.contains("textDocument/rename") {
-            self.text_document_rename(json);
-        } else {
-            warn!("Msg unresolved.")
+        match msg.method.as_str() {
+            "initialize" => self.initialize(json),
+            "initialized" => self.did_initialize(json),
+            "shutdown" => self.shutdown(json),
+            "exit" => self.did_exit(json),
+            "textDocument/didOpen" => self.text_document_did_open(json),
+            "textDocument/didChange" => self.text_document_did_change(json),
+            "textDocument/hover" => self.text_document_hover(json),
+            "textDocument/references" => self.text_document_references(json),
+            "textDocument/rename" => self.text_document_rename(json),
+            _ => warn!("Msg unresolved."),
         }
     }
 

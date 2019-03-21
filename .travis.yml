@@ -4,6 +4,7 @@ language: rust
 rust: stable
 cache: cargo
 install:
+  - (cd ./runtime && cargo bulid)
   - (cd ./compiler && cargo build)
 script:
   - (cd ./compiler && cargo test)

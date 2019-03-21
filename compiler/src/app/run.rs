@@ -2,13 +2,11 @@
 
 use crate::mir::gen_mir::compile;
 use crate::semantics::msg::DocMsg;
-use std::io::{self, Read};
+use std::fs;
+use std::path::PathBuf;
 
-pub fn run() {
-    let mut stdin = io::stdin();
-    let mut picomet_code = vec![];
-    stdin.read_to_end(&mut picomet_code).unwrap();
-    let picomet_code = String::from_utf8(picomet_code).unwrap();
+pub(crate) fn run(picomet_file_path: PathBuf) {
+    let picomet_code = fs::read_to_string(picomet_file_path).unwrap();
 
     let result = compile(&picomet_code);
     if !result.success {

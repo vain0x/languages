@@ -1,4 +1,6 @@
-out
+out/picomet
+out/*.js
+out/*.js.map
 picomet-lang.vsix
 
 

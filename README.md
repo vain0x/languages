@@ -157,15 +157,19 @@ Write your code in [solver/src/main.picomet](solver/src/main.picomet).
 
 ## Develop
 
-To develop this project, first install Rust.
+To develop this project, install tools:
 
-- To install Rust tools, follow the instructions written in [Rust programming language](https://www.rust-lang.org/)
+- **Rust tools** from <https://www.rust-lang.org> for compiler/runtime
+- **Node.js** from <https://nodejs.org> for vscode-ext
+- **Yarn** from <https://yarnpkg.com> for vscode-ext
 
-Second, in both `compiler` and `runtime` directories, run `./setup` for configure your environment.
+Second, run `./setup`.
 
-To build, run `cargo build` inside `compiler` or `runtime` directory.
+### Dev: Test
 
-To run tests, run `cargo test` in `compiler` directory. Tests are written in [compiler/tests/tests.rs](compiler/tests/tests.rs).
+To test the compiler, run `cargo test` in `compiler`. Tests are written in [compiler/tests/tests.rs](compiler/tests/tests.rs).
+
+To test the vscode extension, open `compiler` or `vscode-ext` with VSCode and press F5. This launches new instance of VSCode with extension temporally installed.
 
 ## Internals
 

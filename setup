@@ -1,0 +1,6 @@
+#!/bin/bash
+
+cargo install cargo-watch
+
+(cd runtime && ./setup)
+(cd vscode-ext && yarn)

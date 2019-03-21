@@ -10,7 +10,7 @@
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode-ext"
             ],
             "env": {
-                "PICOMET_LANG_LSP_SERVER": "../compiler/target/debug/lsp_server"
+                "PICOMET_BIN": "../compiler/target/debug/picomet"
             },
             "preLaunchTask": "ext:build"
         }

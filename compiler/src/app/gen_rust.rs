@@ -48,7 +48,7 @@ fn read_to_string(path: &Path) -> io::Result<String> {
     Ok(buffer)
 }
 
-pub fn gen_rust_to_file(
+pub(crate) fn gen_rust_to_file(
     picomet_path: &Path,
     runtime_path: &Path,
     out_path: &Path,

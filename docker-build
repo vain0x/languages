@@ -1,3 +1,64 @@
 #!/bin/bash
+# Configure your picomet-lang development environment.
+# You need Docker.
+# If you have VSCode installed, extension is also installed.
 
-docker build . -t vain0x/picomet-lang
+set -eux
+
+PICOMET_LANG_DIR=$(pwd)
+RUST_TAG=rust:1.33.0
+NODE_TAG=node:11
+
+CODE=$(code --version &>/dev/null; echo $?)
+
+# ------------------------------------------------
+# Build the compiler
+# ------------------------------------------------
+
+sudo docker pull $RUST_TAG
+
+sudo docker run \
+    --interactive --tty --rm \
+    --volume $PICOMET_LANG_DIR:/picomet-lang \
+    --workdir /picomet-lang/compiler \
+    -t $RUST_TAG \
+    cargo build --release --bin picomet
+
+# ------------------------------------------------
+# Install the VSCode extension [optional]
+# ------------------------------------------------
+
+if [[ $CODE = 0 ]]
+then
+    sudo docker pull $NODE_TAG
+
+    sudo docker run \
+        --interactive --tty --rm \
+        --volume $PICOMET_LANG_DIR:/picomet-lang \
+        --workdir /picomet-lang/vscode-ext \
+        -t $NODE_TAG \
+        ./build
+
+    (cd vscode-ext && ./install)
+fi
+
+# ------------------------------------------------
+# Generate uninstall script
+# ------------------------------------------------
+
+cat > docker-uninstall <<EOF
+#!/bin/bash
+# Remove things introduced by 'picomet-lang/docker-build'.
+
+set -eux
+
+sudo docker rmi --force $RUST_TAG
+
+if [[ $CODE = 0 ]]
+then
+    (cd vscode-ext && ./uninstall)
+    sudo docker rmi --force $NODE_TAG
+fi
+EOF
+
+chmod +x ./docker-uninstall

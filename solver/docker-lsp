@@ -1,4 +1,0 @@
-#!/bin/bash
-# Before this, you need to run `./docker-build` in `..`.
-
-docker run --interactive --rm --workdir /picomet-lang/compiler vain0x/picomet-lang cargo run --bin lsp_server

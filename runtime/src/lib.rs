@@ -1,9 +1,13 @@
-use std::io::{self, stderr, BufRead, Write as IoWrite};
+use std::io::{self, BufRead, Write as IoWrite};
 use std::mem::size_of;
 use std::str;
 
+#[allow(unused)]
+use std::io::stderr;
+
 const BASE_PTR_REG_ID: usize = 1;
 const STACK_PTR_REG_ID: usize = 2;
+#[allow(unused)]
 const RET_REG_ID: usize = 3;
 #[allow(unused)]
 const KNOWN_REG_NUM: usize = 4;
@@ -72,6 +76,7 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
 
     // Parse.
     for line in src.split("\n") {
+        #[allow(deprecated)]
         let line = line.trim_left();
         if line.starts_with("//") || line.len() == 0 {
             continue;
@@ -125,12 +130,12 @@ pub fn eval<R: io::Read, W: io::Write>(src: &str, stdin: R, stdout: W) {
 
     fn read<T: Copy>(mem: &[u8], p: usize) -> T {
         debug_assert!(p + size_of::<T>() <= mem.len());
-        unsafe { *(mem.as_ptr().add(p) as *const T) }
+        unsafe { *(mem.as_ptr().offset(p as isize) as *const T) }
     }
 
     fn write<T: Copy>(mem: &mut [u8], p: usize, value: T) {
         debug_assert!(p + size_of::<T>() <= mem.len());
-        unsafe { *(mem.as_mut_ptr().add(p) as *mut T) = value }
+        unsafe { *(mem.as_mut_ptr().offset(p as isize) as *mut T) = value }
     }
 
     regs[STACK_PTR_REG_ID] = mem.len() as i64;

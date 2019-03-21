@@ -1,7 +1,0 @@
-let x = read_int();
-
-let rec fact = |a| {
-    if a <= 1 { 1 } else { a * fact(a - 1) }
-};
-
-println_int(fact(x));

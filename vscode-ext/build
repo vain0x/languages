@@ -1,0 +1,10 @@
+#!/bin/bash
+# Build compiler before this.
+
+set -eux
+
+cp ../compiler/target/release/picomet ./out/picomet
+
+yarn
+yarn build
+yarn vsce package --yarn -o picomet-lang.vsix

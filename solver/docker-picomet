@@ -1,5 +1,0 @@
-#!/bin/bash
-
-(cd .. && ./docker-build)
-
-docker run --interactive --rm --workdir /picomet-lang/compiler vain0x/picomet-lang cargo run --release --bin picomet "$@"

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Before this, run `./build`.
+
+set -eux
+
+./uninstall || :
+code --install-extension picomet-lang.vsix

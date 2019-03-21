@@ -5,8 +5,7 @@
 
 // Entry point of the VSCode extension.
 
-import * as path from "path"
-import { ExtensionContext, workspace } from "vscode"
+import { ExtensionContext, workspace, commands } from "vscode"
 import {
   LanguageClient,
   LanguageClientOptions,
@@ -15,13 +14,20 @@ import {
 
 let client: LanguageClient
 
-export function activate(context: ExtensionContext) {
-  const path = process.env.PICOMET_BIN || "./out/picomet"
+const getPicometBin = (context: ExtensionContext) => {
+  const config = workspace.getConfiguration("picomet-lang")
 
-  let serverPath = context.asAbsolutePath(path)
+  const relativePath = process.env.PICOMET_BIN
+    || config.get("picomet-bin") as string | undefined
+    || "./out/picomet"
 
+  return context.asAbsolutePath(relativePath)
+}
+
+const startLspClient = (context: ExtensionContext) => {
+  const picometBinFullPath = getPicometBin(context)
   let serverOptions: ServerOptions = {
-    command: serverPath,
+    command: picometBinFullPath,
     args: ["lsp"],
   }
 
@@ -42,6 +48,12 @@ export function activate(context: ExtensionContext) {
     clientOptions
   )
   client.start()
+}
+
+export function activate(context: ExtensionContext) {
+  commands.registerCommand("getPicometBin", () => getPicometBin(context))
+
+  startLspClient(context)
 }
 
 export function deactivate(): Thenable<void> | undefined {

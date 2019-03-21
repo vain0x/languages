@@ -1,3 +1,0 @@
-#!/bin/bash
-
-./docker-picomet run src/main.picomet

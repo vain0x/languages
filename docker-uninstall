@@ -1,7 +1,0 @@
-#!/bin/bash
-# Remove things created by './docker-build'.
-
-set -eux
-
-docker kill vain0x/picomet-lang || :
-docker rmi --force vain0x/picomet-lang

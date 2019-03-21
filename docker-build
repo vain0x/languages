@@ -52,12 +52,12 @@ cat > docker-uninstall <<EOF
 
 set -eux
 
-sudo docker rmi --force $RUST_TAG
+sudo docker rmi --force $RUST_TAG || :
 
 if [[ $CODE = 0 ]]
 then
-    (cd vscode-ext && ./uninstall)
-    sudo docker rmi --force $NODE_TAG
+    (cd vscode-ext && ./uninstall) || :
+    sudo docker rmi --force $NODE_TAG || :
 fi
 EOF
 

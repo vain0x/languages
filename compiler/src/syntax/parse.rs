@@ -104,11 +104,12 @@ impl Parser<'_> {
             }
             TokenKind::Str => {
                 self.current += 1;
-                let value = {
-                    let text = self.text(token_l);
-                    text[1..text.len() - 1].replace("\\n", "\n").to_string()
-                };
-                self.add_exp(ExpKind::Str(value), (token_l, self.current))
+
+                let text = self.text(token_l);
+                match parse_str(text) {
+                    Err(message) => self.add_exp_err(message.to_string(), (token_l, self.current)),
+                    Ok(value) => self.add_exp(ExpKind::Str(value), (token_l, self.current)),
+                }
             }
             TokenKind::Ident => {
                 self.current += 1;
@@ -482,6 +483,23 @@ fn parse_char(text: &str) -> Result<u8, &'static str> {
         _ => return Err("Expected exactly one ASCII character"),
     };
     Ok(c)
+}
+
+// Parse string literal.
+fn parse_str(text: &str) -> Result<String, &'static str> {
+    if !(text.len() >= 2 && text.starts_with('\"') && text.ends_with('\"')) {
+        return Err("Double quote missing");
+    }
+
+    let body = &text[1..text.len() - 1];
+
+    // FIXME: Handle escape sequences correctly.
+    let body = body.replace("\\n", "\n");
+    if body.contains('\\') {
+        return Err("Escape sequences other than '\\n' are not supported yet");
+    }
+
+    Ok(body)
 }
 
 pub(crate) fn parse(syntax: &'_ mut Syntax, module_id: ModuleId, root_token_id: TokenId) -> ExpId {

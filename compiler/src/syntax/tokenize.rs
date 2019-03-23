@@ -60,14 +60,14 @@ impl Tokenizer<'_> {
         false
     }
 
-    /// Read chars until next single quote.
+    /// Read chars until next quote.
     /// Don't read line breaks or EOF.
     /// Don't evaluate escape sequence here.
-    fn read_until_single_quote(&mut self) {
+    fn read_until_quote(&mut self, quote: u8) {
         loop {
             match self.next_char() {
                 b'\0' | b'\n' => return,
-                b'\'' => {
+                c if c == quote => {
                     self.current += 1;
                     return;
                 }
@@ -89,7 +89,7 @@ impl Tokenizer<'_> {
         let l = self.current;
         self.current += 1;
 
-        self.read_until_single_quote();
+        self.read_until_quote(b'\'');
 
         self.add_token(TokenKind::Char, (l, self.current))
     }
@@ -97,15 +97,12 @@ impl Tokenizer<'_> {
     fn read_str(&mut self) {
         assert_eq!(self.next_char(), b'"');
 
-        let l = self.current;
+        let token_l = self.current;
         self.current += 1;
-        let p = |c: u8| c != b'"' && c != b'\n';
-        while p(self.next_char()) {
-            self.current += 1;
-        }
-        let r = self.current;
-        self.current += 1;
-        self.add_token(TokenKind::Str, (l, r + 1));
+
+        self.read_until_quote(b'"');
+
+        self.add_token(TokenKind::Str, (token_l, self.current));
     }
 
     pub fn tokenize(&mut self) {

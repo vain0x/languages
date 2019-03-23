@@ -92,9 +92,15 @@ impl Parser<'_> {
                 let value = self.text(token_l).parse::<i64>().ok().unwrap_or(-1);
                 self.add_exp(ExpKind::Int(value), (token_l, self.current))
             }
-            TokenKind::Char(c) => {
+            TokenKind::Char => {
+                let token_l = self.current;
                 self.current += 1;
-                self.add_exp(ExpKind::Byte(c), (token_l, self.current))
+
+                let text = self.text(token_l);
+                match parse_char(text) {
+                    Err(message) => self.add_exp_err(message.to_string(), (token_l, self.current)),
+                    Ok(c) => self.add_exp(ExpKind::Byte(c), (token_l, self.current)),
+                }
             }
             TokenKind::Str => {
                 self.current += 1;
@@ -456,6 +462,26 @@ impl Parser<'_> {
         let exp_id = self.parse_exp();
         self.parse_eof(exp_id)
     }
+}
+
+/// Parse char literal.
+fn parse_char(text: &str) -> Result<u8, &'static str> {
+    if !(text.len() >= 2 && text.starts_with('\'') && text.ends_with('\'')) {
+        return Err("Single quote missing");
+    }
+
+    let body = text[1..text.len() - 1].as_bytes();
+    let c = match body {
+        b"\\0" => b'\0',
+        b"\\n" => b'\n',
+        b"\\r" => b'\r',
+        b"\\t" => b'\t',
+        b"\\\\" | b"\\'" | b"\\\"" => body[1],
+        _ if body.len() >= 1 && body[0] == b'\\' => return Err("Unknown escape sequence"),
+        _ if body.len() == 1 => body[0],
+        _ => return Err("Expected exactly one ASCII character"),
+    };
+    Ok(c)
 }
 
 pub(crate) fn parse(syntax: &'_ mut Syntax, module_id: ModuleId, root_token_id: TokenId) -> ExpId {

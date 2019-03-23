@@ -60,16 +60,26 @@ impl Tokenizer<'_> {
         false
     }
 
-    fn look_esc(&self) -> (u8, usize) {
-        assert_eq!(self.next_char(), b'\\');
-
-        match self.src().as_bytes()[self.current + 1] {
-            b'\0' => (b'\0', 1),
-            b'0' => (b'\0', 2),
-            b'r' => (b'\r', 2),
-            b'n' => (b'\n', 2),
-            b't' => (b'\t', 2),
-            c => (c, 2),
+    /// Read chars until next single quote.
+    /// Don't read line breaks or EOF.
+    /// Don't evaluate escape sequence here.
+    fn read_until_single_quote(&mut self) {
+        loop {
+            match self.next_char() {
+                b'\0' | b'\n' => return,
+                b'\'' => {
+                    self.current += 1;
+                    return;
+                }
+                b'\\' => {
+                    self.current += 1;
+                    match self.next_char() {
+                        b'\0' | b'\n' => {}
+                        _ => self.current += 1,
+                    }
+                }
+                _ => self.current += 1,
+            }
         }
     }
 
@@ -79,18 +89,9 @@ impl Tokenizer<'_> {
         let l = self.current;
         self.current += 1;
 
-        let (c, n) = match self.next_char() {
-            b'\0' | b'\r' | b'\n' => (b'\0', 0),
-            b'\\' => self.look_esc(),
-            c => (c, 1),
-        };
-        self.current += n;
+        self.read_until_single_quote();
 
-        if !self.reads("'") {
-            self.add_token(TokenKind::Err, (l, self.current));
-            return;
-        }
-        self.add_token(TokenKind::Char(c), (l, self.current))
+        self.add_token(TokenKind::Char, (l, self.current))
     }
 
     fn read_str(&mut self) {

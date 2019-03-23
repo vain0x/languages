@@ -115,6 +115,23 @@ fn test_char_literal_escape_sequence() {
 }
 
 #[test]
+fn test_char_literal_errors() {
+    test_err("'", "At 1:1..1:2 Single quote missing");
+
+    test_err("'\n", "At 1:1..1:2 Single quote missing");
+
+    test_err("''", "At 1:1..1:3 Expected exactly one ASCII character");
+
+    test_err(
+        r#"'😄'"#,
+        "At 1:1..1:7 Expected exactly one ASCII character",
+    );
+
+    // HELP: Edge case of poor message.
+    test_err(r#"'\'"#, "At 1:1..1:4 Unknown escape sequence")
+}
+
+#[test]
 fn test_write() {
     eval_tests(
         r#"

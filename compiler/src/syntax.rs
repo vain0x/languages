@@ -55,7 +55,7 @@ pub(crate) enum TokenKind {
     Keyword(Keyword),
     Ident,
     Int,
-    Char(u8),
+    Char,
     Str,
 }
 

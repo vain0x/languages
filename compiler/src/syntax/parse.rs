@@ -71,16 +71,16 @@ impl Parser<'_> {
         exp_id
     }
 
-    fn add_exp_err(&mut self, message: String, token_span: (TokenId, TokenId)) -> ExpId {
-        self.add_exp(ExpKind::Err(message), token_span)
+    fn add_exp_err(&mut self, kind: SyntaxError, token_span: (TokenId, TokenId)) -> ExpId {
+        self.add_exp(ExpKind::Err(kind), token_span)
     }
 
     fn text(&self, token_id: TokenId) -> &str {
         self.syntax.token_text(token_id)
     }
 
-    fn parse_err(&mut self, message: String) -> ExpId {
-        self.add_exp_err(message, (self.current, self.current + 1))
+    fn parse_err(&mut self, kind: SyntaxError) -> ExpId {
+        self.add_exp_err(kind, (self.current, self.current + 1))
     }
 
     fn parse_atom(&mut self) -> ExpId {
@@ -98,7 +98,7 @@ impl Parser<'_> {
 
                 let text = self.text(token_l);
                 match parse_char(text) {
-                    Err(message) => self.add_exp_err(message.to_string(), (token_l, self.current)),
+                    Err(err) => self.add_exp_err(err, (token_l, self.current)),
                     Ok(c) => self.add_exp(ExpKind::Byte(c), (token_l, self.current)),
                 }
             }
@@ -107,7 +107,7 @@ impl Parser<'_> {
 
                 let text = self.text(token_l);
                 match parse_str(text) {
-                    Err(message) => self.add_exp_err(message.to_string(), (token_l, self.current)),
+                    Err(err) => self.add_exp_err(err, (token_l, self.current)),
                     Ok(value) => self.add_exp(ExpKind::Str(value), (token_l, self.current)),
                 }
             }
@@ -126,7 +126,7 @@ impl Parser<'_> {
                 let exp_id = self.parse_term();
 
                 if self.next().kind != TokenKind::Pun(")") {
-                    return self.parse_err("Expected ')'".to_string());
+                    return self.parse_err(SyntaxError::ExpectedChar(')'));
                 }
                 self.current += 1;
                 exp_id
@@ -136,24 +136,19 @@ impl Parser<'_> {
                 let exp_id = self.parse_exp();
 
                 if self.next().kind != TokenKind::Pun("}") {
-                    return self.parse_err("Expected '}'".to_string());
+                    return self.parse_err(SyntaxError::ExpectedChar('}'));
                 }
                 self.current += 1;
                 exp_id
             }
             TokenKind::Err => {
                 self.current += 1;
-                self.parse_err("Invalid character".to_string())
+                self.parse_err(SyntaxError::InvalidChar)
             }
-            TokenKind::Eof => {
-                self.add_exp_err("Unexpected EOF".to_string(), (token_l, self.current))
-            }
+            TokenKind::Eof => self.add_exp_err(SyntaxError::UnexpectedEof, (token_l, self.current)),
             _ => {
                 self.current += 1;
-                self.add_exp_err(
-                    "Expected an expression".to_string(),
-                    (token_l, self.current),
-                )
+                self.add_exp_err(SyntaxError::ExpectedExp, (token_l, self.current))
             }
         }
     }
@@ -171,7 +166,7 @@ impl Parser<'_> {
                     self.parse_term_list(&mut args);
 
                     if self.next().kind != TokenKind::Pun(")") {
-                        return self.parse_err("Expected ')'".to_string());
+                        return self.parse_err(SyntaxError::ExpectedChar(')'));
                     }
                     self.current += 1;
 
@@ -189,7 +184,7 @@ impl Parser<'_> {
                     let arg_exp_id = self.parse_term();
 
                     if self.next().kind != TokenKind::Pun("]") {
-                        return self.parse_err("Expected ']'".to_string());
+                        return self.parse_err(SyntaxError::ExpectedChar(']'));
                     }
                     self.current += 1;
 
@@ -233,7 +228,7 @@ impl Parser<'_> {
                 }
 
                 if self.next().kind != TokenKind::Op(Op::BitOr) {
-                    return self.parse_err("Expected '|'".to_string());
+                    return self.parse_err(SyntaxError::ExpectedChar('|'));
                 }
                 self.current += 1;
 
@@ -301,7 +296,7 @@ impl Parser<'_> {
         let cond = self.parse_term();
 
         if self.next().kind != TokenKind::Pun("{") {
-            return self.parse_err("Expected '{'".to_string());
+            return self.parse_err(SyntaxError::ExpectedChar('{'));
         }
         let body = self.parse_term();
 
@@ -315,7 +310,10 @@ impl Parser<'_> {
         let alt = match self.next().kind {
             TokenKind::Pun("{") => self.parse_atom(),
             TokenKind::Keyword(Keyword::If) => self.parse_term(),
-            _ => self.parse_err("Expected '}' or 'if'".to_string()),
+            _ => self.parse_err(SyntaxError::ExpectedEither(vec![
+                "}".to_string(),
+                "if".to_string(),
+            ])),
         };
 
         self.add_exp(ExpKind::If { cond, body, alt }, (token_l, self.current))
@@ -328,7 +326,7 @@ impl Parser<'_> {
         let cond = self.parse_term();
 
         if self.next().kind != TokenKind::Pun("{") {
-            return self.parse_err("Expected '{'".to_string());
+            return self.parse_err(SyntaxError::ExpectedChar('{'));
         }
         let body = self.parse_term();
 
@@ -386,7 +384,7 @@ impl Parser<'_> {
         let pat_exp_id = self.parse_atom();
 
         if self.next().kind != TokenKind::Op(Op::Set) {
-            return self.parse_err("Expected '='".to_string());
+            return self.parse_err(SyntaxError::ExpectedChar('='));
         }
         self.current += 1;
 
@@ -450,7 +448,7 @@ impl Parser<'_> {
 
     fn parse_eof(&mut self, exp_id: ExpId) -> ExpId {
         if self.next().kind != TokenKind::Eof {
-            let exp_r = self.parse_err("Expected EOF".to_string());
+            let exp_r = self.parse_err(SyntaxError::ExpectedEof);
             return self.add_exp(
                 ExpKind::Semi(vec![exp_id, exp_r]),
                 (self.current, self.current),
@@ -466,9 +464,9 @@ impl Parser<'_> {
 }
 
 /// Parse char literal.
-fn parse_char(text: &str) -> Result<u8, &'static str> {
+fn parse_char(text: &str) -> Result<u8, SyntaxError> {
     if !(text.len() >= 2 && text.starts_with('\'') && text.ends_with('\'')) {
-        return Err("Single quote missing");
+        return Err(SyntaxError::MissingSingleQuote);
     }
 
     let body = text[1..text.len() - 1].as_bytes();
@@ -478,17 +476,17 @@ fn parse_char(text: &str) -> Result<u8, &'static str> {
         b"\\r" => b'\r',
         b"\\t" => b'\t',
         b"\\\\" | b"\\'" | b"\\\"" => body[1],
-        _ if body.len() >= 1 && body[0] == b'\\' => return Err("Unknown escape sequence"),
+        _ if body.len() >= 1 && body[0] == b'\\' => return Err(SyntaxError::UnknownEscapeSequence),
         _ if body.len() == 1 => body[0],
-        _ => return Err("Expected exactly one ASCII character"),
+        _ => return Err(SyntaxError::NonSingleCharLiteral),
     };
     Ok(c)
 }
 
 // Parse string literal.
-fn parse_str(text: &str) -> Result<String, &'static str> {
+fn parse_str(text: &str) -> Result<String, SyntaxError> {
     if !(text.len() >= 2 && text.starts_with('\"') && text.ends_with('\"')) {
-        return Err("Double quote missing");
+        return Err(SyntaxError::MissingDoubleQuote);
     }
 
     let body = &text[1..text.len() - 1];
@@ -496,7 +494,9 @@ fn parse_str(text: &str) -> Result<String, &'static str> {
     // FIXME: Handle escape sequences correctly.
     let body = body.replace("\\n", "\n");
     if body.contains('\\') {
-        return Err("Escape sequences other than '\\n' are not supported yet");
+        return Err(SyntaxError::Unimplemented(
+            "Escape sequences other than '\\n' are not supported yet",
+        ));
     }
 
     Ok(body)

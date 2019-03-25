@@ -2,9 +2,9 @@ use super::*;
 use std::iter;
 
 /// Expression in concrete syntax tree.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum ExpKind {
-    Err(String),
+    Err(SyntaxError),
     Unit,
     Int(i64),
     Byte(u8),

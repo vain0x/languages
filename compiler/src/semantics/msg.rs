@@ -1,6 +1,7 @@
 use super::*;
 use crate::syntax::*;
 use std::collections::BTreeMap;
+use std::fmt;
 
 #[derive(Clone, Debug)]
 pub(crate) struct DocMsg {
@@ -10,16 +11,26 @@ pub(crate) struct DocMsg {
     r: Pos,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) struct Msg {
-    level: MsgLevel,
-    message: String,
-    exp_id: ExpId,
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum MsgLevel {
+    Error,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) enum MsgLevel {
-    Err,
+#[derive(Clone, Debug)]
+pub(crate) enum MsgKind {
+    SyntaxError(SyntaxError),
+    Undefined,
+    TypeMismatch(Ty, Ty),
+    InvalidUseOfRange,
+    OutOfLoop,
+    Unimplemented(String),
+    Unexpected(String),
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct Msg {
+    kind: MsgKind,
+    exp_id: ExpId,
 }
 
 pub(crate) type Msgs = BTreeMap<MsgId, Msg>;
@@ -36,22 +47,29 @@ pub(crate) trait BorrowMutMsgs {
         self.msgs_mut().insert(msg_id, msg);
     }
 
-    fn add_err_msg(&mut self, message: String, exp_id: ExpId) {
-        self.add_msg(Msg::err(message, exp_id));
+    fn add_err_msg(&mut self, kind: MsgKind, exp_id: ExpId) {
+        self.add_msg(Msg { kind, exp_id });
+    }
+}
+
+impl fmt::Display for MsgKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MsgKind::SyntaxError(err) => write!(f, "{}", err),
+            MsgKind::Undefined => write!(f, "Undefined name"),
+            MsgKind::TypeMismatch(..) => write!(f, "Type Error"),
+            MsgKind::InvalidUseOfRange => write!(f, "Invalid use of range"),
+            MsgKind::OutOfLoop => write!(f, "Out of loop"),
+            MsgKind::Unimplemented(message) => write!(f, "{}", message),
+            MsgKind::Unexpected(message) => write!(f, "{}", message),
+        }
     }
 }
 
 impl Msg {
-    pub(crate) fn err(message: String, exp_id: ExpId) -> Self {
-        Msg {
-            level: MsgLevel::Err,
-            message,
-            exp_id,
-        }
-    }
-
     pub(crate) fn is_successful(&self) -> bool {
-        self.level != MsgLevel::Err
+        // Currently all messages are error.
+        false
     }
 
     fn to_doc_msg(&self, syntax: &Syntax) -> DocMsg {
@@ -59,8 +77,8 @@ impl Msg {
         DocMsg {
             l,
             r,
-            level: self.level,
-            message: self.message.to_string(),
+            level: MsgLevel::Error,
+            message: format!("{}", self.kind),
         }
     }
 
@@ -72,7 +90,7 @@ impl Msg {
         let mut result = vec![];
         for msg in msgs {
             result.push(msg.to_doc_msg(syntax));
-            success = success && msg.level != MsgLevel::Err;
+            success = success && msg.is_successful();
         }
         (success, result)
     }

@@ -18,7 +18,7 @@ pub(crate) enum MsgLevel {
 
 #[derive(Clone, Debug)]
 pub(crate) enum MsgKind {
-    SyntaxError(String),
+    SyntaxError(SyntaxError),
     Undefined,
     TypeMismatch(Ty, Ty),
     InvalidUseOfRange,
@@ -55,7 +55,7 @@ pub(crate) trait BorrowMutMsgs {
 impl fmt::Display for MsgKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            MsgKind::SyntaxError(message) => write!(f, "{}", message),
+            MsgKind::SyntaxError(err) => write!(f, "{}", err),
             MsgKind::Undefined => write!(f, "Undefined name"),
             MsgKind::TypeMismatch(..) => write!(f, "Type Error"),
             MsgKind::InvalidUseOfRange => write!(f, "Invalid use of range"),

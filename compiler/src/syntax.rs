@@ -1,9 +1,11 @@
+pub(crate) mod error;
 pub(crate) mod exp;
 pub(crate) mod keyword;
 pub(crate) mod op;
 pub(crate) mod parse;
 pub(crate) mod tokenize;
 
+pub(crate) use self::error::*;
 pub(crate) use self::exp::*;
 pub(crate) use self::keyword::*;
 pub(crate) use self::op::*;

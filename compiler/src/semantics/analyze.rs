@@ -148,8 +148,8 @@ impl SemanticAnalyzer {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            ExpKind::Err(message) => {
-                self.add_err(MsgKind::SyntaxError(message.to_string()), exp_id);
+            ExpKind::Err(err) => {
+                self.add_err(MsgKind::SyntaxError(err.clone()), exp_id);
             }
             ExpKind::Ident(name) => {
                 let var_id = if let Some(index) = arg_index {
@@ -197,8 +197,8 @@ impl SemanticAnalyzer {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            ExpKind::Err(message) => {
-                self.add_err(MsgKind::SyntaxError(message.to_string()), exp_id);
+            ExpKind::Err(err) => {
+                self.add_err(MsgKind::SyntaxError(err.clone()), exp_id);
             }
             ExpKind::Ident(name) => {
                 let (symbol_kind, symbol_ty) = match self.lookup_symbol(name) {
@@ -289,8 +289,8 @@ impl SemanticAnalyzer {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            ExpKind::Err(message) => {
-                self.add_err(MsgKind::SyntaxError(message.to_string()), exp_id);
+            ExpKind::Err(err) => {
+                self.add_err(MsgKind::SyntaxError(err.clone()), exp_id);
             }
             &ExpKind::Unit => {
                 self.set_ty(exp_id, &ty, &Ty::Unit);

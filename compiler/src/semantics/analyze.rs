@@ -33,8 +33,8 @@ impl SemanticAnalyzer {
         self.imported_symbols().find(|symbol| symbol.name() == name)
     }
 
-    fn add_err(&mut self, message: String, exp_id: ExpId) {
-        self.sema.add_err_msg(message, exp_id);
+    fn add_err(&mut self, kind: MsgKind, exp_id: ExpId) {
+        self.sema.add_err_msg(kind, exp_id);
     }
 
     fn add_fun(&mut self, _: ExpId, name: String, ty: Ty, bodies: Vec<ExpId>) -> FunId {
@@ -149,7 +149,7 @@ impl SemanticAnalyzer {
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
             ExpKind::Err(message) => {
-                self.add_err(message.to_string(), exp_id);
+                self.add_err(MsgKind::SyntaxError(message.to_string()), exp_id);
             }
             ExpKind::Ident(name) => {
                 let var_id = if let Some(index) = arg_index {
@@ -198,13 +198,13 @@ impl SemanticAnalyzer {
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
             ExpKind::Err(message) => {
-                self.add_err(message.to_string(), exp_id);
+                self.add_err(MsgKind::SyntaxError(message.to_string()), exp_id);
             }
             ExpKind::Ident(name) => {
                 let (symbol_kind, symbol_ty) = match self.lookup_symbol(name) {
                     Some(symbol) => (symbol.kind(), symbol.get_ty()),
                     None => {
-                        self.add_err("Undefined name".to_string(), exp_id);
+                        self.add_err(MsgKind::Undefined, exp_id);
                         return;
                     }
                 };
@@ -223,7 +223,7 @@ impl SemanticAnalyzer {
         let (symbol_kind, symbol_ty) = match self.lookup_symbol(&name) {
             Some(symbol) => (symbol.kind(), symbol.get_ty()),
             None => {
-                self.add_err("Undefined name".to_string(), exp_id);
+                self.add_err(MsgKind::Undefined, exp_id);
                 return;
             }
         };
@@ -268,12 +268,15 @@ impl SemanticAnalyzer {
                 match self.sema.subst_ty(&Ty::Var(exp_l)) {
                     Ty::Byte | Ty::Int | Ty::Ptr => {}
                     ty => self.add_err(
-                        format!("You cannot assign non-byte/int/ptr value for now {:?}", ty),
+                        MsgKind::Unimplemented(format!(
+                            "You cannot assign non-byte/int/ptr value for now {:?}",
+                            ty
+                        )),
                         exp_id,
                     ),
                 }
             }
-            Op::Range => self.add_err("Invalid use of range".to_string(), exp_id),
+            Op::Range => self.add_err(MsgKind::InvalidUseOfRange, exp_id),
             _ => {
                 self.on_val(exp_l, Ty::Int);
                 self.on_val(exp_r, Ty::Int);
@@ -287,7 +290,7 @@ impl SemanticAnalyzer {
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
             ExpKind::Err(message) => {
-                self.add_err(message.to_string(), exp_id);
+                self.add_err(MsgKind::SyntaxError(message.to_string()), exp_id);
             }
             &ExpKind::Unit => {
                 self.set_ty(exp_id, &ty, &Ty::Unit);
@@ -307,7 +310,9 @@ impl SemanticAnalyzer {
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, ty, op, l, r),
             ExpKind::Fun { .. } => {
                 self.add_err(
-                    "`fun` expressions must appear in the form of `let name = fun ..;`".to_string(),
+                    MsgKind::Unimplemented(
+                        "Functions must appear in the form of `let name = || ..`".to_string(),
+                    ),
                     exp_id,
                 );
             }
@@ -337,7 +342,7 @@ impl SemanticAnalyzer {
             &ExpKind::Break | &ExpKind::Continue => {
                 let loop_id = match self.current_loop_id {
                     None => {
-                        self.add_err("Out of loop".to_string(), exp_id);
+                        self.add_err(MsgKind::OutOfLoop, exp_id);
                         return;
                     }
                     Some(loop_id) => loop_id,
@@ -420,7 +425,10 @@ impl SemanticAnalyzer {
         let var_ids = self.sema.vars.keys().cloned().collect::<Vec<_>>();
         for var_id in var_ids {
             if let VarKind::Rec(exp_id) = self.sema.vars[&var_id].kind {
-                self.add_err("Unresolved let-rec variable".to_string(), exp_id);
+                self.add_err(
+                    MsgKind::Unexpected("Unresolved let-rec variable".to_string()),
+                    exp_id,
+                );
             }
         }
     }
@@ -456,8 +464,8 @@ impl ShareSyntax for SemanticAnalyzer {
 }
 
 impl Sema {
-    fn add_err(&mut self, message: String, exp_id: ExpId) {
-        self.add_err_msg(message, exp_id);
+    fn add_err(&mut self, kind: MsgKind, exp_id: ExpId) {
+        self.add_err_msg(kind, exp_id);
     }
 
     pub fn get_symbol_ref(&self, symbol_kind: SymbolKind) -> SymbolRef<'_> {
@@ -527,14 +535,17 @@ impl Sema {
             (Ty::Fun(l_tys), Ty::Fun(r_tys)) => self.unify_tys(exp_id, &l_tys, &r_tys),
             (Ty::Unit, _) | (Ty::Int, _) | (Ty::Byte, _) | (Ty::Ptr, _) | (Ty::Fun(_), _) => {
                 eprintln!("Type Error left={:?} right={:?}", subst_l_ty, subst_r_ty);
-                self.add_err("Type Error".to_string(), exp_id)
+                self.add_err(MsgKind::TypeMismatch(subst_l_ty, subst_r_ty), exp_id)
             }
         }
     }
 
     fn unify_tys(&mut self, exp_id: ExpId, l_tys: &[Ty], r_tys: &[Ty]) {
         if l_tys.len() != r_tys.len() {
-            self.add_err("Type Error".to_string(), exp_id);
+            self.add_err(
+                MsgKind::TypeMismatch(Ty::Fun(l_tys.to_owned()), Ty::Fun(r_tys.to_owned())),
+                exp_id,
+            );
             return;
         }
 

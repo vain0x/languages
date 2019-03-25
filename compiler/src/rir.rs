@@ -1,5 +1,7 @@
+//! Register machine IR.
+
 pub(crate) mod cmd;
-pub(crate) mod gen_mir;
+pub(crate) mod gen;
 pub(crate) mod regalloc;
 
 pub(crate) use self::cmd::*;
@@ -39,7 +41,7 @@ pub(crate) struct GenLoopDef {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Mir {
+pub(crate) struct Rir {
     pub sema: Rc<Sema>,
     pub reg_count: usize,
     pub label_count: usize,

@@ -1,6 +1,6 @@
 //! Convert picomet-lang code to a string to execute with Rust tools.
 
-use crate::mir::gen_mir::compile;
+use crate::rir::gen::compile;
 use crate::semantics::msg::DocMsg;
 use std::fs;
 use std::io;
@@ -14,7 +14,7 @@ const SOURCE: &'static str = r####"
 ${SOURCE}"####;
 
 const PROGRAM: &'static str = r####"
-${MIR}"####;
+${RIR}"####;
 
 pub fn main() {
     eval_with_stdio(PROGRAM);
@@ -29,14 +29,14 @@ fn gen_rust(picomet_code: String, runtime_code: String) -> String {
     if result.success {
         TEMPLATE
             .replace("${SOURCE}", &picomet_code)
-            .replace("${MIR}", &result.program)
+            .replace("${RIR}", &result.program)
             .replace("${RUNTIME}", &runtime_code)
     } else {
         let stderr = DocMsg::to_text(&result.msgs);
         let err_code = format!(r##"compile_error!(r#"{}"#)"##, &stderr);
         TEMPLATE
             .replace("${SOURCE}", &picomet_code)
-            .replace("${MIR}", "")
+            .replace("${RIR}", "")
             .replace("${RUNTIME}", &err_code)
     }
 }

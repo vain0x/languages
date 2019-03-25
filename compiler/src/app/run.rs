@@ -1,6 +1,6 @@
 //! Evaluate picomet-lang code.
 
-use crate::mir::gen_mir::compile;
+use crate::rir::gen::compile;
 use crate::semantics::msg::DocMsg;
 use std::fs;
 use std::path::PathBuf;

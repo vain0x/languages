@@ -7,57 +7,57 @@ use std::iter;
 use std::mem::size_of;
 use std::rc::Rc;
 
-struct Compiler {
-    mir: Mir,
+struct GenRir {
+    rir: Rir,
     current_fun_id: FunId,
 }
 
-impl Compiler {
+impl GenRir {
     fn sema(&self) -> &Sema {
-        &self.mir.sema
+        &self.rir.sema
     }
 
     fn current_gen_fun(&self) -> &GenFunDef {
-        &self.mir.funs[&self.current_fun_id]
+        &self.rir.funs[&self.current_fun_id]
     }
 
     fn current_gen_fun_mut(&mut self) -> &mut GenFunDef {
         let fun_id = self.current_fun_id;
-        self.mir.funs.get_mut(&fun_id).unwrap()
+        self.rir.funs.get_mut(&fun_id).unwrap()
     }
 
     fn get_symbol(&self, exp_id: ExpId) -> Option<SymbolRef<'_>> {
-        (self.mir.sema.exp_symbols.get(&exp_id)).map(|&symbol| self.mir.sema.get_symbol_ref(symbol))
+        (self.rir.sema.exp_symbols.get(&exp_id)).map(|&symbol| self.rir.sema.get_symbol_ref(symbol))
     }
 
     fn get_loop(&self, exp_id: ExpId) -> Option<&GenLoopDef> {
         let loop_id = self.sema().exp_loops.get(&exp_id)?;
-        self.mir.loops.get(&loop_id)
+        self.rir.loops.get(&loop_id)
     }
 
     fn is_coerced_to_val(&self, exp_id: ExpId) -> bool {
-        self.mir.sema.exp_vals.contains(&exp_id)
+        self.rir.sema.exp_vals.contains(&exp_id)
     }
 
     fn get_ty(&self, exp_id: ExpId) -> Ty {
-        self.mir.sema.get_ty(exp_id).to_owned()
+        self.rir.sema.get_ty(exp_id).to_owned()
     }
 
     fn add_reg(&mut self) -> RegId {
-        self.mir.reg_count += 1;
-        RegId::new(self.mir.reg_count - 1)
+        self.rir.reg_count += 1;
+        RegId::new(self.rir.reg_count - 1)
     }
 
     fn add_label(&mut self) -> LabelId {
-        self.mir.label_count += 1;
-        LabelId::new(self.mir.label_count - 1)
+        self.rir.label_count += 1;
+        LabelId::new(self.rir.label_count - 1)
     }
 
     /// Allocate and write global data. Return the range.
     fn alloc(&mut self, data: &[u8]) -> (usize, usize) {
-        let p = self.mir.text.len();
-        self.mir.text.extend(data);
-        let q = self.mir.text.len();
+        let p = self.rir.text.len();
+        self.rir.text.extend(data);
+        let q = self.rir.text.len();
         (p, q)
     }
 
@@ -103,7 +103,7 @@ impl Compiler {
     }
 
     fn add_cmd_call_fun(&mut self, args: &[ExpId], fun_id: FunId) -> RegId {
-        let body_label_id = self.mir.funs[&fun_id].body_label_id;
+        let body_label_id = self.rir.funs[&fun_id].body_label_id;
 
         // Push args to stack in reversed order.
         for arg in args.iter().cloned().rev() {
@@ -448,7 +448,7 @@ impl Compiler {
     }
 
     fn add_cmd_fun_end(&mut self, fun_id: FunId) {
-        let end_label_id = self.mir.funs[&fun_id].end_label_id;
+        let end_label_id = self.rir.funs[&fun_id].end_label_id;
 
         self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(end_label_id));
 
@@ -463,13 +463,13 @@ impl Compiler {
 
     pub fn gen_fun(&mut self, fun_id: FunId) {
         self.current_fun_id = fun_id;
-        let body_label_id = self.mir.funs[&fun_id].body_label_id;
+        let body_label_id = self.rir.funs[&fun_id].body_label_id;
 
         self.push(Cmd::Label, NO_REG_ID, CmdArg::Label(body_label_id));
         self.add_cmd_save_caller_regs();
         self.add_cmd_allocate_locals(fun_id);
 
-        let final_reg_id = self.on_exps(&self.mir.sema.funs[&fun_id].bodies().to_owned());
+        let final_reg_id = self.on_exps(&self.rir.sema.funs[&fun_id].bodies().to_owned());
         self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(final_reg_id));
         self.kill(final_reg_id);
 
@@ -478,14 +478,14 @@ impl Compiler {
 
     pub fn compile(&mut self) -> CompilationResult {
         // Allocate well-known registers.
-        self.mir.reg_count += KNOWN_REG_NUM;
+        self.rir.reg_count += KNOWN_REG_NUM;
 
         // Prepare funs.
         let fun_ids = self.sema().funs.keys().cloned().collect::<Vec<_>>();
         for &fun_id in &fun_ids {
             let body_label_id = self.add_label();
             let end_label_id = self.add_label();
-            self.mir.funs.insert(
+            self.rir.funs.insert(
                 fun_id,
                 GenFunDef {
                     body_label_id,
@@ -500,7 +500,7 @@ impl Compiler {
         for &loop_id in &loop_ids {
             let break_label_id = self.add_label();
             let continue_label_id = self.add_label();
-            (self.mir.loops).insert(
+            (self.rir.loops).insert(
                 loop_id,
                 GenLoopDef {
                     break_label_id,
@@ -515,13 +515,13 @@ impl Compiler {
         }
 
         // Reassign registers to finite number registers.
-        for fun_id in 0..self.mir.funs.len() {
-            regalloc::alloc_regs(&mut self.mir.funs.get_mut(&FunId::new(fun_id)).unwrap().inss);
+        for fun_id in 0..self.rir.funs.len() {
+            regalloc::alloc_regs(&mut self.rir.funs.get_mut(&FunId::new(fun_id)).unwrap().inss);
         }
 
         // Merge instructions.
         let mut inss = vec![];
-        for (_, fun) in &self.mir.funs {
+        for (_, fun) in &self.rir.funs {
             inss.extend(&fun.inss);
         }
 
@@ -540,9 +540,9 @@ impl Compiler {
             }
         }
 
-        // Write MIR.
+        // Write rir.
         let mut program = String::new();
-        let csv_encoded_text = (self.mir.text.iter().map(|&b| b.to_string()))
+        let csv_encoded_text = (self.rir.text.iter().map(|&b| b.to_string()))
             .collect::<Vec<_>>()
             .join(",");
         writeln!(program, "    .text {}", csv_encoded_text).unwrap();
@@ -552,7 +552,7 @@ impl Compiler {
         }
 
         // Emit compile errors.
-        let (success, msgs) = Msg::summarize(self.mir.msgs.values(), &self.mir.sema.syntax);
+        let (success, msgs) = Msg::summarize(self.rir.msgs.values(), &self.rir.sema.syntax);
 
         CompilationResult {
             success,
@@ -562,7 +562,7 @@ impl Compiler {
     }
 }
 
-impl ShareSyntax for Compiler {
+impl ShareSyntax for GenRir {
     fn share_syntax(&self) -> Rc<Syntax> {
         Rc::clone(&self.sema().syntax)
     }
@@ -584,9 +584,9 @@ fn lo32(x: usize) -> usize {
     x & 0xFFFF_FFFF
 }
 
-pub(crate) fn gen_mir(sema: Rc<Sema>) -> CompilationResult {
-    let mut compiler = Compiler {
-        mir: Mir {
+pub(crate) fn gen(sema: Rc<Sema>) -> CompilationResult {
+    let mut compiler = GenRir {
+        rir: Rir {
             sema: Rc::clone(&sema),
             reg_count: 0,
             label_count: 0,
@@ -611,5 +611,5 @@ pub(crate) fn compile(src: &str) -> CompilationResult {
         };
     }
 
-    gen_mir::gen_mir(sema)
+    gen::gen(sema)
 }

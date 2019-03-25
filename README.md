@@ -207,13 +207,13 @@ To test the vscode extension, open `compiler` or `vscode-ext` with VSCode and pr
 - Sema
     - Syntax tree → Semantic Model
     - Type checking, symbol resolution, etc.
-- MIR
-    - Syntax tree + Semantic Model → MIR instructions
-    - The MIR is assembly for register machine with infinite registers.
+- RIR
+    - Syntax tree + Semantic Model → RIR instructions
+    - The RIR is assembly for register machine with infinite registers.
 - Optimize
     - *Not implemented yet.*
 - Evaluate
-    - Runtime evaluates the MIR instructions.
+    - Runtime evaluates the RIR instructions.
 
 ## Contribution
 

@@ -6,7 +6,7 @@ extern crate log;
 
 mod app;
 mod lsp;
-mod mir;
+mod rir;
 mod semantics;
 mod syntax;
 mod util;

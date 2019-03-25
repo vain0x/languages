@@ -1,5 +1,5 @@
-use crate::mir::gen_mir::compile;
-use crate::mir::CompilationResult;
+use crate::rir::gen::compile;
+use crate::rir::CompilationResult;
 use crate::semantics::DocMsg;
 use std::io;
 

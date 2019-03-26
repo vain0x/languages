@@ -161,7 +161,7 @@ Download (or git-clone) this repository.
 For bash users: run `./install` instead. To uninstall, run `./uninstall`.
 
 - In `compiler` directory, run `cargo build --release`.
-- Copy the generated compiler at `compiler/target/release/picomet` to `vscode-ext/out/picomet`.
+- Copy the generated compiler at `target/release/picomet` to `vscode-ext/out/picomet`.
 - In `vscode-ext`, run there commands:
     ```sh
     yarn

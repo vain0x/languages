@@ -9,7 +9,7 @@ yarn --version
 code --version
 
 # Build the compiler for release.
-(cd compiler && cargo build --release)
+cargo build --release
 
 # Build VSCode extension.
 (cd vscode-ext && ./install)

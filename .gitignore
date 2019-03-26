@@ -1,4 +1,5 @@
-docker-uninstall
+target
+Cargo.lock
 
 
 

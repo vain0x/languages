@@ -3,7 +3,7 @@
 
 set -eux
 
-cp ../compiler/target/release/picomet ./out/picomet
+cp ../target/release/picomet ./out/picomet
 
 yarn
 yarn build

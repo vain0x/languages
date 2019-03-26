@@ -21,7 +21,7 @@
                 "build"
             ],
             "options": {
-                "cwd": "../vscode-ext"
+                "cwd": "./vscode-ext"
             },
             "group": "build",
             "dependsOn": "compiler:build"

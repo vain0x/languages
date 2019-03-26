@@ -10,7 +10,7 @@
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "env": {
-                "PICOMET_BIN": "../compiler/target/debug/picomet"
+                "PICOMET_BIN": "../target/debug/picomet"
             },
             "preLaunchTask": "ext:build"
         }

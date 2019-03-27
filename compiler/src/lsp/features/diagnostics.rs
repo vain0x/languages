@@ -48,7 +48,7 @@ mod tests {
 
         let diagnostics = sema_to_diagnostics(&sema);
 
-        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics.len(), 1, "diagnostics = {:?}", diagnostics);
         assert_eq!(
             diagnostics[0],
             Diagnostic {

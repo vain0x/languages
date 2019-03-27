@@ -215,6 +215,7 @@ impl SemanticAnalyzer {
             } => {
                 self.on_val(l, Ty::int());
                 self.on_val(r, Ty::int());
+                self.set_ty(arg, Ty::unit()); // No range type for now.
                 self.sema.exp_ranges.insert(arg, (l, r));
                 true
             }
@@ -331,7 +332,11 @@ impl SemanticAnalyzer {
                     ),
                 }
             }
-            Op::Range => self.add_err(MsgKind::InvalidUseOfRange, exp_id),
+            Op::Range => {
+                self.on_val(exp_l, Ty::int());
+                self.on_val(exp_r, Ty::int());
+                self.add_err(MsgKind::InvalidUseOfRange, exp_id)
+            }
             _ => {
                 self.on_val(exp_l, Ty::int());
                 self.on_val(exp_r, Ty::int());
@@ -434,8 +439,11 @@ impl SemanticAnalyzer {
                         self.current_loop_id = outer_loop_id;
 
                         let fun_var_id =
-                            self.add_var_fun(fun_name.to_string(), fun_ty, fun_id, pat);
+                            self.add_var_fun(fun_name.to_string(), fun_ty.clone(), fun_id, pat);
                         var_ids.push(fun_var_id);
+
+                        self.set_ty(pat, fun_ty.clone());
+                        self.set_ty(init, fun_ty);
 
                         // Generalize types introduced in the definition.
                         for var_id in var_ids {
@@ -514,6 +522,21 @@ impl SemanticAnalyzer {
                     MsgKind::Unexpected("Variable not generalized".to_string()),
                     self.sema.vars[&var_id].def_exp_id,
                 );
+            }
+        }
+
+        // All expressions must have a type.
+        let exp_ids = self.share_syntax().exps.keys().cloned().collect::<Vec<_>>();
+        for &exp_id in &exp_ids {
+            match self.sema.exp_tys.get(&exp_id) {
+                None => self.add_err(
+                    MsgKind::Unexpected(format!(
+                        "Expression must have type ({})",
+                        self.sema.exp_text(exp_id)
+                    )),
+                    exp_id,
+                ),
+                Some(_) => {}
             }
         }
     }

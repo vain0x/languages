@@ -10,7 +10,8 @@
                 "--extensionDevelopmentPath=${workspaceFolder}/vscode-ext"
             ],
             "env": {
-                "PICOMET_BIN": "../target/debug/picomet"
+                "PICOMET_BIN": "../target/debug/picomet",
+                "RUST_BACKTRACE": "1"
             },
             "preLaunchTask": "ext:build"
         }

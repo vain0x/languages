@@ -1,5 +1,6 @@
 use crate::syntax::*;
 use crate::Id;
+use std::collections::{BTreeMap, BTreeSet};
 use std::iter;
 
 pub(crate) type TyId = Id<Ty>;
@@ -23,6 +24,12 @@ pub(crate) enum Ty {
 }
 
 #[derive(Clone, Debug)]
+pub(crate) struct TyScheme {
+    meta: Vec<TyId>,
+    pub ty: Ty,
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct TyDef {
     pub(super) ty: Option<Ty>,
     pub(super) exp_id: ExpId,
@@ -41,12 +48,12 @@ impl Ty {
         Ty::Con(TyCon::Int, Vec::new())
     }
 
-    pub(crate) fn ptr() -> Ty {
-        Ty::Con(TyCon::Slice, Vec::new())
+    pub(crate) fn ptr(inner_ty: Ty) -> Ty {
+        Ty::Con(TyCon::Slice, vec![inner_ty])
     }
 
     pub(crate) fn make_str() -> Ty {
-        Ty::ptr()
+        Ty::ptr(Ty::byte())
     }
 
     pub(crate) fn make_fun(args: impl IntoIterator<Item = Ty>, result: Ty) -> Ty {
@@ -54,6 +61,29 @@ impl Ty {
             TyCon::Fun,
             args.into_iter().chain(iter::once(result)).collect(),
         )
+    }
+
+    pub(crate) fn replace_with(self, replacer: &mut impl Fn(TyId) -> Ty) -> Ty {
+        let mut ty_ids = BTreeSet::new();
+        let mut ty = self;
+
+        loop {
+            match ty {
+                Ty::Err => return Ty::Err,
+                Ty::Meta(ty_id) if ty_ids.contains(&ty_id) => return Ty::Meta(ty_id),
+                Ty::Meta(ty_id) => {
+                    ty_ids.insert(ty_id);
+                    ty = replacer(ty_id);
+                }
+                Ty::Con(ty_con, tys) => {
+                    let tys = tys
+                        .into_iter()
+                        .map(|ty| ty.replace_with(replacer))
+                        .collect();
+                    return Ty::Con(ty_con, tys);
+                }
+            }
+        }
     }
 
     pub(crate) fn size_of(&self) -> Option<usize> {
@@ -92,6 +122,48 @@ impl std::fmt::Display for Ty {
                 Ok(())
             }
         }
+    }
+}
+
+impl From<Ty> for TyScheme {
+    fn from(ty: Ty) -> TyScheme {
+        TyScheme { meta: vec![], ty }
+    }
+}
+
+impl TyScheme {
+    pub(crate) fn instantiate(&self, mut fresh_meta_ty: impl FnMut() -> Ty) -> Ty {
+        let map = self
+            .meta
+            .iter()
+            .map(|&ty_id| (ty_id, fresh_meta_ty()))
+            .collect::<BTreeMap<_, _>>();
+        self.ty
+            .clone()
+            .replace_with(&mut |ty_id| map.get(&ty_id).cloned().unwrap_or(Ty::Meta(ty_id)))
+    }
+
+    pub(crate) fn generalize(ty: Ty) -> TyScheme {
+        fn walk(ty: &Ty, meta: &mut Vec<TyId>) {
+            match ty {
+                Ty::Err => {}
+                &Ty::Meta(ty_id) => {
+                    meta.push(ty_id);
+                }
+                Ty::Con(_, tys) => {
+                    for ty in tys {
+                        walk(ty, meta);
+                    }
+                }
+            }
+        }
+
+        let mut meta = Vec::new();
+        walk(&ty, &mut meta);
+        meta.sort();
+        meta.dedup();
+
+        TyScheme { meta, ty }
     }
 }
 

@@ -32,14 +32,18 @@ pub(crate) enum VarKind {
 pub(crate) struct VarDef {
     pub name: String,
     pub kind: VarKind,
-    pub ty: Ty,
+
+    /// Ok: Type scheme.
+    /// Err: Provisional type before generalization.
+    pub ty_scheme: Result<TyScheme, Ty>,
+
     pub def_exp_id: ExpId,
 }
 
 #[derive(Clone, Debug)]
 pub(crate) struct FunDef {
     pub name: String,
-    pub ty: Ty,
+    pub result_ty: Ty,
     pub symbols: Vec<SymbolKind>,
 
     /// A function can have 1+ bodies.
@@ -84,11 +88,8 @@ pub(crate) struct Sema {
 }
 
 impl FunDef {
-    pub(crate) fn result_ty(&self) -> Option<&Ty> {
-        match &self.ty {
-            Ty::Con(TyCon::Fun, tys) => tys.last(),
-            _ => None,
-        }
+    pub(crate) fn result_ty(&self) -> Ty {
+        self.result_ty.clone()
     }
 
     pub(crate) fn bodies(&self) -> Vec<ExpId> {

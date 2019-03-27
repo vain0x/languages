@@ -11,7 +11,6 @@ pub(crate) use self::ty::*;
 
 use crate::syntax::*;
 use crate::Id;
-use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
@@ -33,14 +32,18 @@ pub(crate) enum VarKind {
 pub(crate) struct VarDef {
     pub name: String,
     pub kind: VarKind,
-    pub ty: Ty,
+
+    /// Ok: Type scheme.
+    /// Err: Provisional type before generalization.
+    pub ty_scheme: Result<TyScheme, Ty>,
+
     pub def_exp_id: ExpId,
 }
 
 #[derive(Clone, Debug)]
 pub(crate) struct FunDef {
     pub name: String,
-    pub ty: Ty,
+    pub result_ty: Ty,
     pub symbols: Vec<SymbolKind>,
 
     /// A function can have 1+ bodies.
@@ -73,22 +76,20 @@ pub(crate) struct Sema {
     pub exp_decls: BTreeSet<ExpId>,
 
     /// Type of expressions.
-    pub exp_tys: RefCell<BTreeMap<ExpId, Ty>>,
+    pub exp_tys: BTreeMap<ExpId, Ty>,
 
     pub exp_parent: BTreeMap<ExpId, ExpId>,
 
     pub vars: BTreeMap<VarId, VarDef>,
     pub funs: BTreeMap<FunId, FunDef>,
+    pub tys: BTreeMap<TyId, TyDef>,
     pub loops: BTreeMap<LoopId, LoopDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 
 impl FunDef {
-    pub(crate) fn result_ty(&self) -> Option<&Ty> {
-        match &self.ty {
-            Ty::Fun(tys) => tys.last(),
-            _ => None,
-        }
+    pub(crate) fn result_ty(&self) -> Ty {
+        self.result_ty.clone()
     }
 
     pub(crate) fn bodies(&self) -> Vec<ExpId> {

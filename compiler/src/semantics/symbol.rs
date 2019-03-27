@@ -36,10 +36,13 @@ impl SymbolRef<'_> {
         }
     }
 
-    pub fn get_ty(&self) -> Ty {
+    pub fn ty_scheme(&self) -> TyScheme {
         match self {
-            SymbolRef::Prim(prim) => prim.get_ty(),
-            SymbolRef::Var(_, var_def) => var_def.ty.to_owned(),
+            SymbolRef::Prim(prim) => prim.ty_scheme(),
+            SymbolRef::Var(_, var_def) => match var_def.ty_scheme.clone() {
+                Ok(ty_scheme) => ty_scheme,
+                Err(ty) => TyScheme::from(ty),
+            },
         }
     }
 

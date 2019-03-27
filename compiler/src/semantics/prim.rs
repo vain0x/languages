@@ -28,16 +28,22 @@ impl Prim {
         PRIMS.iter().find(|&&(_, prim)| prim == self).unwrap().0
     }
 
-    pub(crate) fn get_ty(self) -> Ty {
+    pub(crate) fn ty_scheme(self) -> TyScheme {
         match self {
-            Prim::ByteToInt => Ty::Fun(vec![Ty::Byte, Ty::Int]),
-            Prim::IntToByte => Ty::Fun(vec![Ty::Int, Ty::Byte]),
-            Prim::SliceLen => Ty::Fun(vec![Ty::Ptr, Ty::Int]),
-            Prim::MemAlloc => Ty::Fun(vec![Ty::Int, Ty::Ptr]),
-            Prim::PrintLnInt => Ty::Fun(vec![Ty::Int, Ty::Unit]),
-            Prim::ReadInt => Ty::Fun(vec![Ty::Int]),
-            Prim::ReadStr => Ty::Fun(vec![Ty::Ptr]),
-            Prim::Print => Ty::Fun(vec![Ty::Ptr, Ty::Unit]),
+            Prim::ByteToInt => TyScheme::generalize(Ty::make_fun(vec![Ty::byte()], Ty::int())),
+            Prim::IntToByte => TyScheme::generalize(Ty::make_fun(vec![Ty::int()], Ty::byte())),
+            Prim::SliceLen => TyScheme::generalize(Ty::make_fun(
+                vec![Ty::ptr(Ty::Meta(TyId::new(0)))],
+                Ty::int(),
+            )),
+            Prim::MemAlloc => TyScheme::generalize(Ty::make_fun(
+                vec![Ty::int()],
+                Ty::ptr(Ty::Meta(TyId::new(0))),
+            )),
+            Prim::PrintLnInt => TyScheme::generalize(Ty::make_fun(vec![Ty::int()], Ty::unit())),
+            Prim::ReadInt => TyScheme::generalize(Ty::make_fun(vec![], Ty::int())),
+            Prim::ReadStr => TyScheme::generalize(Ty::make_fun(vec![], Ty::make_str())),
+            Prim::Print => TyScheme::generalize(Ty::make_fun(vec![Ty::make_str()], Ty::unit())),
         }
     }
 }

@@ -169,6 +169,33 @@ fn test_slice_subslice() {
 }
 
 #[test]
+fn test_slice_of_int() {
+    eval_tests(
+        r#"
+            let buf = mem_alloc(2);
+            buf[0] = 1000000000000000000;
+            buf[1] = 2000000000000000000;
+            println_int(buf[0]);
+            println_int(buf[1]);
+        "#,
+        &[("", "1000000000000000000\n2000000000000000000\n")],
+    );
+}
+
+#[test]
+fn test_slice_of_int_subslice() {
+    eval_tests(
+        r#"
+            let buf = mem_alloc(3);
+            let sub = buf[1..2];
+            sub[1] = 2000;
+            println_int(buf[2]);
+        "#,
+        &[("", "2000\n")],
+    );
+}
+
+#[test]
 fn test_read_int() {
     eval_tests(
         r#"
@@ -450,7 +477,7 @@ fn test_fun_return_same_type() {
             };
             f(0);
         "#,
-        "At 3:17..4:18 Type Error",
+        "At 4:17..4:18 Type Error",
     )
 }
 
@@ -505,6 +532,27 @@ fn test_fun_rec_allow_name_conflict() {
             println_int(f());
         "#,
         &[("", "2\n2\n2\n")],
+    );
+}
+
+#[test]
+fn test_fun_generic() {
+    eval_tests(
+        r#"
+            let f = |x| byte_to_int(x);
+            let id = |x| x;
+            println_int(if id(0) == 0 { 1 } else { 0 });
+            println_int(if f(id('a')) == f('a') { 1 } else { 0 });
+        "#,
+        &[("", "1\n1\n")],
+    );
+
+    test_err(
+        r#"
+            let f = |x| x + 1;
+            f("");
+        "#,
+        "At 3:15..3:17 Type Error",
     );
 }
 

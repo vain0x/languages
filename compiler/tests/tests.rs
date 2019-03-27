@@ -810,3 +810,108 @@ fn test_abc083_b_some_sums() {
         ],
     )
 }
+
+/// <https://atcoder.jp/contests/abs/tasks/abc088_b>
+#[test]
+fn test_abc088_b_card_game_for_two() {
+    eval_tests(
+        r#"
+            let vi_swap = |xs, i, j| {
+                let t = xs[i] + 0;
+                xs[i] = xs[j];
+                xs[j] = t;
+            };
+
+            /// Push to binary heap. Slice must have room for item.
+            let vi_heap_push = |xs, len, x| {
+                xs[len] = x + 0;
+
+                let i = len;
+                while i > 0 {
+                    let p = (i - 1) / 2;
+                    if xs[i] < xs[p] {
+                        vi_swap(xs, i, p);
+                    }
+                    i = p;
+                }
+            };
+
+            /// Pop from binary heap.
+            let vi_heap_pop = |xs, len| {
+                // assert len >= 1
+
+                let x = xs[0] + 0;
+                let t = xs[len - 1];
+
+                xs[0] = t;
+                len += -1;
+
+                let i = 0;
+                while 0 == 0 {
+                    let l = i * 2 + 1;
+                    let r = i * 2 + 2;
+                    if r < len {
+                        if xs[l] > xs[r] {
+                            l = r;
+                        }
+                    }
+                    if l >= len {
+                        break;
+                    }
+                    if xs[l] < xs[i] {
+                        vi_swap(xs, i, l);
+                    }
+                    i = l;
+                }
+
+                x
+            };
+
+            let vi_sort = |xs, len| {
+                let ys = mem_alloc(len);
+                let yn = 0;
+                while yn < len {
+                    vi_heap_push(ys, yn, xs[yn]);
+                    yn += 1;
+                }
+
+                while yn > 0 {
+                    xs[len - yn] = vi_heap_pop(ys, yn);
+                    yn += -1;
+                }
+            };
+
+            let N = read_int();
+            let A = mem_alloc(N);
+
+            let i = 0;
+            while i < N {
+                A[i] = read_int();
+                i += 1;
+            }
+
+            vi_sort(A, N);
+
+            let alice = 0;
+            let bob = 0;
+            let i = N - 1;
+            while i >= 0 {
+                alice += A[i];
+                i += -1;
+
+                if i >= 0 {
+                    bob += A[i];
+                    i += -1;
+                }
+            }
+
+            println_int(alice - bob);
+        "#,
+        &[
+            ("2\n3 1\n", "2\n"),
+            ("3\n2 7 4", "5\n"),
+            ("4\n20 18 2 18", "18\n"),
+            ("7\n3 1 4 1 5 9 2", "7\n"),
+        ],
+    )
+}

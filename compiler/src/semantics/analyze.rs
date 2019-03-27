@@ -53,9 +53,11 @@ impl SemanticAnalyzer {
 
     /// Define a variable that is defined with `let rec` before analysis.
     fn add_var_rec(&mut self, exp_id: ExpId, name: String) -> VarId {
+        let ty = self.sema.fresh_meta_ty(exp_id);
+
         let var_def = VarDef {
             name: name.to_string(),
-            ty: Ty::Var(exp_id),
+            ty,
             kind: VarKind::Rec(exp_id),
             def_exp_id: exp_id,
         };
@@ -117,10 +119,10 @@ impl SemanticAnalyzer {
         })
     }
 
-    fn add_var_fun(&mut self, name: String, fun_id: FunId, def_exp_id: ExpId) -> VarId {
+    fn add_var_fun(&mut self, name: String, ty: Ty, fun_id: FunId, def_exp_id: ExpId) -> VarId {
         self.add_var(VarDef {
             name,
-            ty: Ty::Var(def_exp_id),
+            ty,
             kind: VarKind::Fun(fun_id),
             def_exp_id,
         })
@@ -139,29 +141,35 @@ impl SemanticAnalyzer {
         self.sema.exp_symbols.insert(exp_id, symbol_kind);
     }
 
-    fn set_ty(&mut self, exp_id: ExpId, l_ty: &Ty, r_ty: &Ty) {
-        self.sema.unify_ty(exp_id, &Ty::Var(exp_id), l_ty);
+    fn set_ty(&mut self, exp_id: ExpId, ty: Ty) {
+        self.sema.exp_tys.insert(exp_id, ty);
+    }
+
+    fn unify_ty(&mut self, exp_id: ExpId, l_ty: Ty, r_ty: Ty) {
         self.sema.unify_ty(exp_id, l_ty, r_ty);
+    }
+
+    fn fresh_meta_ty(&mut self, exp_id: ExpId) -> Ty {
+        self.sema.fresh_meta_ty(exp_id)
     }
 
     fn on_pat(&mut self, exp_id: ExpId, ty: Ty, arg_index: Option<usize>) {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
+        self.set_ty(exp_id, ty.clone());
         match &exp.kind {
             ExpKind::Err(err) => {
                 self.add_err(MsgKind::SyntaxError(err.clone()), exp_id);
             }
             ExpKind::Ident(name) => {
                 let var_id = if let Some(index) = arg_index {
-                    self.add_arg(name.to_string(), ty.to_owned(), index, exp_id)
+                    self.add_arg(name.to_string(), ty, index, exp_id)
                 } else if self.current_fun_id == GLOBAL_FUN_ID {
-                    self.add_global(name.to_string(), ty.to_owned(), exp_id)
+                    self.add_global(name.to_string(), ty, exp_id)
                 } else {
-                    self.add_local(name.to_string(), ty.to_owned(), exp_id)
+                    self.add_local(name.to_string(), ty, exp_id)
                 };
                 self.set_symbol(exp_id, SymbolKind::Var(var_id));
-
-                self.set_ty(exp_id, &ty, &ty);
             }
             _ => panic!("pattern must be an ident"),
         }
@@ -175,27 +183,29 @@ impl SemanticAnalyzer {
                 r,
                 ..
             } => {
-                self.on_val(l, Ty::Int);
-                self.on_val(r, Ty::Int);
+                self.on_val(l, Ty::int());
+                self.on_val(r, Ty::int());
                 self.sema.exp_ranges.insert(arg, (l, r));
                 true
             }
             _ => {
-                self.on_val(arg, Ty::Int);
+                self.on_val(arg, Ty::int());
                 false
             }
         }
     }
 
     fn on_index_ref(&mut self, exp_id: ExpId, ty: Ty, indexee: ExpId, arg: ExpId) {
-        self.on_val(indexee, Ty::Ptr);
-        self.on_val(arg, Ty::Int);
-        self.set_ty(exp_id, &ty, &Ty::Byte);
+        self.on_val(indexee, Ty::ptr());
+        self.on_val(arg, Ty::int());
+
+        self.unify_ty(exp_id, ty, Ty::byte());
     }
 
     fn on_ref(&mut self, exp_id: ExpId, ty: Ty) {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
+        self.set_ty(exp_id, ty.clone());
         match &exp.kind {
             ExpKind::Err(err) => {
                 self.add_err(MsgKind::SyntaxError(err.clone()), exp_id);
@@ -210,7 +220,7 @@ impl SemanticAnalyzer {
                 };
 
                 self.set_symbol(exp_id, symbol_kind);
-                self.set_ty(exp_id, &ty, &symbol_ty);
+                self.unify_ty(exp_id, ty, symbol_ty);
             }
             &ExpKind::Index { indexee, arg } => {
                 self.on_index_ref(exp_id, ty, indexee, arg);
@@ -229,7 +239,7 @@ impl SemanticAnalyzer {
         };
 
         self.set_symbol(exp_id, symbol_kind);
-        self.set_ty(exp_id, &ty, &symbol_ty);
+        self.unify_ty(exp_id, ty, symbol_ty);
 
         match symbol_kind {
             SymbolKind::Prim(..) => {}
@@ -239,22 +249,25 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn on_call(&mut self, exp_id: ExpId, ty: Ty, callee: ExpId, args: &[ExpId]) {
-        self.set_ty(exp_id, &ty, &Ty::Var(exp_id));
-        let callee_ty = Ty::make_fun(args.iter().cloned().map(Ty::Var), ty);
+    fn on_call(&mut self, _: ExpId, ty: Ty, callee: ExpId, args: &[ExpId]) {
+        let arg_tys = args
+            .iter()
+            .map(|&arg| self.sema.fresh_meta_ty(arg))
+            .collect::<Vec<_>>();
+        let callee_ty = Ty::make_fun(arg_tys.clone(), ty);
 
         self.on_val(callee, callee_ty);
-        for &arg in args {
-            self.on_val(arg, Ty::Var(arg));
+        for (&arg, arg_ty) in args.into_iter().zip(arg_tys) {
+            self.on_val(arg, arg_ty);
         }
     }
 
     fn on_index(&mut self, exp_id: ExpId, ty: Ty, indexee: ExpId, arg: ExpId) {
-        self.on_val(indexee, Ty::Ptr);
+        self.on_val(indexee, Ty::ptr());
         let range = self.on_range_or_int_val(arg);
 
-        let result_ty = if range { Ty::Ptr } else { Ty::Byte };
-        self.set_ty(exp_id, &ty, &result_ty);
+        let result_ty = if range { Ty::ptr() } else { Ty::byte() };
+        self.unify_ty(exp_id, ty, result_ty);
 
         self.sema.exp_vals.insert(exp_id);
     }
@@ -262,14 +275,18 @@ impl SemanticAnalyzer {
     fn on_bin(&mut self, exp_id: ExpId, ty: Ty, op: Op, exp_l: ExpId, exp_r: ExpId) {
         match op {
             Op::Set | Op::SetAdd => {
-                self.on_ref(exp_l, Ty::Var(exp_l));
-                self.on_val(exp_r, Ty::Var(exp_l));
-                self.set_ty(exp_id, &ty, &Ty::Unit);
-                match self.sema.subst_ty(&Ty::Var(exp_l)) {
-                    Ty::Byte | Ty::Int | Ty::Ptr => {}
+                let item_ty = self.fresh_meta_ty(exp_l);
+
+                self.on_ref(exp_l, item_ty.clone());
+                self.on_val(exp_r, item_ty.clone());
+                self.unify_ty(exp_id, ty, Ty::unit());
+
+                match self.sema.subst_ty(item_ty) {
+                    Ty::Con(TyCon::Byte, _) | Ty::Con(TyCon::Int, _) | Ty::Con(TyCon::Slice, _) => {
+                    }
                     ty => self.add_err(
                         MsgKind::Unimplemented(format!(
-                            "You cannot assign non-byte/int/ptr value for now {:?}",
+                            "You cannot assign non-byte/int/slice value for now {:?}",
                             ty
                         )),
                         exp_id,
@@ -278,9 +295,9 @@ impl SemanticAnalyzer {
             }
             Op::Range => self.add_err(MsgKind::InvalidUseOfRange, exp_id),
             _ => {
-                self.on_val(exp_l, Ty::Int);
-                self.on_val(exp_r, Ty::Int);
-                self.set_ty(exp_id, &ty, &Ty::Int);
+                self.on_val(exp_l, Ty::int());
+                self.on_val(exp_r, Ty::int());
+                self.unify_ty(exp_id, ty, Ty::int());
             }
         }
     }
@@ -288,21 +305,22 @@ impl SemanticAnalyzer {
     fn on_val(&mut self, exp_id: ExpId, ty: Ty) {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
+        self.set_ty(exp_id, ty.clone());
         match &exp.kind {
             ExpKind::Err(err) => {
                 self.add_err(MsgKind::SyntaxError(err.clone()), exp_id);
             }
             &ExpKind::Unit => {
-                self.set_ty(exp_id, &ty, &Ty::Unit);
+                self.unify_ty(exp_id, ty, Ty::unit());
             }
             &ExpKind::Int(_) => {
-                self.set_ty(exp_id, &ty, &Ty::Int);
+                self.unify_ty(exp_id, ty, Ty::int());
             }
             &ExpKind::Byte(_) => {
-                self.set_ty(exp_id, &ty, &Ty::Byte);
+                self.unify_ty(exp_id, ty, Ty::byte());
             }
             ExpKind::Str(_) => {
-                self.set_ty(exp_id, &ty, &Ty::make_str());
+                self.unify_ty(exp_id, ty, Ty::make_str());
             }
             ExpKind::Ident(name) => self.on_ident(exp_id, ty, name),
             ExpKind::Call { callee, args } => self.on_call(exp_id, ty, *callee, &args),
@@ -317,25 +335,21 @@ impl SemanticAnalyzer {
                 );
             }
             &ExpKind::Return(result) => {
-                let result_ty = (self.current_fun().result_ty())
-                    .expect("It must not be an incomplete function because here's the definition")
-                    .to_owned();
+                let result_ty = self.current_fun().result_ty().cloned().unwrap();
                 self.on_val(result, result_ty);
-                self.set_ty(exp_id, &ty, &Ty::Unit);
             }
             &ExpKind::If { cond, body, alt } => {
-                self.on_val(cond, Ty::Int);
-                self.on_val(body, Ty::Var(exp_id));
-                self.on_val(alt, Ty::Var(exp_id));
-                self.set_ty(exp_id, &Ty::Var(exp_id), &ty);
+                self.on_val(cond, Ty::int());
+                self.on_val(body, ty.clone());
+                self.on_val(alt, ty);
             }
             &ExpKind::While { cond, body } => {
                 let loop_id = self.add_loop(exp_id, body);
                 let outer_loop_id = mem::replace(&mut self.current_loop_id, Some(loop_id));
 
-                self.on_val(cond, Ty::Int);
-                self.on_val(body, Ty::Unit);
-                self.set_ty(exp_id, &ty, &Ty::Unit);
+                self.on_val(cond, Ty::int());
+                self.on_val(body, Ty::unit());
+                self.unify_ty(exp_id, ty, Ty::unit());
 
                 self.current_loop_id = outer_loop_id;
             }
@@ -349,48 +363,47 @@ impl SemanticAnalyzer {
                 };
 
                 self.sema.exp_loops.insert(exp_id, loop_id);
-                self.set_ty(exp_id, &ty, &Ty::Unit);
             }
             &ExpKind::Let { pat, init, .. } => {
                 let syntax = self.share_syntax();
                 match (syntax.exp_kind(pat), syntax.exp_kind(init)) {
                     (ExpKind::Ident(fun_name), ExpKind::Fun { pats, body }) => {
-                        self.set_ty(exp_id, &ty, &Ty::Unit);
+                        self.unify_ty(exp_id, ty, Ty::unit());
                         self.sema.exp_decls.insert(exp_id);
 
-                        let fun_ty = {
-                            let arg_tys = pats.iter().cloned().map(Ty::Var);
-                            let result_ty = Ty::Var(*body);
-                            Ty::make_fun(arg_tys, result_ty)
-                        };
-                        self.set_ty(pat, &fun_ty, &fun_ty);
-                        let fun_id = self.add_fun(pat, fun_name.to_string(), fun_ty, vec![*body]);
+                        let arg_tys = pats
+                            .iter()
+                            .map(|&pat| self.fresh_meta_ty(pat))
+                            .collect::<Vec<_>>();
+                        let result_ty = self.fresh_meta_ty(*body);
+                        let fun_ty = Ty::make_fun(arg_tys.clone(), result_ty.clone());
+
+                        let fun_id =
+                            self.add_fun(pat, fun_name.to_string(), fun_ty.clone(), vec![*body]);
 
                         let outer_fun_id = mem::replace(&mut self.current_fun_id, fun_id);
                         let outer_loop_id = mem::replace(&mut self.current_loop_id, None);
 
-                        for (i, pat) in pats.iter().cloned().enumerate() {
-                            self.on_pat(pat, Ty::Var(pat), Some(i));
+                        for (i, (pat, arg_ty)) in pats.iter().cloned().zip(arg_tys).enumerate() {
+                            self.on_pat(pat, arg_ty, Some(i));
                         }
-                        self.on_val(*body, Ty::Var(*body));
+                        self.on_val(*body, result_ty);
 
                         self.current_fun_id = outer_fun_id;
                         self.current_loop_id = outer_loop_id;
 
-                        self.add_var_fun(fun_name.to_string(), fun_id, pat);
+                        self.add_var_fun(fun_name.to_string(), fun_ty, fun_id, pat);
                     }
                     _ => {
-                        self.on_val(init, Ty::Var(pat));
-                        self.on_pat(pat, Ty::Var(pat), None);
-                        self.set_ty(exp_id, &ty, &Ty::Unit);
+                        let pat_ty = self.fresh_meta_ty(pat);
+                        self.on_val(init, pat_ty.clone());
+                        self.on_pat(pat, pat_ty, None);
+                        self.unify_ty(exp_id, ty, Ty::unit());
                     }
                 }
             }
             ExpKind::Semi(exps) => {
-                self.on_vals(exps);
-
-                let last_ty = exps.last().cloned().map(Ty::Var).unwrap_or(Ty::Unit);
-                self.set_ty(exp_id, &ty, &last_ty);
+                self.on_vals(exps, ty);
             }
         }
     }
@@ -411,13 +424,22 @@ impl SemanticAnalyzer {
         self.set_symbol(pat, SymbolKind::Var(var_id));
     }
 
-    fn on_vals(&mut self, exp_ids: &[ExpId]) {
+    fn on_vals(&mut self, exp_ids: &[ExpId], last_ty: Ty) {
         for &exp_id in exp_ids {
             self.look_ahead_let_rec(exp_id);
         }
 
-        for &exp_id in exp_ids {
-            self.on_val(exp_id, Ty::Var(exp_id));
+        for i in 0..exp_ids.len() {
+            let ty = {
+                let is_last = i + 1 == exp_ids.len();
+                if is_last {
+                    last_ty.clone()
+                } else {
+                    self.fresh_meta_ty(exp_ids[i])
+                }
+            };
+
+            self.on_val(exp_ids[i], ty);
         }
     }
 
@@ -436,8 +458,9 @@ impl SemanticAnalyzer {
     fn analyze(&mut self) {
         // Merge all top-level expressions into single function.
         let roots = self.sema.syntax.module_root_exps().collect::<Vec<_>>();
-        let last_exp_id = *roots.last().expect("At least one document");
-        let main_fun_ty = Ty::make_fun(iter::empty(), Ty::Var(last_exp_id));
+        let last_exp_id = *roots.last().unwrap();
+        let main_result_ty = self.fresh_meta_ty(last_exp_id);
+        let main_fun_ty = Ty::make_fun(iter::empty(), main_result_ty.clone());
         let fun_id = self.add_fun(
             last_exp_id,
             "main".to_string(),
@@ -451,7 +474,8 @@ impl SemanticAnalyzer {
             self.current_fun_mut().symbols.push(SymbolKind::Prim(prim));
         }
 
-        self.on_vals(&roots);
+        self.on_vals(&roots, main_result_ty);
+        // FIXME: don't allow function type
 
         self.verify();
     }
@@ -493,63 +517,90 @@ impl Sema {
     }
 
     pub fn get_ty(&self, exp_id: ExpId) -> Ty {
-        self.subst_ty(&Ty::Var(exp_id))
+        let ty = self.exp_tys.get(&exp_id).cloned().unwrap();
+        self.subst_ty(ty)
     }
 
-    fn bind_ty(&mut self, exp_id: ExpId, ty: &Ty) {
-        self.exp_tys.borrow_mut().insert(exp_id, ty.to_owned());
+    fn fresh_meta_ty(&mut self, exp_id: ExpId) -> Ty {
+        let ty_id = TyId::new(self.tys.len());
+        self.tys.insert(ty_id, TyDef { ty: None, exp_id });
+        Ty::Meta(ty_id)
     }
 
-    fn subst_ty(&self, ty: &Ty) -> Ty {
-        match ty {
-            &Ty::Var(exp_id) => {
-                let next = {
-                    match self.exp_tys.borrow().get(&exp_id) {
-                        None => return ty.clone(),
-                        Some(&Ty::Var(x)) if x == exp_id => return ty.clone(),
-                        Some(next) => next.clone(),
+    fn do_bind_ty(&mut self, ty_id: TyId, ty: Ty) {
+        let ty_def = self.tys.get_mut(&ty_id).unwrap();
+        match ty_def.ty {
+            Some(_) => panic!("Cannot re-bind meta ty"),
+            None => {
+                ty_def.ty = Some(ty);
+            }
+        }
+    }
+
+    fn subst_ty(&self, mut ty: Ty) -> Ty {
+        let mut ty_ids = BTreeSet::new();
+
+        loop {
+            match ty {
+                Ty::Meta(ty_id) => {
+                    if !ty_ids.insert(ty_id) {
+                        // Circular recursion.
+                        return Ty::Err;
                     }
-                };
-
-                let ty = self.subst_ty(&next);
-                self.exp_tys.borrow_mut().insert(exp_id, ty.clone());
-                ty
-            }
-            Ty::Fun(tys) => Ty::Fun(tys.into_iter().map(|ty| self.subst_ty(ty)).collect()),
-            _ => ty.clone(),
-        }
-    }
-
-    fn unify_ty(&mut self, exp_id: ExpId, l_ty: &Ty, r_ty: &Ty) {
-        let subst_l_ty = self.subst_ty(l_ty);
-        let subst_r_ty = self.subst_ty(r_ty);
-        match (&subst_l_ty, &subst_r_ty) {
-            (Ty::Var(l_exp_id), Ty::Var(r_exp_id)) if l_exp_id == r_exp_id => {}
-            (&Ty::Var(exp_id), _) | (_, &Ty::Var(exp_id)) => self.bind_ty(exp_id, &subst_r_ty),
-            (Ty::Err, _)
-            | (_, Ty::Err)
-            | (Ty::Unit, Ty::Unit)
-            | (Ty::Byte, Ty::Byte)
-            | (Ty::Int, Ty::Int)
-            | (Ty::Ptr, Ty::Ptr) => {}
-            (Ty::Fun(l_tys), Ty::Fun(r_tys)) => self.unify_tys(exp_id, &l_tys, &r_tys),
-            (Ty::Unit, _) | (Ty::Int, _) | (Ty::Byte, _) | (Ty::Ptr, _) | (Ty::Fun(_), _) => {
-                eprintln!("Type Error left={:?} right={:?}", subst_l_ty, subst_r_ty);
-                self.add_err(MsgKind::TypeMismatch(subst_l_ty, subst_r_ty), exp_id)
+                    let ty_def = &self.tys[&ty_id];
+                    match &ty_def.ty {
+                        None => return ty,
+                        &Some(Ty::Meta(next_ty_id)) if next_ty_id == ty_id => return ty,
+                        Some(next) => ty = next.clone(),
+                    }
+                }
+                Ty::Con(ty_con, tys) => {
+                    return Ty::Con(
+                        ty_con,
+                        tys.into_iter().map(|ty| self.subst_ty(ty)).collect(),
+                    );
+                }
+                _ => return ty,
             }
         }
     }
 
-    fn unify_tys(&mut self, exp_id: ExpId, l_tys: &[Ty], r_tys: &[Ty]) {
+    fn unify_ty(&mut self, exp_id: ExpId, l_ty: Ty, r_ty: Ty) {
+        let l_ty = self.subst_ty(l_ty.clone());
+        let r_ty = self.subst_ty(r_ty.clone());
+        match (l_ty, r_ty) {
+            (Ty::Meta(l), Ty::Meta(r)) if l == r => {}
+            (Ty::Meta(l), r_ty) => self.do_bind_ty(l, r_ty),
+            (l_ty, Ty::Meta(r)) => self.do_bind_ty(r, l_ty),
+            (Ty::Err, _) | (_, Ty::Err) => {}
+            (Ty::Con(l_ty_con, ref l_tys), Ty::Con(r_ty_con, ref r_tys))
+                if l_ty_con == r_ty_con =>
+            {
+                self.unify_tys(exp_id, l_ty_con, l_tys.clone(), r_ty_con, r_tys.clone())
+            }
+            (l_ty, r_ty) => {
+                eprintln!("Type Error left={:?} right={:?}", l_ty, r_ty);
+                self.add_err(MsgKind::TypeMismatch(l_ty, r_ty), exp_id)
+            }
+        }
+    }
+
+    fn unify_tys(
+        &mut self,
+        exp_id: ExpId,
+        l_ty_con: TyCon,
+        l_tys: Vec<Ty>,
+        r_ty_con: TyCon,
+        r_tys: Vec<Ty>,
+    ) {
         if l_tys.len() != r_tys.len() {
-            self.add_err(
-                MsgKind::TypeMismatch(Ty::Fun(l_tys.to_owned()), Ty::Fun(r_tys.to_owned())),
-                exp_id,
-            );
+            let l_ty = Ty::Con(l_ty_con, l_tys);
+            let r_ty = Ty::Con(r_ty_con, r_tys);
+            self.add_err(MsgKind::TypeMismatch(l_ty, r_ty), exp_id);
             return;
         }
 
-        for (l_ty, r_ty) in l_tys.iter().zip(r_tys.iter()) {
+        for (l_ty, r_ty) in l_tys.into_iter().zip(r_tys.into_iter()) {
             self.unify_ty(exp_id, l_ty, r_ty);
         }
     }
@@ -573,8 +624,9 @@ pub(crate) fn sema(syntax: Rc<Syntax>) -> Sema {
             exp_vals: BTreeSet::new(),
             exp_ranges: BTreeMap::new(),
             exp_decls: BTreeSet::new(),
-            exp_tys: RefCell::new(BTreeMap::new()),
+            exp_tys: BTreeMap::new(),
             exp_parent: BTreeMap::new(),
+            tys: BTreeMap::new(),
             vars: BTreeMap::new(),
             funs: BTreeMap::new(),
             loops: BTreeMap::new(),

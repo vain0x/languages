@@ -11,7 +11,6 @@ pub(crate) use self::ty::*;
 
 use crate::syntax::*;
 use crate::Id;
-use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
@@ -73,12 +72,13 @@ pub(crate) struct Sema {
     pub exp_decls: BTreeSet<ExpId>,
 
     /// Type of expressions.
-    pub exp_tys: RefCell<BTreeMap<ExpId, Ty>>,
+    pub exp_tys: BTreeMap<ExpId, Ty>,
 
     pub exp_parent: BTreeMap<ExpId, ExpId>,
 
     pub vars: BTreeMap<VarId, VarDef>,
     pub funs: BTreeMap<FunId, FunDef>,
+    pub tys: BTreeMap<TyId, TyDef>,
     pub loops: BTreeMap<LoopId, LoopDef>,
     pub msgs: BTreeMap<MsgId, Msg>,
 }
@@ -86,7 +86,7 @@ pub(crate) struct Sema {
 impl FunDef {
     pub(crate) fn result_ty(&self) -> Option<&Ty> {
         match &self.ty {
-            Ty::Fun(tys) => tys.last(),
+            Ty::Con(TyCon::Fun, tys) => tys.last(),
             _ => None,
         }
     }

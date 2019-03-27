@@ -30,14 +30,14 @@ impl Prim {
 
     pub(crate) fn get_ty(self) -> Ty {
         match self {
-            Prim::ByteToInt => Ty::Fun(vec![Ty::Byte, Ty::Int]),
-            Prim::IntToByte => Ty::Fun(vec![Ty::Int, Ty::Byte]),
-            Prim::SliceLen => Ty::Fun(vec![Ty::Ptr, Ty::Int]),
-            Prim::MemAlloc => Ty::Fun(vec![Ty::Int, Ty::Ptr]),
-            Prim::PrintLnInt => Ty::Fun(vec![Ty::Int, Ty::Unit]),
-            Prim::ReadInt => Ty::Fun(vec![Ty::Int]),
-            Prim::ReadStr => Ty::Fun(vec![Ty::Ptr]),
-            Prim::Print => Ty::Fun(vec![Ty::Ptr, Ty::Unit]),
+            Prim::ByteToInt => Ty::make_fun(vec![Ty::byte()], Ty::int()),
+            Prim::IntToByte => Ty::make_fun(vec![Ty::int()], Ty::byte()),
+            Prim::SliceLen => Ty::make_fun(vec![Ty::ptr()], Ty::int()),
+            Prim::MemAlloc => Ty::make_fun(vec![Ty::int()], Ty::ptr()),
+            Prim::PrintLnInt => Ty::make_fun(vec![Ty::int()], Ty::unit()),
+            Prim::ReadInt => Ty::make_fun(vec![], Ty::int()),
+            Prim::ReadStr => Ty::make_fun(vec![], Ty::ptr()),
+            Prim::Print => Ty::make_fun(vec![Ty::ptr()], Ty::unit()),
         }
     }
 }

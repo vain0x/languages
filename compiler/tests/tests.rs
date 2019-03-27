@@ -450,7 +450,7 @@ fn test_fun_return_same_type() {
             };
             f(0);
         "#,
-        "At 3:17..4:18 Type Error",
+        "At 4:17..4:18 Type Error",
     )
 }
 

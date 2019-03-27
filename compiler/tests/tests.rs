@@ -771,3 +771,42 @@ fn test_abc087_b_coins() {
         ],
     )
 }
+
+/// <https://atcoder.jp/contests/abs/tasks/abc083_b>
+#[test]
+fn test_abc083_b_some_sums() {
+    eval_tests(
+        r#"
+            let digit_sum = |x| {
+                let s = 0;
+                while x > 0 {
+                    s += x % 10;
+                    x = x / 10; // FIXME: missing /=
+                }
+                s
+            };
+
+            let N = read_int();
+            let A = read_int();
+            let B = read_int();
+
+            let k = 0;
+            let x = 1;
+            while x <= N {
+                let s = digit_sum(x);
+                if A <= s {
+                    if s <= B { // FIXME: missing &&
+                        k += x;
+                    }
+                }
+                x += 1;
+            }
+            println_int(k);
+        "#,
+        &[
+            ("20 2 5", "84\n"),
+            ("10 1 2", "13\n"),
+            ("100 4 16", "4554\n"),
+        ],
+    )
+}

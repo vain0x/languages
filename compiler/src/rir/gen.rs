@@ -102,6 +102,16 @@ impl GenRir {
         l
     }
 
+    fn add_cmd_load(&mut self, dest: RegId, src: RegId, size: usize) {
+        let cmd = match size {
+            1 => Cmd::Load8,
+            8 => Cmd::Load,
+            _ => panic!("load of unsized value"),
+        };
+        self.push(cmd, dest, CmdArg::Reg(src));
+        self.kill(src);
+    }
+
     fn add_cmd_call_fun(&mut self, args: &[ExpId], fun_id: FunId) -> RegId {
         let body_label_id = self.rir.funs[&fun_id].body_label_id;
 
@@ -164,13 +174,15 @@ impl GenRir {
         }
     }
 
-    fn on_call(&mut self, _: ExpId, callee: ExpId, args: &[ExpId]) -> RegId {
+    fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]) -> RegId {
         let symbol_ref = self.get_symbol(callee).expect("cannot call non-symbol");
         match symbol_ref {
             SymbolRef::Prim(Prim::ByteToInt) | SymbolRef::Prim(Prim::IntToByte) => {
                 self.on_exp(args[0])
             }
             SymbolRef::Prim(Prim::SliceLen) => {
+                // FIXME: divide by size of inner type
+
                 // len = hi32 - lo32 (in bytes)
                 let reg_id = self.on_exp(args[0]);
                 let hi_reg_id = self.add_reg();
@@ -185,10 +197,19 @@ impl GenRir {
                 hi_reg_id
             }
             SymbolRef::Prim(Prim::MemAlloc) => {
+                let scale = (self.get_ty(exp_id).as_slice_inner())
+                    .expect("mem_alloc's result must be slice type")
+                    .size_of()
+                    .unwrap_or(1) as i64;
+
                 let size_reg_id = self.on_exp(args[0]);
+                let scale_reg_id = self.add_reg_imm(scale);
                 let ptr_reg_id = self.add_reg();
+
+                self.push(Cmd::Mul, size_reg_id, CmdArg::Reg(scale_reg_id));
                 self.push(Cmd::Alloc, ptr_reg_id, CmdArg::Reg(size_reg_id));
                 self.kill(size_reg_id);
+                self.kill(scale_reg_id);
                 ptr_reg_id
             }
             SymbolRef::Prim(Prim::ReadInt) => {
@@ -301,31 +322,43 @@ impl GenRir {
             &ExpKind::Index { indexee, arg } => {
                 let indexee_reg_id = self.on_exp(indexee);
 
+                let scale = (self.get_ty(indexee).as_slice_inner())
+                    .expect("indexee must be slice type")
+                    .size_of()
+                    .unwrap_or(1);
+                let scale_reg_id = self.add_reg_imm(scale as i64);
+
                 if let Some(&(l, r)) = self.sema().exp_ranges.get(&arg) {
-                    // x[l..r] ---> slice(begin(x) + l, begin(x) + r)
+                    // x[l..r] ---> slice(begin(x) + l * scale, begin(x) + r * scale)
                     let l_reg_id = self.on_exp(l);
                     let r_reg_id = self.on_exp(r);
+                    self.push(Cmd::Mul, l_reg_id, CmdArg::Reg(scale_reg_id));
+                    self.push(Cmd::Mul, r_reg_id, CmdArg::Reg(scale_reg_id));
+
                     self.add_cmd_lo32(indexee_reg_id);
                     self.push(Cmd::Add, l_reg_id, CmdArg::Reg(indexee_reg_id));
                     self.push(Cmd::Add, r_reg_id, CmdArg::Reg(indexee_reg_id));
                     let slice_reg_id = self.add_cmd_make_slice(l_reg_id, r_reg_id);
                     self.kill(indexee_reg_id);
+                    self.kill(scale_reg_id);
                     return slice_reg_id;
                 }
 
                 let arg_reg_id = self.on_exp(arg);
+                self.push(Cmd::Mul, arg_reg_id, CmdArg::Reg(scale_reg_id));
                 self.push(Cmd::Add, arg_reg_id, CmdArg::Reg(indexee_reg_id));
                 self.kill(indexee_reg_id);
+                self.kill(scale_reg_id);
 
                 if !self.is_coerced_to_val(exp_id) {
                     return arg_reg_id;
                 }
 
-                let byte_reg_id = self.add_reg();
+                let item_reg_id = self.add_reg();
                 self.add_cmd_lo32(arg_reg_id); // begin of slice
-                self.push(Cmd::Load8, byte_reg_id, CmdArg::Reg(arg_reg_id));
+                self.add_cmd_load(item_reg_id, arg_reg_id, scale);
                 self.kill(arg_reg_id);
-                byte_reg_id
+                item_reg_id
             }
             &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
             ExpKind::Fun { .. } => NO_REG_ID,

@@ -169,6 +169,33 @@ fn test_slice_subslice() {
 }
 
 #[test]
+fn test_slice_of_int() {
+    eval_tests(
+        r#"
+            let buf = mem_alloc(2);
+            buf[0] = 1000000000000000000;
+            buf[1] = 2000000000000000000;
+            println_int(buf[0]);
+            println_int(buf[1]);
+        "#,
+        &[("", "1000000000000000000\n2000000000000000000\n")],
+    );
+}
+
+#[test]
+fn test_slice_of_int_subslice() {
+    eval_tests(
+        r#"
+            let buf = mem_alloc(3);
+            let sub = buf[1..2];
+            sub[1] = 2000;
+            println_int(buf[2]);
+        "#,
+        &[("", "2000\n")],
+    );
+}
+
+#[test]
 fn test_read_int() {
     eval_tests(
         r#"

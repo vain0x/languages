@@ -63,6 +63,13 @@ impl Ty {
         )
     }
 
+    pub(crate) fn as_slice_inner(self) -> Option<Ty> {
+        match self {
+            Ty::Con(TyCon::Slice, tys) => Some(tys.into_iter().next().unwrap()),
+            _ => None,
+        }
+    }
+
     pub(crate) fn replace_with(self, replacer: &mut impl Fn(TyId) -> Ty) -> Ty {
         let mut ty_ids = BTreeSet::new();
         let mut ty = self;
@@ -108,7 +115,7 @@ impl std::fmt::Display for Ty {
             Ty::Con(TyCon::Unit, _) => write!(out, "unit"),
             Ty::Con(TyCon::Byte, _) => write!(out, "byte"),
             Ty::Con(TyCon::Int, _) => write!(out, "int"),
-            Ty::Con(TyCon::Slice, _) => write!(out, "[byte]"),
+            Ty::Con(TyCon::Slice, tys) => write!(out, "[{}]", tys[0]),
             Ty::Con(TyCon::Fun, tys) => {
                 write!(out, "|")?;
                 for i in 0..tys.len() {

@@ -139,16 +139,23 @@ impl SemanticAnalyzer {
 
     // Generalize type of variable to type scheme.
     fn generalize_var(&mut self, var_id: VarId) {
-        let var_def = self.sema.vars.get_mut(&var_id).unwrap();
+        let ty = {
+            let var_def = &self.sema.vars[&var_id];
+            var_def.ty_scheme.clone().unwrap_err()
+        };
 
-        let ty = var_def.ty_scheme.clone().unwrap_err();
+        // Main type.
+        let ty = self.sema.subst_ty(ty);
 
         // Generalize if function. Otherwise, keep meta variables open.
+        let var_def = self.sema.vars.get_mut(&var_id).unwrap();
+
         let ty_scheme = if let VarKind::Fun(_) = var_def.kind {
             TyScheme::generalize(ty)
         } else {
             TyScheme::from(ty)
         };
+
         var_def.ty_scheme = Ok(ty_scheme);
     }
 

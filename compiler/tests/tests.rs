@@ -508,6 +508,27 @@ fn test_fun_rec_allow_name_conflict() {
     );
 }
 
+#[test]
+fn test_fun_generic() {
+    eval_tests(
+        r#"
+            let f = |x| byte_to_int(x);
+            let id = |x| x;
+            println_int(if id(0) == 0 { 1 } else { 0 });
+            println_int(if f(id('a')) == f('a') { 1 } else { 0 });
+        "#,
+        &[("", "1\n1\n")],
+    );
+
+    test_err(
+        r#"
+            let f = |x| x + 1;
+            f("");
+        "#,
+        "At 3:15..3:17 Type Error",
+    );
+}
+
 static STDLIB: &str = r#"
     let DIGIT_CHARS = "0123456789";
     let HYPHEN_CHAR = "-"[0];

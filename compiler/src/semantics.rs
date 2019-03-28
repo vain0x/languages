@@ -121,6 +121,31 @@ impl Sema {
         &module.doc().src()[l..r]
     }
 
+    pub(crate) fn exp_as_symbol(&self, exp_id: ExpId) -> Option<SymbolRef<'_>> {
+        let symbol_kind = self.exp_symbols.get(&exp_id)?;
+        Some(self.symbol_ref(*symbol_kind))
+    }
+
+    pub(crate) fn exp_as_loop(&self, exp_id: ExpId) -> Option<LoopId> {
+        self.exp_loops.get(&exp_id).cloned()
+    }
+
+    pub(crate) fn exp_is_coerced_to_value(&self, exp_id: ExpId) -> bool {
+        self.exp_vals.contains(&exp_id)
+    }
+
+    pub(crate) fn exp_as_range(&self, exp_id: ExpId) -> Option<(ExpId, ExpId)> {
+        self.exp_ranges.get(&exp_id).cloned()
+    }
+
+    pub(crate) fn exp_is_decl(&self, exp_id: ExpId) -> bool {
+        self.exp_decls.contains(&exp_id)
+    }
+
+    pub(crate) fn exp_ty(&self, exp_id: ExpId) -> Ty {
+        self.get_ty(exp_id)
+    }
+
     pub(crate) fn symbol_ref(&self, symbol: SymbolKind) -> SymbolRef<'_> {
         match symbol {
             SymbolKind::Prim(prim) => SymbolRef::Prim(prim),

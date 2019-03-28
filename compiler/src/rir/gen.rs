@@ -27,20 +27,20 @@ impl GenRir {
     }
 
     fn get_symbol(&self, exp_id: ExpId) -> Option<SymbolRef<'_>> {
-        (self.rir.sema.exp_symbols.get(&exp_id)).map(|&symbol| self.rir.sema.get_symbol_ref(symbol))
+        self.sema().exp_as_symbol(exp_id)
     }
 
     fn get_loop(&self, exp_id: ExpId) -> Option<&GenLoopDef> {
-        let loop_id = self.sema().exp_loops.get(&exp_id)?;
+        let loop_id = self.sema().exp_as_loop(exp_id)?;
         self.rir.loops.get(&loop_id)
     }
 
     fn is_coerced_to_val(&self, exp_id: ExpId) -> bool {
-        self.rir.sema.exp_vals.contains(&exp_id)
+        self.sema().exp_is_coerced_to_value(exp_id)
     }
 
     fn get_ty(&self, exp_id: ExpId) -> Ty {
-        self.rir.sema.get_ty(exp_id).to_owned()
+        self.sema().exp_ty(exp_id)
     }
 
     fn add_reg(&mut self) -> RegId {
@@ -328,7 +328,7 @@ impl GenRir {
                     .unwrap_or(1);
                 let scale_reg_id = self.add_reg_imm(scale as i64);
 
-                if let Some(&(l, r)) = self.sema().exp_ranges.get(&arg) {
+                if let Some((l, r)) = self.sema().exp_as_range(arg) {
                     // x[l..r] ---> slice(begin(x) + l * scale, begin(x) + r * scale)
                     let l_reg_id = self.on_exp(l);
                     let r_reg_id = self.on_exp(r);
@@ -425,7 +425,7 @@ impl GenRir {
                 NO_REG_ID
             }
             &ExpKind::Let { pat, init, .. } => {
-                if self.sema().exp_decls.contains(&exp_id) {
+                if self.sema().exp_is_decl(exp_id) {
                     return NO_REG_ID;
                 }
                 let init_reg_id = self.on_exp(init);

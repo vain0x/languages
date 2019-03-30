@@ -108,7 +108,8 @@ impl ReducePir {
             PirKind::IndexPoint => {
                 // xs[i] = slice_begin(xs) + i
                 decompose!(args, [xs, i]);
-                xs.slice_begin().add(i)
+                let inner_ty = xs.ty().as_slice_inner().expect("indexee is slice");
+                xs.slice_begin().add(i).with_ty(inner_ty)
             }
             PirKind::IndexSlice => {
                 // xs[l..r] = slice_new(slice_begin(xs) + l, slice_begin(xs) + r)

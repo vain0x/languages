@@ -111,6 +111,10 @@ impl Pir {
         self.ty.clone()
     }
 
+    pub(crate) fn with_ty(self, ty: Ty) -> Pir {
+        Pir { ty, ..self }
+    }
+
     pub(crate) fn int(value: i64, exp_id: ExpId) -> Pir {
         Pir {
             kind: PirKind::int(value),
@@ -164,23 +168,26 @@ impl Pir {
 
     /// `slice_new(xl, xr)` -> `xl | (xr << 32)`
     pub(crate) fn slice_new(self, end: Pir) -> Pir {
-        self.bit_or(end.bit_shift_l_int(32))
+        let ptr_ty = self.ty(); // Missing pointer types, use slice type instead
+        self.bit_or(end.bit_shift_l_int(32)).with_ty(ptr_ty)
     }
 
     /// `slice_begin(xs)` -> `xs & 0xFFFFFFFF`
     pub(crate) fn slice_begin(self) -> Pir {
+        let ptr_ty = self.ty();
         let mask = Pir::int(0xFFFF_FFFF_i64, self.exp_id);
-        self.bit_and(mask)
+        self.bit_and(mask).with_ty(ptr_ty)
     }
 
     /// `slice_end(xs)` -> `(xs >> 32) & 0xFFFFFFFF`
     pub(crate) fn slice_end(self) -> Pir {
+        let ptr_ty = self.ty();
         let mask = Pir::int(0xFFFF_FFFF_i64, self.exp_id);
-        self.bit_shift_r_int(32).bit_and(mask)
+        self.bit_shift_r_int(32).bit_and(mask).with_ty(ptr_ty)
     }
 
     pub(crate) fn into_deref(self) -> Pir {
-        let (ty, exp_id) = (self.ty.clone(), self.exp_id);
+        let (ty, exp_id) = (self.ty(), self.exp_id);
         Pir {
             kind: PirKind::Deref { size: 0 },
             args: vec![self],

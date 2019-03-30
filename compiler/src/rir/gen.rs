@@ -1,4 +1,5 @@
 use super::*;
+use crate::pir::{self, Pir, PirKind, PirProgram, PirVal};
 use crate::semantics::*;
 use crate::syntax::*;
 use std::collections::BTreeMap;
@@ -13,8 +14,20 @@ struct GenRir {
 }
 
 impl GenRir {
-    fn sema(&self) -> &Sema {
-        &self.rir.sema
+    fn pir_program(&self) -> &PirProgram {
+        &self.rir.pir_program
+    }
+
+    fn share_pir_program(&self) -> Rc<PirProgram> {
+        Rc::clone(&self.rir.pir_program)
+    }
+
+    fn break_label_id(&self, loop_id: LoopId) -> LabelId {
+        self.rir.loops[&loop_id].break_label_id
+    }
+
+    fn continue_label_id(&self, loop_id: LoopId) -> LabelId {
+        self.rir.loops[&loop_id].continue_label_id
     }
 
     fn current_gen_fun(&self) -> &GenFunDef {
@@ -24,23 +37,6 @@ impl GenRir {
     fn current_gen_fun_mut(&mut self) -> &mut GenFunDef {
         let fun_id = self.current_fun_id;
         self.rir.funs.get_mut(&fun_id).unwrap()
-    }
-
-    fn get_symbol(&self, exp_id: ExpId) -> Option<SymbolRef<'_>> {
-        (self.rir.sema.exp_symbols.get(&exp_id)).map(|&symbol| self.rir.sema.get_symbol_ref(symbol))
-    }
-
-    fn get_loop(&self, exp_id: ExpId) -> Option<&GenLoopDef> {
-        let loop_id = self.sema().exp_loops.get(&exp_id)?;
-        self.rir.loops.get(&loop_id)
-    }
-
-    fn is_coerced_to_val(&self, exp_id: ExpId) -> bool {
-        self.rir.sema.exp_vals.contains(&exp_id)
-    }
-
-    fn get_ty(&self, exp_id: ExpId) -> Ty {
-        self.rir.sema.get_ty(exp_id).to_owned()
     }
 
     fn add_reg(&mut self) -> RegId {
@@ -87,36 +83,31 @@ impl GenRir {
         self.kill(mask);
     }
 
-    fn add_cmd_hi32(&mut self, target: RegId) {
-        let offset = self.add_reg_imm(32);
-        self.push(Cmd::BitShiftR, target, CmdArg::Reg(offset));
-        self.kill(offset);
-    }
-
-    fn add_cmd_make_slice(&mut self, l: RegId, r: RegId) -> RegId {
-        let offset = self.add_reg_imm(32);
-        self.push(Cmd::BitShiftL, r, CmdArg::Reg(offset));
-        self.push(Cmd::BitOr, l, CmdArg::Reg(r));
-        self.kill(offset);
-        self.kill(r);
-        l
+    fn add_cmd_store(&mut self, dest: RegId, src: RegId, size: usize) {
+        let cmd = match size {
+            1 => Cmd::Store8,
+            8 => Cmd::Store,
+            _ => panic!("store of unsized value {:?}", size),
+        };
+        self.push(cmd, dest, CmdArg::Reg(src));
+        self.kill(src);
     }
 
     fn add_cmd_load(&mut self, dest: RegId, src: RegId, size: usize) {
         let cmd = match size {
             1 => Cmd::Load8,
             8 => Cmd::Load,
-            _ => panic!("load of unsized value"),
+            _ => panic!("load of unsized value {:?}", size),
         };
         self.push(cmd, dest, CmdArg::Reg(src));
         self.kill(src);
     }
 
-    fn add_cmd_call_fun(&mut self, args: &[ExpId], fun_id: FunId) -> RegId {
+    fn add_cmd_call_fun(&mut self, args: &[Pir], fun_id: FunId) -> RegId {
         let body_label_id = self.rir.funs[&fun_id].body_label_id;
 
         // Push args to stack in reversed order.
-        for arg in args.iter().cloned().rev() {
+        for arg in args.iter().rev() {
             let reg_id = self.on_exp(arg);
             self.push(Cmd::Push, reg_id, CmdArg::None);
             self.kill(reg_id);
@@ -135,138 +126,61 @@ impl GenRir {
         reg_id
     }
 
-    fn on_ident(&mut self, exp_id: ExpId, _: &str) -> RegId {
-        let symbol_ref = self.get_symbol(exp_id).expect("ident should be resolved");
-        match symbol_ref {
-            SymbolRef::Prim(..) => panic!("cannot generate primitive"),
-            SymbolRef::Var(_, &VarDef { kind, .. }) => {
-                let ptr_reg_id = self.add_reg();
-                match kind {
-                    VarKind::Global { index } => {
-                        let ptr = (index * size_of::<i64>()) as i64;
-                        self.push(Cmd::Imm, ptr_reg_id, CmdArg::Int(ptr));
-                    }
-                    VarKind::Local { index } => {
-                        let offset = -((index + 1) as i64) * size_of::<i64>() as i64;
-                        self.push(Cmd::Mov, ptr_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
-                        self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
-                    }
-                    VarKind::Arg { index } => {
-                        // Before the base pointer, arguments are stacked under register values and return address.
-                        let offset =
-                            ((index + (REG_NUM - KNOWN_REG_NUM + 2)) * size_of::<i64>()) as i64;
-                        self.push(Cmd::Mov, ptr_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
-                        self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
-                    }
-                    VarKind::Fun(..) => panic!("cannot generate fun"),
-                    VarKind::Rec(_) => unreachable!("VarKind::Rec is resolved during analysis"),
-                };
-
-                if self.is_coerced_to_val(exp_id) {
-                    let reg_id = self.add_reg();
-                    self.push(Cmd::Load, reg_id, CmdArg::Reg(ptr_reg_id));
-                    self.kill(ptr_reg_id);
-                    reg_id
-                } else {
-                    ptr_reg_id
-                }
+    fn on_call_prim(&mut self, prim: Prim, args: &[Pir]) -> RegId {
+        match prim {
+            Prim::ByteToInt | Prim::IntToByte | Prim::SliceLen => {
+                panic!("{:?} should not exit", prim)
             }
-        }
-    }
-
-    fn on_call(&mut self, exp_id: ExpId, callee: ExpId, args: &[ExpId]) -> RegId {
-        let symbol_ref = self.get_symbol(callee).expect("cannot call non-symbol");
-        match symbol_ref {
-            SymbolRef::Prim(Prim::ByteToInt) | SymbolRef::Prim(Prim::IntToByte) => {
-                self.on_exp(args[0])
-            }
-            SymbolRef::Prim(Prim::SliceLen) => {
-                // FIXME: divide by size of inner type
-
-                // len = hi32 - lo32 (in bytes)
-                let reg_id = self.on_exp(args[0]);
-                let hi_reg_id = self.add_reg();
-                let lo_reg_id = self.add_reg();
-                self.push(Cmd::Mov, hi_reg_id, CmdArg::Reg(reg_id));
-                self.add_cmd_hi32(hi_reg_id);
-                self.push(Cmd::Mov, lo_reg_id, CmdArg::Reg(reg_id));
-                self.add_cmd_lo32(lo_reg_id);
-                self.push(Cmd::Sub, hi_reg_id, CmdArg::Reg(lo_reg_id));
-                self.kill(reg_id);
-                self.kill(lo_reg_id);
-                hi_reg_id
-            }
-            SymbolRef::Prim(Prim::MemAlloc) => {
-                let scale = (self.get_ty(exp_id).as_slice_inner())
-                    .expect("mem_alloc's result must be slice type")
-                    .size_of()
-                    .unwrap_or(1) as i64;
-
-                let size_reg_id = self.on_exp(args[0]);
-                let scale_reg_id = self.add_reg_imm(scale);
+            Prim::MemAlloc => {
+                let size_reg_id = self.on_exp(&args[0]);
                 let ptr_reg_id = self.add_reg();
 
-                self.push(Cmd::Mul, size_reg_id, CmdArg::Reg(scale_reg_id));
                 self.push(Cmd::Alloc, ptr_reg_id, CmdArg::Reg(size_reg_id));
                 self.kill(size_reg_id);
-                self.kill(scale_reg_id);
                 ptr_reg_id
             }
-            SymbolRef::Prim(Prim::ReadInt) => {
+            Prim::ReadInt => {
                 let reg_id = self.add_reg();
                 self.push(Cmd::ReadInt, reg_id, CmdArg::None);
                 reg_id
             }
-            SymbolRef::Prim(Prim::ReadStr) => {
+            Prim::ReadStr => {
                 let reg_id = self.add_reg();
                 self.push(Cmd::ReadStr, reg_id, CmdArg::None);
                 reg_id
             }
-            SymbolRef::Prim(Prim::PrintLnInt) => {
-                let r = self.on_exp(args[0]);
+            Prim::PrintLnInt => {
+                let r = self.on_exp(&args[0]);
                 self.push(Cmd::PrintLnInt, NO_REG_ID, CmdArg::Reg(r));
                 self.kill(r);
                 NO_REG_ID
             }
-            SymbolRef::Prim(Prim::Print) => {
-                let ptr_reg_id = self.on_exp(args[0]);
+            Prim::Print => {
+                let ptr_reg_id = self.on_exp(&args[0]);
                 self.push(Cmd::Write, ptr_reg_id, CmdArg::None);
                 self.kill(ptr_reg_id);
                 NO_REG_ID
             }
-            SymbolRef::Var(
-                _,
-                &VarDef {
-                    kind: VarKind::Fun(fun_id),
-                    ..
-                },
-            ) => self.add_cmd_call_fun(args, fun_id),
-            SymbolRef::Var(..) => panic!("cannot call on non-primitive/function value"),
         }
     }
 
-    fn on_bin(&mut self, _: ExpId, op: Op, exp_l: ExpId, exp_r: ExpId) -> RegId {
-        let l_reg = self.on_exp(exp_l);
-        let r_reg = self.on_exp(exp_r);
+    fn on_bin(&mut self, op: Op, size: usize, l: &Pir, r: &Pir) -> RegId {
+        let l_reg = self.on_exp(l);
+        let r_reg = self.on_exp(r);
         let cmd = match op {
             Op::Set => {
-                let size = self.get_ty(exp_l).size_of();
-                let cmd = match size {
-                    Some(1) => Cmd::Store8,
-                    Some(8) => Cmd::Store,
-                    _ => unimplemented!(),
-                };
                 self.add_cmd_lo32(l_reg);
-                self.push(cmd, l_reg, CmdArg::Reg(r_reg));
+                self.add_cmd_store(l_reg, r_reg, size);
                 self.kill(l_reg);
                 self.kill(r_reg);
                 return NO_REG_ID;
             }
             Op::SetAdd => {
+                // FIXME: use size
                 let t_reg = self.add_reg();
-                self.push(Cmd::Load, t_reg, CmdArg::Reg(l_reg));
+                self.add_cmd_load(t_reg, l_reg, size);
                 self.push(Cmd::Add, t_reg, CmdArg::Reg(r_reg));
-                self.push(Cmd::Store, l_reg, CmdArg::Reg(t_reg));
+                self.add_cmd_store(l_reg, t_reg, size);
                 self.kill(l_reg);
                 self.kill(r_reg);
                 self.kill(t_reg);
@@ -283,7 +197,11 @@ impl GenRir {
             Op::Mul => Cmd::Mul,
             Op::Div => Cmd::Div,
             Op::Mod => Cmd::Mod,
-            Op::LogOr | Op::BitOr => unimplemented!(),
+            Op::BitAnd => Cmd::BitAnd,
+            Op::BitOr => Cmd::BitOr,
+            Op::BitShiftL => Cmd::BitShiftL,
+            Op::BitShiftR => Cmd::BitShiftR,
+            Op::LogOr => unimplemented!("unimplemented ||"),
             Op::Range => panic!("Can't generate range operation"),
         };
 
@@ -292,77 +210,70 @@ impl GenRir {
         l_reg
     }
 
-    fn on_exp(&mut self, exp_id: ExpId) -> RegId {
-        let syntax = self.share_syntax();
-        let exp = &syntax.exps[&exp_id];
-        match &exp.kind {
-            &ExpKind::Err(_) => {
-                self.push(Cmd::Exit, NO_REG_ID, CmdArg::None);
-                NO_REG_ID
-            }
-            &ExpKind::Unit => NO_REG_ID,
-            &ExpKind::Int(value) => {
+    fn on_exp(&mut self, pir: &Pir) -> RegId {
+        match pir.kind() {
+            &PirKind::Val(PirVal::Unit) => NO_REG_ID,
+            &PirKind::Val(PirVal::Int(value)) => {
                 let reg_id = self.add_reg();
                 self.push(Cmd::Imm, reg_id, CmdArg::Int(value));
                 reg_id
             }
-            &ExpKind::Byte(value) => {
+            &PirKind::Val(PirVal::Byte(value)) => {
                 let reg_id = self.add_reg();
                 self.push(Cmd::Imm, reg_id, CmdArg::Int(value as i64));
                 reg_id
             }
-            ExpKind::Str(value) => {
+            PirKind::Val(PirVal::Str(value)) => {
                 let (p, q) = self.alloc(value.as_bytes());
                 let reg_id = self.add_reg();
                 self.push(Cmd::Imm, reg_id, CmdArg::Ptr(p, q));
                 reg_id
             }
-            ExpKind::Ident(name) => self.on_ident(exp_id, name),
-            ExpKind::Call { callee, args } => self.on_call(exp_id, *callee, args),
-            &ExpKind::Index { indexee, arg } => {
-                let indexee_reg_id = self.on_exp(indexee);
+            &PirKind::Var { var_id } => {
+                let var_kind = self.pir_program().var_kind(var_id);
 
-                let scale = (self.get_ty(indexee).as_slice_inner())
-                    .expect("indexee must be slice type")
-                    .size_of()
-                    .unwrap_or(1);
-                let scale_reg_id = self.add_reg_imm(scale as i64);
-
-                if let Some(&(l, r)) = self.sema().exp_ranges.get(&arg) {
-                    // x[l..r] ---> slice(begin(x) + l * scale, begin(x) + r * scale)
-                    let l_reg_id = self.on_exp(l);
-                    let r_reg_id = self.on_exp(r);
-                    self.push(Cmd::Mul, l_reg_id, CmdArg::Reg(scale_reg_id));
-                    self.push(Cmd::Mul, r_reg_id, CmdArg::Reg(scale_reg_id));
-
-                    self.add_cmd_lo32(indexee_reg_id);
-                    self.push(Cmd::Add, l_reg_id, CmdArg::Reg(indexee_reg_id));
-                    self.push(Cmd::Add, r_reg_id, CmdArg::Reg(indexee_reg_id));
-                    let slice_reg_id = self.add_cmd_make_slice(l_reg_id, r_reg_id);
-                    self.kill(indexee_reg_id);
-                    self.kill(scale_reg_id);
-                    return slice_reg_id;
-                }
-
-                let arg_reg_id = self.on_exp(arg);
-                self.push(Cmd::Mul, arg_reg_id, CmdArg::Reg(scale_reg_id));
-                self.push(Cmd::Add, arg_reg_id, CmdArg::Reg(indexee_reg_id));
-                self.kill(indexee_reg_id);
-                self.kill(scale_reg_id);
-
-                if !self.is_coerced_to_val(exp_id) {
-                    return arg_reg_id;
-                }
-
-                let item_reg_id = self.add_reg();
-                self.add_cmd_lo32(arg_reg_id); // begin of slice
-                self.add_cmd_load(item_reg_id, arg_reg_id, scale);
-                self.kill(arg_reg_id);
-                item_reg_id
+                let ptr_reg_id = self.add_reg();
+                match var_kind {
+                    PirVarKind::Global { index } => {
+                        let ptr = (index * size_of::<i64>()) as i64;
+                        self.push(Cmd::Imm, ptr_reg_id, CmdArg::Int(ptr));
+                    }
+                    PirVarKind::Local { index } => {
+                        let offset = -((index + 1) as i64) * size_of::<i64>() as i64;
+                        self.push(Cmd::Mov, ptr_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
+                        self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
+                    }
+                    PirVarKind::Arg { index } => {
+                        // Before the base pointer, arguments are stacked under register values and return address.
+                        let offset =
+                            ((index + (REG_NUM - KNOWN_REG_NUM + 2)) * size_of::<i64>()) as i64;
+                        self.push(Cmd::Mov, ptr_reg_id, CmdArg::Reg(BASE_PTR_REG_ID));
+                        self.push(Cmd::AddImm, ptr_reg_id, CmdArg::Int(offset));
+                    }
+                };
+                ptr_reg_id
             }
-            &ExpKind::Bin { op, l, r } => self.on_bin(exp_id, op, l, r),
-            ExpKind::Fun { .. } => NO_REG_ID,
-            &ExpKind::Return(result) => {
+            &PirKind::CallPrim(prim) => self.on_call_prim(prim, pir.children()),
+            &PirKind::CallFun(fun_id) => self.add_cmd_call_fun(pir.children(), fun_id),
+            &PirKind::Op { op, size } => {
+                let (l, r) = {
+                    let children = pir.children();
+                    (&children[0], &children[1])
+                };
+                self.on_bin(op, size, l, r)
+            }
+            &PirKind::Deref { size } => {
+                let ptr = &pir.children()[0];
+
+                let ptr_reg_id = self.on_exp(ptr);
+                let reg_id = self.add_reg();
+                self.add_cmd_load(reg_id, ptr_reg_id, size);
+                self.kill(ptr_reg_id);
+
+                reg_id
+            }
+            PirKind::Return => {
+                let result = &pir.children()[0];
                 let end_label_id = self.current_gen_fun().end_label_id;
                 let reg_id = self.on_exp(result);
                 self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(reg_id));
@@ -370,7 +281,12 @@ impl GenRir {
                 self.kill(reg_id);
                 NO_REG_ID
             }
-            &ExpKind::If { cond, body, alt } => {
+            PirKind::If => {
+                let (cond, body, alt) = {
+                    let children = pir.children();
+                    (&children[0], &children[1], &children[2])
+                };
+
                 let alt_label = CmdArg::Label(self.add_label());
                 let end_label = CmdArg::Label(self.add_label());
                 let end_reg = self.add_reg();
@@ -392,11 +308,14 @@ impl GenRir {
                 self.push(Cmd::Label, NO_REG_ID, end_label);
                 end_reg
             }
-            &ExpKind::While { cond, body } => {
-                let loop_def = self.get_loop(exp_id).expect("Missing loop def");
+            &PirKind::While { loop_id } => {
+                let (cond, body) = {
+                    let children = pir.children();
+                    (&children[0], &children[1])
+                };
 
-                let break_label = CmdArg::Label(loop_def.break_label_id);
-                let continue_label = CmdArg::Label(loop_def.continue_label_id);
+                let break_label = CmdArg::Label(self.break_label_id(loop_id));
+                let continue_label = CmdArg::Label(self.continue_label_id(loop_id));
 
                 self.push(Cmd::Label, NO_REG_ID, continue_label);
                 let cond_reg_id = self.on_exp(cond);
@@ -410,39 +329,29 @@ impl GenRir {
                 self.push(Cmd::Label, NO_REG_ID, break_label);
                 NO_REG_ID
             }
-            &ExpKind::Break => {
-                let loop_def = self.get_loop(exp_id).expect("Missing loop def");
-                let break_label = CmdArg::Label(loop_def.break_label_id);
+            &PirKind::Break { loop_id } => {
+                let break_label = CmdArg::Label(self.break_label_id(loop_id));
 
                 self.push(Cmd::Jump, NO_REG_ID, break_label);
                 NO_REG_ID
             }
-            &ExpKind::Continue => {
-                let loop_def = self.get_loop(exp_id).expect("Missing loop def");
-                let continue_label = CmdArg::Label(loop_def.continue_label_id);
+            &PirKind::Continue { loop_id } => {
+                let continue_label = CmdArg::Label(self.continue_label_id(loop_id));
 
                 self.push(Cmd::Jump, NO_REG_ID, continue_label);
                 NO_REG_ID
             }
-            &ExpKind::Let { pat, init, .. } => {
-                if self.sema().exp_decls.contains(&exp_id) {
-                    return NO_REG_ID;
-                }
-                let init_reg_id = self.on_exp(init);
-                let var_reg_id = self.on_exp(pat);
-                self.push(Cmd::Store, var_reg_id, CmdArg::Reg(init_reg_id));
-                self.kill(var_reg_id);
-                self.kill(init_reg_id);
-                NO_REG_ID
+            PirKind::Semi => self.on_exps(pir.children()),
+            PirKind::IndexPoint | PirKind::IndexSlice => {
+                panic!("{:?} should vanish in reduce", pir.kind())
             }
-            ExpKind::Semi(exps) => self.on_exps(exps),
         }
     }
 
-    fn on_exps(&mut self, exps: &[ExpId]) -> RegId {
+    fn on_exps(&mut self, pirs: &[Pir]) -> RegId {
         let mut reg_id = NO_REG_ID;
-        for &exp_id in exps {
-            let result = self.on_exp(exp_id);
+        for pir in pirs {
+            let result = self.on_exp(pir);
             self.kill(reg_id);
             reg_id = result;
         }
@@ -461,7 +370,7 @@ impl GenRir {
     }
 
     fn add_cmd_allocate_locals(&mut self, fun_id: FunId) {
-        let local_count = self.sema().fun_local_count(fun_id);
+        let local_count = self.pir_program().fun_local_count(fun_id);
         let frame_size = (local_count * size_of::<i64>()) as i64;
         if fun_id == GLOBAL_FUN_ID {
             self.alloc_zero(frame_size as usize);
@@ -475,7 +384,7 @@ impl GenRir {
             return;
         }
 
-        let local_count = self.sema().fun_local_count(fun_id);
+        let local_count = self.pir_program().fun_local_count(fun_id);
         let frame_size = (local_count * size_of::<i64>()) as i64;
         self.push(Cmd::AddImm, STACK_PTR_REG_ID, CmdArg::Int(frame_size));
     }
@@ -502,7 +411,11 @@ impl GenRir {
         self.add_cmd_save_caller_regs();
         self.add_cmd_allocate_locals(fun_id);
 
-        let final_reg_id = self.on_exps(&self.rir.sema.funs[&fun_id].bodies().to_owned());
+        let final_reg_id = {
+            let pir_program = self.share_pir_program();
+            let body = pir_program.fun_body(fun_id);
+            self.on_exp(body)
+        };
         self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(final_reg_id));
         self.kill(final_reg_id);
 
@@ -514,8 +427,7 @@ impl GenRir {
         self.rir.reg_count += KNOWN_REG_NUM;
 
         // Prepare funs.
-        let fun_ids = self.sema().funs.keys().cloned().collect::<Vec<_>>();
-        for &fun_id in &fun_ids {
+        for (fun_id, fun_def) in self.share_pir_program().funs() {
             let body_label_id = self.add_label();
             let end_label_id = self.add_label();
             self.rir.funs.insert(
@@ -526,24 +438,22 @@ impl GenRir {
                     inss: vec![],
                 },
             );
-        }
 
-        // Prepare loops.
-        let loop_ids = self.sema().loops.keys().cloned().collect::<Vec<_>>();
-        for &loop_id in &loop_ids {
-            let break_label_id = self.add_label();
-            let continue_label_id = self.add_label();
-            (self.rir.loops).insert(
-                loop_id,
-                GenLoopDef {
-                    break_label_id,
-                    continue_label_id,
-                },
-            );
+            for loop_id in fun_def.body().collect_loops() {
+                let break_label_id = self.add_label();
+                let continue_label_id = self.add_label();
+                self.rir.loops.insert(
+                    loop_id,
+                    GenLoopDef {
+                        break_label_id,
+                        continue_label_id,
+                    },
+                );
+            }
         }
 
         // Generate funs.
-        for &fun_id in &fun_ids {
+        for (fun_id, _) in self.share_pir_program().funs() {
             self.gen_fun(fun_id);
         }
 
@@ -584,20 +494,11 @@ impl GenRir {
             writeln!(program, "    {} {} {}", cmd, l, r.to_i64()).unwrap();
         }
 
-        // Emit compile errors.
-        let (success, msgs) = Msg::summarize(self.rir.msgs.values(), &self.rir.sema.syntax);
-
         CompilationResult {
-            success,
+            success: true,
             program,
-            msgs,
+            msgs: vec![],
         }
-    }
-}
-
-impl ShareSyntax for GenRir {
-    fn share_syntax(&self) -> Rc<Syntax> {
-        Rc::clone(&self.sema().syntax)
     }
 }
 
@@ -617,16 +518,15 @@ fn lo32(x: usize) -> usize {
     x & 0xFFFF_FFFF
 }
 
-pub(crate) fn gen(sema: Rc<Sema>) -> CompilationResult {
+pub(crate) fn gen(program: Rc<PirProgram>) -> CompilationResult {
     let mut compiler = GenRir {
         rir: Rir {
-            sema: Rc::clone(&sema),
+            pir_program: Rc::clone(&program),
             reg_count: 0,
             label_count: 0,
             text: vec![],
             funs: BTreeMap::new(),
             loops: BTreeMap::new(),
-            msgs: sema.msgs.clone(),
         },
         current_fun_id: GLOBAL_FUN_ID,
     };
@@ -635,14 +535,6 @@ pub(crate) fn gen(sema: Rc<Sema>) -> CompilationResult {
 
 pub(crate) fn compile(src: &str) -> CompilationResult {
     let sema = Rc::new(analyze::analyze_str(src));
-    if !sema.is_successful() {
-        let (success, msgs) = Msg::summarize(sema.msgs.values(), &sema.syntax);
-        return CompilationResult {
-            success,
-            msgs,
-            program: "".to_string(),
-        };
-    }
-
-    gen::gen(sema)
+    let pir_program = Rc::new(pir::from_sema(sema));
+    gen::gen(pir_program)
 }

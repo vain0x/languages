@@ -584,23 +584,6 @@ impl Sema {
         self.add_err_msg(kind, exp_id);
     }
 
-    pub fn get_symbol_ref(&self, symbol_kind: SymbolKind) -> SymbolRef<'_> {
-        match symbol_kind {
-            SymbolKind::Prim(prim) => SymbolRef::Prim(prim),
-            SymbolKind::Var(var_id) => SymbolRef::Var(var_id, &self.vars[&var_id]),
-        }
-    }
-
-    fn fun_symbols(&self, fun_id: FunId) -> Vec<SymbolRef<'_>> {
-        let fun_def = match self.funs.get(&fun_id) {
-            Some(fun_def) => fun_def,
-            None => return vec![],
-        };
-        (fun_def.symbols.iter())
-            .map(|&symbol_kind| self.get_symbol_ref(symbol_kind))
-            .collect::<Vec<_>>()
-    }
-
     pub fn fun_local_count(&self, fun_id: FunId) -> usize {
         self.fun_symbols(fun_id)
             .into_iter()

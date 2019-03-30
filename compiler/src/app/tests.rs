@@ -1,6 +1,6 @@
 use crate::rir::gen::compile;
 use crate::rir::CompilationResult;
-use crate::semantics::DocMsg;
+use crate::semantics::{analyze, DocMsg};
 use std::io;
 
 pub fn eval_tests(src: &str, ios: &[(&str, &str)]) {
@@ -33,9 +33,9 @@ pub fn eval_tests(src: &str, ios: &[(&str, &str)]) {
 pub fn test_err(src: &str, expected: &str) {
     let compress = |s: &str| s.replace(|c: char| c.is_ascii_whitespace(), "");
 
-    let CompilationResult { success, msgs, .. } = compile(src);
+    let sema = analyze::analyze_str(src);
 
-    let stderr = DocMsg::to_text(&msgs);
+    let stderr = DocMsg::to_text(&sema.to_doc_msgs());
     assert_eq!(
         compress(&stderr),
         compress(expected),
@@ -43,5 +43,5 @@ pub fn test_err(src: &str, expected: &str) {
         stderr,
         expected
     );
-    assert!(!success);
+    assert!(!sema.is_successful());
 }

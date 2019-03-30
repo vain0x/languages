@@ -87,6 +87,15 @@ pub(crate) struct Sema {
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 
+impl VarDef {
+    pub(crate) fn is_arg(&self) -> bool {
+        match self.kind {
+            VarKind::Arg { .. } => true,
+            _ => false,
+        }
+    }
+}
+
 impl FunDef {
     pub(crate) fn result_ty(&self) -> Ty {
         self.result_ty.clone()
@@ -98,12 +107,12 @@ impl FunDef {
 }
 
 impl Sema {
-    pub(crate) fn to_doc_msgs(&self) -> Vec<DocMsg> {
-        Msg::summarize(self.msgs.values(), &self.syntax).1
+    pub(crate) fn is_successful(&self) -> bool {
+        Msg::summarize(self.msgs.values(), &self.syntax).0
     }
 
-    pub(crate) fn is_successful(&self) -> bool {
-        self.msgs.iter().all(|(_, msg)| msg.is_successful())
+    pub(crate) fn to_doc_msgs(&self) -> Vec<DocMsg> {
+        Msg::summarize(self.msgs.values(), &self.syntax).1
     }
 
     pub(crate) fn find_module_by_doc_id(&self, doc_id: DocId) -> Option<(ModuleId, &Module)> {
@@ -119,6 +128,59 @@ impl Sema {
         let (l, r) = exp.span;
         let module = &self.syntax.modules[&exp.module_id];
         &module.doc().src()[l..r]
+    }
+
+    pub(crate) fn exp_as_symbol(&self, exp_id: ExpId) -> Option<SymbolRef<'_>> {
+        let symbol_kind = self.exp_symbols.get(&exp_id)?;
+        Some(self.symbol_ref(*symbol_kind))
+    }
+
+    pub(crate) fn exp_as_loop(&self, exp_id: ExpId) -> Option<LoopId> {
+        self.exp_loops.get(&exp_id).cloned()
+    }
+
+    pub(crate) fn exp_is_coerced_to_value(&self, exp_id: ExpId) -> bool {
+        self.exp_vals.contains(&exp_id)
+    }
+
+    pub(crate) fn exp_as_range(&self, exp_id: ExpId) -> Option<(ExpId, ExpId)> {
+        self.exp_ranges.get(&exp_id).cloned()
+    }
+
+    pub(crate) fn exp_is_decl(&self, exp_id: ExpId) -> bool {
+        self.exp_decls.contains(&exp_id)
+    }
+
+    pub(crate) fn exp_ty(&self, exp_id: ExpId) -> Ty {
+        self.get_ty(exp_id)
+    }
+
+    pub(crate) fn fun_symbols(&self, fun_id: FunId) -> Vec<SymbolRef<'_>> {
+        let fun_def = match self.funs.get(&fun_id) {
+            Some(fun_def) => fun_def,
+            None => return vec![],
+        };
+        (fun_def.symbols.iter())
+            .map(|&symbol_kind| self.symbol_ref(symbol_kind))
+            .collect::<Vec<_>>()
+    }
+
+    pub(crate) fn fun_arg_ids(&self, fun_id: FunId) -> impl Iterator<Item = VarId> + '_ {
+        self.fun_symbols(fun_id)
+            .into_iter()
+            .filter_map(|symbol| match symbol {
+                SymbolRef::Var(var_id, var_def) if var_def.is_arg() => Some(var_id),
+                _ => None,
+            })
+    }
+
+    pub(crate) fn fun_local_ids(&self, fun_id: FunId) -> impl Iterator<Item = VarId> + '_ {
+        self.fun_symbols(fun_id)
+            .into_iter()
+            .filter_map(|symbol| match symbol {
+                SymbolRef::Var(var_id, var_def) if !var_def.is_arg() => Some(var_id),
+                _ => None,
+            })
     }
 
     pub(crate) fn symbol_ref(&self, symbol: SymbolKind) -> SymbolRef<'_> {
@@ -180,6 +242,12 @@ impl Sema {
         let def_exp_id = self.symbol_ref(symbol_kind).def_exp_id()?;
         let let_exp_id = self.find_ancestor_let(def_exp_id)?;
         Some(self.exp_text(let_exp_id))
+    }
+}
+
+impl ShareSyntax for Sema {
+    fn share_syntax(&self) -> Rc<Syntax> {
+        Rc::clone(&self.syntax)
     }
 }
 

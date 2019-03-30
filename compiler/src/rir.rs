@@ -5,6 +5,7 @@ pub(crate) mod gen;
 pub(crate) mod regalloc;
 
 pub(crate) use self::cmd::*;
+use crate::pir::*;
 use crate::semantics::*;
 use crate::Id;
 use std::collections::BTreeMap;
@@ -42,13 +43,12 @@ pub(crate) struct GenLoopDef {
 
 #[derive(Clone, Debug)]
 pub(crate) struct Rir {
-    pub sema: Rc<Sema>,
+    pub pir_program: Rc<PirProgram>,
     pub reg_count: usize,
     pub label_count: usize,
     pub text: Vec<u8>,
     pub funs: BTreeMap<FunId, GenFunDef>,
     pub loops: BTreeMap<LoopId, GenLoopDef>,
-    pub msgs: BTreeMap<MsgId, Msg>,
 }
 
 #[derive(Clone)]

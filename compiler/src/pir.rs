@@ -74,14 +74,6 @@ pub(crate) struct PirProgram {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) enum BlockExit {
-    Exit,
-    Jump(BlockId),
-    JumpUnless(BlockId, Option<Pir>),
-    Return(Pir),
-}
-
-#[derive(Clone, Debug)]
 pub(crate) struct Block {
     semi: Vec<Pir>,
     cond: Option<Pir>,

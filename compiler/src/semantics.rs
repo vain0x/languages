@@ -87,6 +87,15 @@ pub(crate) struct Sema {
     pub msgs: BTreeMap<MsgId, Msg>,
 }
 
+impl VarDef {
+    pub(crate) fn is_arg(&self) -> bool {
+        match self.kind {
+            VarKind::Arg { .. } => true,
+            _ => false,
+        }
+    }
+}
+
 impl FunDef {
     pub(crate) fn result_ty(&self) -> Ty {
         self.result_ty.clone()
@@ -154,6 +163,24 @@ impl Sema {
         (fun_def.symbols.iter())
             .map(|&symbol_kind| self.symbol_ref(symbol_kind))
             .collect::<Vec<_>>()
+    }
+
+    pub(crate) fn fun_arg_ids(&self, fun_id: FunId) -> impl Iterator<Item = VarId> + '_ {
+        self.fun_symbols(fun_id)
+            .into_iter()
+            .filter_map(|symbol| match symbol {
+                SymbolRef::Var(var_id, var_def) if var_def.is_arg() => Some(var_id),
+                _ => None,
+            })
+    }
+
+    pub(crate) fn fun_local_ids(&self, fun_id: FunId) -> impl Iterator<Item = VarId> + '_ {
+        self.fun_symbols(fun_id)
+            .into_iter()
+            .filter_map(|symbol| match symbol {
+                SymbolRef::Var(var_id, var_def) if !var_def.is_arg() => Some(var_id),
+                _ => None,
+            })
     }
 
     pub(crate) fn symbol_ref(&self, symbol: SymbolKind) -> SymbolRef<'_> {

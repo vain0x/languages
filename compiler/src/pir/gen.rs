@@ -11,6 +11,10 @@ impl GenPir {
         &self.sema
     }
 
+    fn share_sema(&self) -> Rc<Sema> {
+        Rc::clone(&self.sema)
+    }
+
     fn pir(&self, kind: PirKind, args: Vec<Pir>, exp_id: ExpId) -> Pir {
         Pir {
             kind,
@@ -123,6 +127,18 @@ impl GenPir {
                 if self.sema().exp_is_decl(exp_id) {
                     return self.pir(PirKind::unit(), vec![], exp_id);
                 }
+
+                let var_id = match self.sema().exp_as_symbol(pat) {
+                    None => panic!("let lhs must be symbol"),
+                    Some(SymbolRef::Prim { .. }) => unreachable!(),
+                    Some(SymbolRef::Var(var_id, _)) => var_id,
+                };
+                let var_def = PirVarDef {
+                    ty: self.sema().exp_ty(pat),
+                    exp_id: pat,
+                };
+                self.program.vars.insert(var_id, var_def);
+
                 let init = self.on_exp(init);
                 let var = self.on_exp(pat);
                 self.pir(
@@ -134,29 +150,41 @@ impl GenPir {
                     exp_id,
                 )
             }
-            ExpKind::Semi(exps) => self.on_exps(exps),
+            ExpKind::Semi(exps) => self.on_exps(exps, exp_id),
         }
     }
 
-    fn on_exps(&mut self, exps: &[ExpId]) -> Pir {
-        let mut last = None;
-        for &exp_id in exps {
-            last = Some(self.on_exp(exp_id));
+    fn on_exps(&mut self, exps: &[ExpId], exp_id: ExpId) -> Pir {
+        let pirs = exps
+            .iter()
+            .map(|&exp_id| self.on_exp(exp_id))
+            .collect::<Vec<_>>();
+        let ty = pirs.last().map(|pir| pir.ty()).unwrap_or(Ty::unit());
+
+        Pir {
+            kind: PirKind::Semi,
+            args: pirs,
+            ty,
+            exp_id,
         }
-        last.expect("at least one expression in semi")
     }
 
     pub fn gen_fun(&mut self, fun_id: FunId) {
-        let fun_def = &Rc::clone(&self.sema).funs[&fun_id];
+        let fun_def = &self.share_sema().funs[&fun_id];
+
+        eprintln!("pir gen fun {} {:#?}", fun_id, fun_def.bodies());
 
         let exp_id = fun_def.bodies().last().cloned().unwrap();
-        let body = self.on_exps(&fun_def.bodies().clone());
+        let body = self.on_exps(&fun_def.bodies(), exp_id);
+
+        let args = self.sema().fun_arg_ids(fun_id).collect();
+        let locals = self.sema().fun_local_ids(fun_id).collect();
 
         self.program.funs.insert(
             fun_id,
             PirFunDef {
-                args: vec![],
-                locals: vec![],
+                args,
+                locals,
                 body,
                 exp_id,
                 is_global: fun_id == GLOBAL_FUN_ID,

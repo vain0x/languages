@@ -87,7 +87,7 @@ impl GenRir {
         let cmd = match size {
             1 => Cmd::Store8,
             8 => Cmd::Store,
-            _ => panic!("store of unsized value"),
+            _ => panic!("store of unsized value {:?}", size),
         };
         self.push(cmd, dest, CmdArg::Reg(src));
         self.kill(src);
@@ -97,7 +97,7 @@ impl GenRir {
         let cmd = match size {
             1 => Cmd::Load8,
             8 => Cmd::Load,
-            _ => panic!("load of unsized value"),
+            _ => panic!("load of unsized value {:?}", size),
         };
         self.push(cmd, dest, CmdArg::Reg(src));
         self.kill(src);
@@ -265,8 +265,10 @@ impl GenRir {
             &PirKind::Deref { size } => {
                 let ptr = &pir.children()[0];
 
-                let reg_id = self.on_exp(ptr);
-                self.add_cmd_load(reg_id, reg_id, size);
+                let ptr_reg_id = self.on_exp(ptr);
+                let reg_id = self.add_reg();
+                self.add_cmd_load(reg_id, ptr_reg_id, size);
+                self.kill(ptr_reg_id);
 
                 reg_id
             }
@@ -412,6 +414,7 @@ impl GenRir {
         let final_reg_id = {
             let pir_program = self.share_pir_program();
             let body = pir_program.fun_body(fun_id);
+            eprintln!("rir gen fun {} {:#?}", fun_id, body);
             self.on_exp(body)
         };
         self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(final_reg_id));
@@ -425,7 +428,7 @@ impl GenRir {
         self.rir.reg_count += KNOWN_REG_NUM;
 
         // Prepare funs.
-        for (fun_id, fun_def) in Rc::clone(&self.rir.pir_program).funs() {
+        for (fun_id, fun_def) in self.share_pir_program().funs() {
             let body_label_id = self.add_label();
             let end_label_id = self.add_label();
             self.rir.funs.insert(
@@ -451,7 +454,7 @@ impl GenRir {
         }
 
         // Generate funs.
-        for (fun_id, _) in Rc::clone(&self.rir.pir_program).funs() {
+        for (fun_id, _) in self.share_pir_program().funs() {
             self.gen_fun(fun_id);
         }
 

@@ -139,15 +139,14 @@ impl ReducePir {
                 kind = PirKind::Op { op, size };
             }
             PirKind::Deref { .. } => {
-                decompose!(&args, [p]);
-                let size = p.ty().size_of().expect("sized");
+                let size = ty.size_of().expect("sized");
                 kind = PirKind::Deref { size };
             }
             _ => {}
         }
         let args = args
             .into_iter()
-            .map(|arg| self.reduce_prim(arg.kind, arg.args, arg.ty, arg.exp_id))
+            .map(|arg| self.calc_size(arg.kind, arg.args, arg.ty, arg.exp_id))
             .collect();
         make_pir(kind, args, ty, exp_id)
     }

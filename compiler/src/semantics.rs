@@ -208,6 +208,12 @@ impl Sema {
     }
 }
 
+impl ShareSyntax for Sema {
+    fn share_syntax(&self) -> Rc<Syntax> {
+        Rc::clone(&self.syntax)
+    }
+}
+
 impl BorrowMutMsgs for Sema {
     fn msgs_mut(&mut self) -> &mut Msgs {
         &mut self.msgs

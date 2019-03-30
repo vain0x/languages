@@ -197,9 +197,12 @@ impl GenRir {
             Op::Mul => Cmd::Mul,
             Op::Div => Cmd::Div,
             Op::Mod => Cmd::Mod,
-            Op::LogOr | Op::BitOr => unimplemented!(),
+            Op::BitAnd => Cmd::BitAnd,
+            Op::BitOr => Cmd::BitOr,
+            Op::BitShiftL => Cmd::BitShiftL,
+            Op::BitShiftR => Cmd::BitShiftR,
+            Op::LogOr => unimplemented!("unimplemented ||"),
             Op::Range => panic!("Can't generate range operation"),
-            _ => unimplemented!(),
         };
 
         self.push(cmd, l_reg, CmdArg::Reg(r_reg));

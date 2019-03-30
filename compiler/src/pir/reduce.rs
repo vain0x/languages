@@ -3,7 +3,7 @@ use super::*;
 macro_rules! decompose {
     ($items:expr, [$($item:ident),*]) => {
         let mut iter = $items.into_iter();
-        $(let $item = iter.next().unwrap();)*
+        $(let $item = iter.next().expect(concat!("decompose! ", stringify!($item)));)*
     };
 }
 
@@ -27,26 +27,29 @@ fn make_semi(args: Vec<Pir>, ty: Ty, exp_id: ExpId) -> Pir {
 
 impl ReducePir {
     fn add_temporary(&mut self, pir: Pir, semi: &mut Vec<Pir>) -> Pir {
+        let exp_id = pir.exp_id;
+
         let var_id = VarId::new(self.vars.len());
         self.vars.insert(
             var_id,
             PirVarDef {
-                ty: pir.ty.clone(),
-                exp_id: pir.exp_id,
+                ty: pir.ty(),
+                exp_id,
             },
         );
+        let var_pir = make_pir(PirKind::Var { var_id }, vec![], pir.ty(), exp_id);
 
         semi.push(make_pir(
             PirKind::Op {
                 op: Op::Set,
                 size: 0,
             },
-            vec![],
+            vec![var_pir.clone(), pir],
             Ty::unit(),
-            pir.exp_id,
+            exp_id,
         ));
 
-        make_pir(PirKind::Var { var_id }, vec![], pir.ty, pir.exp_id)
+        var_pir.into_deref()
     }
 
     /// Multiple an int by size of type.

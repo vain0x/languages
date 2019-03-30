@@ -128,17 +128,6 @@ impl GenPir {
                     return self.pir(PirKind::unit(), vec![], exp_id);
                 }
 
-                let var_id = match self.sema().exp_as_symbol(pat) {
-                    None => panic!("let lhs must be symbol"),
-                    Some(SymbolRef::Prim { .. }) => unreachable!(),
-                    Some(SymbolRef::Var(var_id, _)) => var_id,
-                };
-                let var_def = PirVarDef {
-                    ty: self.sema().exp_ty(pat),
-                    exp_id: pat,
-                };
-                self.program.vars.insert(var_id, var_def);
-
                 let init = self.on_exp(init);
                 let var = self.on_exp(pat);
                 self.pir(
@@ -190,8 +179,21 @@ impl GenPir {
         );
     }
 
+    fn import_vars(&mut self) {
+        for &var_id in self.share_sema().vars.keys() {
+            let var_def = &self.sema().vars[&var_id];
+            let var_def = PirVarDef {
+                is_temporary: false,
+                exp_id: var_def.def_exp_id,
+            };
+            self.program.vars.insert(var_id, var_def);
+        }
+    }
+
     pub fn gen_pir(&mut self) {
-        for &fun_id in Rc::clone(&self.sema).funs.keys() {
+        self.import_vars();
+
+        for &fun_id in self.share_sema().funs.keys() {
             self.gen_fun(fun_id);
         }
     }

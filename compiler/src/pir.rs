@@ -54,7 +54,7 @@ pub(crate) enum PirVarKind {
 
 #[derive(Clone, Debug)]
 pub(crate) struct PirVarDef {
-    ty: Ty,
+    is_temporary: bool,
     exp_id: ExpId,
 }
 

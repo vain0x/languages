@@ -33,7 +33,7 @@ impl ReducePir {
         self.vars.insert(
             var_id,
             PirVarDef {
-                ty: pir.ty(),
+                is_temporary: true,
                 exp_id,
             },
         );
@@ -152,11 +152,35 @@ impl ReducePir {
         pir
     }
 
+    fn add_temporaries_to_locals(&mut self, fun_id: FunId) {
+        fn dfs(pir: &Pir, var_ids: &mut Vec<VarId>) {
+            if let PirKind::Var { var_id } = pir.kind {
+                var_ids.push(var_id)
+            }
+
+            for pir in pir.children() {
+                dfs(pir, var_ids)
+            }
+        }
+
+        let body = &self.funs[&fun_id].body;
+
+        let mut var_ids = vec![];
+        dfs(body, &mut var_ids);
+        var_ids.retain(|var_id| self.vars[&var_id].is_temporary);
+        var_ids.sort();
+        var_ids.dedup();
+
+        self.funs.get_mut(&fun_id).unwrap().locals.extend(var_ids);
+    }
+
     fn run(&mut self) {
         for fun_id in self.funs.keys().cloned().collect::<Vec<_>>() {
             let body = self.funs[&fun_id].body.clone();
             let body = self.reduce_pir(body);
             self.funs.get_mut(&fun_id).unwrap().body = body;
+
+            self.add_temporaries_to_locals(fun_id);
         }
     }
 }

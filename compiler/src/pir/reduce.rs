@@ -57,13 +57,11 @@ impl ReducePir {
         *arg = scale;
     }
 
-    fn scale_ptr_indices(
-        &mut self,
-        kind: PirKind,
-        mut args: Vec<Pir>,
-        ty: Ty,
-        exp_id: ExpId,
-    ) -> Pir {
+    fn scale_ptr_indices(&mut self, kind: PirKind, args: Vec<Pir>, ty: Ty, exp_id: ExpId) -> Pir {
+        let mut args = args
+            .into_iter()
+            .map(|arg| self.scale_ptr_indices(arg.kind, arg.args, arg.ty, arg.exp_id))
+            .collect::<Vec<_>>();
         match kind {
             PirKind::CallPrim(Prim::MemAlloc) => {
                 self.scale_up(&mut args[0], ty.clone());
@@ -80,17 +78,15 @@ impl ReducePir {
                 self.scale_up(&mut args[2], slice_ty);
                 make_pir(kind, args, ty, exp_id)
             }
-            _ => {
-                let args = args
-                    .into_iter()
-                    .map(|arg| self.scale_ptr_indices(arg.kind, arg.args, arg.ty, arg.exp_id))
-                    .collect();
-                make_pir(kind, args, ty, exp_id)
-            }
+            _ => make_pir(kind, args, ty, exp_id),
         }
     }
 
     fn reduce_prim(&mut self, kind: PirKind, args: Vec<Pir>, ty: Ty, exp_id: ExpId) -> Pir {
+        let args = args
+            .into_iter()
+            .map(|arg| self.reduce_prim(arg.kind, arg.args, arg.ty, arg.exp_id))
+            .collect::<Vec<_>>();
         match kind {
             PirKind::CallPrim(Prim::ByteToInt) | PirKind::CallPrim(Prim::IntToByte) => {
                 decompose!(args, [arg]);
@@ -121,13 +117,7 @@ impl ReducePir {
                 semi.push(xl.slice_new(xr));
                 make_semi(semi, ty, exp_id)
             }
-            _ => {
-                let args = args
-                    .into_iter()
-                    .map(|arg| self.reduce_prim(arg.kind, arg.args, arg.ty, arg.exp_id))
-                    .collect();
-                make_pir(kind, args, ty, exp_id)
-            }
+            _ => make_pir(kind, args, ty, exp_id),
         }
     }
 

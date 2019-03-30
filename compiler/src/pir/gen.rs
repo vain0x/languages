@@ -172,8 +172,6 @@ impl GenPir {
     pub fn gen_fun(&mut self, fun_id: FunId) {
         let fun_def = &self.share_sema().funs[&fun_id];
 
-        eprintln!("pir gen fun {} {:#?}", fun_id, fun_def.bodies());
-
         let exp_id = fun_def.bodies().last().cloned().unwrap();
         let body = self.on_exps(&fun_def.bodies(), exp_id);
 

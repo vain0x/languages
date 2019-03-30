@@ -414,7 +414,6 @@ impl GenRir {
         let final_reg_id = {
             let pir_program = self.share_pir_program();
             let body = pir_program.fun_body(fun_id);
-            eprintln!("rir gen fun {} {:#?}", fun_id, body);
             self.on_exp(body)
         };
         self.push(Cmd::Mov, RET_REG_ID, CmdArg::Reg(final_reg_id));

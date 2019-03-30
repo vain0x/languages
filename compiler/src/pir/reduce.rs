@@ -1,8 +1,7 @@
 use super::*;
-use std::mem;
 
 macro_rules! decompose {
-    ($items:expr, ($($item:ident),*)) => {
+    ($items:expr, [$($item:ident),*]) => {
         let mut iter = $items.into_iter();
         $(let $item = iter.next().unwrap();)*
     };
@@ -38,7 +37,10 @@ impl ReducePir {
         );
 
         semi.push(make_pir(
-            PirKind::Op(Op::Set),
+            PirKind::Op {
+                op: Op::Set,
+                size: 0,
+            },
             vec![],
             Ty::unit(),
             pir.exp_id,
@@ -91,12 +93,12 @@ impl ReducePir {
     fn reduce_prim(&mut self, kind: PirKind, args: Vec<Pir>, ty: Ty, exp_id: ExpId) -> Pir {
         match kind {
             PirKind::CallPrim(Prim::ByteToInt) | PirKind::CallPrim(Prim::IntToByte) => {
-                decompose!(args, (arg));
+                decompose!(args, [arg]);
                 arg
             }
             PirKind::CallPrim(Prim::SliceLen) => {
                 // slice_len(xs) = slice_end(xs) - slice_begin(xs)
-                decompose!(args, (xs));
+                decompose!(args, [xs]);
                 let mut semi = vec![];
                 let xs = self.add_temporary(xs, &mut semi);
                 let end = xs.clone().slice_end();
@@ -106,12 +108,12 @@ impl ReducePir {
             }
             PirKind::IndexPoint => {
                 // xs[i] = slice_begin(xs) + i
-                decompose!(args, (xs, i));
+                decompose!(args, [xs, i]);
                 xs.slice_begin().add(i)
             }
             PirKind::IndexSlice => {
                 // xs[l..r] = slice_new(slice_begin(xs) + l, slice_begin(xs) + r)
-                decompose!(args, (xs, l, r));
+                decompose!(args, [xs, l, r]);
                 let mut semi = vec![];
                 let xs = self.add_temporary(xs, &mut semi);
                 let xl = xs.clone().slice_begin().add(l);
@@ -129,8 +131,32 @@ impl ReducePir {
         }
     }
 
+    fn calc_size(&mut self, mut kind: PirKind, args: Vec<Pir>, ty: Ty, exp_id: ExpId) -> Pir {
+        match kind {
+            PirKind::Op { op, .. } => {
+                decompose!(&args, [x]);
+                let size = x.ty().size_of().expect("sized");
+                kind = PirKind::Op { op, size };
+            }
+            PirKind::Deref { .. } => {
+                decompose!(&args, [p]);
+                let size = p.ty().size_of().expect("sized");
+                kind = PirKind::Deref { size };
+            }
+            _ => {}
+        }
+        let args = args
+            .into_iter()
+            .map(|arg| self.reduce_prim(arg.kind, arg.args, arg.ty, arg.exp_id))
+            .collect();
+        make_pir(kind, args, ty, exp_id)
+    }
+
     fn reduce_pir(&mut self, pir: Pir) -> Pir {
-        self.scale_ptr_indices(pir.kind, pir.args, pir.ty, pir.exp_id)
+        let pir = self.scale_ptr_indices(pir.kind, pir.args, pir.ty, pir.exp_id);
+        let pir = self.reduce_prim(pir.kind, pir.args, pir.ty, pir.exp_id);
+        let pir = self.calc_size(pir.kind, pir.args, pir.ty, pir.exp_id);
+        pir
     }
 
     fn run(&mut self) {

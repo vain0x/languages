@@ -1,21 +1,14 @@
 use super::*;
-use crate::syntax::ShareSyntax as _;
 use std::rc::Rc;
 
 struct GenPir {
-    syntax: Rc<Syntax>,
     sema: Rc<Sema>,
     program: PirProgram,
-    current_fun_id: FunId,
 }
 
 impl GenPir {
     fn sema(&self) -> &Sema {
         &self.sema
-    }
-
-    fn current_fun(&self) -> &FunDef {
-        &self.sema.funs[&self.current_fun_id]
     }
 
     fn pir(&self, kind: PirKind, args: Vec<Pir>, exp_id: ExpId) -> Pir {
@@ -31,7 +24,7 @@ impl GenPir {
         let symbol_ref = (self.sema().exp_as_symbol(exp_id)).expect("Missing ident symbol");
         match symbol_ref {
             SymbolRef::Prim(..) => panic!("cannot generate primitive"),
-            SymbolRef::Var(var_id, &VarDef { kind, .. }) => {
+            SymbolRef::Var(var_id, _) => {
                 let pir = self.pir(PirKind::Var { var_id }, vec![], exp_id);
 
                 if self.sema().exp_is_coerced_to_value(exp_id) {
@@ -51,7 +44,7 @@ impl GenPir {
                 self.pir(PirKind::CallPrim(prim), args, exp_id)
             }
             SymbolRef::Var(
-                var_id,
+                _,
                 &VarDef {
                     kind: VarKind::Fun(fun_id),
                     ..
@@ -67,7 +60,7 @@ impl GenPir {
     fn on_bin(&mut self, exp_id: ExpId, op: Op, exp_l: ExpId, exp_r: ExpId) -> Pir {
         let l = self.on_exp(exp_l);
         let r = self.on_exp(exp_r);
-        self.pir(PirKind::Op(op), vec![l, r], exp_id)
+        self.pir(PirKind::Op { op, size: 0 }, vec![l, r], exp_id)
     }
 
     fn on_exp(&mut self, exp_id: ExpId) -> Pir {
@@ -119,7 +112,7 @@ impl GenPir {
             }
             &ExpKind::Break => {
                 let loop_id = (self.sema().exp_as_loop(exp_id)).expect("Missing loop id on break");
-                self.pir(PirKind::Continue { loop_id }, vec![], exp_id)
+                self.pir(PirKind::Break { loop_id }, vec![], exp_id)
             }
             &ExpKind::Continue => {
                 let loop_id =
@@ -132,7 +125,14 @@ impl GenPir {
                 }
                 let init = self.on_exp(init);
                 let var = self.on_exp(pat);
-                self.pir(PirKind::Op(Op::Set), vec![var, init], exp_id)
+                self.pir(
+                    PirKind::Op {
+                        op: Op::Set,
+                        size: 0,
+                    },
+                    vec![var, init],
+                    exp_id,
+                )
             }
             ExpKind::Semi(exps) => self.on_exps(exps),
         }
@@ -178,15 +178,12 @@ impl ShareSyntax for GenPir {
 }
 
 pub(crate) fn gen(sema: Rc<Sema>) -> PirProgram {
-    let syntax = sema.share_syntax();
     let mut gen_pir = GenPir {
-        syntax,
         sema,
         program: PirProgram {
             vars: BTreeMap::new(),
             funs: BTreeMap::new(),
         },
-        current_fun_id: GLOBAL_FUN_ID,
     };
     gen_pir.gen_pir();
     gen_pir.program

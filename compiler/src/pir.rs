@@ -4,6 +4,7 @@ use crate::semantics::*;
 use crate::syntax::*;
 use crate::Id;
 use std::collections::BTreeMap;
+use std::rc::Rc;
 
 pub(crate) mod gen;
 pub(crate) mod reduce;
@@ -26,8 +27,8 @@ pub(crate) enum PirKind {
     CallFun(FunId),
     IndexPoint,
     IndexSlice,
-    Op(Op),
-    Deref,
+    Op { op: Op, size: usize },
+    Deref { size: usize },
     Return,
     If,
     While { loop_id: LoopId },
@@ -42,6 +43,13 @@ pub(crate) struct Pir {
     args: Vec<Pir>,
     ty: Ty,
     exp_id: ExpId,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum PirVarKind {
+    Global { index: usize },
+    Local { index: usize },
+    Arg { index: usize },
 }
 
 #[derive(Clone, Debug)]
@@ -63,6 +71,14 @@ pub(crate) struct PirFunDef {
 pub(crate) struct PirProgram {
     vars: BTreeMap<VarId, PirVarDef>,
     funs: BTreeMap<FunId, PirFunDef>,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum BlockExit {
+    Exit,
+    Jump(BlockId),
+    JumpUnless(BlockId, Option<Pir>),
+    Return(Pir),
 }
 
 #[derive(Clone, Debug)]
@@ -91,12 +107,16 @@ impl PirKind {
 }
 
 impl Pir {
-    pub(crate) fn ty(&self) -> Ty {
-        self.ty.clone()
+    pub(crate) fn kind(&self) -> &PirKind {
+        &self.kind
     }
 
-    pub(crate) fn exp_id(&self) -> ExpId {
-        self.exp_id
+    pub(crate) fn children(&self) -> &[Pir] {
+        &self.args
+    }
+
+    pub(crate) fn ty(&self) -> Ty {
+        self.ty.clone()
     }
 
     pub(crate) fn int(value: i64, exp_id: ExpId) -> Pir {
@@ -112,7 +132,7 @@ impl Pir {
         let ty = self.ty();
         let exp_id = self.exp_id;
         Pir {
-            kind: PirKind::Op(op),
+            kind: PirKind::Op { op, size: 0 },
             args: vec![self, other],
             ty,
             exp_id,
@@ -121,11 +141,6 @@ impl Pir {
 
     pub(crate) fn add(self, other: Pir) -> Pir {
         self.into_op(Op::Add, other)
-    }
-
-    pub(crate) fn add_int(self, value: i64) -> Pir {
-        let other = Pir::int(value, self.exp_id);
-        self.add(other)
     }
 
     pub(crate) fn sub(self, other: Pir) -> Pir {
@@ -175,10 +190,88 @@ impl Pir {
     pub(crate) fn into_deref(self) -> Pir {
         let (ty, exp_id) = (self.ty.clone(), self.exp_id);
         Pir {
-            kind: PirKind::Deref,
+            kind: PirKind::Deref { size: 0 },
             args: vec![self],
             ty,
             exp_id,
         }
     }
+
+    pub(crate) fn collect_loops(&self) -> Vec<LoopId> {
+        fn dfs(pir: &Pir, loops: &mut Vec<LoopId>) {
+            match pir.kind() {
+                &PirKind::While { loop_id, .. }
+                | &PirKind::Break { loop_id, .. }
+                | &PirKind::Continue { loop_id, .. } => {
+                    loops.push(loop_id);
+                }
+                _ => {}
+            }
+
+            for child in pir.children() {
+                dfs(child, loops);
+            }
+        }
+
+        let mut loops = vec![];
+        dfs(self, &mut loops);
+        loops.sort();
+        loops.dedup();
+        loops
+    }
+}
+
+impl PirFunDef {
+    pub(crate) fn args(&self) -> &[VarId] {
+        &self.args
+    }
+
+    pub(crate) fn locals(&self) -> &[VarId] {
+        &self.locals
+    }
+
+    pub(crate) fn body(&self) -> &Pir {
+        &self.body
+    }
+}
+
+impl PirProgram {
+    pub(crate) fn var_kind(&self, var_id: VarId) -> PirVarKind {
+        for (_, fun_def) in self.funs() {
+            for (index, &arg_var_id) in fun_def.args().iter().enumerate() {
+                if arg_var_id != var_id {
+                    continue;
+                }
+                return PirVarKind::Arg { index };
+            }
+            for (index, &local_var_id) in fun_def.locals().iter().enumerate() {
+                if local_var_id != var_id {
+                    continue;
+                }
+                return if fun_def.is_global {
+                    PirVarKind::Global { index }
+                } else {
+                    PirVarKind::Local { index }
+                };
+            }
+        }
+        panic!("Missing var {}", var_id)
+    }
+
+    pub(crate) fn funs(&self) -> impl Iterator<Item = (FunId, &PirFunDef)> {
+        self.funs.iter().map(|(&fun_id, fun_def)| (fun_id, fun_def))
+    }
+
+    pub(crate) fn fun_body(&self, fun_id: FunId) -> &Pir {
+        self.funs[&fun_id].body()
+    }
+
+    pub(crate) fn fun_local_count(&self, fun_id: FunId) -> usize {
+        self.funs[&fun_id].locals.len()
+    }
+}
+
+pub(crate) fn from_sema(sema: Rc<Sema>) -> PirProgram {
+    let pir_program = self::gen::gen(sema);
+    self::reduce::reduce(pir_program)
 }

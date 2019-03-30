@@ -102,10 +102,6 @@ impl Sema {
         Msg::summarize(self.msgs.values(), &self.syntax).1
     }
 
-    pub(crate) fn is_successful(&self) -> bool {
-        self.msgs.iter().all(|(_, msg)| msg.is_successful())
-    }
-
     pub(crate) fn find_module_by_doc_id(&self, doc_id: DocId) -> Option<(ModuleId, &Module)> {
         self.syntax.find_module_by_doc_id(doc_id)
     }
@@ -144,6 +140,16 @@ impl Sema {
 
     pub(crate) fn exp_ty(&self, exp_id: ExpId) -> Ty {
         self.get_ty(exp_id)
+    }
+
+    pub(crate) fn fun_symbols(&self, fun_id: FunId) -> Vec<SymbolRef<'_>> {
+        let fun_def = match self.funs.get(&fun_id) {
+            Some(fun_def) => fun_def,
+            None => return vec![],
+        };
+        (fun_def.symbols.iter())
+            .map(|&symbol_kind| self.symbol_ref(symbol_kind))
+            .collect::<Vec<_>>()
     }
 
     pub(crate) fn symbol_ref(&self, symbol: SymbolKind) -> SymbolRef<'_> {

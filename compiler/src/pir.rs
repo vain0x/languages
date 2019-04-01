@@ -148,6 +148,11 @@ impl Pir {
         self.into_op(Op::Mul, other)
     }
 
+    pub(crate) fn div_int(self, value: i64) -> Pir {
+        let other = Pir::int(value, self.exp_id);
+        self.into_op(Op::Div, other)
+    }
+
     pub(crate) fn bit_and(self, other: Pir) -> Pir {
         self.into_op(Op::BitAnd, other)
     }

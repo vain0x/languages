@@ -152,7 +152,16 @@ fn test_slice_len() {
             println_int(slice_len(s));
         "#,
         &[("", "6\n")],
-    )
+    );
+
+    eval_tests(
+        r#"
+            let xs = mem_alloc(1);
+            xs[0] = 0;
+            println_int(slice_len(xs));
+        "#,
+        &[("", "1\n")],
+    );
 }
 
 #[test]

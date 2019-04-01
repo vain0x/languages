@@ -60,12 +60,24 @@ impl ReducePir {
         *arg = scale;
     }
 
+    fn scale_down(&mut self, arg: &mut Pir, slice_ty: Ty) {
+        let inner_ty = slice_ty.as_slice_inner().expect("Expected slice type");
+        let size = inner_ty.size_of().expect("Expected sized type");
+        *arg = arg.clone().div_int(size as i64);
+    }
+
     fn scale_ptr_indices(&mut self, kind: PirKind, args: Vec<Pir>, ty: Ty, exp_id: ExpId) -> Pir {
         let mut args = args
             .into_iter()
             .map(|arg| self.scale_ptr_indices(arg.kind, arg.args, arg.ty, arg.exp_id))
             .collect::<Vec<_>>();
         match kind {
+            PirKind::CallPrim(Prim::SliceLen) => {
+                let slice_ty = args[0].ty();
+                let mut pir = make_pir(kind, args, ty, exp_id);
+                self.scale_down(&mut pir, slice_ty);
+                pir
+            }
             PirKind::CallPrim(Prim::MemAlloc) => {
                 self.scale_up(&mut args[0], ty.clone());
                 make_pir(kind, args, ty, exp_id)

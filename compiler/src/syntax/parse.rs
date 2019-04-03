@@ -383,6 +383,12 @@ impl Parser<'_> {
 
         let pat_exp_id = self.parse_atom();
 
+        let mut pat_ty_exp_id = None;
+        if self.next().kind == TokenKind::Op(Op::Anno) {
+            self.current += 1;
+            pat_ty_exp_id = Some(self.parse_ty());
+        }
+
         if self.next().kind != TokenKind::Op(Op::Set) {
             return self.parse_err(SyntaxError::ExpectedChar('='));
         }
@@ -393,11 +399,19 @@ impl Parser<'_> {
         self.add_exp(
             ExpKind::Let {
                 pat: pat_exp_id,
+                pat_ty: pat_ty_exp_id,
                 init: init_exp_id,
                 rec,
             },
             (token_l, self.current),
         )
+    }
+
+    fn parse_ty(&mut self) -> ExpId {
+        match self.next().kind {
+            TokenKind::Ident => self.parse_atom(),
+            _ => self.parse_err(SyntaxError::ExpectedTy),
+        }
     }
 
     fn parse_stmt(&mut self) -> ExpId {

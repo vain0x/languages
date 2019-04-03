@@ -71,7 +71,7 @@ impl GenPir {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            &ExpKind::Err(_) => panic!("Can't perform code generation if error"),
+            ExpKind::Err(err) => panic!("Can't perform code generation if error {:?}", err),
             &ExpKind::Unit => self.pir(PirKind::unit(), vec![], exp_id),
             &ExpKind::Int(value) => self.pir(PirKind::int(value), vec![], exp_id),
             &ExpKind::Byte(value) => self.pir(PirKind::byte(value), vec![], exp_id),

@@ -41,6 +41,7 @@ pub(crate) enum ExpKind {
     Continue,
     Let {
         pat: ExpId,
+        pat_ty: Option<ExpId>,
         init: ExpId,
         rec: bool,
     },
@@ -86,7 +87,12 @@ impl ExpKind {
             &ExpKind::Return(exp_id) => vec![exp_id],
             &ExpKind::If { cond, body, alt } => vec![cond, body, alt],
             &ExpKind::While { cond, body } => vec![cond, body],
-            &ExpKind::Let { pat, init, .. } => vec![pat, init],
+            &ExpKind::Let {
+                pat, pat_ty, init, ..
+            } => [Some(pat), pat_ty, Some(init)]
+                .iter()
+                .filter_map(|&x| x)
+                .collect(),
             ExpKind::Semi(exps) => exps.to_owned(),
         }
     }

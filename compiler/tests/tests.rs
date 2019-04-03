@@ -291,6 +291,21 @@ fn test_local_var_set_add() {
 }
 
 #[test]
+fn test_local_var_with_type_annotation() {
+    eval_tests(
+        r#"
+            let u: unit = ();
+            let b: byte = 'b';
+            let n: int = 1;
+            let s: _ = || ();
+        "#,
+        &[("", "")],
+    );
+
+    test_err("let x: unit = 1", "At 1:15..1:16 Type Error");
+}
+
+#[test]
 fn test_if() {
     eval_tests(
         r#"

@@ -7,6 +7,7 @@ pub(crate) enum SyntaxError {
     ExpectedChar(char),
     ExpectedEof,
     ExpectedEither(Vec<String>),
+    ExpectedTy,
     ExpectedExp,
     MissingSingleQuote,
     UnknownEscapeSequence,
@@ -25,6 +26,7 @@ impl fmt::Display for SyntaxError {
             SyntaxError::ExpectedEither(candidates) => {
                 write!(f, "Expected '{}'", candidates.join("', '"))
             }
+            SyntaxError::ExpectedTy => write!(f, "Expected a type"),
             SyntaxError::ExpectedExp => write!(f, "Expected an expression"),
             SyntaxError::MissingSingleQuote => write!(f, "Single quote missing"),
             SyntaxError::UnknownEscapeSequence => write!(f, "Unknown escape sequence"),

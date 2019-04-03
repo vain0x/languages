@@ -188,6 +188,38 @@ impl SemanticAnalyzer {
         ty_scheme.instantiate(|| self.fresh_meta_ty(exp_id))
     }
 
+    fn on_ty(&mut self, exp_id: ExpId) -> Ty {
+        let syntax = self.share_syntax();
+        let exp = &syntax.exps[&exp_id];
+        self.set_ty(exp_id, Ty::unit()); // provisional
+        match &exp.kind {
+            ExpKind::Err(err) => {
+                self.add_err(MsgKind::SyntaxError(err.clone()), exp_id);
+                self.fresh_meta_ty(exp_id)
+            }
+            ExpKind::Ident(ident) => match ident.as_str() {
+                "unit" => Ty::unit(),
+                "byte" => Ty::byte(),
+                "int" => Ty::int(),
+                "_" => self.fresh_meta_ty(exp_id),
+                _ => {
+                    self.add_err(
+                        MsgKind::Unimplemented("Can't use type variables".to_string()),
+                        exp_id,
+                    );
+                    self.fresh_meta_ty(exp_id)
+                }
+            },
+            _ => {
+                self.add_err(
+                    MsgKind::Unimplemented("Unsupported type expression".to_string()),
+                    exp_id,
+                );
+                self.fresh_meta_ty(exp_id)
+            }
+        }
+    }
+
     fn on_pat(&mut self, exp_id: ExpId, ty: Ty, arg_index: Option<usize>) -> Option<VarId> {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
@@ -414,8 +446,15 @@ impl SemanticAnalyzer {
 
                 self.sema.exp_loops.insert(exp_id, loop_id);
             }
-            &ExpKind::Let { pat, init, .. } => {
+            &ExpKind::Let {
+                pat, pat_ty, init, ..
+            } => {
                 let syntax = self.share_syntax();
+                let pat_ty = if let Some(pat_ty) = pat_ty {
+                    self.on_ty(pat_ty)
+                } else {
+                    self.fresh_meta_ty(pat)
+                };
                 match (syntax.exp_kind(pat), syntax.exp_kind(init)) {
                     (ExpKind::Ident(fun_name), ExpKind::Fun { pats, body }) => {
                         self.unify_ty(exp_id, ty, Ty::unit());
@@ -427,6 +466,7 @@ impl SemanticAnalyzer {
                             .collect::<Vec<_>>();
                         let result_ty = self.fresh_meta_ty(*body);
                         let fun_ty = Ty::make_fun(arg_tys.clone(), result_ty.clone());
+                        self.unify_ty(exp_id, fun_ty.clone(), pat_ty);
 
                         let fun_id =
                             self.add_fun(pat, fun_name.to_string(), result_ty.clone(), vec![*body]);
@@ -458,7 +498,6 @@ impl SemanticAnalyzer {
                         }
                     }
                     _ => {
-                        let pat_ty = self.fresh_meta_ty(pat);
                         self.on_val(init, pat_ty.clone());
                         let var_id = self.on_pat(pat, pat_ty, None);
                         self.unify_ty(exp_id, ty, Ty::unit());

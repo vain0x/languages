@@ -37,6 +37,8 @@ pub(crate) enum Op {
     Sub,
     // `|`
     BitOr,
+    /// `^`
+    BitXor,
     Mul,
     Div,
     Mod,
@@ -64,6 +66,7 @@ pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
     ("+", Op::Add, OpLevel::Add),
     ("-", Op::Sub, OpLevel::Add),
     ("|", Op::BitOr, OpLevel::Add),
+    ("^", Op::BitXor, OpLevel::Add),
     ("*", Op::Mul, OpLevel::Mul),
     ("/", Op::Div, OpLevel::Mul),
     ("%", Op::Mod, OpLevel::Mul),

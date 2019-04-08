@@ -80,6 +80,18 @@ fn test_arithmetic_type_error() {
 }
 
 #[test]
+fn test_bitwise_operation() {
+    eval_tests(
+        r#"
+            println_int(12 & 10);
+            println_int(12 | 10);
+            println_int(12 ^ 10);
+        "#,
+        &[("", "8\n14\n6\n")],
+    );
+}
+
+#[test]
 fn test_str() {
     eval_tests(
         r#"

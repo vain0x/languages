@@ -199,6 +199,7 @@ impl GenRir {
             Op::Mod => Cmd::Mod,
             Op::BitAnd => Cmd::BitAnd,
             Op::BitOr => Cmd::BitOr,
+            Op::BitXor => Cmd::BitXor,
             Op::BitShiftL => Cmd::BitShiftL,
             Op::BitShiftR => Cmd::BitShiftR,
             Op::LogOr => unreachable!("|| is reduced"),

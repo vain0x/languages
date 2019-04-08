@@ -161,3 +161,21 @@ impl Pun {
             .next()
     }
 }
+
+pub(crate) mod ctype {
+    pub(crate) fn is_ascii_digit(c: u8) -> bool {
+        b'0' <= c && c <= b'9'
+    }
+
+    pub(crate) fn is_ident_char(c: u8) -> bool {
+        (b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z' || is_ascii_digit(c) || c == b'_')
+    }
+
+    pub(crate) fn is_op_char(c: u8) -> bool {
+        b"!*+-./%<=>?@^~&|:".contains(&c)
+    }
+
+    pub(crate) fn is_whitespace(c: u8) -> bool {
+        c == b' ' || c == b'\t' || c == b'\r' || c == b'\n'
+    }
+}

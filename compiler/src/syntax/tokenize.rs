@@ -1,4 +1,5 @@
 use super::*;
+use crate::syntax::pun::ctype::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -164,22 +165,6 @@ impl BorrowDoc for Tokenizer<'_> {
     fn doc(&self) -> &Doc {
         &self.doc
     }
-}
-
-fn is_ascii_digit(c: u8) -> bool {
-    b'0' <= c && c <= b'9'
-}
-
-fn is_ident_char(c: u8) -> bool {
-    (b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z' || is_ascii_digit(c) || c == b'_')
-}
-
-fn is_op_char(c: u8) -> bool {
-    b"!*+-./%<=>?@^~&|:".contains(&c)
-}
-
-fn is_whitespace(c: u8) -> bool {
-    c == b' ' || c == b'\t' || c == b'\r' || c == b'\n'
 }
 
 fn next_char_len(src: &str) -> usize {

@@ -3,12 +3,14 @@ pub(crate) mod exp;
 pub(crate) mod keyword;
 pub(crate) mod op;
 pub(crate) mod parse;
+pub(crate) mod pun;
 pub(crate) mod tokenize;
 
 pub(crate) use self::error::*;
 pub(crate) use self::exp::*;
 pub(crate) use self::keyword::*;
 pub(crate) use self::op::*;
+pub(crate) use self::pun::*;
 
 use crate::Id;
 use std::collections::BTreeMap;
@@ -52,7 +54,7 @@ pub(crate) trait BorrowDoc {
 pub(crate) enum TokenKind {
     Err,
     Eof,
-    Pun(&'static str),
+    Pun(Pun),
     Op(Op),
     Keyword(Keyword),
     Ident,
@@ -78,8 +80,6 @@ pub(crate) struct Syntax {
 pub(crate) trait ShareSyntax {
     fn share_syntax(&self) -> Rc<Syntax>;
 }
-
-pub(crate) const PUNS: &'static [&'static str] = &["(", ")", "[", "]", "{", "}", ",", ";"];
 
 impl Doc {
     pub(crate) fn new(doc_id: DocId, uri: String, src: Rc<String>) -> Self {

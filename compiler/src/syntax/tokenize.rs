@@ -106,6 +106,8 @@ impl Tokenizer<'_> {
     }
 
     pub fn tokenize(&mut self) {
+        let puns = Pun::get_all();
+
         't: while !self.at_eof() {
             let l = self.current;
             if self.reads("//") {
@@ -146,8 +148,8 @@ impl Tokenizer<'_> {
                 self.read_str();
                 continue;
             }
-            for pun in PUNS {
-                if self.reads(pun) {
+            for &pun in &puns {
+                if self.reads(pun.text()) {
                     self.add_token(TokenKind::Pun(pun), (l, self.current));
                     continue 't;
                 }

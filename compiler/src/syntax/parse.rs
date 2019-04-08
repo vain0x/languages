@@ -27,15 +27,16 @@ impl Parser<'_> {
         Some(&self.syntax.tokens[&(self.current - 1)])
     }
 
+    /// FIXME: Why different than `is_followed_by_term`?
     fn is_followed_by_exp(&self) -> bool {
         match self.next().kind {
             TokenKind::Err
             | TokenKind::Eof
             | TokenKind::Keyword(Keyword::Else)
-            | TokenKind::Pun(")")
-            | TokenKind::Pun("]")
-            | TokenKind::Pun("}")
-            | TokenKind::Pun(",") => false,
+            | TokenKind::Pun(Pun::ParenR)
+            | TokenKind::Pun(Pun::BracketR)
+            | TokenKind::Pun(Pun::BraceR)
+            | TokenKind::Pun(Pun::Comma) => false,
             _ => true,
         }
     }
@@ -43,7 +44,7 @@ impl Parser<'_> {
     fn is_followed_by_term(&self) -> bool {
         match self.next().kind {
             _ if !self.is_followed_by_exp() => false,
-            TokenKind::Pun(";") => false,
+            TokenKind::Pun(Pun::Semi) => false,
             _ => true,
         }
     }
@@ -116,26 +117,26 @@ impl Parser<'_> {
                 let name = self.text(token_l).to_string();
                 self.add_exp(ExpKind::Ident(name), (token_l, self.current))
             }
-            TokenKind::Pun("(") => {
+            TokenKind::Pun(Pun::ParenL) => {
                 self.current += 1;
-                if self.next().kind == TokenKind::Pun(")") {
+                if self.next().kind == TokenKind::Pun(Pun::ParenR) {
                     self.current += 1;
                     return self.add_exp(ExpKind::Unit, (token_l, self.current));
                 }
 
                 let exp_id = self.parse_term();
 
-                if self.next().kind != TokenKind::Pun(")") {
+                if self.next().kind != TokenKind::Pun(Pun::ParenR) {
                     return self.parse_err(SyntaxError::ExpectedChar(')'));
                 }
                 self.current += 1;
                 exp_id
             }
-            TokenKind::Pun("{") => {
+            TokenKind::Pun(Pun::BraceL) => {
                 self.current += 1;
                 let exp_id = self.parse_exp();
 
-                if self.next().kind != TokenKind::Pun("}") {
+                if self.next().kind != TokenKind::Pun(Pun::BraceR) {
                     return self.parse_err(SyntaxError::ExpectedChar('}'));
                 }
                 self.current += 1;
@@ -159,13 +160,13 @@ impl Parser<'_> {
 
         loop {
             match self.next().kind {
-                TokenKind::Pun("(") => {
+                TokenKind::Pun(Pun::ParenL) => {
                     self.current += 1;
 
                     let mut args = vec![];
                     self.parse_term_list(&mut args);
 
-                    if self.next().kind != TokenKind::Pun(")") {
+                    if self.next().kind != TokenKind::Pun(Pun::ParenR) {
                         return self.parse_err(SyntaxError::ExpectedChar(')'));
                     }
                     self.current += 1;
@@ -178,12 +179,12 @@ impl Parser<'_> {
                         (token_l, self.current),
                     );
                 }
-                TokenKind::Pun("[") => {
+                TokenKind::Pun(Pun::BracketL) => {
                     self.current += 1;
 
                     let arg_exp_id = self.parse_term();
 
-                    if self.next().kind != TokenKind::Pun("]") {
+                    if self.next().kind != TokenKind::Pun(Pun::BracketR) {
                         return self.parse_err(SyntaxError::ExpectedChar(']'));
                     }
                     self.current += 1;
@@ -318,7 +319,7 @@ impl Parser<'_> {
 
         let cond = self.parse_term();
 
-        if self.next().kind != TokenKind::Pun("{") {
+        if self.next().kind != TokenKind::Pun(Pun::BraceL) {
             return self.parse_err(SyntaxError::ExpectedChar('{'));
         }
         let body = self.parse_term();
@@ -331,7 +332,7 @@ impl Parser<'_> {
         self.current += 1;
 
         let alt = match self.next().kind {
-            TokenKind::Pun("{") => self.parse_atom(),
+            TokenKind::Pun(Pun::BraceL) => self.parse_atom(),
             TokenKind::Keyword(Keyword::If) => self.parse_term(),
             _ => self.parse_err(SyntaxError::ExpectedEither(vec![
                 "}".to_string(),
@@ -348,7 +349,7 @@ impl Parser<'_> {
 
         let cond = self.parse_term();
 
-        if self.next().kind != TokenKind::Pun("{") {
+        if self.next().kind != TokenKind::Pun(Pun::BraceL) {
             return self.parse_err(SyntaxError::ExpectedChar('{'));
         }
         let body = self.parse_term();
@@ -384,7 +385,7 @@ impl Parser<'_> {
             items.push(self.parse_term());
 
             match self.next().kind {
-                TokenKind::Pun(",") => {
+                TokenKind::Pun(Pun::Comma) => {
                     self.current += 1;
                     continue;
                 }
@@ -451,13 +452,13 @@ impl Parser<'_> {
         while self.is_followed_by_exp() {
             children.push(self.parse_stmt());
 
-            while self.next().kind == TokenKind::Pun(";") {
+            while self.next().kind == TokenKind::Pun(Pun::Semi) {
                 self.current += 1;
             }
         }
 
         // Trailing semicolons discard the result.
-        if let Some(TokenKind::Pun(";")) = self.prev().map(|t| t.kind) {
+        if let Some(TokenKind::Pun(Pun::Semi)) = self.prev().map(|t| t.kind) {
             children.push(self.add_exp(ExpKind::Unit, (self.current - 1, self.current - 1)));
         }
 
@@ -474,7 +475,7 @@ impl Parser<'_> {
             items.push(self.parse_atom());
 
             match self.next().kind {
-                TokenKind::Pun(",") => {
+                TokenKind::Pun(Pun::Comma) => {
                     self.current += 1;
                     continue;
                 }

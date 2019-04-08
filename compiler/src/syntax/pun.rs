@@ -160,6 +160,17 @@ impl Pun {
             .filter_map(|&(pun, pun_text)| if pun_text == text { Some(pun) } else { None })
             .next()
     }
+
+    fn is_identifier(self) -> bool {
+        self.text().bytes().all(ctype::is_ident_char)
+    }
+
+    pub(crate) fn keywords() -> Vec<Pun> {
+        Pun::get_all()
+            .into_iter()
+            .filter(|pun| pun.is_identifier())
+            .collect()
+    }
 }
 
 pub(crate) mod ctype {

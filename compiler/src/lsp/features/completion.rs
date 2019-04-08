@@ -73,8 +73,7 @@ fn new_item(
 pub(crate) fn completion(uri: &Url, sema: &Sema, _position: Position) -> CompletionList {
     let mut items = vec![];
 
-    // FIXME: Exclude non-identifier punctuations.
-    items.extend(Pun::get_all().into_iter().map(|pun| {
+    items.extend(Pun::keywords().into_iter().map(|pun| {
         new_item(
             pun.text().to_string(),
             CompletionItemKind::Keyword,

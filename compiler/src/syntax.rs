@@ -1,6 +1,5 @@
 pub(crate) mod error;
 pub(crate) mod exp;
-pub(crate) mod keyword;
 pub(crate) mod op;
 pub(crate) mod parse;
 pub(crate) mod pun;
@@ -8,7 +7,6 @@ pub(crate) mod tokenize;
 
 pub(crate) use self::error::*;
 pub(crate) use self::exp::*;
-pub(crate) use self::keyword::*;
 pub(crate) use self::op::*;
 pub(crate) use self::pun::*;
 
@@ -55,8 +53,6 @@ pub(crate) enum TokenKind {
     Err,
     Eof,
     Pun(Pun),
-    Op(Op),
-    Keyword(Keyword),
     Ident,
     Int,
     Char,

@@ -1,6 +1,6 @@
 use super::*;
 use crate::semantics::{prim::PRIMS, symbol::SymbolKind, ty::Ty, Sema, VarId};
-use crate::syntax::keyword::Keyword;
+use crate::syntax::pun::Pun;
 use lsp_types::*;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -73,9 +73,10 @@ fn new_item(
 pub(crate) fn completion(uri: &Url, sema: &Sema, _position: Position) -> CompletionList {
     let mut items = vec![];
 
-    items.extend(Keyword::get_all().into_iter().map(|keyword| {
+    // FIXME: Exclude non-identifier punctuations.
+    items.extend(Pun::get_all().into_iter().map(|pun| {
         new_item(
-            keyword.text().to_string(),
+            pun.text().to_string(),
             CompletionItemKind::Keyword,
             uri,
             None,

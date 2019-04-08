@@ -121,23 +121,17 @@ impl Tokenizer<'_> {
                 self.add_token(TokenKind::Int, span);
                 continue;
             }
-            if let Some((word, span)) = self.read_while(is_ident_char) {
-                if word == "as" {
-                    // FIXME: Write more consistent code.
-                    self.add_token(TokenKind::Op(Op::As), span);
-                } else if let Some(&keyword) = Keyword::get_all()
-                    .iter()
-                    .find(|&&keyword| keyword.text() == &word)
-                {
-                    self.add_token(TokenKind::Keyword(keyword), span);
+            if let Some((text, span)) = self.read_while(is_ident_char) {
+                if let Some(pun) = Pun::parse(&text) {
+                    self.add_token(TokenKind::Pun(pun), span);
                 } else {
                     self.add_token(TokenKind::Ident, span);
                 }
                 continue;
             }
-            if let Some((word, span)) = self.read_while(is_op_char) {
-                if let Some(&(_, op)) = OPS.iter().find(|&&(op_text, _)| op_text == &word) {
-                    self.add_token(TokenKind::Op(op), span);
+            if let Some((text, span)) = self.read_while(is_op_char) {
+                if let Some(pun) = Pun::parse(&text) {
+                    self.add_token(TokenKind::Pun(pun), span);
                 } else {
                     self.add_token(TokenKind::Err, (l, self.current));
                 }

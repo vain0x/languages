@@ -32,7 +32,7 @@ impl Parser<'_> {
         match self.next().kind {
             TokenKind::Err
             | TokenKind::Eof
-            | TokenKind::Keyword(Keyword::Else)
+            | TokenKind::Pun(Pun::Else)
             | TokenKind::Pun(Pun::ParenR)
             | TokenKind::Pun(Pun::BracketR)
             | TokenKind::Pun(Pun::BraceR)
@@ -197,7 +197,13 @@ impl Parser<'_> {
                         (token_l, self.current),
                     );
                 }
-                TokenKind::Op(op @ Op::Anno) | TokenKind::Op(op @ Op::As) => {
+                TokenKind::Pun(Pun::Anno) | TokenKind::Pun(Pun::As) => {
+                    let op = match self.next().kind {
+                        TokenKind::Pun(Pun::Anno) => Op::Anno,
+                        TokenKind::Pun(Pun::As) => Op::As,
+                        _ => unreachable!(),
+                    };
+
                     self.current += 1;
 
                     let exp_r = self.parse_ty();
@@ -224,28 +230,28 @@ impl Parser<'_> {
     fn parse_prefix(&mut self) -> ExpId {
         let token_l = self.current;
         match self.next().kind {
-            TokenKind::Op(Op::Sub) => {
+            TokenKind::Pun(Pun::Sub) => {
                 self.current += 1;
                 let l = self.add_exp(ExpKind::Int(0), (token_l, self.current));
                 let r = self.parse_prefix();
                 self.add_exp(ExpKind::Bin { op: Op::Sub, l, r }, (token_l, self.current))
             }
             // No parameter lambda.
-            TokenKind::Op(Op::LogOr) => {
+            TokenKind::Pun(Pun::LogOr) => {
                 self.current += 1;
                 let body = self.parse_term();
                 self.add_exp(ExpKind::Fun { pats: vec![], body }, (token_l, self.current))
             }
             // Lambda.
-            TokenKind::Op(Op::BitOr) => {
+            TokenKind::Pun(Pun::BitOr) => {
                 self.current += 1;
 
                 let mut pats = vec![];
-                if self.next().kind != TokenKind::Op(Op::BitOr) {
+                if self.next().kind != TokenKind::Pun(Pun::BitOr) {
                     self.parse_atom_list(&mut pats);
                 }
 
-                if self.next().kind != TokenKind::Op(Op::BitOr) {
+                if self.next().kind != TokenKind::Pun(Pun::BitOr) {
                     return self.parse_err(SyntaxError::ExpectedChar('|'));
                 }
                 self.current += 1;
@@ -272,13 +278,14 @@ impl Parser<'_> {
         let mut exp_l = self.parse_bin_next(op_level);
 
         while let &Token {
-            kind: TokenKind::Op(op),
+            kind: TokenKind::Pun(pun),
             ..
         } = self.next()
         {
-            if !op_level.contains(op) {
-                break;
-            }
+            let op = match op_level.pun_to_op(pun) {
+                None => break,
+                Some(op) => op,
+            };
 
             self.current += 1;
 
@@ -324,7 +331,7 @@ impl Parser<'_> {
         }
         let body = self.parse_term();
 
-        if self.next().kind != TokenKind::Keyword(Keyword::Else) {
+        if self.next().kind != TokenKind::Pun(Pun::Else) {
             let alt = self.add_exp(ExpKind::Unit, (token_l, self.current));
 
             return self.add_exp(ExpKind::If { cond, body, alt }, (token_l, self.current));
@@ -333,7 +340,7 @@ impl Parser<'_> {
 
         let alt = match self.next().kind {
             TokenKind::Pun(Pun::BraceL) => self.parse_atom(),
-            TokenKind::Keyword(Keyword::If) => self.parse_term(),
+            TokenKind::Pun(Pun::If) => self.parse_term(),
             _ => self.parse_err(SyntaxError::ExpectedEither(vec![
                 "}".to_string(),
                 "if".to_string(),
@@ -371,11 +378,11 @@ impl Parser<'_> {
 
     fn parse_term(&mut self) -> ExpId {
         match self.next().kind {
-            TokenKind::Keyword(Keyword::Return) => self.parse_return(),
-            TokenKind::Keyword(Keyword::If) => self.parse_if(),
-            TokenKind::Keyword(Keyword::While) => self.parse_while(),
-            TokenKind::Keyword(Keyword::Break) => self.parse_break(),
-            TokenKind::Keyword(Keyword::Continue) => self.parse_continue(),
+            TokenKind::Pun(Pun::Return) => self.parse_return(),
+            TokenKind::Pun(Pun::If) => self.parse_if(),
+            TokenKind::Pun(Pun::While) => self.parse_while(),
+            TokenKind::Pun(Pun::Break) => self.parse_break(),
+            TokenKind::Pun(Pun::Continue) => self.parse_continue(),
             _ => self.parse_bin(),
         }
     }
@@ -398,7 +405,7 @@ impl Parser<'_> {
         let token_l = self.current;
         self.current += 1;
 
-        let rec = if self.next().kind == TokenKind::Keyword(Keyword::Rec) {
+        let rec = if self.next().kind == TokenKind::Pun(Pun::Rec) {
             self.current += 1;
             true
         } else {
@@ -408,12 +415,12 @@ impl Parser<'_> {
         let pat_exp_id = self.parse_atom();
 
         let mut pat_ty_exp_id = None;
-        if self.next().kind == TokenKind::Op(Op::Anno) {
+        if self.next().kind == TokenKind::Pun(Pun::Anno) {
             self.current += 1;
             pat_ty_exp_id = Some(self.parse_ty());
         }
 
-        if self.next().kind != TokenKind::Op(Op::Set) {
+        if self.next().kind != TokenKind::Pun(Pun::Set) {
             return self.parse_err(SyntaxError::ExpectedChar('='));
         }
         self.current += 1;
@@ -440,7 +447,7 @@ impl Parser<'_> {
 
     fn parse_stmt(&mut self) -> ExpId {
         match self.next().kind {
-            TokenKind::Keyword(Keyword::Let) => self.parse_let(),
+            TokenKind::Pun(Pun::Let) => self.parse_let(),
             _ => self.parse_term(),
         }
     }

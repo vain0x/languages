@@ -96,7 +96,7 @@ fn test_str() {
     eval_tests(
         r#"
             let i = read_int();
-            println_int(byte_to_int("Hello, world!"[i]))
+            println_int("Hello, world!"[i] as int)
         "#,
         &[("0", "72\n"), ("1", "101\n")],
     )
@@ -116,11 +116,11 @@ fn test_str_literal_escape_sequence() {
 fn test_char_literal_escape_sequence() {
     eval_tests(
         r#"
-            println_int(byte_to_int('A'));
-            println_int(byte_to_int('\0'));
-            println_int(byte_to_int('\n'));
-            println_int(byte_to_int('\r'));
-            println_int(byte_to_int('\''));
+            println_int('A' as int);
+            println_int('\0' as int);
+            println_int('\n' as int);
+            println_int('\r' as int);
+            println_int('\'' as int);
         "#,
         &[("", "65\n0\n10\n13\n39\n")],
     );
@@ -149,7 +149,7 @@ fn test_write() {
         r#"
             let p = mem_alloc(2);
             p[0] = "A"[0];
-            p[1] = int_to_byte(10);
+            p[1] = 10 as byte;
             print(p);
         "#,
         &[("", "A\n")],
@@ -618,7 +618,7 @@ fn test_fun_rec_allow_name_conflict() {
 fn test_fun_generic() {
     eval_tests(
         r#"
-            let f = |x| byte_to_int(x);
+            let f = |x| x as int;
             let id = |x| x;
             println_int(if id(0) == 0 { 1 } else { 0 });
             println_int(if f(id('a')) == f('a') { 1 } else { 0 });

@@ -103,10 +103,6 @@ impl ReducePir {
             .map(|arg| self.reduce_prim(arg.kind, arg.args, arg.ty, arg.exp_id))
             .collect::<Vec<_>>();
         match kind {
-            PirKind::CallPrim(Prim::ByteToInt) | PirKind::CallPrim(Prim::IntToByte) => {
-                decompose!(args, [arg]);
-                arg
-            }
             PirKind::CallPrim(Prim::SliceLen) => {
                 // slice_len(xs) = slice_end(xs) - slice_begin(xs)
                 decompose!(args, [xs]);

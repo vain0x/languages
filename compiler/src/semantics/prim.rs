@@ -2,8 +2,6 @@ use super::*;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub(crate) enum Prim {
-    ByteToInt,
-    IntToByte,
     SliceLen,
     MemAlloc,
     ReadInt,
@@ -13,8 +11,6 @@ pub(crate) enum Prim {
 }
 
 pub(crate) static PRIMS: &[(&str, Prim)] = &[
-    ("byte_to_int", Prim::ByteToInt),
-    ("int_to_byte", Prim::IntToByte),
     ("slice_len", Prim::SliceLen),
     ("read_int", Prim::ReadInt),
     ("read_str", Prim::ReadStr),
@@ -30,8 +26,6 @@ impl Prim {
 
     pub(crate) fn ty_scheme(self) -> TyScheme {
         match self {
-            Prim::ByteToInt => TyScheme::generalize(Ty::make_fun(vec![Ty::byte()], Ty::int())),
-            Prim::IntToByte => TyScheme::generalize(Ty::make_fun(vec![Ty::int()], Ty::byte())),
             Prim::SliceLen => TyScheme::generalize(Ty::make_fun(
                 vec![Ty::ptr(Ty::Meta(TyId::new(0)))],
                 Ty::int(),

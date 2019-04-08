@@ -128,9 +128,7 @@ impl GenRir {
 
     fn on_call_prim(&mut self, prim: Prim, args: &[Pir]) -> RegId {
         match prim {
-            Prim::ByteToInt | Prim::IntToByte | Prim::SliceLen => {
-                panic!("{:?} should not exit", prim)
-            }
+            Prim::SliceLen => panic!("PIR should remove {:?}", prim),
             Prim::MemAlloc => {
                 let size_reg_id = self.on_exp(&args[0]);
                 let ptr_reg_id = self.add_reg();

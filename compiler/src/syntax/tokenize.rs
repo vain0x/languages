@@ -122,7 +122,10 @@ impl Tokenizer<'_> {
                 continue;
             }
             if let Some((word, span)) = self.read_while(is_ident_char) {
-                if let Some(&keyword) = Keyword::get_all()
+                if word == "as" {
+                    // FIXME: Write more consistent code.
+                    self.add_token(TokenKind::Op(Op::As), span);
+                } else if let Some(&keyword) = Keyword::get_all()
                     .iter()
                     .find(|&&keyword| keyword.text() == &word)
                 {

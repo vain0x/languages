@@ -1,4 +1,5 @@
 use super::*;
+use crate::syntax::pun::ctype::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -106,6 +107,8 @@ impl Tokenizer<'_> {
     }
 
     pub fn tokenize(&mut self) {
+        let puns = Pun::get_all();
+
         't: while !self.at_eof() {
             let l = self.current;
             if self.reads("//") {
@@ -119,20 +122,17 @@ impl Tokenizer<'_> {
                 self.add_token(TokenKind::Int, span);
                 continue;
             }
-            if let Some((word, span)) = self.read_while(is_ident_char) {
-                if let Some(&keyword) = Keyword::get_all()
-                    .iter()
-                    .find(|&&keyword| keyword.text() == &word)
-                {
-                    self.add_token(TokenKind::Keyword(keyword), span);
+            if let Some((text, span)) = self.read_while(is_ident_char) {
+                if let Some(pun) = Pun::parse(&text) {
+                    self.add_token(TokenKind::Pun(pun), span);
                 } else {
                     self.add_token(TokenKind::Ident, span);
                 }
                 continue;
             }
-            if let Some((word, span)) = self.read_while(is_op_char) {
-                if let Some(&(_, op, _)) = OPS.iter().find(|&&(op_text, _, _)| op_text == &word) {
-                    self.add_token(TokenKind::Op(op), span);
+            if let Some((text, span)) = self.read_while(is_op_char) {
+                if let Some(pun) = Pun::parse(&text) {
+                    self.add_token(TokenKind::Pun(pun), span);
                 } else {
                     self.add_token(TokenKind::Err, (l, self.current));
                 }
@@ -146,8 +146,8 @@ impl Tokenizer<'_> {
                 self.read_str();
                 continue;
             }
-            for pun in PUNS {
-                if self.reads(pun) {
+            for &pun in &puns {
+                if self.reads(pun.text()) {
                     self.add_token(TokenKind::Pun(pun), (l, self.current));
                     continue 't;
                 }
@@ -165,22 +165,6 @@ impl BorrowDoc for Tokenizer<'_> {
     fn doc(&self) -> &Doc {
         &self.doc
     }
-}
-
-fn is_ascii_digit(c: u8) -> bool {
-    b'0' <= c && c <= b'9'
-}
-
-fn is_ident_char(c: u8) -> bool {
-    (b'A' <= c && c <= b'Z' || b'a' <= c && c <= b'z' || is_ascii_digit(c) || c == b'_')
-}
-
-fn is_op_char(c: u8) -> bool {
-    b"!*+-./%<=>?@^~&|:".contains(&c)
-}
-
-fn is_whitespace(c: u8) -> bool {
-    c == b' ' || c == b'\t' || c == b'\r' || c == b'\n'
 }
 
 fn next_char_len(src: &str) -> usize {

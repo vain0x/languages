@@ -664,11 +664,11 @@ fn test_casts() {
     eval_tests(
         r#"
             // byte to int
-            println_int('A' :> int);
+            println_int('A' as int);
 
             // int to byte
             let s = mem_alloc(1);
-            s[0] = 65 :> byte;
+            s[0] = 65 as byte;
             println_str(s);
         "#,
         &[("", "65\nA\n")],

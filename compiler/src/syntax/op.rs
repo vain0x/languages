@@ -2,12 +2,12 @@
 pub(crate) enum OpLevel {
     Set,
     Range,
-    Anno,
     LogOr,
     LogAnd,
     Cmp,
     Add,
     Mul,
+    Anno,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -20,8 +20,6 @@ pub(crate) enum Op {
     SetDiv,
     SetMod,
     Range,
-    // :
-    Anno,
     // `||`
     LogOr,
     // `&&`
@@ -53,6 +51,8 @@ pub(crate) enum Op {
     BitShiftL,
     // `>>`
     BitShiftR,
+    // :
+    Anno,
 }
 
 pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
@@ -63,7 +63,6 @@ pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
     ("/=", Op::SetDiv, OpLevel::Set),
     ("%=", Op::SetMod, OpLevel::Set),
     ("..", Op::Range, OpLevel::Range),
-    (":", Op::Anno, OpLevel::Anno),
     ("||", Op::LogOr, OpLevel::LogOr),
     ("&&", Op::LogAnd, OpLevel::LogAnd),
     ("==", Op::Eq, OpLevel::Cmp),
@@ -82,19 +81,19 @@ pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
     ("&", Op::BitAnd, OpLevel::Mul),
     ("<<", Op::BitShiftL, OpLevel::Mul),
     (">>", Op::BitShiftR, OpLevel::Mul),
+    (":", Op::Anno, OpLevel::Anno),
 ];
 
 impl OpLevel {
     pub(crate) fn next_level(self) -> Option<Self> {
         match self {
             OpLevel::Set => Some(OpLevel::Range),
-            OpLevel::Range => Some(OpLevel::Anno),
-            OpLevel::Anno => Some(OpLevel::LogOr),
+            OpLevel::Range => Some(OpLevel::LogOr),
             OpLevel::LogOr => Some(OpLevel::LogAnd),
             OpLevel::LogAnd => Some(OpLevel::Cmp),
             OpLevel::Cmp => Some(OpLevel::Add),
             OpLevel::Add => Some(OpLevel::Mul),
-            OpLevel::Mul => None,
+            OpLevel::Mul | OpLevel::Anno => None,
         }
     }
 

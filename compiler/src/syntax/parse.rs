@@ -196,6 +196,23 @@ impl Parser<'_> {
                         (token_l, self.current),
                     );
                 }
+                TokenKind::Op(Op::Anno) => {
+                    self.current += 1;
+
+                    let exp_r = self.parse_ty();
+
+                    exp_l = self.add_exp(
+                        ExpKind::Bin {
+                            op: Op::Anno,
+                            l: exp_l,
+                            r: exp_r,
+                        },
+                        (token_l, self.current),
+                    );
+
+                    // Break here to reject `xs: [int] [1]` etc.
+                    break;
+                }
                 _ => break,
             }
         }
@@ -240,14 +257,16 @@ impl Parser<'_> {
         }
     }
 
+    /// Parse binary expression of next-level, higher priority.
     fn parse_bin_next(&mut self, op_level: OpLevel) -> ExpId {
         match op_level.next_level() {
             None => self.parse_prefix(),
-            Some(op_level) => self.parse_bin_l(op_level),
+            Some(op_level) => self.parse_bin_left_assoc(op_level),
         }
     }
 
-    fn parse_bin_l(&mut self, op_level: OpLevel) -> ExpId {
+    /// Parse left-associative binary expression.
+    fn parse_bin_left_assoc(&mut self, op_level: OpLevel) -> ExpId {
         let token_l = self.current;
         let mut exp_l = self.parse_bin_next(op_level);
 
@@ -274,6 +293,10 @@ impl Parser<'_> {
         }
 
         exp_l
+    }
+
+    fn parse_bin(&mut self) -> ExpId {
+        self.parse_bin_left_assoc(OpLevel::Set)
     }
 
     fn parse_return(&mut self) -> ExpId {
@@ -352,7 +375,7 @@ impl Parser<'_> {
             TokenKind::Keyword(Keyword::While) => self.parse_while(),
             TokenKind::Keyword(Keyword::Break) => self.parse_break(),
             TokenKind::Keyword(Keyword::Continue) => self.parse_continue(),
-            _ => self.parse_bin_l(OpLevel::Set),
+            _ => self.parse_bin(),
         }
     }
 

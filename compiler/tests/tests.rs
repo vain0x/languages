@@ -635,6 +635,30 @@ fn test_fun_generic() {
     );
 }
 
+#[test]
+fn test_type_annotations() {
+    eval_tests(
+        r#"
+            // In expression.
+            println_int(2: int + 3); //=> 5
+
+            // In reference.
+            let x = 2;
+            x: int += 4;
+            println_int(x); //=> 6
+
+            // Unify type variable.
+            let id = |x| x: int;
+            println_int(id(3) + 4); //=> 7
+
+            // On local variable;
+            let x: int = 8;
+            println_int(x); //=> 8
+        "#,
+        &[("", "5\n6\n7\n8\n")],
+    )
+}
+
 static STDLIB: &str = r#"
     let DIGIT_CHARS = "0123456789";
     let HYPHEN_CHAR = "-"[0];

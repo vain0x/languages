@@ -299,6 +299,11 @@ impl SemanticAnalyzer {
             &ExpKind::Index { indexee, arg } => {
                 self.on_index_ref(exp_id, ty, indexee, arg);
             }
+            &ExpKind::Bin { op: Op::Anno, l, r } => {
+                let anno_ty = self.on_ty(r);
+                self.on_ref(l, anno_ty.clone());
+                self.unify_ty(exp_id, ty, anno_ty);
+            }
             _ => panic!("reference must be identifier"),
         }
     }
@@ -375,6 +380,11 @@ impl SemanticAnalyzer {
                 self.on_val(exp_l, Ty::int());
                 self.on_val(exp_r, Ty::int());
                 self.add_err(MsgKind::InvalidUseOfRange, exp_id)
+            }
+            Op::Anno => {
+                let anno_ty = self.on_ty(exp_r);
+                self.on_val(exp_l, anno_ty.clone());
+                self.unify_ty(exp_id, ty, anno_ty);
             }
             _ => {
                 self.on_val(exp_l, Ty::int());

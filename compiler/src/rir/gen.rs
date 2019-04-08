@@ -211,7 +211,7 @@ impl GenRir {
             Op::BitShiftR => Cmd::BitShiftR,
             Op::LogOr => unreachable!("|| is reduced"),
             Op::LogAnd => unreachable!("&& is reduced"),
-            Op::Anno => unimplemented!("not generate anno"),
+            Op::Anno => unreachable!("PIR should remove anno"),
             Op::Range => panic!("Can't generate range operation"),
         };
 

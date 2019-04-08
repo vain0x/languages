@@ -2,7 +2,7 @@
 
 *PRs are welcome.*
 
-- `-=` etc.
+- `&=`, etc.
 - pipeline operator (`x |> f(y)` ---> `f(x, y)`)
 - address-of (`&x`)
     - slice of one element

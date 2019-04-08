@@ -13,7 +13,12 @@ pub(crate) enum OpLevel {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub(crate) enum Op {
     Set,
+    /// `+=`
     SetAdd,
+    SetSub,
+    SetMul,
+    SetDiv,
+    SetMod,
     Range,
     // :
     Anno,
@@ -53,6 +58,10 @@ pub(crate) enum Op {
 pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
     ("=", Op::Set, OpLevel::Set),
     ("+=", Op::SetAdd, OpLevel::Set),
+    ("-=", Op::SetSub, OpLevel::Set),
+    ("*=", Op::SetMul, OpLevel::Set),
+    ("/=", Op::SetDiv, OpLevel::Set),
+    ("%=", Op::SetMod, OpLevel::Set),
     ("..", Op::Range, OpLevel::Range),
     (":", Op::Anno, OpLevel::Anno),
     ("||", Op::LogOr, OpLevel::LogOr),

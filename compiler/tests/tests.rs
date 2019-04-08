@@ -303,6 +303,26 @@ fn test_local_var_set_add() {
 }
 
 #[test]
+fn test_local_var_set_etc() {
+    eval_tests(
+        r#"
+            let a = 10;
+            a += 1;
+            println_int(a); // 11
+            a -= 2;
+            println_int(a); // 9
+            a *= 3;
+            println_int(a); // 27
+            a /= 4;
+            println_int(a); // 6
+            a %= 5;
+            println_int(a); // 1
+        "#,
+        &[("", "11\n9\n27\n6\n1\n")],
+    );
+}
+
+#[test]
 fn test_local_var_with_type_annotation() {
     eval_tests(
         r#"

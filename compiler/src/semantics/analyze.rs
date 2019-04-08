@@ -352,7 +352,7 @@ impl SemanticAnalyzer {
 
     fn on_bin(&mut self, exp_id: ExpId, ty: Ty, op: Op, exp_l: ExpId, exp_r: ExpId) {
         match op {
-            Op::Set | Op::SetAdd => {
+            Op::Set | Op::SetAdd | Op::SetSub | Op::SetMul | Op::SetDiv | Op::SetMod => {
                 let item_ty = self.fresh_meta_ty(exp_l);
 
                 self.on_ref(exp_l, item_ty.clone());

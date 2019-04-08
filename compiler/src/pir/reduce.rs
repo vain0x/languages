@@ -139,6 +139,12 @@ impl ReducePir {
                 let true_pir = Pir::int_true(exp_id);
                 make_pir(PirKind::If, vec![l, true_pir, r], ty, exp_id)
             }
+            PirKind::Op { op: Op::LogAnd, .. } => {
+                // l && r ---> if l { r } else { false }
+                decompose!(args, [l, r]);
+                let false_pir = Pir::int_false(exp_id);
+                make_pir(PirKind::If, vec![l, r, false_pir], ty, exp_id)
+            }
             _ => make_pir(kind, args, ty, exp_id),
         }
     }

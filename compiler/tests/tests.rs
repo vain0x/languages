@@ -348,6 +348,17 @@ fn test_log_or() {
 }
 
 #[test]
+fn test_log_and() {
+    eval_tests(
+        r#"
+            let x = read_int();
+            println_int(if x != 0 && 4 % x == 0 { 1 } else { 0 })
+        "#,
+        &[("0\n", "0\n"), ("2\n", "1\n"), ("3\n", "0\n")],
+    )
+}
+
+#[test]
 fn test_while() {
     eval_tests(
         r#"

@@ -4,6 +4,7 @@ pub(crate) enum OpLevel {
     Range,
     Anno,
     LogOr,
+    LogAnd,
     Cmp,
     Add,
     Mul,
@@ -18,6 +19,8 @@ pub(crate) enum Op {
     Anno,
     // `||`
     LogOr,
+    // `&&`
+    LogAnd,
     /// `==`
     Eq,
     /// `!=`
@@ -51,6 +54,7 @@ pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
     ("..", Op::Range, OpLevel::Range),
     (":", Op::Anno, OpLevel::Anno),
     ("||", Op::LogOr, OpLevel::LogOr),
+    ("&&", Op::LogAnd, OpLevel::LogAnd),
     ("==", Op::Eq, OpLevel::Cmp),
     ("!=", Op::Ne, OpLevel::Cmp),
     ("<", Op::Lt, OpLevel::Cmp),
@@ -74,7 +78,8 @@ impl OpLevel {
             OpLevel::Set => Some(OpLevel::Range),
             OpLevel::Range => Some(OpLevel::Anno),
             OpLevel::Anno => Some(OpLevel::LogOr),
-            OpLevel::LogOr => Some(OpLevel::Cmp),
+            OpLevel::LogOr => Some(OpLevel::LogAnd),
+            OpLevel::LogAnd => Some(OpLevel::Cmp),
             OpLevel::Cmp => Some(OpLevel::Add),
             OpLevel::Add => Some(OpLevel::Mul),
             OpLevel::Mul => None,

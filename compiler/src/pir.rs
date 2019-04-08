@@ -124,6 +124,10 @@ impl Pir {
         }
     }
 
+    pub(crate) fn int_false(exp_id: ExpId) -> Pir {
+        Pir::int(0, exp_id)
+    }
+
     pub(crate) fn int_true(exp_id: ExpId) -> Pir {
         Pir::int(1, exp_id)
     }

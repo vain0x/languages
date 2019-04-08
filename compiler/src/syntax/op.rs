@@ -57,34 +57,34 @@ pub(crate) enum Op {
     As,
 }
 
-pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
-    ("=", Op::Set, OpLevel::Set),
-    ("+=", Op::SetAdd, OpLevel::Set),
-    ("-=", Op::SetSub, OpLevel::Set),
-    ("*=", Op::SetMul, OpLevel::Set),
-    ("/=", Op::SetDiv, OpLevel::Set),
-    ("%=", Op::SetMod, OpLevel::Set),
-    ("..", Op::Range, OpLevel::Range),
-    ("||", Op::LogOr, OpLevel::LogOr),
-    ("&&", Op::LogAnd, OpLevel::LogAnd),
-    ("==", Op::Eq, OpLevel::Cmp),
-    ("!=", Op::Ne, OpLevel::Cmp),
-    ("<", Op::Lt, OpLevel::Cmp),
-    ("<=", Op::Le, OpLevel::Cmp),
-    (">", Op::Gt, OpLevel::Cmp),
-    (">=", Op::Ge, OpLevel::Cmp),
-    ("+", Op::Add, OpLevel::Add),
-    ("-", Op::Sub, OpLevel::Add),
-    ("|", Op::BitOr, OpLevel::Add),
-    ("^", Op::BitXor, OpLevel::Add),
-    ("*", Op::Mul, OpLevel::Mul),
-    ("/", Op::Div, OpLevel::Mul),
-    ("%", Op::Mod, OpLevel::Mul),
-    ("&", Op::BitAnd, OpLevel::Mul),
-    ("<<", Op::BitShiftL, OpLevel::Mul),
-    (">>", Op::BitShiftR, OpLevel::Mul),
-    (":", Op::Anno, OpLevel::Anno),
-    (":>", Op::As, OpLevel::Anno),
+pub(crate) const OPS: &[(&str, Op)] = &[
+    ("=", Op::Set),
+    ("+=", Op::SetAdd),
+    ("-=", Op::SetSub),
+    ("*=", Op::SetMul),
+    ("/=", Op::SetDiv),
+    ("%=", Op::SetMod),
+    ("..", Op::Range),
+    ("||", Op::LogOr),
+    ("&&", Op::LogAnd),
+    ("==", Op::Eq),
+    ("!=", Op::Ne),
+    ("<", Op::Lt),
+    ("<=", Op::Le),
+    (">", Op::Gt),
+    (">=", Op::Ge),
+    ("+", Op::Add),
+    ("-", Op::Sub),
+    ("|", Op::BitOr),
+    ("^", Op::BitXor),
+    ("*", Op::Mul),
+    ("/", Op::Div),
+    ("%", Op::Mod),
+    ("&", Op::BitAnd),
+    ("<<", Op::BitShiftL),
+    (">>", Op::BitShiftR),
+    (":", Op::Anno),
+    (":>", Op::As),
 ];
 
 impl OpLevel {
@@ -101,11 +101,45 @@ impl OpLevel {
     }
 
     pub(crate) fn contains(self, the_op: Op) -> bool {
-        for &(_, op, op_level) in OPS {
-            if op == the_op && op_level == self {
+        for &(_, op) in OPS {
+            if op == the_op && op.op_level() == self {
                 return true;
             }
         }
         false
+    }
+}
+
+impl Op {
+    fn op_level(self) -> OpLevel {
+        match self {
+            Op::Set => OpLevel::Set,
+            Op::SetAdd => OpLevel::Set,
+            Op::SetSub => OpLevel::Set,
+            Op::SetMul => OpLevel::Set,
+            Op::SetDiv => OpLevel::Set,
+            Op::SetMod => OpLevel::Set,
+            Op::Range => OpLevel::Range,
+            Op::LogOr => OpLevel::LogOr,
+            Op::LogAnd => OpLevel::LogAnd,
+            Op::Eq => OpLevel::Cmp,
+            Op::Ne => OpLevel::Cmp,
+            Op::Lt => OpLevel::Cmp,
+            Op::Le => OpLevel::Cmp,
+            Op::Gt => OpLevel::Cmp,
+            Op::Ge => OpLevel::Cmp,
+            Op::Add => OpLevel::Add,
+            Op::Sub => OpLevel::Add,
+            Op::BitOr => OpLevel::Add,
+            Op::BitXor => OpLevel::Add,
+            Op::Mul => OpLevel::Mul,
+            Op::Div => OpLevel::Mul,
+            Op::Mod => OpLevel::Mul,
+            Op::BitAnd => OpLevel::Mul,
+            Op::BitShiftL => OpLevel::Mul,
+            Op::BitShiftR => OpLevel::Mul,
+            Op::Anno => OpLevel::Anno,
+            Op::As => OpLevel::Anno,
+        }
     }
 }

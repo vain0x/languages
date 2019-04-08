@@ -131,7 +131,7 @@ impl Tokenizer<'_> {
                 continue;
             }
             if let Some((word, span)) = self.read_while(is_op_char) {
-                if let Some(&(_, op, _)) = OPS.iter().find(|&&(op_text, _, _)| op_text == &word) {
+                if let Some(&(_, op)) = OPS.iter().find(|&&(op_text, _)| op_text == &word) {
                     self.add_token(TokenKind::Op(op), span);
                 } else {
                     self.add_token(TokenKind::Err, (l, self.current));

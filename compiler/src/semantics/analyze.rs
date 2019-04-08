@@ -299,6 +299,11 @@ impl SemanticAnalyzer {
             &ExpKind::Index { indexee, arg } => {
                 self.on_index_ref(exp_id, ty, indexee, arg);
             }
+            &ExpKind::Bin { op: Op::Anno, l, r } => {
+                let anno_ty = self.on_ty(r);
+                self.on_ref(l, anno_ty.clone());
+                self.unify_ty(exp_id, ty, anno_ty);
+            }
             _ => panic!("reference must be identifier"),
         }
     }
@@ -352,7 +357,7 @@ impl SemanticAnalyzer {
 
     fn on_bin(&mut self, exp_id: ExpId, ty: Ty, op: Op, exp_l: ExpId, exp_r: ExpId) {
         match op {
-            Op::Set | Op::SetAdd => {
+            Op::Set | Op::SetAdd | Op::SetSub | Op::SetMul | Op::SetDiv | Op::SetMod => {
                 let item_ty = self.fresh_meta_ty(exp_l);
 
                 self.on_ref(exp_l, item_ty.clone());
@@ -375,6 +380,21 @@ impl SemanticAnalyzer {
                 self.on_val(exp_l, Ty::int());
                 self.on_val(exp_r, Ty::int());
                 self.add_err(MsgKind::InvalidUseOfRange, exp_id)
+            }
+            Op::Anno => {
+                let anno_ty = self.on_ty(exp_r);
+                self.on_val(exp_l, anno_ty.clone());
+                self.unify_ty(exp_id, ty, anno_ty);
+            }
+            Op::As => {
+                let dest_ty = self.on_ty(exp_r);
+                let l_ty = self.fresh_meta_ty(exp_l);
+                self.on_val(exp_l, l_ty.clone());
+                self.unify_ty(exp_id, ty, dest_ty.clone());
+
+                if !l_ty.can_cast_to(&dest_ty) {
+                    self.add_err(MsgKind::InvalidTypeCast(l_ty, dest_ty), exp_id);
+                }
             }
             _ => {
                 self.on_val(exp_l, Ty::int());

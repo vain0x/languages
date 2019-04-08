@@ -175,11 +175,18 @@ impl GenRir {
                 self.kill(r_reg);
                 return NO_REG_ID;
             }
-            Op::SetAdd => {
-                // FIXME: use size
+            Op::SetAdd | Op::SetSub | Op::SetMul | Op::SetDiv | Op::SetMod => {
+                let op_cmd = match op {
+                    Op::SetAdd => Cmd::Add,
+                    Op::SetSub => Cmd::Sub,
+                    Op::SetMul => Cmd::Mul,
+                    Op::SetDiv => Cmd::Div,
+                    Op::SetMod => Cmd::Mod,
+                    _ => unreachable!(),
+                };
                 let t_reg = self.add_reg();
                 self.add_cmd_load(t_reg, l_reg, size);
-                self.push(Cmd::Add, t_reg, CmdArg::Reg(r_reg));
+                self.push(op_cmd, t_reg, CmdArg::Reg(r_reg));
                 self.add_cmd_store(l_reg, t_reg, size);
                 self.kill(l_reg);
                 self.kill(r_reg);
@@ -199,10 +206,13 @@ impl GenRir {
             Op::Mod => Cmd::Mod,
             Op::BitAnd => Cmd::BitAnd,
             Op::BitOr => Cmd::BitOr,
+            Op::BitXor => Cmd::BitXor,
             Op::BitShiftL => Cmd::BitShiftL,
             Op::BitShiftR => Cmd::BitShiftR,
-            Op::LogOr => unimplemented!("unimplemented ||"),
-            Op::Anno => unimplemented!("not generate anno"),
+            Op::LogOr => unreachable!("|| is reduced"),
+            Op::LogAnd => unreachable!("&& is reduced"),
+            Op::Anno => unreachable!("PIR should remove anno"),
+            Op::As => unreachable!("PIR should remove as"),
             Op::Range => panic!("Can't generate range operation"),
         };
 

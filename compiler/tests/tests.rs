@@ -80,6 +80,18 @@ fn test_arithmetic_type_error() {
 }
 
 #[test]
+fn test_bitwise_operation() {
+    eval_tests(
+        r#"
+            println_int(12 & 10);
+            println_int(12 | 10);
+            println_int(12 ^ 10);
+        "#,
+        &[("", "8\n14\n6\n")],
+    );
+}
+
+#[test]
 fn test_str() {
     eval_tests(
         r#"
@@ -291,6 +303,26 @@ fn test_local_var_set_add() {
 }
 
 #[test]
+fn test_local_var_set_etc() {
+    eval_tests(
+        r#"
+            let a = 10;
+            a += 1;
+            println_int(a); // 11
+            a -= 2;
+            println_int(a); // 9
+            a *= 3;
+            println_int(a); // 27
+            a /= 4;
+            println_int(a); // 6
+            a %= 5;
+            println_int(a); // 1
+        "#,
+        &[("", "11\n9\n27\n6\n1\n")],
+    );
+}
+
+#[test]
 fn test_local_var_with_type_annotation() {
     eval_tests(
         r#"
@@ -333,6 +365,28 @@ fn test_if_else_if_chain() {
             })
         "#,
         &[("1", "-1\n"), ("2", "-2\n"), ("3", "3\n")],
+    )
+}
+
+#[test]
+fn test_log_or() {
+    eval_tests(
+        r#"
+            let x = read_int();
+            println_int(if x == 0 || 4 % x == 0 { 1 } else { 0 })
+        "#,
+        &[("0\n", "1\n"), ("2\n", "1\n"), ("3\n", "0\n")],
+    )
+}
+
+#[test]
+fn test_log_and() {
+    eval_tests(
+        r#"
+            let x = read_int();
+            println_int(if x != 0 && 4 % x == 0 { 1 } else { 0 })
+        "#,
+        &[("0\n", "0\n"), ("2\n", "1\n"), ("3\n", "0\n")],
     )
 }
 
@@ -579,6 +633,46 @@ fn test_fun_generic() {
         "#,
         "At 3:15..3:17 Type Error",
     );
+}
+
+#[test]
+fn test_type_annotations() {
+    eval_tests(
+        r#"
+            // In expression.
+            println_int(2: int + 3); //=> 5
+
+            // In reference.
+            let x = 2;
+            x: int += 4;
+            println_int(x); //=> 6
+
+            // Unify type variable.
+            let id = |x| x: int;
+            println_int(id(3) + 4); //=> 7
+
+            // On local variable;
+            let x: int = 8;
+            println_int(x); //=> 8
+        "#,
+        &[("", "5\n6\n7\n8\n")],
+    )
+}
+
+#[test]
+fn test_casts() {
+    eval_tests(
+        r#"
+            // byte to int
+            println_int('A' :> int);
+
+            // int to byte
+            let s = mem_alloc(1);
+            s[0] = 65 :> byte;
+            println_str(s);
+        "#,
+        &[("", "65\nA\n")],
+    )
 }
 
 static STDLIB: &str = r#"

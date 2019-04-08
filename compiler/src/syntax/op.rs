@@ -2,22 +2,28 @@
 pub(crate) enum OpLevel {
     Set,
     Range,
-    Anno,
     LogOr,
+    LogAnd,
     Cmp,
     Add,
     Mul,
+    Anno,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub(crate) enum Op {
     Set,
+    /// `+=`
     SetAdd,
+    SetSub,
+    SetMul,
+    SetDiv,
+    SetMod,
     Range,
-    // :
-    Anno,
     // `||`
     LogOr,
+    // `&&`
+    LogAnd,
     /// `==`
     Eq,
     /// `!=`
@@ -34,6 +40,8 @@ pub(crate) enum Op {
     Sub,
     // `|`
     BitOr,
+    /// `^`
+    BitXor,
     Mul,
     Div,
     Mod,
@@ -43,14 +51,22 @@ pub(crate) enum Op {
     BitShiftL,
     // `>>`
     BitShiftR,
+    // :
+    Anno,
+    /// :>
+    As,
 }
 
 pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
     ("=", Op::Set, OpLevel::Set),
     ("+=", Op::SetAdd, OpLevel::Set),
+    ("-=", Op::SetSub, OpLevel::Set),
+    ("*=", Op::SetMul, OpLevel::Set),
+    ("/=", Op::SetDiv, OpLevel::Set),
+    ("%=", Op::SetMod, OpLevel::Set),
     ("..", Op::Range, OpLevel::Range),
-    (":", Op::Anno, OpLevel::Anno),
     ("||", Op::LogOr, OpLevel::LogOr),
+    ("&&", Op::LogAnd, OpLevel::LogAnd),
     ("==", Op::Eq, OpLevel::Cmp),
     ("!=", Op::Ne, OpLevel::Cmp),
     ("<", Op::Lt, OpLevel::Cmp),
@@ -60,24 +76,27 @@ pub(crate) const OPS: &[(&str, Op, OpLevel)] = &[
     ("+", Op::Add, OpLevel::Add),
     ("-", Op::Sub, OpLevel::Add),
     ("|", Op::BitOr, OpLevel::Add),
+    ("^", Op::BitXor, OpLevel::Add),
     ("*", Op::Mul, OpLevel::Mul),
     ("/", Op::Div, OpLevel::Mul),
     ("%", Op::Mod, OpLevel::Mul),
     ("&", Op::BitAnd, OpLevel::Mul),
     ("<<", Op::BitShiftL, OpLevel::Mul),
     (">>", Op::BitShiftR, OpLevel::Mul),
+    (":", Op::Anno, OpLevel::Anno),
+    (":>", Op::As, OpLevel::Anno),
 ];
 
 impl OpLevel {
     pub(crate) fn next_level(self) -> Option<Self> {
         match self {
             OpLevel::Set => Some(OpLevel::Range),
-            OpLevel::Range => Some(OpLevel::Anno),
-            OpLevel::Anno => Some(OpLevel::LogOr),
-            OpLevel::LogOr => Some(OpLevel::Cmp),
+            OpLevel::Range => Some(OpLevel::LogOr),
+            OpLevel::LogOr => Some(OpLevel::LogAnd),
+            OpLevel::LogAnd => Some(OpLevel::Cmp),
             OpLevel::Cmp => Some(OpLevel::Add),
             OpLevel::Add => Some(OpLevel::Mul),
-            OpLevel::Mul => None,
+            OpLevel::Mul | OpLevel::Anno => None,
         }
     }
 

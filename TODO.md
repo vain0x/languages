@@ -2,9 +2,7 @@
 
 *PRs are welcome.*
 
-- `-=` etc.
-- bit operators
-- `&&`, `||`
+- `&=`, etc.
 - pipeline operator (`x |> f(y)` ---> `f(x, y)`)
 - address-of (`&x`)
     - slice of one element

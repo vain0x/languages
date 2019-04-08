@@ -45,6 +45,7 @@ define_cmd! {
     Ge,
     BitAnd,
     BitOr,
+    BitXor,
     BitShiftL,
     BitShiftR,
     ReadInt,

@@ -62,16 +62,32 @@ impl GenPir {
     }
 
     fn on_bin(&mut self, exp_id: ExpId, op: Op, exp_l: ExpId, exp_r: ExpId) -> Pir {
-        let l = self.on_exp(exp_l);
-        let r = self.on_exp(exp_r);
-        self.pir(PirKind::Op { op, size: 0 }, vec![l, r], exp_id)
+        match op {
+            Op::Anno => {
+                // Type annotations don't affect on runtime.
+                return self.on_exp(exp_l);
+            }
+            Op::As => {
+                // Currently value-changing casts such as int to float don't exist.
+                return self.on_exp(exp_l);
+            }
+            _ => {
+                let l = self.on_exp(exp_l);
+                let r = self.on_exp(exp_r);
+                self.pir(PirKind::Op { op, size: 0 }, vec![l, r], exp_id)
+            }
+        }
     }
 
     fn on_exp(&mut self, exp_id: ExpId) -> Pir {
         let syntax = self.share_syntax();
         let exp = &syntax.exps[&exp_id];
         match &exp.kind {
-            ExpKind::Err(err) => panic!("Can't perform code generation if error {:?}", err),
+            ExpKind::Err(err) => panic!(
+                "Can't perform code generation if error {:?} text={}",
+                err,
+                self.sema().exp_text(exp_id)
+            ),
             &ExpKind::Unit => self.pir(PirKind::unit(), vec![], exp_id),
             &ExpKind::Int(value) => self.pir(PirKind::int(value), vec![], exp_id),
             &ExpKind::Byte(value) => self.pir(PirKind::byte(value), vec![], exp_id),

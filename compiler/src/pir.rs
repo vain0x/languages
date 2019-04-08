@@ -124,6 +124,10 @@ impl Pir {
         }
     }
 
+    pub(crate) fn int_true(exp_id: ExpId) -> Pir {
+        Pir::int(1, exp_id)
+    }
+
     fn into_op(self, op: Op, other: Pir) -> Pir {
         let ty = self.ty();
         let exp_id = self.exp_id;

@@ -133,6 +133,12 @@ impl ReducePir {
                 semi.push(xl.slice_new(xr));
                 make_semi(semi, ty, exp_id)
             }
+            PirKind::Op { op: Op::LogOr, .. } => {
+                // l || r ---> if l { true } else { r }
+                decompose!(args, [l, r]);
+                let true_pir = Pir::int_true(exp_id);
+                make_pir(PirKind::If, vec![l, true_pir, r], ty, exp_id)
+            }
             _ => make_pir(kind, args, ty, exp_id),
         }
     }

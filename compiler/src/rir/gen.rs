@@ -212,6 +212,7 @@ impl GenRir {
             Op::LogOr => unreachable!("|| is reduced"),
             Op::LogAnd => unreachable!("&& is reduced"),
             Op::Anno => unreachable!("PIR should remove anno"),
+            Op::As => unreachable!("PIR should remove as"),
             Op::Range => panic!("Can't generate range operation"),
         };
 

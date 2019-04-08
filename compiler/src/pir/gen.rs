@@ -63,7 +63,14 @@ impl GenPir {
 
     fn on_bin(&mut self, exp_id: ExpId, op: Op, exp_l: ExpId, exp_r: ExpId) -> Pir {
         match op {
-            Op::Anno => return self.on_exp(exp_l),
+            Op::Anno => {
+                // Type annotations don't affect on runtime.
+                return self.on_exp(exp_l);
+            }
+            Op::As => {
+                // Currently value-changing casts such as int to float don't exist.
+                return self.on_exp(exp_l);
+            }
             _ => {
                 let l = self.on_exp(exp_l);
                 let r = self.on_exp(exp_r);

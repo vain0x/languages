@@ -93,6 +93,15 @@ impl Ty {
         }
     }
 
+    pub(crate) fn can_cast_to(&self, dest_ty: &Ty) -> bool {
+        // FIXME: Allow more patterns.
+        match (self, dest_ty) {
+            (Ty::Con(TyCon::Int, _), Ty::Con(TyCon::Byte, _)) => true,
+            (Ty::Con(TyCon::Byte, _), Ty::Con(TyCon::Int, _)) => true,
+            _ => false,
+        }
+    }
+
     pub(crate) fn size_of(&self) -> Option<usize> {
         match self {
             Ty::Con(TyCon::Unit, _) | Ty::Con(TyCon::Byte, _) => Some(1),

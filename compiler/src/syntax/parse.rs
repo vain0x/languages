@@ -196,14 +196,14 @@ impl Parser<'_> {
                         (token_l, self.current),
                     );
                 }
-                TokenKind::Op(Op::Anno) => {
+                TokenKind::Op(op @ Op::Anno) | TokenKind::Op(op @ Op::As) => {
                     self.current += 1;
 
                     let exp_r = self.parse_ty();
 
                     exp_l = self.add_exp(
                         ExpKind::Bin {
-                            op: Op::Anno,
+                            op,
                             l: exp_l,
                             r: exp_r,
                         },

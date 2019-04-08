@@ -659,6 +659,22 @@ fn test_type_annotations() {
     )
 }
 
+#[test]
+fn test_casts() {
+    eval_tests(
+        r#"
+            // byte to int
+            println_int('A' :> int);
+
+            // int to byte
+            let s = mem_alloc(1);
+            s[0] = 65 :> byte;
+            println_str(s);
+        "#,
+        &[("", "65\nA\n")],
+    )
+}
+
 static STDLIB: &str = r#"
     let DIGIT_CHARS = "0123456789";
     let HYPHEN_CHAR = "-"[0];

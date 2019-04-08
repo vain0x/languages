@@ -386,6 +386,16 @@ impl SemanticAnalyzer {
                 self.on_val(exp_l, anno_ty.clone());
                 self.unify_ty(exp_id, ty, anno_ty);
             }
+            Op::As => {
+                let dest_ty = self.on_ty(exp_r);
+                let l_ty = self.fresh_meta_ty(exp_l);
+                self.on_val(exp_l, l_ty.clone());
+                self.unify_ty(exp_id, ty, dest_ty.clone());
+
+                if !l_ty.can_cast_to(&dest_ty) {
+                    self.add_err(MsgKind::InvalidTypeCast(l_ty, dest_ty), exp_id);
+                }
+            }
             _ => {
                 self.on_val(exp_l, Ty::int());
                 self.on_val(exp_r, Ty::int());

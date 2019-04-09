@@ -7,15 +7,13 @@
 - address-of (`&x`)
     - slice of one element
 - type annotations (`|x: int| -> unit { .. }`)
-- numeric cast
-    - `as int`
-    - `as byte`
 - `for`
     - `for x in l..r { body }` ---> `let x = l; while x < r { body; x += 1 }`
 - block expressions
 - block-local scope
 - update README
     - let rec
+    - as
     - lsp
 
 ## Heavy Topics

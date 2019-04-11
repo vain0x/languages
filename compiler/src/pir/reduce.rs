@@ -141,6 +141,13 @@ impl ReducePir {
                 let false_pir = Pir::int_false(exp_id);
                 make_pir(PirKind::If, vec![l, r, false_pir], ty, exp_id)
             }
+            PirKind::While { loop_id } => {
+                // while p { x } ---> loop { if p { x } else { break } }
+                decompose!(args, [cond, body]);
+                let break_pir = Pir::break_stmt(loop_id, ty.clone(), exp_id);
+                let if_pir = make_pir(PirKind::If, vec![cond, body, break_pir], ty.clone(), exp_id);
+                make_pir(PirKind::Loop { loop_id }, vec![if_pir], ty, exp_id)
+            }
             _ => make_pir(kind, args, ty, exp_id),
         }
     }

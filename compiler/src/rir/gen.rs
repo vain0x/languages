@@ -317,24 +317,16 @@ impl GenRir {
                 self.push(Cmd::Label, NO_REG_ID, end_label);
                 end_reg
             }
-            &PirKind::While { loop_id } => {
-                let (cond, body) = {
-                    let children = pir.children();
-                    (&children[0], &children[1])
-                };
+            &PirKind::Loop { loop_id } => {
+                let body = &pir.children()[0];
 
                 let break_label = CmdArg::Label(self.break_label_id(loop_id));
                 let continue_label = CmdArg::Label(self.continue_label_id(loop_id));
 
                 self.push(Cmd::Label, NO_REG_ID, continue_label);
-                let cond_reg_id = self.on_exp(cond);
-                self.push(Cmd::Unless, cond_reg_id, break_label);
-                self.kill(cond_reg_id);
-
                 let body_reg_id = self.on_exp(body);
                 self.kill(body_reg_id);
                 self.push(Cmd::Jump, NO_REG_ID, continue_label);
-
                 self.push(Cmd::Label, NO_REG_ID, break_label);
                 NO_REG_ID
             }
@@ -351,7 +343,7 @@ impl GenRir {
                 NO_REG_ID
             }
             PirKind::Semi => self.on_exps(pir.children()),
-            PirKind::IndexPoint | PirKind::IndexSlice => {
+            PirKind::IndexPoint | PirKind::IndexSlice | PirKind::While { .. } => {
                 panic!("{:?} should vanish in reduce", pir.kind())
             }
         }

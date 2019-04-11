@@ -31,6 +31,7 @@ pub(crate) enum PirKind {
     Deref { size: usize },
     Return,
     If,
+    Loop { loop_id: LoopId },
     While { loop_id: LoopId },
     Break { loop_id: LoopId },
     Continue { loop_id: LoopId },
@@ -130,6 +131,15 @@ impl Pir {
 
     pub(crate) fn int_true(exp_id: ExpId) -> Pir {
         Pir::int(1, exp_id)
+    }
+
+    pub(crate) fn break_stmt(loop_id: LoopId, ty: Ty, exp_id: ExpId) -> Pir {
+        Pir {
+            kind: PirKind::Break { loop_id },
+            args: vec![],
+            ty,
+            exp_id,
+        }
     }
 
     fn into_op(self, op: Op, other: Pir) -> Pir {

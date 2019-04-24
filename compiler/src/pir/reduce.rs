@@ -7,6 +7,12 @@ macro_rules! decompose {
     };
 }
 
+enum StmtResult {
+    None,
+    Keep,
+    Set(VarId),
+}
+
 struct ReducePir {
     vars: BTreeMap<VarId, PirVarDef>,
     funs: BTreeMap<FunId, PirFunDef>,
@@ -26,9 +32,9 @@ fn make_semi(args: Vec<Pir>, ty: Ty, exp_id: ExpId) -> Pir {
 }
 
 impl ReducePir {
-    fn add_temporary(&mut self, pir: Pir, semi: &mut Vec<Pir>) -> Pir {
-        let exp_id = pir.exp_id;
-
+    /// Add declaration of fresh temporary variable.
+    /// Return (var_id, var_pir) where var_pir refers to the value.
+    fn add_temporary_begin(&mut self, ty: Ty, exp_id: ExpId) -> (VarId, Pir) {
         let var_id = VarId::new(self.vars.len());
         self.vars.insert(
             var_id,
@@ -37,19 +43,30 @@ impl ReducePir {
                 exp_id,
             },
         );
-        let var_pir = make_pir(PirKind::Var { var_id }, vec![], pir.ty(), exp_id);
+        let var_pir = make_pir(PirKind::Var { var_id }, vec![], ty, exp_id).into_deref();
+        (var_id, var_pir)
+    }
 
+    /// Add initialization of the temporary variable.
+    fn add_temporary_end(&mut self, var_id: VarId, init: Pir, semi: &mut Vec<Pir>) {
+        let (ty, exp_id) = (init.ty(), init.exp_id);
+        let var_pir = make_pir(PirKind::Var { var_id }, vec![], ty, exp_id);
         semi.push(make_pir(
             PirKind::Op {
                 op: Op::Set,
                 size: 0,
             },
-            vec![var_pir.clone(), pir],
+            vec![var_pir, init],
             Ty::unit(),
             exp_id,
         ));
+    }
 
-        var_pir.into_deref()
+    fn add_temporary(&mut self, init: Pir, semi: &mut Vec<Pir>) -> Pir {
+        let (ty, exp_id) = (init.ty(), init.exp_id);
+        let (var_id, var_pir) = self.add_temporary_begin(ty, exp_id);
+        self.add_temporary_end(var_id, init, semi);
+        var_pir
     }
 
     /// Multiple an int by size of type.
@@ -152,6 +169,117 @@ impl ReducePir {
         }
     }
 
+    /// Canonicalize the expression.
+    /// In the result tree,
+    /// - only statements such as `if` contain other statements
+    /// - expressions contain only val/var as children
+    ///     except for right-hand side of `=` may contain call expressions etc.
+    /// E.g. `return f(if p { x } else { y })` --->
+    /// ``
+    /// let _f, _if;
+    /// if p { _if = x } else { _if = y };
+    /// _f = f(_if);
+    /// return _f;
+    /// ``
+    fn canonicalize_exp(&mut self, mut pir: Pir, semi: &mut Vec<Pir>) -> Pir {
+        match &pir.kind {
+            PirKind::Op { op, .. } if op.is_stmt() => {
+                let exp_id = pir.exp_id;
+                let args = std::mem::replace(&mut pir.args, vec![]);
+                let args = self.canonicalize_many(args, semi);
+                semi.push(Pir { args, ..pir });
+                Pir::unit(exp_id)
+            }
+            PirKind::Val(..) | PirKind::Var { .. } | PirKind::Op { .. } | PirKind::Deref { .. } => {
+                let args = std::mem::replace(&mut pir.args, vec![]);
+                let args = self.canonicalize_many(args, semi);
+                Pir { args, ..pir }
+            }
+            PirKind::CallPrim(..) | PirKind::CallFun(..) => {
+                let args = std::mem::replace(&mut pir.args, vec![]);
+                let args = self.canonicalize_many(args, semi);
+                let pir = Pir { args, ..pir };
+                self.add_temporary(pir, semi)
+            }
+            PirKind::If => {
+                let (ty, exp_id) = (pir.ty(), pir.exp_id);
+                let args = std::mem::replace(&mut pir.args, vec![]);
+                decompose!(args, [cond, body, alt]);
+
+                let (var_id, result) = self.add_temporary_begin(ty, exp_id);
+                let cond = self.canonicalize_exp(cond, semi);
+                let body = self.canonicalize_stmt(body, StmtResult::Set(var_id));
+                let alt = self.canonicalize_stmt(alt, StmtResult::Set(var_id));
+                let args = vec![cond, body, alt];
+                semi.push(Pir { args, ..pir });
+
+                result
+            }
+            PirKind::Loop { .. } => {
+                let exp_id = pir.exp_id;
+                let args = std::mem::replace(&mut pir.args, vec![]);
+                decompose!(args, [body]);
+
+                let body = self.canonicalize_stmt(body, StmtResult::None);
+                semi.push(Pir {
+                    args: vec![body],
+                    ..pir
+                });
+
+                Pir::unit(exp_id)
+            }
+            PirKind::Break { .. } | PirKind::Continue { .. } | PirKind::Return => {
+                let exp_id = pir.exp_id;
+                let args = std::mem::replace(&mut pir.args, vec![]);
+                let args = self.canonicalize_many(args, semi);
+                semi.push(Pir { args, ..pir });
+                Pir::unit(exp_id)
+            }
+            PirKind::Semi => {
+                let (args, ty, exp_id) = (pir.args, pir.ty, pir.exp_id);
+
+                let (var_id, result) = self.add_temporary_begin(ty, exp_id);
+                let last = args
+                    .into_iter()
+                    .map(|arg| self.canonicalize_exp(arg, semi))
+                    .last()
+                    .expect("semi have any child");
+                self.add_temporary_end(var_id, last, semi);
+                result
+            }
+            PirKind::IndexPoint | PirKind::IndexSlice | PirKind::While { .. } => {
+                panic!("{:?} should be removed", pir.kind)
+            }
+        }
+    }
+
+    fn canonicalize_many(&mut self, pirs: Vec<Pir>, semi: &mut Vec<Pir>) -> Vec<Pir> {
+        pirs.into_iter()
+            .map(|pir| self.canonicalize_exp(pir, semi))
+            .collect()
+    }
+
+    fn canonicalize_stmt(&mut self, pir: Pir, result: StmtResult) -> Pir {
+        let (ty, exp_id) = (pir.ty(), pir.exp_id);
+
+        let mut semi = vec![];
+        let init = self.canonicalize_exp(pir, &mut semi);
+
+        match result {
+            StmtResult::None => {
+                // We can discard `init` because it doesn't cause side-effects.
+            }
+            StmtResult::Keep => {
+                semi.push(init);
+            }
+            StmtResult::Set(var_id) => {
+                self.add_temporary_end(var_id, init, &mut semi);
+            }
+        }
+
+        make_pir(PirKind::Semi, semi, ty, exp_id)
+    }
+
     fn calc_size(&mut self, mut kind: PirKind, args: Vec<Pir>, ty: Ty, exp_id: ExpId) -> Pir {
         match kind {
             PirKind::Op { op, .. } => {
@@ -175,6 +303,7 @@ impl ReducePir {
     fn reduce_pir(&mut self, pir: Pir) -> Pir {
         let pir = self.scale_ptr_indices(pir.kind, pir.args, pir.ty, pir.exp_id);
         let pir = self.reduce_prim(pir.kind, pir.args, pir.ty, pir.exp_id);
+        let pir = self.canonicalize_stmt(pir, StmtResult::Keep);
         let pir = self.calc_size(pir.kind, pir.args, pir.ty, pir.exp_id);
         pir
     }

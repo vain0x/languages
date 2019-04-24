@@ -116,6 +116,15 @@ impl Pir {
         Pir { ty, ..self }
     }
 
+    pub(crate) fn unit(exp_id: ExpId) -> Pir {
+        Pir {
+            kind: PirKind::unit(),
+            args: vec![],
+            ty: Ty::unit(),
+            exp_id,
+        }
+    }
+
     pub(crate) fn int(value: i64, exp_id: ExpId) -> Pir {
         Pir {
             kind: PirKind::int(value),
@@ -296,4 +305,56 @@ impl PirProgram {
 pub(crate) fn from_sema(sema: Rc<Sema>) -> PirProgram {
     let pir_program = self::gen::gen(sema);
     self::reduce::reduce(pir_program)
+}
+
+fn pir_children_are_block(pir: &Pir) -> bool {
+    match &pir.kind {
+        PirKind::If | PirKind::Loop { .. } | PirKind::While { .. } | PirKind::Semi => true,
+        _ => false,
+    }
+}
+
+fn pir_display_head(pir: &Pir, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    match &pir.kind {
+        PirKind::Val(..) | PirKind::Var { .. } => unimplemented!(),
+        PirKind::CallPrim(prim) => write!(f, "{}", prim.text()),
+        PirKind::CallFun(fun_id) => write!(f, "F{}", fun_id),
+        PirKind::Op { op, .. } => op.display(f),
+        PirKind::Deref { .. } => write!(f, "deref"),
+        PirKind::IndexPoint => write!(f, "[]"),
+        PirKind::IndexSlice => write!(f, "[..]"),
+        PirKind::If => write!(f, "if"),
+        PirKind::Loop { .. } => write!(f, "loop"),
+        PirKind::While { .. } => write!(f, "while"),
+        PirKind::Break { .. } => write!(f, "break"),
+        PirKind::Continue { .. } => write!(f, "continue"),
+        PirKind::Return { .. } => write!(f, "return"),
+        PirKind::Semi { .. } => write!(f, "begin"),
+    }
+}
+
+impl std::fmt::Display for Pir {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self.kind {
+            PirKind::Val(val) => write!(f, "{:?}", val),
+            PirKind::Var { var_id } => write!(f, "_v{}", var_id),
+            _ if pir_children_are_block(self) => {
+                write!(f, "(")?;
+                pir_display_head(self, f)?;
+                write!(f, "\n")?;
+                for child in self.children() {
+                    write!(f, "  {}\n", child)?;
+                }
+                write!(f, ")")
+            }
+            _ => {
+                write!(f, "(")?;
+                pir_display_head(self, f)?;
+                for child in self.children() {
+                    write!(f, " {}", child)?;
+                }
+                write!(f, ")")
+            }
+        }
+    }
 }

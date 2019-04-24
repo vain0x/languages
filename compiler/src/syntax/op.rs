@@ -130,4 +130,25 @@ impl Op {
             Op::As => OpLevel::Anno,
         }
     }
+
+    fn pun(self) -> Option<Pun> {
+        OP_PUNS
+            .iter()
+            .filter_map(|&(op, pun)| if op == self { Some(pun) } else { None })
+            .next()
+    }
+
+    pub(crate) fn is_stmt(self) -> bool {
+        match self {
+            Op::Set | Op::SetAdd | Op::SetSub | Op::SetMul | Op::SetDiv | Op::SetMod => true,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn display(self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self.pun() {
+            Some(pun) => write!(f, "{}", pun.text()),
+            None => write!(f, "{:?}", self),
+        }
+    }
 }

@@ -1,0 +1,10 @@
+[package]
+name = "picomet_test_gen"
+version = "0.1.0"
+authors = ["vain0x <vainzerox@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+serde = "1"
+serde_derive = "1"
+toml = "0.5"

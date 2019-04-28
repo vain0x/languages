@@ -1,0 +1,25 @@
+[[eval]]
+src = """\
+    // In expression.
+    println_int(2: int + 3); //=> 5
+
+    // In reference.
+    let x = 2;
+    x: int += 4;
+    println_int(x); //=> 6
+
+    // Unify type variable.
+    let id = |x| x: int;
+    println_int(id(3) + 4); //=> 7
+
+    // On local variable;
+    let x: int = 8;
+    println_int(x); //=> 8
+"""
+
+stdout = """\
+5
+6
+7
+8
+"""

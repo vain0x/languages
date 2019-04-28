@@ -1,0 +1,8 @@
+[[error]]
+src = """\
+1 + (while 0 == 0 {})
+"""
+
+err = """\
+At 1:6..1:21 Type Error
+"""

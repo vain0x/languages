@@ -1,0 +1,16 @@
+[[eval]]
+src = """\
+    let fact = |n| {
+        let x = 1;
+        while n >= 2 {
+            x = x * n;
+            n = n - 1;
+        }
+        x
+    };
+    println_int(fact(3)); //=> 6
+"""
+
+stdout = """\
+6
+"""

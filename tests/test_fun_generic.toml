@@ -1,0 +1,26 @@
+# [[eval]]
+# name = "id"
+#
+# src = """\
+#     let f = |x| x as int;
+#     let id = |x| x;
+#     println_int(if id(0) == 0 { 1 } else { 0 });
+#     println_int(if f(id('a')) == f('a') { 1 } else { 0 });
+# """
+#
+# stdout = """\
+# 1
+# 1
+# """
+
+[[error]]
+name = "nongeneric"
+
+src = """\
+    let f = |x| x + 1;
+    f(\"\");
+"""
+
+err = """\
+At 2:7..2:9 Type Error
+"""

@@ -1,0 +1,16 @@
+[[eval]]
+src = """\
+println_int('A' as int);
+println_int('\\0' as int);
+println_int('\\n' as int);
+println_int('\\r' as int);
+println_int('\\'' as int);
+"""
+
+stdout = """\
+65
+0
+10
+13
+39
+"""

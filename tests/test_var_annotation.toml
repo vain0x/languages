@@ -1,0 +1,20 @@
+[[eval]]
+name = "ok"
+
+src = """\
+    let u: unit = ();
+    let b: byte = 'b';
+    let n: int = 1;
+    let s: _ = || ();
+"""
+
+[[error]]
+name = "bad"
+
+src = """\
+let x: unit = 1
+"""
+
+err = """\
+At 1:15..1:16 Type Error
+"""

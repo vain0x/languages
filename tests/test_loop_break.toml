@@ -1,0 +1,40 @@
+[[eval]]
+name = "ok"
+
+src = """\
+    let i = 0;
+    while i < 4 {
+        i += 1;
+        if i == 3 { break }
+        println_int(i);
+    }
+"""
+
+stdout = """\
+1
+2
+"""
+
+[[error]]
+name = "ground"
+
+src = """\
+break
+"""
+
+err = """\
+At 1:1..1:6 Out of loop
+"""
+
+[[error]]
+name = "ground_of_lambda"
+
+src = """\
+    while 0 != 0 {
+        let f = || break;
+    }
+"""
+
+err = """\
+At 2:20..2:25 Out of loop
+"""

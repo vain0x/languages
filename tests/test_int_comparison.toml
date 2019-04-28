@@ -1,0 +1,40 @@
+src = """\
+let l = read_int();
+let r = read_int();
+println_int(if l == r { 1 } else { 0 });
+println_int(if l != r { 1 } else { 0 });
+println_int(if l < r { 1 } else { 0 });
+println_int(if l <= r { 1 } else { 0 });
+println_int(if l > r { 1 } else { 0 });
+println_int(if l >= r { 1 } else { 0 });
+"""
+
+[[io]]
+stdin = """\
+1
+1
+"""
+
+stdout = """\
+1
+0
+0
+1
+0
+1
+"""
+
+[[io]]
+stdin = """\
+1
+2
+"""
+
+stdout = """\
+0
+1
+1
+1
+0
+0
+"""

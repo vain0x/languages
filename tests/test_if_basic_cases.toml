@@ -1,0 +1,25 @@
+src = """\
+    println_int(if read_int() == 0 {
+        42
+    } else {
+        -1
+    })
+"""
+
+[[io]]
+stdin = """\
+0
+"""
+
+stdout = """\
+42
+"""
+
+[[io]]
+stdin = """\
+1
+"""
+
+stdout = """\
+-1
+"""

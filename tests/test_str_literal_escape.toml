@@ -1,0 +1,8 @@
+[[eval]]
+src = """\
+print("Hello, world!\\n");
+"""
+
+stdout = """\
+Hello, world!
+"""

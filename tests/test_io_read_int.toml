@@ -1,0 +1,22 @@
+src = """\
+println_int(read_int() + 1)
+
+"""
+
+[[io]]
+stdin = """\
+41
+"""
+
+stdout = """\
+42
+"""
+
+[[io]]
+stdin = """\
+-1
+"""
+
+stdout = """\
+0
+"""

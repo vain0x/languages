@@ -1,0 +1,56 @@
+# <https://atcoder.jp/contests/abs/tasks/abc083_b>
+
+src = """\
+    let digit_sum = |x| {
+        let s = 0;
+        while x > 0 {
+            s += x % 10;
+            x = x / 10; // FIXME: missing /=
+        }
+        s
+    };
+
+    let N = read_int();
+    let A = read_int();
+    let B = read_int();
+
+    let k = 0;
+    let x = 1;
+    while x <= N {
+        let s = digit_sum(x);
+        if A <= s {
+            if s <= B { // FIXME: missing &&
+                k += x;
+            }
+        }
+        x += 1;
+    }
+    println_int(k);
+"""
+
+[[io]]
+stdin = """\
+20 2 5
+"""
+
+stdout = """\
+84
+"""
+
+[[io]]
+stdin = """\
+10 1 2
+"""
+
+stdout = """\
+13
+"""
+
+[[io]]
+stdin = """\
+100 4 16
+"""
+
+stdout = """\
+4554
+"""

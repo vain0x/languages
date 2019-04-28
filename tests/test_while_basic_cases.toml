@@ -1,0 +1,25 @@
+src = """\
+    while read_int() == 0 {
+        println_int(1)
+    }
+"""
+
+[[io]]
+stdin = """\
+0
+0
+0
+4
+0
+"""
+
+stdout = """\
+1
+1
+1
+"""
+
+[[io]]
+stdin = """\
+1
+"""

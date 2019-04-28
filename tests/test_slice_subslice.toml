@@ -1,0 +1,34 @@
+[[eval]]
+name = "of_byte"
+
+src = """\
+print("Happy"[1..1 + 3]);
+print("\\n");
+"""
+
+stdout = """\
+app
+"""
+
+[[error]]
+src = """\
+0..0
+"""
+
+err = """\
+At 1:1..1:5 Invalid use of range
+"""
+
+[[eval]]
+name = "of_int"
+
+src = """\
+let buf = mem_alloc(3);
+let sub = buf[1..2];
+sub[1] = 2000;
+println_int(buf[2]);
+"""
+
+stdout = """\
+2000
+"""

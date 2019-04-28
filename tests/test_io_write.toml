@@ -1,0 +1,11 @@
+[[eval]]
+src = """\
+let p = mem_alloc(2);
+p[0] = "A"[0];
+p[1] = 10 as byte;
+print(p);
+"""
+
+stdout = """\
+A
+"""

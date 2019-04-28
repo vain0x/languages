@@ -18,12 +18,12 @@ The following code is a solution written in picomet-lang to solve this problem: 
 
 This reads two integers from standard input and prints a word to standard output that indicates whether the product of two integers is even or odd.
 
-Other examples are available at the bottom of [compiler/tests/tests.rs](compiler/tests/tests.rs).
+Other examples are available in [tests](tests).
 
 ## Documents: How to Write Picomet-lang
 
 - Before read, please check last-modified date because I might forget to update the document after changes.
-- See [compiler/tests/tests.rs](compiler/tests/tests.rs) for actually working picomet-lang codes.
+- See [tests](tests) for actually working picomet-lang codes.
 
 ### Docs: Language properties
 
@@ -190,7 +190,7 @@ cargo install cargo-watch
 
 ### Dev: Test
 
-To test the compiler, run `cargo test` in `compiler`. Tests are written in [compiler/tests/tests.rs](compiler/tests/tests.rs).
+To test the compiler, run `cargo test`. Tests are written in [tests](tests.rs) and converted to `compiler/tests/tests_generated.rs`.
 
 To test the vscode extension, open `compiler` or `vscode-ext` with VSCode and press F5 to launch new instance of VSCode with extension temporally installed.
 

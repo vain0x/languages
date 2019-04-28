@@ -1,0 +1,25 @@
+# <https://atcoder.jp/contests/abs/tasks/abc086_a?lang=en>
+
+src = """\
+    let a = read_int();
+    let b = read_int();
+    print(if a * b % 2 == 0 { "Even\\n" } else { "Odd\\n" });
+"""
+
+[[io]]
+stdin = """
+3 4
+"""
+
+stdout = """\
+Even
+"""
+
+[[io]]
+stdin = """\
+1 21
+"""
+
+stdout = """\
+Odd
+"""

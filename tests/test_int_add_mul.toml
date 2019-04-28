@@ -1,0 +1,8 @@
+[[eval]]
+src = """\
+println_int(1 + 2 * 3)
+"""
+
+stdout = """
+7
+"""

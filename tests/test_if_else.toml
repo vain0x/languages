@@ -1,0 +1,37 @@
+src = """\
+    let x = read_int();
+    println_int(if x == 1 {
+        -1
+    } else if x == 2 {
+        -2
+    } else {
+        x
+    })
+"""
+
+[[io]]
+stdin = """\
+1
+"""
+
+stdout = """\
+-1
+"""
+
+[[io]]
+stdin = """\
+2
+"""
+
+stdout = """\
+-2
+"""
+
+[[io]]
+stdin = """\
+3
+"""
+
+stdout = """\
+3
+"""

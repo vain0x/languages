@@ -1,0 +1,94 @@
+[[eval]]
+name = "use_one_readonly"
+
+src = """\
+    let a = 1
+    println_int(a)
+"""
+
+stdout = """\
+1
+"""
+
+[[eval]]
+name = "use_two_readonly"
+
+src = """\
+    let a = 1;
+    let b = 2;
+    println_int(a);
+    println_int(b);
+"""
+
+stdout = """\
+1
+2
+"""
+
+[[eval]]
+name = "shadowing"
+
+src = """\
+    let a = 1;
+    let a = {
+        println_int(a);
+        2
+    };
+    println_int(a);
+"""
+
+stdout = """\
+1
+2
+"""
+
+[[eval]]
+name = "modify"
+
+src = """\
+    let a = 1;
+    a = a + 1;
+    println_int(a);
+"""
+
+stdout = """\
+2
+"""
+
+[[eval]]
+name = "set_add"
+
+src = """\
+    let a = 1;
+    a += 1;
+    println_int(a);
+"""
+
+stdout = """\
+2
+"""
+
+[[eval]]
+name = "set_mul_etc"
+
+src = """\
+    let a = 10;
+    a += 1;
+    println_int(a); // 11
+    a -= 2;
+    println_int(a); // 9
+    a *= 3;
+    println_int(a); // 27
+    a /= 4;
+    println_int(a); // 6
+    a %= 5;
+    println_int(a); // 1
+"""
+
+stdout = """\
+11
+9
+27
+6
+1
+"""

@@ -1,0 +1,9 @@
+[[eval]]
+src = """\
+    let succ = |x| x + 1;
+    println_int(succ(1)); //=> 2
+"""
+
+stdout = """\
+2
+"""

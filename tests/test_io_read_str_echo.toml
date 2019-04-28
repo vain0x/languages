@@ -1,0 +1,18 @@
+src = """\
+let s = read_str();
+print(s);
+"""
+
+[[io]]
+stdin = """\
+hello
+"""
+
+stdout = "hello"
+
+[[io]]
+stdin = """\
+a
+"""
+
+stdout = "a"

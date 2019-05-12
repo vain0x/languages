@@ -1,7 +1,11 @@
 use crate::semantics::VarId;
 
 mod gen;
-mod print;
+pub(crate) mod print;
+
+pub(crate) type JsVarId = crate::Id<JsVar>;
+
+pub(crate) struct JsVar;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum JsPrim {
@@ -20,21 +24,22 @@ pub(crate) enum JsVal {
 pub(crate) enum JsExp {
     Val(JsVal),
     Var {
-        var_id: VarId,
+        var_id: JsVarId,
     },
     Prim {
         prim: JsPrim,
         args: Vec<JsExp>,
     },
     Fun {
-        params: Vec<String>,
+        params: Vec<JsVarId>,
         body: Vec<JsStm>,
     },
 }
 
 #[derive(Clone, Debug)]
 pub(crate) enum JsStm {
-    Let { pat: String, body: JsExp },
+    Exp(JsExp),
+    Let { pat: JsVarId, body: JsExp },
 }
 
 #[derive(Clone, Debug)]

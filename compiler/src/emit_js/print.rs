@@ -1,4 +1,5 @@
 use super::*;
+use crate::pir::*;
 use std::fmt::Write as _;
 
 struct JsPrinter {
@@ -77,6 +78,10 @@ impl JsPrinter {
     fn print_stm(&mut self, stm: &JsStm) {
         self.print_indent();
         match stm {
+            JsStm::Exp(body) => {
+                self.print_exp(body);
+                write!(self.out, ";\n").unwrap();
+            }
             JsStm::Let { pat, body } => {
                 write!(self.out, "let {} = ", pat).unwrap();
                 self.print_exp(body);
@@ -100,15 +105,13 @@ pub(crate) fn js_print(program: &JsProgram) -> String {
     printer.out
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub(crate) fn convert_to_javascript(src: &str) -> String {
+    use crate::semantics::analyze;
+    use crate::pir;
+    use std::rc::Rc;
 
-    #[test]
-    fn test_emit_js() {
-        assert_eq!(
-            js_print(&super::gen::js_gen()),
-            "let main = () => {\n  let _ = console.log(42);\n};\nmain();\n"
-        );
-    }
+    let sema = Rc::new(analyze::analyze_str(src));
+    let pir_program = pir::from_sema(sema);
+    let js_program = super::gen::js_gen(&pir_program);
+    js_print(&js_program)
 }

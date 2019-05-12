@@ -250,6 +250,13 @@ impl Pir {
         loops.dedup();
         loops
     }
+
+    pub(crate) fn as_var(&self) -> Option<VarId> {
+        match self.kind() {
+            &PirKind::Var { var_id } => Some(var_id),
+            _ => None,
+        }
+    }
 }
 
 impl PirFunDef {
@@ -287,6 +294,10 @@ impl PirProgram {
             }
         }
         panic!("Missing var {}", var_id)
+    }
+
+    pub(crate) fn vars(&self) -> impl Iterator<Item = (VarId, &PirVarDef)> {
+        self.vars.iter().map(|(&var_id, var_def)| (var_id, var_def))
     }
 
     pub(crate) fn funs(&self) -> impl Iterator<Item = (FunId, &PirFunDef)> {

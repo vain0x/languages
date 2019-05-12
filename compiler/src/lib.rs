@@ -5,6 +5,7 @@ extern crate serde_derive;
 extern crate log;
 
 mod app;
+mod emit_js;
 mod lsp;
 mod pir;
 mod rir;

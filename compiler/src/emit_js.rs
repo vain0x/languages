@@ -8,8 +8,18 @@ pub(crate) type JsVarId = crate::Id<JsVar>;
 pub(crate) struct JsVar;
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) enum JsPrim {
+pub(crate) enum JsOp {
     Add,
+    Sub,
+    Mul,
+    Div,
+    Set,
+    SetAdd,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum JsPrim {
+    Print,
     PrintLn,
 }
 
@@ -18,6 +28,7 @@ pub(crate) enum JsVal {
     Null,
     Num(f64),
     Str(String),
+    Prim(JsPrim),
 }
 
 #[derive(Clone, Debug)]
@@ -26,8 +37,11 @@ pub(crate) enum JsExp {
     Var {
         var_id: JsVarId,
     },
-    Prim {
-        prim: JsPrim,
+    Bin {
+        op: JsOp,
+        args: Vec<JsExp>,
+    },
+    Call {
         args: Vec<JsExp>,
     },
     Fun {
@@ -40,6 +54,7 @@ pub(crate) enum JsExp {
 pub(crate) enum JsStm {
     Exp(JsExp),
     Let { pat: JsVarId, body: JsExp },
+    Return(Box<JsExp>),
 }
 
 #[derive(Clone, Debug)]

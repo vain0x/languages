@@ -1,8 +1,8 @@
 use super::*;
 use crate::pir::*;
-use crate::syntax::*;
 use crate::semantics::*;
-use crate::pir::*;
+use crate::syntax::*;
+
 use std::collections::BTreeMap;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -15,6 +15,26 @@ struct JsGen {
     vars: BTreeMap<VarOrFunId, JsVarId>,
 }
 
+fn op_to_js_op(op: Op) -> JsOp {
+    match op {
+        Op::Add => JsOp::Add,
+        Op::Sub => JsOp::Sub,
+        Op::Mul => JsOp::Mul,
+        Op::Div => JsOp::Div,
+        Op::Set => JsOp::Set,
+        Op::SetAdd => JsOp::SetAdd,
+        _ => unimplemented!(),
+    }
+}
+
+fn prim_to_js_prim(prim: Prim) -> JsPrim {
+    match prim {
+        Prim::Print => JsPrim::Print,
+        Prim::PrintLnInt => JsPrim::PrintLn,
+        _ => unimplemented!(),
+    }
+}
+
 impl JsGen {
     fn js_var_id_from_var_id(&self, var_id: VarId) -> JsVarId {
         self.vars[&VarOrFunId::Var(var_id)]
@@ -25,15 +45,35 @@ impl JsGen {
     }
 
     fn gen_exp(&self, pir: &Pir) -> JsExp {
-        match &pir.kind() {
-            PirKind::Op { op: Op::Add, .. } => {
+        match pir.kind() {
+            PirKind::Val(PirVal::Unit) => JsExp::Val(JsVal::Null),
+            &PirKind::Val(PirVal::Byte(value)) => JsExp::Val(JsVal::Num(value as f64)),
+            &PirKind::Val(PirVal::Int(value)) => JsExp::Val(JsVal::Num(value as f64)),
+            PirKind::Val(PirVal::Str(value)) => JsExp::Val(JsVal::Str(value.to_string())),
+            &PirKind::Var { var_id } => JsExp::Var {
+                var_id: self.js_var_id_from_var_id(var_id),
+            },
+            &PirKind::Op { op, .. } => {
                 let args = self.gen_exps(pir.children());
-JsExp::Prim {
-                    prim: JsPrim::Add,
+                JsExp::Bin {
+                    op: op_to_js_op(op),
                     args,
                 }
             }
-            _ => unimplemented!()
+            &PirKind::CallPrim(prim) => {
+                let js_prim = prim_to_js_prim(prim);
+                let mut args = self.gen_exps(pir.children());
+                args.insert(0, JsExp::Val(JsVal::Prim(js_prim)));
+                JsExp::Call { args }
+            }
+            &PirKind::CallFun(fun_id) => {
+                let var_id = self.js_var_id_from_fun_id(fun_id);
+                let mut args = self.gen_exps(pir.children());
+                args.insert(0, JsExp::Var { var_id });
+                JsExp::Call { args }
+            }
+            PirKind::Deref { .. } => self.gen_exp(&pir.children()[0]),
+            _ => unimplemented!("{:?}", pir),
         }
     }
 
@@ -43,35 +83,31 @@ JsExp::Prim {
 
     fn gen_stm(&self, pir: &Pir, out: &mut Vec<JsStm>) {
         match &pir.kind() {
-            PirKind::Op { op: Op::Set, .. } => {
-                let pat = self.js_var_id_from_var_id(pir.children()[0].as_var().unwrap());
-                let body = self.gen_exp(&pir.children()[1]);
-                out.push(JsStm::Let {
-                    pat,
-                    body,
-                });
-            }
-            PirKind::Op { .. } => {
-                let body = self.gen_exp(pir);
-                out.push(JsStm::Exp(body));
+            PirKind::Return => {
+                let arg = self.gen_exp(&pir.children()[0]);
+                out.push(JsStm::Return(Box::new(arg)));
             }
             PirKind::Semi => {
                 for pir in pir.children() {
                     self.gen_stm(pir, out);
                 }
             }
-            _ => unimplemented!()
+            _ => {
+                let body = self.gen_exp(pir);
+                out.push(JsStm::Exp(body));
+            }
         }
     }
 
     fn gen_fun(&self, fun_id: FunId, fun_def: &PirFunDef) -> JsStm {
-        let params =  fun_def.args().iter().map(|&var_id| self.js_var_id_from_var_id(var_id)).collect();
+        let params = fun_def
+            .args()
+            .iter()
+            .map(|&var_id| self.js_var_id_from_var_id(var_id))
+            .collect();
         let mut body = vec![];
         self.gen_stm(fun_def.body(), &mut body);
-        let fun_exp = JsExp::Fun {
-            params,
-            body,
-        };
+        let fun_exp = JsExp::Fun { params, body };
         JsStm::Let {
             pat: self.js_var_id_from_fun_id(fun_id),
             body: fun_exp,
@@ -88,7 +124,7 @@ pub(crate) fn js_gen(program: &PirProgram) -> JsProgram {
         let js_var_id = JsVarId::new(js_gen.vars.len());
         js_gen.vars.insert(VarOrFunId::Var(var_id), js_var_id);
     }
-    for (fun_id, fun_def) in program.funs() {
+    for (fun_id, _) in program.funs() {
         let js_var_id = JsVarId::new(js_gen.vars.len());
         js_gen.vars.insert(VarOrFunId::Fun(fun_id), js_var_id);
     }
@@ -99,7 +135,12 @@ pub(crate) fn js_gen(program: &PirProgram) -> JsProgram {
         stms.push(stm);
     }
 
-    JsProgram {
-        stms,
-    }
+    // Entry point.
+    stms.push(JsStm::Exp(JsExp::Call {
+        args: vec![JsExp::Var {
+            var_id: js_gen.js_var_id_from_fun_id(GLOBAL_FUN_ID),
+        }],
+    }));
+
+    JsProgram { stms }
 }

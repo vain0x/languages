@@ -54,11 +54,14 @@ pub fn test_snapshot(name: &str, src: &str) {
     let file_path = workspace_dir.join(format!("../tests/js/{}.js", name));
 
     // Ignore panic. I know that the current implementation doesn't work for most of cases.
-    let js_code =
+    let js_code = if name.contains("println_42") {
+        crate::emit_js::print::convert_to_javascript(src)
+    } else {
         match std::panic::catch_unwind(|| crate::emit_js::print::convert_to_javascript(src)) {
             Err(_) => return,
             Ok(x) => x,
-        };
+        }
+    };
 
     let old_content = fs::read_to_string(&file_path).unwrap_or_else(|_| String::new());
     if js_code != old_content {

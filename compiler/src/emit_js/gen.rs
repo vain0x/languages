@@ -17,12 +17,27 @@ struct JsGen {
 
 fn op_to_js_op(op: Op) -> JsOp {
     match op {
-        Op::Add => JsOp::Add,
-        Op::Sub => JsOp::Sub,
-        Op::Mul => JsOp::Mul,
-        Op::Div => JsOp::Div,
         Op::Set => JsOp::Set,
         Op::SetAdd => JsOp::SetAdd,
+        Op::SetSub => JsOp::SetSub,
+        Op::SetMul => JsOp::SetMul,
+        Op::SetDiv => JsOp::SetDiv,
+        Op::Eq => JsOp::Eq,
+        Op::Ne => JsOp::Ne,
+        Op::Lt => JsOp::Lt,
+        Op::Le => JsOp::Le,
+        Op::Gt => JsOp::Gt,
+        Op::Ge => JsOp::Ge,
+        Op::Add => JsOp::Add,
+        Op::Sub => JsOp::Sub,
+        Op::BitOr => JsOp::BitOr,
+        Op::BitXor => JsOp::BitXor,
+        Op::Mul => JsOp::Mul,
+        Op::Div => JsOp::Div,
+        Op::Mod => JsOp::Mod,
+        Op::BitAnd => JsOp::BitAnd,
+        Op::BitShiftL => JsOp::BitShiftL,
+        Op::BitShiftR => JsOp::BitShiftR,
         _ => unimplemented!(),
     }
 }
@@ -83,6 +98,29 @@ impl JsGen {
 
     fn gen_stm(&self, pir: &Pir, out: &mut Vec<JsStm>) {
         match &pir.kind() {
+            PirKind::If => {
+                let cond = Box::new(self.gen_exp(&pir.children()[0]));
+                let mut body =vec![];
+                self.gen_stm(&pir.children()[1], &mut body);
+                let mut alt = vec![];
+                self.gen_stm(&pir.children()[2], &mut alt);
+                out.push(JsStm::If {
+                    cond, body, alt
+                });
+            }
+            PirKind::Loop {..} => {
+                let mut body =vec![];
+                self.gen_stm(&pir.children()[0], &mut body);
+                out.push(JsStm::Loop{
+                    body,
+                });
+            }
+            PirKind::Break { ..} => {
+                out.push(JsStm::Break);
+            }
+            PirKind::Continue {..} => {
+                out.push(JsStm::Continue);
+            }
             PirKind::Return => {
                 let arg = self.gen_exp(&pir.children()[0]);
                 out.push(JsStm::Return(Box::new(arg)));

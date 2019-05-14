@@ -250,13 +250,6 @@ impl Pir {
         loops.dedup();
         loops
     }
-
-    pub(crate) fn as_var(&self) -> Option<VarId> {
-        match self.kind() {
-            &PirKind::Var { var_id } => Some(var_id),
-            _ => None,
-        }
-    }
 }
 
 impl PirFunDef {

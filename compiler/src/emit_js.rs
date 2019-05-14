@@ -9,12 +9,27 @@ pub(crate) struct JsVar;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum JsOp {
-    Add,
-    Sub,
-    Mul,
-    Div,
     Set,
     SetAdd,
+    SetSub,
+    SetMul,
+    SetDiv,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    Add,
+    Sub,
+    BitOr,
+    BitXor,
+    Mul,
+    Div,
+    Mod,
+    BitAnd,
+    BitShiftL,
+    BitShiftR,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -53,7 +68,20 @@ pub(crate) enum JsExp {
 #[derive(Clone, Debug)]
 pub(crate) enum JsStm {
     Exp(JsExp),
-    Let { pat: JsVarId, body: JsExp },
+    Let {
+        pat: JsVarId,
+        body: JsExp,
+    },
+    If {
+        cond: Box<JsExp>,
+        body: Vec<JsStm>,
+        alt: Vec<JsStm>,
+    },
+    Loop {
+        body: Vec<JsStm>,
+    },
+    Break,
+    Continue,
     Return(Box<JsExp>),
 }
 

@@ -1,5 +1,4 @@
 use super::*;
-use crate::pir::*;
 use std::fmt::Write as _;
 
 struct JsPrinter {
@@ -9,12 +8,27 @@ struct JsPrinter {
 
 fn js_op_to_str(op: JsOp) -> &'static str {
     match op {
-        JsOp::Add => "+",
-        JsOp::Sub => "-",
-        JsOp::Mul => "*",
-        JsOp::Div => "/",
         JsOp::Set => "=",
         JsOp::SetAdd => "+=",
+        JsOp::SetSub => "-=",
+        JsOp::SetMul => "*=",
+        JsOp::SetDiv => "/=",
+        JsOp::Eq => "===",
+        JsOp::Ne => "!==",
+        JsOp::Lt => "<",
+        JsOp::Le => "<=",
+        JsOp::Gt => ">",
+        JsOp::Ge => ">=",
+        JsOp::Add => "+",
+        JsOp::Sub => "-",
+        JsOp::BitOr => "|",
+        JsOp::BitXor => "^",
+        JsOp::Mul => "*",
+        JsOp::Div => "/", // FIXME: int div
+        JsOp::Mod => "%",
+        JsOp::BitAnd => "&",
+        JsOp::BitShiftL => "<<",
+        JsOp::BitShiftR => ">>",
     }
 }
 impl JsPrinter {
@@ -70,12 +84,8 @@ impl JsPrinter {
                     }
                     write!(self.out, "v{}", param).unwrap();
                 }
-                write!(self.out, ") => {{\n").unwrap();
-                self.indent += 1;
-                self.print_stms(body);
-                self.indent -= 1;
-                self.print_indent();
-                write!(self.out, "}}").unwrap();
+                write!(self.out, ") => ").unwrap();
+                self.print_block(body);
             }
         }
     }
@@ -84,6 +94,16 @@ impl JsPrinter {
         for stm in stms {
             self.print_stm(stm);
         }
+    }
+
+    /// Don't end with line break.
+    fn print_block(&mut self, stms: &[JsStm]) {
+        write!(self.out, "{{\n").unwrap();
+        self.indent += 1;
+        self.print_stms(stms);
+        self.indent -= 1;
+        self.print_indent();
+        write!(self.out, "}}").unwrap();
     }
 
     /// Print a statement with indent and end with line break.
@@ -98,6 +118,26 @@ impl JsPrinter {
                 write!(self.out, "let v{} = ", pat).unwrap();
                 self.print_exp(body);
                 write!(self.out, ";\n").unwrap();
+            }
+            JsStm::If { cond, body, alt } => {
+                write!(self.out, "if (").unwrap();
+                self.print_exp(&cond);
+                write!(self.out, ") ").unwrap();
+                self.print_block(&body);
+                write!(self.out, " else ").unwrap();
+                self.print_block(&alt);
+                write!(self.out, "\n").unwrap();
+            }
+            JsStm::Loop { body } => {
+                write!(self.out, "while (true) ").unwrap();
+                self.print_block(&body);
+                write!(self.out, "\n").unwrap();
+            }
+            JsStm::Break => {
+                write!(self.out, "break;\n").unwrap();
+            }
+            JsStm::Continue => {
+                write!(self.out, "continue;\n").unwrap();
             }
             JsStm::Return(body) => {
                 write!(self.out, "return ").unwrap();

@@ -1,7 +1,6 @@
-pub(crate) enum Code {
-    PushInt(i64),
-    Exit,
-}
+use crate::il::*;
+
+pub(crate) mod il;
 
 pub(crate) struct Runtime {
     table: Vec<i64>,
@@ -38,18 +37,23 @@ impl Runtime {
         loop {
             self.pc += 1;
             match self.program[self.pc - 1] {
-                Code::PushInt(value) => {
-                    self.stack_push(value);
+                Code::PushTrue => {
+                    self.stack_push(1);
                 }
-                Code::Exit => std::process::exit(self.stack_pop() as i32),
+                Code::Assert => {
+                    if self.stack_pop() == 0 {
+                        eprintln!("assertion error");
+                        std::process::abort()
+                    }
+                }
+                Code::Exit => std::process::exit(0),
             }
         }
     }
 }
 
-pub fn run(il: &str) -> ! {
-    let exit = if il.trim() == "assert(false)" { 1 } else { 0 };
-    let codes = vec![Code::PushInt(exit), Code::Exit];
+pub fn run(il_text: &str) -> ! {
+    let codes = il::parse::parse(il_text);
 
     let mut runtime = Runtime::new();
     for code in codes {

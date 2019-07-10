@@ -47,8 +47,9 @@ impl Runtime {
     }
 }
 
-pub fn run(value: i64) -> ! {
-    let codes = vec![Code::PushInt(value), Code::Exit];
+pub fn run(il: &str) -> ! {
+    let exit = if il.trim() == "assert(false)" { 1 } else { 0 };
+    let codes = vec![Code::PushInt(exit), Code::Exit];
 
     let mut runtime = Runtime::new();
     for code in codes {

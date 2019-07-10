@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cargo build --bin altery && cargo run --bin al_test

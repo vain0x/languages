@@ -11,6 +11,7 @@ pub(crate) fn parse(text: &str) -> Vec<Code> {
             "exit" => codes.push(Code::Exit),
             "assert" => codes.push(Code::Assert),
             "true" => codes.push(Code::PushTrue),
+            "false" => codes.push(Code::PushFalse),
             "push_int" => {
                 i += 1;
                 codes.push(Code::PushInt(tokens[i - 1].parse::<i64>().unwrap()));

@@ -47,6 +47,9 @@ impl Runtime {
                 Code::PushTrue => {
                     self.stack_push(1);
                 }
+                Code::PushFalse => {
+                    self.stack_push(0);
+                }
                 Code::PushInt(value) => {
                     self.stack_push(value);
                 }

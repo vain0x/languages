@@ -7,6 +7,7 @@ pub(crate) enum TokenKind {
     Tombstone,
     Ident,
     True,
+    False,
     Assert,
     Int,
     ParenL,
@@ -21,8 +22,11 @@ pub(crate) struct Token {
     loc: SourceLocation,
 }
 
-static KEYWORD_TEXTS: &[(TokenKind, &str)] =
-    &[(TokenKind::True, "true"), (TokenKind::Assert, "assert")];
+static KEYWORD_TEXTS: &[(TokenKind, &str)] = &[
+    (TokenKind::True, "true"),
+    (TokenKind::False, "false"),
+    (TokenKind::Assert, "assert"),
+];
 
 static SYMBOL_TEXTS: &[(TokenKind, &str)] = &[
     (TokenKind::ParenL, "("),

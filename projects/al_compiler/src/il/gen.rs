@@ -4,6 +4,7 @@ use crate::syntax::*;
 fn gen_expr(ast: &Ast, codes: &mut Vec<Code>) {
     match ast.kind() {
         AstKind::True => codes.push(Code::PushTrue),
+        AstKind::False => codes.push(Code::PushFalse),
         AstKind::Assert | AstKind::Ident(_) => unimplemented!(),
         AstKind::Int(value) => codes.push(Code::PushInt(*value)),
         AstKind::Eq => match ast.children() {

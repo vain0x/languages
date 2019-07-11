@@ -3,6 +3,7 @@ use crate::syntax::*;
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub(crate) enum AstKind {
     True,
+    False,
     Ident(String),
     Int(i64),
     Assert,

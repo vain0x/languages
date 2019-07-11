@@ -2,10 +2,10 @@ use crate::syntax::*;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub(crate) enum AstKind {
-    Null,
     True,
     Ident(String),
     Call,
+    Semi,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

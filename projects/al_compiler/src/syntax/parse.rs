@@ -102,12 +102,21 @@ fn parse_term(p: &mut Parser<'_>) -> Ast {
     parse_call(p)
 }
 
-fn parse_root(p: &mut Parser<'_>) -> Ast {
-    if p.at_eof() {
-        return Ast::new(AstKind::Null, vec![], p.loc());
+fn parse_semi(loc: SourceLocation, p: &mut Parser<'_>) -> Ast {
+    let mut children = vec![];
+
+    while !p.at_eof() {
+        let child = parse_term(p);
+        children.push(child);
     }
 
-    let body = parse_term(p);
+    Ast::new(AstKind::Semi, children, loc)
+}
+
+fn parse_root(p: &mut Parser<'_>) -> Ast {
+    let loc = p.loc();
+    let body = parse_semi(loc, p);
+
     if !p.at_eof() {
         panic!("expected EOF {:?}", p.loc())
     }

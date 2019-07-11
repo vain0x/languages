@@ -3,7 +3,6 @@ use crate::syntax::*;
 
 fn gen_expr(ast: &Ast, codes: &mut Vec<Code>) {
     match ast.kind() {
-        AstKind::Null => {}
         AstKind::True => codes.push(Code::PushTrue),
         AstKind::Ident(_) => unimplemented!(),
         AstKind::Call => match ast.children() {
@@ -16,6 +15,11 @@ fn gen_expr(ast: &Ast, codes: &mut Vec<Code>) {
             },
             _ => unreachable!(),
         },
+        AstKind::Semi => {
+            for child in ast.children() {
+                gen_expr(child, codes);
+            }
+        }
     }
 }
 

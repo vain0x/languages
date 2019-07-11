@@ -5,3 +5,4 @@ authors = ["vain0x <vainzerox@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+al_aux = { path = "../al_aux" }

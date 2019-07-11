@@ -58,6 +58,16 @@ impl Runtime {
                     let left = self.stack_pop();
                     self.stack_push(left + right);
                 }
+                Code::OpSub => {
+                    let right = self.stack_pop();
+                    let left = self.stack_pop();
+                    self.stack_push(left - right);
+                }
+                Code::OpMul => {
+                    let right = self.stack_pop();
+                    let left = self.stack_pop();
+                    self.stack_push(left * right);
+                }
                 Code::OpDiv => {
                     let right = self.stack_pop();
                     let left = self.stack_pop();

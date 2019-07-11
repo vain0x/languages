@@ -13,6 +13,18 @@ fn gen_expr(ast: &Ast, codes: &mut Vec<Code>) {
             }
             codes.push(Code::OpAdd);
         }
+        AstKind::Sub => {
+            for child in ast.children() {
+                gen_expr(child, codes);
+            }
+            codes.push(Code::OpSub);
+        }
+        AstKind::Mul => {
+            for child in ast.children() {
+                gen_expr(child, codes);
+            }
+            codes.push(Code::OpMul);
+        }
         AstKind::Div => {
             for child in ast.children() {
                 gen_expr(child, codes);

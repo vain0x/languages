@@ -114,27 +114,45 @@ fn parse_call(p: &mut Parser<'_>) -> Ast {
 fn parse_mul(p: &mut Parser<'_>) -> Ast {
     let left = parse_call(p);
 
-    if !p.at(TokenKind::Slash) {
-        return left;
-    }
-    let loc = p.loc();
-    p.bump();
+    if p.at(TokenKind::Star) {
+        let loc = p.loc();
+        p.bump();
 
-    let right = parse_call(p);
-    Ast::new(AstKind::Div, vec![left, right], loc)
+        let right = parse_call(p);
+        return Ast::new(AstKind::Mul, vec![left, right], loc);
+    }
+
+    if p.at(TokenKind::Slash) {
+        let loc = p.loc();
+        p.bump();
+
+        let right = parse_call(p);
+        return Ast::new(AstKind::Div, vec![left, right], loc);
+    }
+
+    left
 }
 
 fn parse_add(p: &mut Parser<'_>) -> Ast {
     let left = parse_mul(p);
 
-    if !p.at(TokenKind::Plus) {
-        return left;
-    }
-    let loc = p.loc();
-    p.bump();
+    if p.at(TokenKind::Plus) {
+        let loc = p.loc();
+        p.bump();
 
-    let right = parse_mul(p);
-    Ast::new(AstKind::Add, vec![left, right], loc)
+        let right = parse_mul(p);
+        return Ast::new(AstKind::Add, vec![left, right], loc);
+    }
+
+    if p.at(TokenKind::Minus) {
+        let loc = p.loc();
+        p.bump();
+
+        let right = parse_mul(p);
+        return Ast::new(AstKind::Sub, vec![left, right], loc);
+    }
+
+    left
 }
 
 fn parse_eq(p: &mut Parser<'_>) -> Ast {

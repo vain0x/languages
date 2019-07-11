@@ -24,4 +24,12 @@ op_div
 push_int 42
 op_eq
 assert
+push_int 48
+push_int 3
+push_int 2
+op_mul
+op_sub
+push_int 42
+op_eq
+assert
 exit

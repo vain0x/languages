@@ -4,3 +4,4 @@ assert((0 == 1) == false)
 
 assert(2 + 3 == 5)
 assert(84 / 2 == 42)
+assert(48 - 3 * 2 == 42)

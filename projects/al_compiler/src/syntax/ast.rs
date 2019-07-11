@@ -8,6 +8,8 @@ pub(crate) enum AstKind {
     Int(i64),
     Assert,
     Add,
+    Sub,
+    Mul,
     Div,
     Eq,
     Call,

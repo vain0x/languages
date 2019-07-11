@@ -7,6 +7,7 @@ pub(crate) enum TokenKind {
     Tombstone,
     Ident,
     True,
+    Int,
     ParenL,
     ParenR,
 }

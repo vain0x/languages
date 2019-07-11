@@ -37,16 +37,19 @@ impl Runtime {
         loop {
             self.pc += 1;
             match self.program[self.pc - 1] {
-                Code::PushTrue => {
-                    self.stack_push(1);
-                }
+                Code::Exit => std::process::exit(0),
                 Code::Assert => {
                     if self.stack_pop() == 0 {
                         eprintln!("assertion error");
                         std::process::abort()
                     }
                 }
-                Code::Exit => std::process::exit(0),
+                Code::PushTrue => {
+                    self.stack_push(1);
+                }
+                Code::PushInt(value) => {
+                    self.stack_push(value);
+                }
             }
         }
     }

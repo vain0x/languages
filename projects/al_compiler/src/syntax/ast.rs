@@ -4,6 +4,7 @@ use crate::syntax::*;
 pub(crate) enum AstKind {
     True,
     Ident(String),
+    Int(i64),
     Call,
     Semi,
 }

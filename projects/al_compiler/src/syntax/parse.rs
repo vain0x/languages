@@ -71,6 +71,11 @@ fn parse_atom(p: &mut Parser<'_>) -> Ast {
             p.bump();
             Ast::new(AstKind::Ident(ident), children, loc)
         }
+        TokenKind::Int => {
+            let value = p.text().parse::<i64>().unwrap();
+            p.bump();
+            Ast::new(AstKind::Int(value), children, loc)
+        }
         TokenKind::ParenL => {
             p.bump();
             let body = parse_term(p);

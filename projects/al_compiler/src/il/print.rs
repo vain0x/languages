@@ -9,6 +9,7 @@ pub(crate) fn print(codes: &[Code]) -> io::Result<Vec<u8>> {
             Code::Exit => writeln!(out, "exit")?,
             Code::Assert => writeln!(out, "assert")?,
             Code::PushTrue => writeln!(out, "true")?,
+            Code::PushInt(value) => writeln!(out, "push_int {}", value)?,
         }
     }
 

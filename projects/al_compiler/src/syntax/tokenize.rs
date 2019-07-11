@@ -105,6 +105,12 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
+    fn int(&mut self) {
+        if self.eat_while(|c| c.is_ascii_digit()) {
+            self.add_token(TokenKind::Int);
+        }
+    }
+
     fn symbol(&mut self) {
         for &(kind, text) in TokenKind::symbol_texts() {
             if self.eat(text) {
@@ -129,6 +135,7 @@ impl<'a> Tokenizer<'a> {
         while !self.at_eof() {
             self.spaces();
             self.ident();
+            self.int();
             self.symbol();
             self.error();
         }

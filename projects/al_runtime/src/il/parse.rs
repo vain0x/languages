@@ -2,15 +2,22 @@ use super::*;
 
 pub(crate) fn parse(text: &str) -> Vec<Code> {
     let mut codes = Vec::new();
+    let tokens = text.split_ascii_whitespace().collect::<Vec<_>>();
+    let mut i = 0;
 
-    for token_text in text.split_ascii_whitespace() {
-        if token_text == "exit" {
-            codes.push(Code::Exit);
-        } else if token_text == "assert" {
-            codes.push(Code::Assert);
-        } else if token_text == "true" {
-            codes.push(Code::PushTrue);
+    while i < tokens.len() {
+        i += 1;
+        match tokens[i - 1] {
+            "exit" => codes.push(Code::Exit),
+            "assert" => codes.push(Code::Assert),
+            "true" => codes.push(Code::PushTrue),
+            "push_int" => {
+                i += 1;
+                codes.push(Code::PushInt(tokens[i - 1].parse::<i64>().unwrap()));
+            }
+            _ => unreachable!("Unknown IL token {}", tokens[i - 1])
         }
     }
+
     codes
 }

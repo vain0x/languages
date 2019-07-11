@@ -66,6 +66,10 @@ fn parse_atom(p: &mut Parser<'_>) -> Ast {
             p.bump();
             Ast::new(AstKind::True, children, loc)
         }
+        TokenKind::Assert => {
+            p.bump();
+            Ast::new(AstKind::Assert, children, loc)
+        }
         TokenKind::Ident => {
             let ident = p.text().to_string();
             p.bump();

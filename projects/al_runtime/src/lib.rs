@@ -53,6 +53,11 @@ impl Runtime {
                 Code::PushInt(value) => {
                     self.stack_push(value);
                 }
+                Code::OpAdd => {
+                    let right = self.stack_pop();
+                    let left = self.stack_pop();
+                    self.stack_push(left + right);
+                }
                 Code::OpEq => {
                     let right = self.stack_pop();
                     let left = self.stack_pop();

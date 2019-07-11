@@ -4,5 +4,6 @@ pub(crate) enum Code {
     PushTrue,
     PushFalse,
     PushInt(i64),
+    OpAdd,
     OpEq,
 }

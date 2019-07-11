@@ -12,4 +12,10 @@ op_eq
 false
 op_eq
 assert
+push_int 2
+push_int 3
+op_add
+push_int 5
+op_eq
+assert
 exit

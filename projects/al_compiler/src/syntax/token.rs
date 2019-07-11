@@ -13,6 +13,7 @@ pub(crate) enum TokenKind {
     ParenL,
     ParenR,
     EqEq,
+    Plus,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -32,6 +33,7 @@ static SYMBOL_TEXTS: &[(TokenKind, &str)] = &[
     (TokenKind::ParenL, "("),
     (TokenKind::ParenR, ")"),
     (TokenKind::EqEq, "=="),
+    (TokenKind::Plus, "+"),
 ];
 
 impl TokenKind {

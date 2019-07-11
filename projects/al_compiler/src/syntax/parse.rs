@@ -1,17 +1,26 @@
-
 use crate::syntax::tokenize::tokenize;
 use crate::syntax::*;
+use al_aux::syntax::TokenKindTrait;
 use std::cell::Cell;
 use std::rc::Rc;
-struct Parser<'a> {
+
+type Parser<'a> = TokenParser<'a, Token>;
+
+trait TokenTrait {
+    type Kind: TokenKindTrait + PartialEq;
+
+    fn kind(&self) -> Self::Kind;
+}
+
+struct TokenParser<'a, Token> {
     tokens: &'a [Token],
     current: usize,
     tick: Cell<usize>,
 }
 
-impl<'a> Parser<'a> {
+impl<'a, Token: TokenTrait> TokenParser<'a, Token> {
     fn new(tokens: &'a [Token]) -> Self {
-        Parser {
+        TokenParser {
             tokens,
             current: 0,
             tick: Cell::default(),
@@ -34,26 +43,45 @@ impl<'a> Parser<'a> {
         self.tick.set(tick);
     }
 
-    fn text(&self) -> &str {
-        self.tokens[self.current].text()
-    }
-
-    fn loc(&self) -> SourceLocation {
-        self.tokens[self.current].loc()
-    }
-
-    fn next(&self) -> TokenKind {
+    fn next_token(&self) -> &Token {
         self.detect_infinite_loop();
 
-        self.tokens[self.current].kind()
+        &self.tokens[self.current]
+    }
+
+    fn next(&self) -> Token::Kind {
+        self.next_token().kind()
     }
 
     fn at_eof(&self) -> bool {
-        self.at(TokenKind::Eof)
+        Token::Kind::eof().into_iter().any(|kind| self.at(kind))
     }
 
-    fn at(&self, kind: TokenKind) -> bool {
+    fn at(&self, kind: Token::Kind) -> bool {
         self.next() == kind
+    }
+}
+
+trait ParserExt {
+    fn text(&self) -> &str;
+    fn loc(&self) -> SourceLocation;
+}
+
+impl TokenTrait for Token {
+    type Kind = TokenKind;
+
+    fn kind(&self) -> TokenKind {
+        self.kind()
+    }
+}
+
+impl<'a> ParserExt for TokenParser<'a, Token> {
+    fn text(&self) -> &str {
+        self.next_token().text()
+    }
+
+    fn loc(&self) -> SourceLocation {
+        self.next_token().loc()
     }
 }
 

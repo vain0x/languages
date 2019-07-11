@@ -13,8 +13,8 @@ impl TokenKindTrait for TokenKind {
         TokenKind::Error
     }
 
-    fn eof() -> Option<Self> {
-        Some(TokenKind::Eof)
+    fn eof() -> Self {
+        TokenKind::Eof
     }
 
     fn is_trivia(&self) -> bool {

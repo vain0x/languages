@@ -49,7 +49,7 @@ impl<'a, Token: TokenTrait> TokenParser<'a, Token> {
     }
 
     pub fn at_eof(&self) -> bool {
-        Token::Kind::eof().into_iter().any(|kind| self.at(kind))
+        self.at(Token::Kind::eof())
     }
 
     pub fn at(&self, kind: Token::Kind) -> bool {

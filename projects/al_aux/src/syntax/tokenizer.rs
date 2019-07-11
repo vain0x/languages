@@ -3,7 +3,7 @@ use std::cell::Cell;
 pub trait TokenKindTrait: Sized {
     fn error() -> Self;
 
-    fn eof() -> Option<Self>;
+    fn eof() -> Self;
 
     fn is_trivia(&self) -> bool;
 }
@@ -111,9 +111,7 @@ impl<'a, T: TokenFactoryTrait> Tokenizer<'a, T> {
     }
 
     fn eof(&mut self) {
-        if let Some(kind) = T::Kind::eof() {
-            self.add_token(kind);
-        }
+        self.add_token(T::Kind::eof());
     }
 
     pub fn tokenize(mut self, any: impl Fn(&mut Self)) -> Vec<T::Token> {

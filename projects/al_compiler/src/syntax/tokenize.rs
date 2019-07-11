@@ -90,35 +90,6 @@ impl<'a> Tokenizer<'a> {
         self.ate()
     }
 
-    fn spaces(&mut self) {
-        if self.eat_while(|c| c.is_ascii_whitespace()) {
-            self.add_token(TokenKind::Tombstone);
-        }
-    }
-
-    fn ident(&mut self) {
-        if !self.next().is_ascii_digit()
-            && self.eat_while(|c| c.is_ascii_alphanumeric() || c == b'_')
-        {
-            let kind = ident_kind(self.current_text());
-            self.add_token(kind);
-        }
-    }
-
-    fn int(&mut self) {
-        if self.eat_while(|c| c.is_ascii_digit()) {
-            self.add_token(TokenKind::Int);
-        }
-    }
-
-    fn symbol(&mut self) {
-        for &(kind, text) in TokenKind::symbol_texts() {
-            if self.eat(text) {
-                self.add_token(kind);
-            }
-        }
-    }
-
     fn error(&mut self) {
         if self.stuck {
             self.bump();
@@ -133,15 +104,46 @@ impl<'a> Tokenizer<'a> {
 
     fn tokenize(mut self) -> Vec<Token> {
         while !self.at_eof() {
-            self.spaces();
-            self.ident();
-            self.int();
-            self.symbol();
+            any(&mut self);
             self.error();
         }
         self.eof();
         self.tokens
     }
+}
+
+fn spaces(t: &mut Tokenizer<'_>) {
+    if t.eat_while(|c| c.is_ascii_whitespace()) {
+        t.add_token(TokenKind::Tombstone);
+    }
+}
+
+fn ident(t: &mut Tokenizer<'_>) {
+    if !t.next().is_ascii_digit() && t.eat_while(|c| c.is_ascii_alphanumeric() || c == b'_') {
+        let kind = ident_kind(t.current_text());
+        t.add_token(kind);
+    }
+}
+
+fn int(t: &mut Tokenizer<'_>) {
+    if t.eat_while(|c| c.is_ascii_digit()) {
+        t.add_token(TokenKind::Int);
+    }
+}
+
+fn symbol(t: &mut Tokenizer<'_>) {
+    for &(kind, text) in TokenKind::symbol_texts() {
+        if t.eat(text) {
+            t.add_token(kind);
+        }
+    }
+}
+
+fn any(t: &mut Tokenizer<'_>) {
+    spaces(t);
+    ident(t);
+    int(t);
+    symbol(t);
 }
 
 fn ident_kind(text: &str) -> TokenKind {

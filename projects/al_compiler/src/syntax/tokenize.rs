@@ -1,6 +1,13 @@
 use crate::syntax::*;
 use al_aux::syntax::*;
 
+type Tok<'a> = Tokenizer<'a, TokenFactory<'a>>;
+
+struct TokenFactory<'a> {
+    file: usize,
+    text: &'a str,
+}
+
 impl TokenKindTrait for TokenKind {
     fn error() -> Self {
         TokenKind::Error
@@ -13,11 +20,6 @@ impl TokenKindTrait for TokenKind {
     fn is_trivia(&self) -> bool {
         *self == TokenKind::Tombstone
     }
-}
-
-struct TokenFactory<'a> {
-    file: usize,
-    text: &'a str,
 }
 
 impl<'a> TokenFactory<'a> {
@@ -37,7 +39,14 @@ impl<'a> TokenFactoryTrait for TokenFactory<'a> {
     }
 }
 
-type Tok<'a> = Tokenizer<'a, TokenFactory<'a>>;
+fn ident_kind(text: &str) -> TokenKind {
+    for &(kind, keyword_text) in TokenKind::keyword_texts() {
+        if text == keyword_text {
+            return kind;
+        }
+    }
+    TokenKind::Ident
+}
 
 fn spaces(t: &mut Tok<'_>) {
     if t.eat_while(|c| c.is_ascii_whitespace()) {
@@ -71,15 +80,6 @@ fn any(t: &mut Tok<'_>) {
     ident(t);
     int(t);
     symbol(t);
-}
-
-fn ident_kind(text: &str) -> TokenKind {
-    for &(kind, keyword_text) in TokenKind::keyword_texts() {
-        if text == keyword_text {
-            return kind;
-        }
-    }
-    TokenKind::Ident
 }
 
 pub(crate) fn tokenize(file: usize, text: &str) -> Vec<Token> {

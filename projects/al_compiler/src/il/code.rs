@@ -3,4 +3,5 @@ pub(crate) enum Code {
     Assert,
     PushTrue,
     PushInt(i64),
+    OpEq,
 }

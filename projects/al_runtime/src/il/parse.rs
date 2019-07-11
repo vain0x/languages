@@ -15,6 +15,7 @@ pub(crate) fn parse(text: &str) -> Vec<Code> {
                 i += 1;
                 codes.push(Code::PushInt(tokens[i - 1].parse::<i64>().unwrap()));
             }
+            "op_eq" => codes.push(Code::OpEq),
             _ => unreachable!("Unknown IL token {}", tokens[i - 1])
         }
     }

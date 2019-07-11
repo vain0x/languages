@@ -103,8 +103,21 @@ fn parse_call(p: &mut Parser<'_>) -> Ast {
     Ast::new(AstKind::Call, vec![cal, arg], loc)
 }
 
+fn parse_eq(p: &mut Parser<'_>) -> Ast {
+    let left = parse_call(p);
+
+    if !p.at(TokenKind::EqEq) {
+        return left;
+    }
+    let loc = p.loc();
+    p.bump();
+
+    let right = parse_call(p);
+    Ast::new(AstKind::Eq, vec![left, right], loc)
+}
+
 fn parse_term(p: &mut Parser<'_>) -> Ast {
-    parse_call(p)
+    parse_eq(p)
 }
 
 fn parse_semi(loc: SourceLocation, p: &mut Parser<'_>) -> Ast {

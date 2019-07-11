@@ -10,6 +10,7 @@ pub(crate) enum TokenKind {
     Int,
     ParenL,
     ParenR,
+    EqEq,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -21,7 +22,11 @@ pub(crate) struct Token {
 
 static KEYWORD_TEXTS: &[(TokenKind, &str)] = &[(TokenKind::True, "true")];
 
-static SYMBOL_TEXTS: &[(TokenKind, &str)] = &[(TokenKind::ParenL, "("), (TokenKind::ParenR, ")")];
+static SYMBOL_TEXTS: &[(TokenKind, &str)] = &[
+    (TokenKind::ParenL, "("),
+    (TokenKind::ParenR, ")"),
+    (TokenKind::EqEq, "=="),
+];
 
 impl TokenKind {
     pub(crate) fn keyword_texts() -> &'static [(TokenKind, &'static str)] {

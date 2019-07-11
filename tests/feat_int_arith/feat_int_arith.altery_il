@@ -1,3 +1,15 @@
+push_int 0
+push_int 0
+op_eq
+assert
 push_int 1
+push_int 1
+op_eq
+assert
+push_int 0
+push_int 1
+op_eq
+push_int 0
+op_eq
 assert
 exit

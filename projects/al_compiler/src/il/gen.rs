@@ -6,6 +6,14 @@ fn gen_expr(ast: &Ast, codes: &mut Vec<Code>) {
         AstKind::True => codes.push(Code::PushTrue),
         AstKind::Ident(_) => unimplemented!(),
         AstKind::Int(value) => codes.push(Code::PushInt(*value)),
+        AstKind::Eq => match ast.children() {
+            [left, right] => {
+                gen_expr(&left, codes);
+                gen_expr(&right, codes);
+                codes.push(Code::OpEq);
+            }
+            _ => unreachable!(),
+        }
         AstKind::Call => match ast.children() {
             [cal, arg] => match cal.kind() {
                 AstKind::Ident(cal_ident) if cal_ident == "assert" => {

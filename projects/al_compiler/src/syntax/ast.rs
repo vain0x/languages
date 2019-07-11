@@ -5,6 +5,7 @@ pub(crate) enum AstKind {
     True,
     Ident(String),
     Int(i64),
+    Eq,
     Call,
     Semi,
 }

@@ -111,8 +111,21 @@ fn parse_call(p: &mut Parser<'_>) -> Ast {
     Ast::new(AstKind::Call, vec![cal, arg], loc)
 }
 
-fn parse_add(p: &mut Parser<'_>) -> Ast {
+fn parse_mul(p: &mut Parser<'_>) -> Ast {
     let left = parse_call(p);
+
+    if !p.at(TokenKind::Slash) {
+        return left;
+    }
+    let loc = p.loc();
+    p.bump();
+
+    let right = parse_call(p);
+    Ast::new(AstKind::Div, vec![left, right], loc)
+}
+
+fn parse_add(p: &mut Parser<'_>) -> Ast {
+    let left = parse_mul(p);
 
     if !p.at(TokenKind::Plus) {
         return left;
@@ -120,7 +133,7 @@ fn parse_add(p: &mut Parser<'_>) -> Ast {
     let loc = p.loc();
     p.bump();
 
-    let right = parse_call(p);
+    let right = parse_mul(p);
     Ast::new(AstKind::Add, vec![left, right], loc)
 }
 

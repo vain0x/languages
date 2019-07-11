@@ -58,6 +58,12 @@ impl Runtime {
                     let left = self.stack_pop();
                     self.stack_push(left + right);
                 }
+                Code::OpDiv => {
+                    let right = self.stack_pop();
+                    let left = self.stack_pop();
+                    // FIXME: ゼロ除算をエラーにする
+                    self.stack_push(left / right);
+                }
                 Code::OpEq => {
                     let right = self.stack_pop();
                     let left = self.stack_pop();

@@ -12,6 +12,7 @@ pub(crate) fn print(codes: &[Code]) -> io::Result<Vec<u8>> {
             Code::PushFalse => writeln!(out, "false")?,
             Code::PushInt(value) => writeln!(out, "push_int {}", value)?,
             Code::OpAdd => writeln!(out, "op_add")?,
+            Code::OpDiv => writeln!(out, "op_div")?,
             Code::OpEq => writeln!(out, "op_eq")?,
         }
     }

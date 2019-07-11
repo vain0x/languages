@@ -18,4 +18,10 @@ op_add
 push_int 5
 op_eq
 assert
+push_int 84
+push_int 2
+op_div
+push_int 42
+op_eq
+assert
 exit

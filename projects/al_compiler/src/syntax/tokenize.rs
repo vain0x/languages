@@ -15,18 +15,18 @@ impl TokenKindTrait for TokenKind {
     }
 }
 
-struct AlteryTokenFactory<'a> {
+struct TokenFactory<'a> {
     file: usize,
     text: &'a str,
 }
 
-impl<'a> AlteryTokenFactory<'a> {
-    fn new(file: usize, text :&'a str) -> Self {
-        AlteryTokenFactory {file,text}
+impl<'a> TokenFactory<'a> {
+    fn new(file: usize, text: &'a str) -> Self {
+        TokenFactory { file, text }
     }
 }
 
-impl<'a> TokenFactoryTrait for AlteryTokenFactory<'a> {
+impl<'a> TokenFactoryTrait for TokenFactory<'a> {
     type Token = Token;
     type Kind = TokenKind;
 
@@ -37,7 +37,7 @@ impl<'a> TokenFactoryTrait for AlteryTokenFactory<'a> {
     }
 }
 
-type Tok<'a> = Tokenizer<'a, AlteryTokenFactory<'a>>;
+type Tok<'a> = Tokenizer<'a, TokenFactory<'a>>;
 
 fn spaces(t: &mut Tok<'_>) {
     if t.eat_while(|c| c.is_ascii_whitespace()) {
@@ -83,6 +83,6 @@ fn ident_kind(text: &str) -> TokenKind {
 }
 
 pub(crate) fn tokenize(file: usize, text: &str) -> Vec<Token> {
-    let token_factory = AlteryTokenFactory::new(file, text);
+    let token_factory = TokenFactory::new(file, text);
     Tokenizer::new(token_factory, text).tokenize(any)
 }

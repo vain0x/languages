@@ -1,66 +1,9 @@
 use crate::syntax::tokenize::tokenize;
 use crate::syntax::*;
-use al_aux::syntax::TokenKindTrait;
-use std::cell::Cell;
+use al_aux::syntax::*;
 use std::rc::Rc;
 
 type Parser<'a> = TokenParser<'a, Token>;
-
-trait TokenTrait {
-    type Kind: TokenKindTrait + PartialEq;
-
-    fn kind(&self) -> Self::Kind;
-}
-
-struct TokenParser<'a, Token> {
-    tokens: &'a [Token],
-    current: usize,
-    tick: Cell<usize>,
-}
-
-impl<'a, Token: TokenTrait> TokenParser<'a, Token> {
-    fn new(tokens: &'a [Token]) -> Self {
-        TokenParser {
-            tokens,
-            current: 0,
-            tick: Cell::default(),
-        }
-    }
-
-    fn bump(&mut self) {
-        if self.at_eof() {
-            return;
-        }
-
-        assert!(self.current + 1 < self.tokens.len());
-        self.current += 1;
-    }
-
-    fn detect_infinite_loop(&self) {
-        let tick = self.tick.get() + 1;
-
-        assert!(tick < 10_000_000);
-        self.tick.set(tick);
-    }
-
-    fn next_token(&self) -> &Token {
-        self.detect_infinite_loop();
-
-        &self.tokens[self.current]
-    }
-
-    fn next(&self) -> Token::Kind {
-        self.next_token().kind()
-    }
-
-    fn at_eof(&self) -> bool {
-        Token::Kind::eof().into_iter().any(|kind| self.at(kind))
-    }
-
-    fn at(&self, kind: Token::Kind) -> bool {
-        self.next() == kind
-    }
-}
 
 trait ParserExt {
     fn text(&self) -> &str;

@@ -8,20 +8,6 @@ struct TokenFactory<'a> {
     text: &'a str,
 }
 
-impl TokenKindTrait for TokenKind {
-    fn error() -> Self {
-        TokenKind::Error
-    }
-
-    fn eof() -> Self {
-        TokenKind::Eof
-    }
-
-    fn is_trivia(&self) -> bool {
-        *self == TokenKind::Tombstone
-    }
-}
-
 impl<'a> TokenFactory<'a> {
     fn new(file: usize, text: &'a str) -> Self {
         TokenFactory { file, text }

@@ -10,14 +10,6 @@ trait ParserExt {
     fn loc(&self) -> SourceLocation;
 }
 
-impl TokenTrait for Token {
-    type Kind = TokenKind;
-
-    fn kind(&self) -> TokenKind {
-        self.kind()
-    }
-}
-
 impl<'a> ParserExt for TokenParser<'a, Token> {
     fn text(&self) -> &str {
         self.next_token().text()

@@ -1,4 +1,5 @@
 use crate::syntax::*;
+use al_aux::syntax::{TokenKindTrait, TokenTrait};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum TokenKind {
@@ -67,5 +68,27 @@ impl Token {
 
     pub(crate) fn loc(&self) -> SourceLocation {
         self.loc
+    }
+}
+
+impl TokenKindTrait for TokenKind {
+    fn error() -> Self {
+        TokenKind::Error
+    }
+
+    fn eof() -> Self {
+        TokenKind::Eof
+    }
+
+    fn is_trivia(&self) -> bool {
+        *self == TokenKind::Tombstone
+    }
+}
+
+impl TokenTrait for Token {
+    type Kind = TokenKind;
+
+    fn kind(&self) -> TokenKind {
+        self.kind()
     }
 }

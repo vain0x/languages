@@ -1,77 +1,10 @@
+//! 中間言語の構文解析
+
+use super::*;
 use al_aux::il::*;
 use al_aux::syntax::*;
 
 type P<'a> = TokenParser<'a, IlToken>;
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub(crate) enum IlTokenKind {
-    Error,
-    Eof,
-    Trivia,
-    Int,
-
-    /// `$foo`
-    Ident,
-
-    Atom,
-    ParenL,
-    ParenR,
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct IlToken {
-    kind: IlTokenKind,
-    start: usize,
-    end: usize,
-}
-
-pub(crate) struct IlTokenFactory;
-
-impl IlToken {
-    fn kind(&self) -> IlTokenKind {
-        self.kind
-    }
-
-    fn start(&self) -> usize {
-        self.start
-    }
-
-    fn end(&self) -> usize {
-        self.end
-    }
-}
-
-impl TokenKindTrait for IlTokenKind {
-    fn error() -> Self {
-        IlTokenKind::Error
-    }
-
-    fn eof() -> Self {
-        IlTokenKind::Eof
-    }
-
-    fn is_trivia(&self) -> bool {
-        *self == IlTokenKind::Trivia
-    }
-}
-
-impl TokenTrait for IlToken {
-    type Kind = IlTokenKind;
-
-    fn kind(&self) -> IlTokenKind {
-        self.kind()
-    }
-}
-
-impl TokenFactoryTrait for IlTokenFactory {
-    type Token = IlToken;
-
-    type Kind = IlTokenKind;
-
-    fn new_token(&self, kind: Self::Kind, start: usize, end: usize) -> Self::Token {
-        IlToken { kind, start, end }
-    }
-}
 
 static ATOM_KINDS: &[(&str, IlKind)] = &[
     ("root", IlKind::Root),

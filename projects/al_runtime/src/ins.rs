@@ -1,7 +1,7 @@
-//! Instructions.
+//! 実行コード (instructions)
 
-use std::collections::HashMap;
 use al_aux::il::*;
+use std::collections::HashMap;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum InsKind {

@@ -1,6 +1,7 @@
 use crate::semantics::*;
 use crate::syntax::*;
 use al_aux::il::*;
+use std::collections::HashMap;
 
 fn kind_from_prim(prim: Prim) -> IlKind {
     match prim {
@@ -19,11 +20,18 @@ fn set_text_comment(il: usize, expr: &Expr, t: &mut IlTree, s: &SourceFileSystem
     t.set_comment(il, comment);
 }
 
-fn gen_globals(t: &mut IlTree) -> usize {
+fn gen_globals(globals: &HashMap<String, usize>, t: &mut IlTree) -> usize {
+    let mut globals = globals
+        .iter()
+        .map(|(ident, global_id)| (global_id, ident.to_owned()))
+        .collect::<Vec<_>>();
+    globals.sort();
+
     let mut children = vec![];
-    for &ident in &["a", "b"] {
-        children.push(t.new_ident(ident.to_owned()));
+    for (_, ident) in globals {
+        children.push(t.new_ident(ident));
     }
+
     t.new_node(IlKind::Globals, &children)
 }
 
@@ -32,8 +40,8 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
         ExprKind::Lit(Lit::Bool(value)) => t.new_bool(*value),
         ExprKind::Lit(Lit::Int(value)) => t.new_int(*value),
         ExprKind::Prim(prim) => t.new_leaf(kind_from_prim(*prim)),
-        ExprKind::Ident(name) => {
-            let ident = t.new_ident(name.to_owned());
+        ExprKind::Global(_, ident) => {
+            let ident = t.new_ident(ident.to_owned());
             t.new_node(IlKind::GlobalGet, &[ident])
         }
         ExprKind::Assign => match expr.children() {
@@ -62,6 +70,7 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
             }
             t.new_node(IlKind::Semi, &children)
         }
+        ExprKind::Ident(_) => unreachable!("名前解決で消えるはず"),
     };
 
     if expr.is_single_statement() {
@@ -71,11 +80,15 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
     il
 }
 
-pub(crate) fn from_expr(expr: &Expr, s: &SourceFileSystem) -> IlTree {
+pub(crate) fn from_expr(
+    expr: &Expr,
+    globals: &HashMap<String, usize>,
+    s: &SourceFileSystem,
+) -> IlTree {
     let mut il_tree = IlTree::new();
 
     let top_level = gen_expr(expr, &mut il_tree, s);
-    let globals = gen_globals(&mut il_tree);
+    let globals = gen_globals(globals, &mut il_tree);
     let code_section = il_tree.new_node(IlKind::CodeSection, &[top_level]);
     let root = il_tree.new_node(IlKind::Root, &[globals, code_section]);
     il_tree.set_root(root);

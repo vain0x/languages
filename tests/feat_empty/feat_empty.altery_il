@@ -1,6 +1,4 @@
 (root
-  (globals
-    $a
-    $b)
+  (globals)
   (code_section
     (semi)))

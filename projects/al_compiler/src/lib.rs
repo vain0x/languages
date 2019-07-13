@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -20,8 +21,10 @@ pub fn build(entry_path: &str) -> io::Result<Output> {
     let file = sources.add_file(SourceFile::new(entry_path, entry_text));
 
     let ast = crate::syntax::parse::parse(file, sources.file_text(file));
-    let expr = crate::semantics::from_ast::from_ast(&ast);
-    let codes = crate::il::from_expr::from_expr(&expr, &sources);
+    let mut expr = crate::semantics::from_ast::from_ast(&ast);
+    let mut globals = HashMap::new();
+    crate::semantics::name_res::name_res(&mut expr, &mut globals);
+    let codes = crate::il::from_expr::from_expr(&expr, &mut globals, &sources);
     let il = crate::il::print::print(&codes)?;
 
     Ok(Output {

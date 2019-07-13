@@ -21,6 +21,7 @@ pub(crate) enum ExprKind {
     Lit(Lit),
     Prim(Prim),
     Ident(String),
+    Global(usize, String),
     Call,
     Assign,
     Semi,
@@ -73,8 +74,16 @@ impl Expr {
         &self.kind
     }
 
+    pub(crate) fn kind_mut(&mut self) -> &mut ExprKind {
+        &mut self.kind
+    }
+
     pub(crate) fn children(&self) -> &[Expr] {
         &self.children
+    }
+
+    pub(crate) fn children_mut(&mut self) -> &mut Vec<Expr> {
+        &mut self.children
     }
 
     // pub(crate) fn main_loc(&self) -> SourceLocation {

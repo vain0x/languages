@@ -50,6 +50,7 @@ impl SyntaxNode {
 }
 
 static BIN_OP_TABLE: &[(BinOp, TokenKind)] = &[
+    (BinOp::Assign, TokenKind::Eq),
     (BinOp::Add, TokenKind::Plus),
     (BinOp::Sub, TokenKind::Minus),
     (BinOp::Mul, TokenKind::Star),
@@ -161,7 +162,7 @@ fn parse_bin(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
 }
 
 fn parse_bin_top(p: &mut Parser<'_>) -> Ast {
-    parse_bin(BinOpLevel::Eq, p)
+    parse_bin(BinOpLevel::first(), p)
 }
 
 fn parse_term(p: &mut Parser<'_>) -> Ast {

@@ -22,6 +22,7 @@ pub(crate) enum ExprKind {
     Prim(Prim),
     Ident(String),
     Call,
+    Assign,
     Semi,
 }
 
@@ -86,6 +87,7 @@ impl Expr {
 
     pub(crate) fn is_single_statement(&self) -> bool {
         match self.kind() {
+            ExprKind::Assign => true,
             ExprKind::Call => match self.children()[0].kind() {
                 ExprKind::Prim(Prim::Assert) => true,
                 _ => false,

@@ -41,11 +41,19 @@ impl Runtime {
                         std::process::abort()
                     }
                 }
+                InsKind::CellSet => {
+                    let right = self.stack_pop();
+                    let left = self.stack_pop() as usize;
+                    self.table[left] = right;
+                }
                 InsKind::Bool(value) => {
                     self.stack_push(if value { 1 } else { 0 });
                 }
                 InsKind::Int(value) => {
                     self.stack_push(value);
+                }
+                InsKind::GlobalGet => {
+                    self.stack_push(0);
                 }
                 InsKind::OpAdd => {
                     let right = self.stack_pop();

@@ -6,6 +6,6 @@ pub(crate) mod token;
 pub(crate) mod tokenize;
 
 pub(crate) use ast::{Ast, AstKind};
+pub(crate) use op::{BinOp, BinOpLevel};
 pub(crate) use source_file::*;
 pub(crate) use token::{Token, TokenKind};
-pub(crate) use op::{BinOp, BinOpLevel};

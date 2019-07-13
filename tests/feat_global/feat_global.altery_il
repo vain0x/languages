@@ -1,0 +1,21 @@
+(root
+  (code_section
+    (semi
+      // a = 1
+      (cell_set
+        (global_get)
+        1)
+      // assert(a == 1)
+      (assert
+        (==
+          (global_get)
+          1))
+      // a = 2
+      (cell_set
+        (global_get)
+        2)
+      // assert(a == 2)
+      (assert
+        (==
+          (global_get)
+          2)))))

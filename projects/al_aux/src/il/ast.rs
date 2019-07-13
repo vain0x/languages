@@ -1,11 +1,18 @@
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum IlKind {
+    // 宣言:
     Root,
     CodeSection,
+
+    // 文:
     Semi,
     Assert,
+    CellSet,
+
+    // 式:
     Bool(bool),
     Int(i64),
+    GlobalGet,
     OpAdd,
     OpSub,
     OpMul,

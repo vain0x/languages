@@ -20,11 +20,19 @@ fn set_text_comment(il: usize, expr: &Expr, t: &mut IlTree, s: &SourceFileSystem
 }
 
 fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
-    match expr.kind() {
+    let il = match expr.kind() {
         ExprKind::Lit(Lit::Bool(value)) => t.add_bool(*value),
         ExprKind::Lit(Lit::Int(value)) => t.add_int(*value),
         ExprKind::Prim(prim) => t.add_leaf(kind_from_prim(*prim)),
-        ExprKind::Ident(_) => unimplemented!(),
+        ExprKind::Ident(_) => t.add_leaf(IlKind::GlobalGet),
+        ExprKind::Assign => match expr.children() {
+            [left, right] => {
+                let left = gen_expr(left, t, s);
+                let right = gen_expr(right, t, s);
+                t.add_node(IlKind::CellSet, &[left, right])
+            }
+            _ => unreachable!(),
+        },
         ExprKind::Call => {
             let kind = match expr.children()[0].kind() {
                 ExprKind::Prim(prim) => kind_from_prim(*prim),
@@ -34,11 +42,7 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
             for child in &expr.children()[1..] {
                 children.push(gen_expr(child, t, s));
             }
-            let il = t.add_node(kind, &children);
-            if expr.is_single_statement() {
-                set_text_comment(il, expr, t, s);
-            }
-            il
+            t.add_node(kind, &children)
         }
         ExprKind::Semi => {
             let mut children = vec![];
@@ -47,7 +51,13 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
             }
             t.add_node(IlKind::Semi, &children)
         }
+    };
+
+    if expr.is_single_statement() {
+        set_text_comment(il, expr, t, s);
     }
+
+    il
 }
 
 pub(crate) fn from_expr(expr: &Expr, s: &SourceFileSystem) -> IlTree {

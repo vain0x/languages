@@ -8,6 +8,7 @@ fn bin_op_to_prim(bin_op: BinOp) -> Prim {
         BinOp::Mul => Prim::OpMul,
         BinOp::Div => Prim::OpDiv,
         BinOp::Eq => Prim::OpEq,
+        BinOp::Assign => panic!(),
     }
 }
 
@@ -22,6 +23,12 @@ pub(crate) fn from_ast(ast: &Ast) -> Expr {
         AstKind::Ident(ident) => Expr::new_ident(ident.to_owned(), ast.loc()),
         AstKind::Int(value) => Expr::new_int(*value, ast.loc()),
         AstKind::Assert => Expr::new_prim(Prim::Assert, ast.loc()),
+        AstKind::Bin(BinOp::Assign) => Expr::new(
+            ExprKind::Assign,
+            map_children(ast).collect(),
+            ast.loc(),
+            ast.total_loc(),
+        ),
         AstKind::Bin(bin_op) => {
             let prim = bin_op_to_prim(*bin_op);
 
@@ -31,11 +38,17 @@ pub(crate) fn from_ast(ast: &Ast) -> Expr {
 
             Expr::new(ExprKind::Call, children, ast.loc(), ast.total_loc())
         }
-        AstKind::Call => {
-            Expr::new(ExprKind::Call, map_children(ast).collect(), ast.loc(), ast.total_loc())
-        }
-        AstKind::Semi => {
-            Expr::new(ExprKind::Semi, map_children(ast).collect(), ast.loc(), ast.total_loc())
-        }
+        AstKind::Call => Expr::new(
+            ExprKind::Call,
+            map_children(ast).collect(),
+            ast.loc(),
+            ast.total_loc(),
+        ),
+        AstKind::Semi => Expr::new(
+            ExprKind::Semi,
+            map_children(ast).collect(),
+            ast.loc(),
+            ast.total_loc(),
+        ),
     }
 }

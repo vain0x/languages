@@ -5,10 +5,14 @@ fn print_atom(kind: IlKind, out: &mut Vec<u8>) -> io::Result<()> {
     match kind {
         IlKind::Root => write!(out, "root")?,
         IlKind::CodeSection => write!(out, "code_section")?,
-        IlKind::Bool(value) => write!(out, "{}", value)?,
-        IlKind::Int(value) => write!(out, "{}", value)?,
+
         IlKind::Semi => write!(out, "semi")?,
         IlKind::Assert => write!(out, "assert")?,
+        IlKind::CellSet => write!(out, "cell_set")?,
+
+        IlKind::Bool(value) => write!(out, "{}", value)?,
+        IlKind::Int(value) => write!(out, "{}", value)?,
+        IlKind::GlobalGet => write!(out, "global_get")?,
         IlKind::OpAdd => write!(out, "+")?,
         IlKind::OpSub => write!(out, "-")?,
         IlKind::OpMul => write!(out, "*")?,

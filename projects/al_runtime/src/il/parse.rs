@@ -160,7 +160,7 @@ fn parse_atom(text: &str, t: &mut IlTree, p: &mut P<'_>) -> IlKind {
 fn parse_term(text: &str, t: &mut IlTree, p: &mut P<'_>) -> usize {
     if !p.at(IlTokenKind::ParenL) {
         let kind = parse_atom(text, t, p);
-        return t.add_leaf(kind);
+        return t.new_leaf(kind);
     }
 
     p.bump();
@@ -174,7 +174,7 @@ fn parse_term(text: &str, t: &mut IlTree, p: &mut P<'_>) -> usize {
     assert!(p.at(IlTokenKind::ParenR));
     p.bump();
 
-    t.add_node(kind, &children)
+    t.new_node(kind, &children)
 }
 
 fn parse_root(text: &str, t: &mut IlTree, p: &mut P<'_>) -> usize {

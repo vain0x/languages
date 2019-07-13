@@ -1,4 +1,7 @@
 (root
+  (globals
+    $a
+    $b)
   (code_section
     (semi
       // assert(true)

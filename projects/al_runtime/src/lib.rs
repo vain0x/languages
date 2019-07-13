@@ -5,6 +5,7 @@ pub(crate) mod ins;
 
 pub(crate) struct Runtime {
     table: Vec<i64>,
+    heap_end: usize,
     stack_end: usize,
     inss: Vec<InsKind>,
     pc: usize,
@@ -14,10 +15,18 @@ impl Runtime {
     fn new() -> Self {
         Runtime {
             table: vec![0xcd; 1024],
+            heap_end: 0,
             stack_end: 1024,
             inss: vec![],
             pc: 0,
         }
+    }
+
+    fn heap_alloc(&mut self, count: usize) -> (usize, usize) {
+        let start = self.heap_end;
+        self.heap_end += count;
+        let end = self.heap_end;
+        (start, end)
     }
 
     fn stack_push(&mut self, value: i64) {
@@ -53,7 +62,8 @@ impl Runtime {
                     self.stack_push(value);
                 }
                 InsKind::GlobalGet => {
-                    self.stack_push(0);
+                    let global_id = self.stack_pop();
+                    self.stack_push(global_id);
                 }
                 InsKind::OpAdd => {
                     let right = self.stack_pop();
@@ -88,10 +98,11 @@ impl Runtime {
 
 pub fn run(il_text: &str) -> ! {
     let il_tree = il::parse::parse(il_text);
-    let inss = ins::gen(&il_tree);
+    let (inss, global_count) = ins::gen(&il_tree);
 
     let mut runtime = Runtime::new();
     runtime.inss = inss;
+    runtime.heap_alloc(global_count);
     runtime.run()
 }
 

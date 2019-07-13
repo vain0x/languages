@@ -1,15 +1,19 @@
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum IlKind {
     // 宣言:
+
     Root,
     CodeSection,
+    Globals,
 
     // 文:
+
     Semi,
     Assert,
     CellSet,
 
     // 式:
+
     Bool(bool),
     Int(i64),
     GlobalGet,
@@ -18,6 +22,10 @@ pub enum IlKind {
     OpMul,
     OpDiv,
     OpEq,
+
+    // その他:
+
+    Ident(usize),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -32,7 +40,7 @@ pub struct Il {
 pub struct IlTree {
     ils: Vec<Il>,
     children: Vec<usize>,
-    comments: Vec<String>,
+    strings: Vec<String>,
     root: usize,
 }
 
@@ -68,7 +76,7 @@ impl IlTree {
         Self {
             ils: Vec::with_capacity(128),
             children: Vec::with_capacity(256),
-            comments: vec![],
+            strings: vec![],
             root: 0,
         }
     }
@@ -86,10 +94,9 @@ impl IlTree {
         self.children[ci]
     }
 
+
     pub fn comment(&self, il: usize) -> Option<&str> {
-        self.ils[il]
-            .comment
-            .map(|comment| self.comments[comment].as_ref())
+        self.ils[il].comment.map(|comment| self.get_string(comment))
     }
 
     pub fn len(&self) -> usize {
@@ -98,6 +105,10 @@ impl IlTree {
 
     pub fn root(&self) -> usize {
         self.root
+    }
+
+    pub fn get_string(&self, string_id: usize) -> &str {
+        &self.strings[string_id]
     }
 
     pub fn set_root(&mut self, root: usize) {
@@ -122,6 +133,11 @@ impl IlTree {
         self.add_leaf(IlKind::Int(value))
     }
 
+    pub fn add_ident(&mut self, ident: String) -> usize {
+        let string_id = self.add_string(ident);
+        self.add_leaf(IlKind::Ident(string_id))
+    }
+
     pub fn add_node(&mut self, kind: IlKind, children: &[usize]) -> usize {
         let start = self.children.len();
         self.children.extend(children);
@@ -130,9 +146,14 @@ impl IlTree {
         self.add_il(Il::new(kind, start, end))
     }
 
+    pub fn add_string(&mut self, string: String) -> usize {
+        let string_id = self.strings.len();
+        self.strings.push(string);
+        string_id
+    }
+
     pub fn set_comment(&mut self, il: usize, comment: String) {
-        let comment_id = self.comments.len();
-        self.comments.push(comment);
-        self.ils[il].comment = Some(comment_id);
+        let string_id = self.add_string(comment);
+        self.ils[il].comment = Some(string_id);
     }
 }

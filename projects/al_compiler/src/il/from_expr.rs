@@ -19,12 +19,23 @@ fn set_text_comment(il: usize, expr: &Expr, t: &mut IlTree, s: &SourceFileSystem
     t.set_comment(il, comment);
 }
 
+fn gen_globals(t: &mut IlTree) -> usize {
+    let mut children = vec![];
+    for &ident in &["a", "b"] {
+        children.push(t.add_ident(ident.to_owned()));
+    }
+    t.add_node(IlKind::Globals, &children)
+}
+
 fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
     let il = match expr.kind() {
         ExprKind::Lit(Lit::Bool(value)) => t.add_bool(*value),
         ExprKind::Lit(Lit::Int(value)) => t.add_int(*value),
         ExprKind::Prim(prim) => t.add_leaf(kind_from_prim(*prim)),
-        ExprKind::Ident(_) => t.add_leaf(IlKind::GlobalGet),
+        ExprKind::Ident(name) => {
+            let ident = t.add_ident(name.to_owned());
+            t.add_node(IlKind::GlobalGet, &[ident])
+        }
         ExprKind::Assign => match expr.children() {
             [left, right] => {
                 let left = gen_expr(left, t, s);
@@ -64,8 +75,9 @@ pub(crate) fn from_expr(expr: &Expr, s: &SourceFileSystem) -> IlTree {
     let mut il_tree = IlTree::new();
 
     let top_level = gen_expr(expr, &mut il_tree, s);
+    let globals = gen_globals(&mut il_tree);
     let code_section = il_tree.add_node(IlKind::CodeSection, &[top_level]);
-    let root = il_tree.add_node(IlKind::Root, &[code_section]);
+    let root = il_tree.add_node(IlKind::Root, &[globals, code_section]);
     il_tree.set_root(root);
 
     il_tree

@@ -1,21 +1,39 @@
 (root
+  (globals
+    $a
+    $b)
   (code_section
     (semi
       // a = 1
       (cell_set
-        (global_get)
+        (global_get
+          $a)
         1)
       // assert(a == 1)
       (assert
         (==
-          (global_get)
+          (global_get
+            $a)
           1))
       // a = 2
       (cell_set
-        (global_get)
+        (global_get
+          $a)
         2)
+      // b = 3
+      (cell_set
+        (global_get
+          $b)
+        3)
       // assert(a == 2)
       (assert
         (==
-          (global_get)
-          2)))))
+          (global_get
+            $a)
+          2))
+      // assert(b == 3)
+      (assert
+        (==
+          (global_get
+            $b)
+          3)))))

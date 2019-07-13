@@ -9,6 +9,10 @@ pub(crate) enum IlTokenKind {
     Eof,
     Trivia,
     Int,
+
+    /// `$foo`
+    Ident,
+
     Atom,
     ParenL,
     ParenR,
@@ -72,6 +76,7 @@ impl TokenFactoryTrait for IlTokenFactory {
 static ATOM_KINDS: &[(&str, IlKind)] = &[
     ("root", IlKind::Root),
     ("code_section", IlKind::CodeSection),
+    ("globals", IlKind::Globals),
     ("semi", IlKind::Semi),
     ("assert", IlKind::Assert),
     ("cell_set", IlKind::CellSet),
@@ -104,6 +109,11 @@ fn tokenize(text: &str) -> Vec<IlToken> {
             t.add_token(IlTokenKind::ParenR);
         }
 
+        if t.eat("$") {
+            t.eat_while(|c| c.is_ascii_alphanumeric() || c == b'_');
+            t.add_token(IlTokenKind::Ident);
+        }
+
         if t.eat_while(|c| c.is_ascii_digit()) {
             t.add_token(IlTokenKind::Int);
         }
@@ -120,7 +130,7 @@ fn next_text<'a>(text: &'a str, p: &mut P<'_>) -> &'a str {
     &text[start..end]
 }
 
-fn parse_atom(text: &str, _t: &mut IlTree, p: &mut P<'_>) -> IlKind {
+fn parse_atom(text: &str, t: &mut IlTree, p: &mut P<'_>) -> IlKind {
     match p.next() {
         IlTokenKind::Atom => {
             let x = next_text(text, p);
@@ -136,6 +146,12 @@ fn parse_atom(text: &str, _t: &mut IlTree, p: &mut P<'_>) -> IlKind {
             let value = next_text(text, p).parse::<i64>().unwrap();
             p.bump();
             IlKind::Int(value)
+        }
+        IlTokenKind::Ident => {
+            let ident = next_text(text, p).to_owned();
+            let string_id = t.add_string(ident);
+            p.bump();
+            IlKind::Ident(string_id)
         }
         _ => panic!("Expected atom but '{}'", next_text(text, p)),
     }

@@ -1,10 +1,11 @@
 use al_aux::il::*;
 use std::io::{self, Write};
 
-fn print_atom(kind: IlKind, out: &mut Vec<u8>) -> io::Result<()> {
+fn print_atom(kind: IlKind, t: &IlTree, out: &mut Vec<u8>) -> io::Result<()> {
     match kind {
         IlKind::Root => write!(out, "root")?,
         IlKind::CodeSection => write!(out, "code_section")?,
+        IlKind::Globals => write!(out, "globals")?,
 
         IlKind::Semi => write!(out, "semi")?,
         IlKind::Assert => write!(out, "assert")?,
@@ -18,13 +19,15 @@ fn print_atom(kind: IlKind, out: &mut Vec<u8>) -> io::Result<()> {
         IlKind::OpMul => write!(out, "*")?,
         IlKind::OpDiv => write!(out, "/")?,
         IlKind::OpEq => write!(out, "==")?,
+
+        IlKind::Ident(ident) => write!(out, "${}", t.get_string(ident))?,
     };
     Ok(())
 }
 
 fn print_node(il: usize, depth: usize, t: &IlTree, out: &mut Vec<u8>) -> io::Result<()> {
     let has_paren = match t.kind(il) {
-        IlKind::Bool(_) | IlKind::Int(_) => false,
+        IlKind::Bool(_) | IlKind::Int(_) | IlKind::Ident(_) => false,
         _ => true,
     };
 
@@ -48,7 +51,7 @@ fn print_node(il: usize, depth: usize, t: &IlTree, out: &mut Vec<u8>) -> io::Res
         write!(out, "(")?;
     }
 
-    print_atom(t.kind(il), out)?;
+    print_atom(t.kind(il), t, out)?;
 
     for ci in 0..t.child_len(il) {
         write!(out, "\n")?;

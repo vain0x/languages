@@ -1,3 +1,5 @@
+//! 中間言語から文字列への変換
+
 use al_aux::il::*;
 use std::io::{self, Write};
 

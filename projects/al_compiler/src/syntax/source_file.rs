@@ -1,10 +1,18 @@
+//! ソースファイル
+//!
+//! ソースファイルは ID で管理する。
+
 use std::cmp::{max, min};
 use std::path::PathBuf;
 
+/// ソースファイル上の範囲
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) struct SourceLocation {
     file: usize,
+
+    /// 開始位置 (バイト単位)
     start: usize,
+
     end: usize,
 }
 

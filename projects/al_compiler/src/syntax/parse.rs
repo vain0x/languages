@@ -1,3 +1,8 @@
+//! 構文解析 (parse)
+//!
+//! 字句解析で生成したトークン列を解析して、式の構造を分析する。
+//! 結果として抽象構文木を生成する。
+
 use crate::syntax::tokenize::tokenize;
 use crate::syntax::*;
 use al_aux::syntax::*;
@@ -5,14 +10,14 @@ use std::rc::Rc;
 
 type Parser<'a> = TokenParser<'a, Token>;
 
-// 具象構文木のノード
+/// 具象構文木のノード
 struct SyntaxNode {
     start_loc: SourceLocation,
 }
 
 trait ParserExt {
-    // 具象構文木のノードの開始時に呼ばれる。
-    // ノードの範囲の開始位置を記録する。
+    /// 具象構文木のノードの開始時に呼ばれる。
+    /// ノードの範囲の開始位置を記録する。
     fn start(&self) -> SyntaxNode {
         SyntaxNode {
             start_loc: self.loc(),
@@ -35,9 +40,9 @@ impl<'a> ParserExt for TokenParser<'a, Token> {
 }
 
 impl SyntaxNode {
-    // 具象構文木のノードの終了時に呼ばれる。
-    // ノードの範囲を計算して AST ノードに保持させる。
-    // この範囲にはカッコのような抽象構文木が持たない情報も含まれる。
+    /// 具象構文木のノードの終了時に呼ばれる。
+    /// ノードの範囲を計算して AST ノードに保持させる。
+    /// この範囲にはカッコのような抽象構文木が持たない情報も含まれる。
     fn finish(&self, mut ast: Ast, p: &mut Parser<'_>) -> Ast {
         let total_loc = match p.prev_token() {
             Some(t) => self.start_loc.union(&t.loc()),
@@ -101,6 +106,7 @@ fn parse_atom(p: &mut Parser<'_>) -> Ast {
     }
 }
 
+/// 関数呼び出し式
 fn parse_call(p: &mut Parser<'_>) -> Ast {
     let call = p.start();
     let cal = parse_atom(p);
@@ -115,7 +121,7 @@ fn parse_call(p: &mut Parser<'_>) -> Ast {
     call.finish(Ast::new(AstKind::Call, vec![cal, arg], loc), p)
 }
 
-// 二項演算式の左辺をパースする。
+/// 二項演算式の左辺
 fn parse_bin_left(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
     match level.next() {
         None => parse_call(p),
@@ -123,13 +129,13 @@ fn parse_bin_left(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
     }
 }
 
-// 二項演算式の右辺をパースする。
+/// 二項演算式の右辺
 fn parse_bin_right(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
     // NOTE: 右結合のケースがある
     parse_bin_left(level, p)
 }
 
-// 特定のレベルの二項演算式をパースする。
+/// 特定のレベルの二項演算式をパースする。
 fn parse_bin(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
     let bins = p.start();
     let mut left = parse_bin_left(level, p);
@@ -161,6 +167,7 @@ fn parse_bin(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
     }
 }
 
+/// 最も結合度の弱い二項演算子の式
 fn parse_bin_top(p: &mut Parser<'_>) -> Ast {
     parse_bin(BinOpLevel::first(), p)
 }
@@ -169,6 +176,8 @@ fn parse_term(p: &mut Parser<'_>) -> Ast {
     parse_bin_top(p)
 }
 
+/// 項の並び。
+/// 一般的な言語の「セミコロンで区切られた文の並び」に相当するものなので、semi と呼ぶ。
 fn parse_semi(loc: SourceLocation, p: &mut Parser<'_>) -> Ast {
     let semi = p.start();
     let mut children = vec![];
@@ -181,7 +190,10 @@ fn parse_semi(loc: SourceLocation, p: &mut Parser<'_>) -> Ast {
     semi.finish(Ast::new(AstKind::Semi, children, loc), p)
 }
 
+/// ソースコード全体をパースする。
 fn parse_root(p: &mut Parser<'_>) -> Ast {
+    let root = p.start();
+
     let loc = p.loc();
     let body = parse_semi(loc, p);
 
@@ -189,7 +201,7 @@ fn parse_root(p: &mut Parser<'_>) -> Ast {
         panic!("expected EOF {:?}", p.loc())
     }
 
-    body
+    root.finish(body, p)
 }
 
 pub(crate) fn parse(file: usize, text: &str) -> Rc<Ast> {

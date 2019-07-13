@@ -1,3 +1,5 @@
+//! 抽象構文木から HIR への変換
+
 use super::*;
 use crate::syntax::*;
 

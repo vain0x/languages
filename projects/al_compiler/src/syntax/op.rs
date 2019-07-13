@@ -1,3 +1,5 @@
+//! 演算子 (operator)
+
 // 二項演算子 (binary operator)
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum BinOp {

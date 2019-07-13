@@ -1,3 +1,8 @@
+//! 抽象構文木 (abstract syntax tree)
+//!
+//! ソースコードから瑣末な情報 (スペースや優先順位のためのカッコなど) を取り除いて、
+//! 式の構造を表現したもの。
+
 use crate::syntax::*;
 
 #[derive(Clone, PartialEq, Eq, Debug)]

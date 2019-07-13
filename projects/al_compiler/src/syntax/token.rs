@@ -1,23 +1,46 @@
+//! トークン
+
 use crate::syntax::*;
 use al_aux::syntax::{TokenKindTrait, TokenTrait};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum TokenKind {
+    /// 解釈できない文字
     Error,
+
+    /// ファイルの末尾 (番兵)
     Eof,
+
+    /// 空白やコメントなどの瑣末なトークン
     Tombstone,
+
+    /// 識別子
     Ident,
+
     True,
     False,
     Assert,
+
+    /// 整数
     Int,
+
+    /// 左カッコ
     ParenL,
+
+    /// 右カッコ
     ParenR,
+
+    /// `==`
     EqEq,
+
+    /// `=`
     Eq,
+
     Minus,
     Plus,
     Slash,
+
+    /// `*`
     Star,
 }
 

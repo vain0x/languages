@@ -1,3 +1,5 @@
+//! HIR から中間言語への変換
+
 use crate::semantics::*;
 use crate::syntax::*;
 use al_aux::il::*;

@@ -1,3 +1,5 @@
+//! 中間言語の抽象構文木
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum IlKind {
     // 宣言:

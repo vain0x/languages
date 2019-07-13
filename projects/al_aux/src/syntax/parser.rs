@@ -1,3 +1,5 @@
+//! 構文解析の汎用ライブラリ
+
 use crate::syntax::*;
 use std::cell::Cell;
 
@@ -8,8 +10,13 @@ pub trait TokenTrait {
 }
 
 pub struct TokenParser<'a, Token> {
+    /// パースの対象となるトークン列
     tokens: &'a [Token],
+
+    /// 現在位置
     current: usize,
+
+    /// 無限ループ対策のカウンター。一定値を超えるとパニックする。
     tick: Cell<usize>,
 }
 

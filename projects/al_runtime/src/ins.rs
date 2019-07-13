@@ -21,7 +21,8 @@ fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>) {
     }
 
     match t.kind(il) {
-        IlKind::Exit => inss.push(InsKind::Exit),
+        IlKind::Root => {}
+        IlKind::CodeSection => {}
         IlKind::Semi => {}
         IlKind::Assert => inss.push(InsKind::Assert),
         IlKind::Bool(value) => inss.push(InsKind::Bool(value)),
@@ -32,6 +33,8 @@ fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>) {
         IlKind::OpDiv => inss.push(InsKind::OpDiv),
         IlKind::OpEq => inss.push(InsKind::OpEq),
     }
+
+    inss.push(InsKind::Exit);
 }
 
 pub(crate) fn gen(t: &IlTree) -> Vec<InsKind> {

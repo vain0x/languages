@@ -53,9 +53,9 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
 pub(crate) fn from_expr(expr: &Expr, s: &SourceFileSystem) -> IlTree {
     let mut il_tree = IlTree::new();
 
-    let main = gen_expr(expr, &mut il_tree, s);
-    let exit = il_tree.add_leaf(IlKind::Exit);
-    let root = il_tree.add_node(IlKind::Semi, &[main, exit]);
+    let top_level = gen_expr(expr, &mut il_tree, s);
+    let code_section = il_tree.add_node(IlKind::CodeSection, &[top_level]);
+    let root = il_tree.add_node(IlKind::Root, &[code_section]);
     il_tree.set_root(root);
 
     il_tree

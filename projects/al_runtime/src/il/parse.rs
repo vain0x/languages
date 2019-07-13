@@ -70,7 +70,8 @@ impl TokenFactoryTrait for IlTokenFactory {
 }
 
 static ATOM_KINDS: &[(&str, IlKind)] = &[
-    ("exit", IlKind::Exit),
+    ("root", IlKind::Root),
+    ("code_section", IlKind::CodeSection),
     ("semi", IlKind::Semi),
     ("assert", IlKind::Assert),
     ("false", IlKind::Bool(false)),

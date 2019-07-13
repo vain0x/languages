@@ -1,9 +1,9 @@
-(semi
-  (semi
-    // assert(true)
-    (assert
-      true)
-    // assert(true)
-    (assert
-      true))
-  (exit))
+(root
+  (code_section
+    (semi
+      // assert(true)
+      (assert
+        true)
+      // assert(true)
+      (assert
+        true))))

@@ -3,9 +3,10 @@ use std::io::{self, Write};
 
 fn print_atom(kind: IlKind, out: &mut Vec<u8>) -> io::Result<()> {
     match kind {
+        IlKind::Root => write!(out, "root")?,
+        IlKind::CodeSection => write!(out, "code_section")?,
         IlKind::Bool(value) => write!(out, "{}", value)?,
         IlKind::Int(value) => write!(out, "{}", value)?,
-        IlKind::Exit => write!(out, "exit")?,
         IlKind::Semi => write!(out, "semi")?,
         IlKind::Assert => write!(out, "assert")?,
         IlKind::OpAdd => write!(out, "+")?,

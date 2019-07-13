@@ -1,6 +1,7 @@
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum IlKind {
-    Exit,
+    Root,
+    CodeSection,
     Semi,
     Assert,
     Bool(bool),
@@ -30,7 +31,12 @@ pub struct IlTree {
 
 impl Il {
     pub fn new(kind: IlKind, start: usize, end: usize) -> Self {
-        Il { kind, start, end, comment: None }
+        Il {
+            kind,
+            start,
+            end,
+            comment: None,
+        }
     }
 
     pub fn kind(self) -> IlKind {
@@ -74,7 +80,9 @@ impl IlTree {
     }
 
     pub fn comment(&self, il: usize) -> Option<&str> {
-        self.ils[il].comment.map(|comment| self.comments[comment].as_ref())
+        self.ils[il]
+            .comment
+            .map(|comment| self.comments[comment].as_ref())
     }
 
     pub fn len(&self) -> usize {

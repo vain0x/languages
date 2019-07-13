@@ -49,6 +49,14 @@ impl SyntaxNode {
     }
 }
 
+static BIN_OP_TABLE: &[(BinOp, TokenKind)] = &[
+    (BinOp::Add, TokenKind::Plus),
+    (BinOp::Sub, TokenKind::Minus),
+    (BinOp::Mul, TokenKind::Star),
+    (BinOp::Div, TokenKind::Slash),
+    (BinOp::Eq, TokenKind::EqEq),
+];
+
 fn parse_atom(p: &mut Parser<'_>) -> Ast {
     let loc = p.loc();
     let children = vec![];
@@ -106,68 +114,41 @@ fn parse_call(p: &mut Parser<'_>) -> Ast {
     call.finish(Ast::new(AstKind::Call, vec![cal, arg], loc), p)
 }
 
-fn parse_mul(p: &mut Parser<'_>) -> Ast {
-    let mul = p.start();
-    let left = parse_call(p);
-
-    if p.at(TokenKind::Star) {
-        let loc = p.loc();
-        p.bump();
-
-        let right = parse_call(p);
-        return mul.finish(Ast::new(AstKind::BinOp(BinOp::Mul), vec![left, right], loc), p);
+fn parse_bin_left(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
+    match level.next() {
+        None => parse_call(p),
+        Some(next_level) => parse_bin(next_level, p),
     }
+}
 
-    if p.at(TokenKind::Slash) {
-        let loc = p.loc();
-        p.bump();
+fn parse_bin_right(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
+    // NOTE: 右結合のケースがある
+    parse_bin_left(level, p)
+}
 
-        let right = parse_call(p);
-        return mul.finish(Ast::new(AstKind::BinOp(BinOp::Div), vec![left, right], loc), p);
+fn parse_bin(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
+    let bin = p.start();
+    let left = parse_bin_left(level, p);
+
+    for &(bin_op, token_kind) in BIN_OP_TABLE {
+        if bin_op.level() == level && p.at(token_kind) {
+            let op_loc = p.loc();
+            p.bump();
+
+            let right = parse_bin_right(level, p);
+            return bin.finish(Ast::new(AstKind::Bin(bin_op), vec![left, right], op_loc), p);
+        }
     }
 
     left
 }
 
-fn parse_add(p: &mut Parser<'_>) -> Ast {
-    let add = p.start();
-    let left = parse_mul(p);
-
-    if p.at(TokenKind::Plus) {
-        let loc = p.loc();
-        p.bump();
-
-        let right = parse_mul(p);
-        return add.finish(Ast::new(AstKind::BinOp(BinOp::Add), vec![left, right], loc), p);
-    }
-
-    if p.at(TokenKind::Minus) {
-        let loc = p.loc();
-        p.bump();
-
-        let right = parse_mul(p);
-        return add.finish(Ast::new(AstKind::BinOp(BinOp::Sub), vec![left, right], loc), p);
-    }
-
-    left
-}
-
-fn parse_eq(p: &mut Parser<'_>) -> Ast {
-    let eq = p.start();
-    let left = parse_add(p);
-
-    if !p.at(TokenKind::EqEq) {
-        return left;
-    }
-    let loc = p.loc();
-    p.bump();
-
-    let right = parse_add(p);
-    eq.finish(Ast::new(AstKind::BinOp(BinOp::Eq), vec![left, right], loc), p)
+fn parse_bin_top(p: &mut Parser<'_>) -> Ast {
+    parse_bin(BinOpLevel::Eq, p)
 }
 
 fn parse_term(p: &mut Parser<'_>) -> Ast {
-    parse_eq(p)
+    parse_bin_top(p)
 }
 
 fn parse_semi(loc: SourceLocation, p: &mut Parser<'_>) -> Ast {

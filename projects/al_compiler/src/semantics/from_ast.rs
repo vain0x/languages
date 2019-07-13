@@ -22,7 +22,7 @@ pub(crate) fn from_ast(ast: &Ast) -> Expr {
         AstKind::Ident(ident) => Expr::new_ident(ident.to_owned(), ast.loc()),
         AstKind::Int(value) => Expr::new_int(*value, ast.loc()),
         AstKind::Assert => Expr::new_prim(Prim::Assert, ast.loc()),
-        AstKind::BinOp(bin_op) => {
+        AstKind::Bin(bin_op) => {
             let prim = bin_op_to_prim(*bin_op);
 
             let mut children = vec![];

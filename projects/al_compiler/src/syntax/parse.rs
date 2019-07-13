@@ -5,8 +5,22 @@ use std::rc::Rc;
 
 type Parser<'a> = TokenParser<'a, Token>;
 
+// 具象構文木のノード
+struct SyntaxNode {
+    start_loc: SourceLocation,
+}
+
 trait ParserExt {
+    // 具象構文木のノードの開始時に呼ばれる。
+    // ノードの範囲の開始位置を記録する。
+    fn start(&self) -> SyntaxNode {
+        SyntaxNode {
+            start_loc: self.loc(),
+        }
+    }
+
     fn text(&self) -> &str;
+
     fn loc(&self) -> SourceLocation;
 }
 
@@ -17,6 +31,21 @@ impl<'a> ParserExt for TokenParser<'a, Token> {
 
     fn loc(&self) -> SourceLocation {
         self.next_token().loc()
+    }
+}
+
+impl SyntaxNode {
+    // 具象構文木のノードの終了時に呼ばれる。
+    // ノードの範囲を計算して AST ノードに保持させる。
+    // この範囲にはカッコのような抽象構文木が持たない情報も含まれる。
+    fn finish(&self, mut ast: Ast, p: &mut Parser<'_>) -> Ast {
+        let total_loc = match p.prev_token() {
+            Some(t) => self.start_loc.union(&t.loc()),
+            None => self.start_loc,
+        };
+
+        ast.extend_loc(&total_loc);
+        ast
     }
 }
 
@@ -48,13 +77,14 @@ fn parse_atom(p: &mut Parser<'_>) -> Ast {
             Ast::new(AstKind::Int(value), children, loc)
         }
         TokenKind::ParenL => {
+            let group = p.start();
             p.bump();
             let body = parse_term(p);
             if !p.at(TokenKind::ParenR) {
                 panic!("no )")
             }
             p.bump();
-            body
+            group.finish(body, p)
         }
         _ => {
             panic!("expected an expression");
@@ -63,6 +93,7 @@ fn parse_atom(p: &mut Parser<'_>) -> Ast {
 }
 
 fn parse_call(p: &mut Parser<'_>) -> Ast {
+    let call = p.start();
     let cal = parse_atom(p);
 
     if !p.at(TokenKind::ParenL) {
@@ -71,10 +102,12 @@ fn parse_call(p: &mut Parser<'_>) -> Ast {
 
     let loc = p.loc();
     let arg = parse_atom(p);
-    Ast::new(AstKind::Call, vec![cal, arg], loc)
+
+    call.finish(Ast::new(AstKind::Call, vec![cal, arg], loc), p)
 }
 
 fn parse_mul(p: &mut Parser<'_>) -> Ast {
+    let mul = p.start();
     let left = parse_call(p);
 
     if p.at(TokenKind::Star) {
@@ -82,7 +115,7 @@ fn parse_mul(p: &mut Parser<'_>) -> Ast {
         p.bump();
 
         let right = parse_call(p);
-        return Ast::new(AstKind::Mul, vec![left, right], loc);
+        return mul.finish(Ast::new(AstKind::Mul, vec![left, right], loc), p);
     }
 
     if p.at(TokenKind::Slash) {
@@ -90,13 +123,14 @@ fn parse_mul(p: &mut Parser<'_>) -> Ast {
         p.bump();
 
         let right = parse_call(p);
-        return Ast::new(AstKind::Div, vec![left, right], loc);
+        return mul.finish(Ast::new(AstKind::Div, vec![left, right], loc), p);
     }
 
     left
 }
 
 fn parse_add(p: &mut Parser<'_>) -> Ast {
+    let add = p.start();
     let left = parse_mul(p);
 
     if p.at(TokenKind::Plus) {
@@ -104,7 +138,7 @@ fn parse_add(p: &mut Parser<'_>) -> Ast {
         p.bump();
 
         let right = parse_mul(p);
-        return Ast::new(AstKind::Add, vec![left, right], loc);
+        return add.finish(Ast::new(AstKind::Add, vec![left, right], loc), p);
     }
 
     if p.at(TokenKind::Minus) {
@@ -112,13 +146,14 @@ fn parse_add(p: &mut Parser<'_>) -> Ast {
         p.bump();
 
         let right = parse_mul(p);
-        return Ast::new(AstKind::Sub, vec![left, right], loc);
+        return add.finish(Ast::new(AstKind::Sub, vec![left, right], loc), p);
     }
 
     left
 }
 
 fn parse_eq(p: &mut Parser<'_>) -> Ast {
+    let eq = p.start();
     let left = parse_add(p);
 
     if !p.at(TokenKind::EqEq) {
@@ -128,7 +163,7 @@ fn parse_eq(p: &mut Parser<'_>) -> Ast {
     p.bump();
 
     let right = parse_add(p);
-    Ast::new(AstKind::Eq, vec![left, right], loc)
+    eq.finish(Ast::new(AstKind::Eq, vec![left, right], loc), p)
 }
 
 fn parse_term(p: &mut Parser<'_>) -> Ast {
@@ -136,6 +171,7 @@ fn parse_term(p: &mut Parser<'_>) -> Ast {
 }
 
 fn parse_semi(loc: SourceLocation, p: &mut Parser<'_>) -> Ast {
+    let semi = p.start();
     let mut children = vec![];
 
     while !p.at_eof() {
@@ -143,7 +179,7 @@ fn parse_semi(loc: SourceLocation, p: &mut Parser<'_>) -> Ast {
         children.push(child);
     }
 
-    Ast::new(AstKind::Semi, children, loc)
+    semi.finish(Ast::new(AstKind::Semi, children, loc), p)
 }
 
 fn parse_root(p: &mut Parser<'_>) -> Ast {

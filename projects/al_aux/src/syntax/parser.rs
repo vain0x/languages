@@ -38,6 +38,14 @@ impl<'a, Token: TokenTrait> TokenParser<'a, Token> {
         self.tick.set(tick);
     }
 
+    pub fn prev_token(&self) -> Option<&Token> {
+        if self.current >= 1 {
+            Some(&self.tokens[self.current - 1])
+        } else {
+            None
+        }
+    }
+
     pub fn next_token(&self) -> &Token {
         self.detect_infinite_loop();
 

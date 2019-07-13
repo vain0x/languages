@@ -1,3 +1,4 @@
+use std::cmp::{max, min};
 use std::path::PathBuf;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -33,6 +34,15 @@ impl SourceLocation {
 
     pub(crate) fn end(&self) -> usize {
         self.end
+    }
+
+    pub(crate) fn union(&self, other: &SourceLocation) -> SourceLocation {
+        assert_eq!(self.file(), other.file());
+        SourceLocation {
+            file: self.file(),
+            start: min(self.start(), other.start()),
+            end: max(self.end(), other.end()),
+        }
     }
 }
 

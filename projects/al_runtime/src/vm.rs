@@ -1,8 +1,8 @@
-//! バーチャルマシン
+//! バーチャルマシン (virtual machine)
 
 use crate::*;
 
-pub(crate) struct Runtime {
+pub(crate) struct VM {
     table_tys: Vec<CellTy>,
     table: Vec<i64>,
     heap_end: usize,
@@ -11,9 +11,9 @@ pub(crate) struct Runtime {
     pc: usize,
 }
 
-impl Runtime {
+impl VM {
     pub(crate) fn new() -> Self {
-        Runtime {
+        VM {
             table_tys: vec![CellTy::None; 1024],
             table: vec![0xcd; 1024],
             heap_end: 0,

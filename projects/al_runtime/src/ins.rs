@@ -81,12 +81,14 @@ fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>, globals: &mut HashMap
         }
     }
 
-    inss.push(InsKind::Exit);
 }
 
 pub(crate) fn gen(t: &IlTree) -> (Vec<InsKind>, usize) {
     let mut inss = vec![];
     let mut globals = HashMap::new();
+
     gen_ins(t.root(), t, &mut inss, &mut globals);
+    inss.push(InsKind::Exit);
+
     (inss, globals.len())
 }

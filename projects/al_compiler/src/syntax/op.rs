@@ -1,3 +1,4 @@
+// 二項演算子 (binary operator)
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum BinOp {
     Eq,
@@ -7,6 +8,7 @@ pub(crate) enum BinOp {
     Sub,
 }
 
+// 二項演算子の結合度を表す。結合が弱い方から強い方に並んでいる。
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum BinOpLevel {
     Eq,

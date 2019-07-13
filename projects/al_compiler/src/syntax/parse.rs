@@ -114,6 +114,7 @@ fn parse_call(p: &mut Parser<'_>) -> Ast {
     call.finish(Ast::new(AstKind::Call, vec![cal, arg], loc), p)
 }
 
+// 二項演算式の左辺をパースする。
 fn parse_bin_left(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
     match level.next() {
         None => parse_call(p),
@@ -121,26 +122,42 @@ fn parse_bin_left(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
     }
 }
 
+// 二項演算式の右辺をパースする。
 fn parse_bin_right(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
     // NOTE: 右結合のケースがある
     parse_bin_left(level, p)
 }
 
+// 特定のレベルの二項演算式をパースする。
 fn parse_bin(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
-    let bin = p.start();
-    let left = parse_bin_left(level, p);
+    let bins = p.start();
+    let mut left = parse_bin_left(level, p);
 
-    for &(bin_op, token_kind) in BIN_OP_TABLE {
-        if bin_op.level() == level && p.at(token_kind) {
+    loop {
+        // 次の位置のトークンが対応する二項演算子を調べる。
+        let bin_op_opt = BIN_OP_TABLE
+            .iter()
+            .filter_map(|&(bin_op, token_kind)| {
+                if bin_op.level() == level && p.at(token_kind) {
+                    Some(bin_op)
+                } else {
+                    None
+                }
+            })
+            .next();
+
+        if let Some(bin_op) = bin_op_opt {
             let op_loc = p.loc();
             p.bump();
 
             let right = parse_bin_right(level, p);
-            return bin.finish(Ast::new(AstKind::Bin(bin_op), vec![left, right], op_loc), p);
+            let ast = bins.finish(Ast::new(AstKind::Bin(bin_op), vec![left, right], op_loc), p);
+            left = ast;
+            continue;
         }
-    }
 
-    left
+        return left;
+    }
 }
 
 fn parse_bin_top(p: &mut Parser<'_>) -> Ast {

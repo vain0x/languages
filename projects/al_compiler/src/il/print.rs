@@ -23,6 +23,18 @@ fn print_node(il: usize, depth: usize, t: &IlTree, out: &mut Vec<u8>) -> io::Res
         _ => true,
     };
 
+    if let Some(comment) = t.comment(il) {
+        for line in comment.split("\n") {
+            // Indent.
+            for _ in 0..depth {
+                write!(out, "  ")?;
+            }
+
+            write!(out, "// {}", line.trim_end())?;
+        }
+    }
+
+    // Indent.
     for _ in 0..depth {
         write!(out, "  ")?;
     }

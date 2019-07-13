@@ -30,7 +30,7 @@ pub(crate) struct Expr {
     kind: ExprKind,
     children: Vec<Expr>,
     main_loc: SourceLocation,
-    wide_loc: SourceLocation,
+    total_loc: SourceLocation,
 }
 
 impl Expr {
@@ -38,13 +38,13 @@ impl Expr {
         kind: ExprKind,
         children: Vec<Expr>,
         main_loc: SourceLocation,
-        wide_loc: SourceLocation,
+        total_loc: SourceLocation,
     ) -> Expr {
         Expr {
             kind,
             children,
             main_loc,
-            wide_loc,
+            total_loc,
         }
     }
 
@@ -80,8 +80,8 @@ impl Expr {
     //     self.main_loc
     // }
 
-    pub(crate) fn wide_loc(&self) -> &SourceLocation {
-        &self.wide_loc
+    pub(crate) fn total_loc(&self) -> &SourceLocation {
+        &self.total_loc
     }
 
     pub(crate) fn is_single_statement(&self) -> bool {
@@ -89,13 +89,13 @@ impl Expr {
             ExprKind::Call => match self.children()[0].kind() {
                 ExprKind::Prim(Prim::Assert) => true,
                 _ => false,
-            }
+            },
             _ => false,
         }
     }
 
     pub(crate) fn short_text<'a>(&self, s: &'a SourceFileSystem) -> (&'a str, bool) {
-        let text = s.loc_text(self.wide_loc()).trim();
+        let text = s.loc_text(self.total_loc()).trim();
         let mut split = text.split('\n');
         let first_line = split.next().unwrap_or("");
         let omit = split.next().is_some();

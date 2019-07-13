@@ -30,7 +30,7 @@ fn print_node(il: usize, depth: usize, t: &IlTree, out: &mut Vec<u8>) -> io::Res
                 write!(out, "  ")?;
             }
 
-            write!(out, "// {}", line.trim_end())?;
+            write!(out, "// {}\n", line.trim_end())?;
         }
     }
 

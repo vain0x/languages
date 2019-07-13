@@ -1,7 +1,9 @@
 (semi
   (semi
+    // assert(true
     (assert
       true)
+    // assert(true
     (assert
       true))
   (exit))

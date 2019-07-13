@@ -1,4 +1,4 @@
-use crate::syntax::SourceLocation;
+use crate::syntax::*;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Lit {
@@ -80,7 +80,15 @@ impl Expr {
     //     self.main_loc
     // }
 
-    // pub(crate) fn wide_loc(&self) -> SourceLocation {
-    //     self.wide_loc
-    // }
+    pub(crate) fn wide_loc(&self) -> &SourceLocation {
+        &self.wide_loc
+    }
+
+    pub(crate) fn short_text<'a>(&self, s: &'a SourceFileSystem) -> (&'a str, bool) {
+        let text = s.loc_text(self.wide_loc()).trim();
+        let mut split = text.split('\n');
+        let first_line = split.next().unwrap_or("");
+        let omit = split.next().is_some();
+        (first_line, omit)
+    }
 }

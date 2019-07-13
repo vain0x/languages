@@ -5,5 +5,5 @@ pub(crate) mod token;
 pub(crate) mod tokenize;
 
 pub(crate) use ast::{AstKind, Ast};
-pub(crate) use source_file::SourceLocation;
+pub(crate) use source_file::*;
 pub(crate) use token::{TokenKind, Token};

@@ -84,6 +84,16 @@ impl Expr {
         &self.wide_loc
     }
 
+    pub(crate) fn is_single_statement(&self) -> bool {
+        match self.kind() {
+            ExprKind::Call => match self.children()[0].kind() {
+                ExprKind::Prim(Prim::Assert) => true,
+                _ => false,
+            }
+            _ => false,
+        }
+    }
+
     pub(crate) fn short_text<'a>(&self, s: &'a SourceFileSystem) -> (&'a str, bool) {
         let text = s.loc_text(self.wide_loc()).trim();
         let mut split = text.split('\n');

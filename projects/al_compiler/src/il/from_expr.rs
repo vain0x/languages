@@ -35,7 +35,9 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
                 children.push(gen_expr(child, t, s));
             }
             let il = t.add_node(kind, &children);
-            set_text_comment(il, expr, t, s);
+            if expr.is_single_statement() {
+                set_text_comment(il, expr, t, s);
+            }
             il
         }
         ExprKind::Semi => {

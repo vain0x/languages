@@ -3,6 +3,7 @@ use std::io;
 use std::path::PathBuf;
 
 pub(crate) mod il;
+pub(crate) mod semantics;
 pub(crate) mod syntax;
 
 pub struct Output {
@@ -15,7 +16,8 @@ pub fn build(entry_path: &str) -> io::Result<Output> {
     let text = fs::read_to_string(PathBuf::from(entry_path))?;
 
     let ast = crate::syntax::parse::parse(file, &text);
-    let codes = crate::il::gen::gen(&ast);
+    let expr = crate::semantics::from_ast::from_ast(&ast);
+    let codes = crate::il::from_expr::from_expr(&expr);
     let il = crate::il::print::print(&codes)?;
 
     Ok(Output {

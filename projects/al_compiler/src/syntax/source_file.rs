@@ -18,4 +18,16 @@ impl SourceLocation {
         assert!(start <= end);
         SourceLocation { file, start, end }
     }
+
+    pub(crate) fn file(&self) -> usize {
+        self.file
+    }
+
+    pub(crate) fn start(&self) -> usize {
+        self.start
+    }
+
+    pub(crate) fn end(&self) -> usize {
+        self.end
+    }
 }

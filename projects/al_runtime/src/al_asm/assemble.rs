@@ -1,25 +1,8 @@
-//! 実行コード (instructions)
+//! 中間言語からアセンブリへの変換
 
+use super::*;
 use al_aux::il::*;
 use std::collections::HashMap;
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub(crate) enum InsKind {
-    // 文
-    Exit,
-    Assert,
-    CellSet,
-
-    // 式
-    Bool(bool),
-    Int(i64),
-    GlobalGet,
-    OpAdd,
-    OpSub,
-    OpMul,
-    OpDiv,
-    OpEq,
-}
 
 fn gen_globals(il: usize, t: &IlTree, globals: &mut HashMap<String, usize>) {
     for ci in 0..t.child_len(il) {
@@ -80,10 +63,9 @@ fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>, globals: &mut HashMap
             }
         }
     }
-
 }
 
-pub(crate) fn gen(t: &IlTree) -> (Vec<InsKind>, usize) {
+pub(crate) fn assemble(t: &IlTree) -> (Vec<InsKind>, usize) {
     let mut inss = vec![];
     let mut globals = HashMap::new();
 

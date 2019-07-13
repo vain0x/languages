@@ -7,11 +7,7 @@ pub(crate) enum AstKind {
     Ident(String),
     Int(i64),
     Assert,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Eq,
+    BinOp(BinOp),
     Call,
     Semi,
 }

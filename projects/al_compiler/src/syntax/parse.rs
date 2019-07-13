@@ -115,7 +115,7 @@ fn parse_mul(p: &mut Parser<'_>) -> Ast {
         p.bump();
 
         let right = parse_call(p);
-        return mul.finish(Ast::new(AstKind::Mul, vec![left, right], loc), p);
+        return mul.finish(Ast::new(AstKind::BinOp(BinOp::Mul), vec![left, right], loc), p);
     }
 
     if p.at(TokenKind::Slash) {
@@ -123,7 +123,7 @@ fn parse_mul(p: &mut Parser<'_>) -> Ast {
         p.bump();
 
         let right = parse_call(p);
-        return mul.finish(Ast::new(AstKind::Div, vec![left, right], loc), p);
+        return mul.finish(Ast::new(AstKind::BinOp(BinOp::Div), vec![left, right], loc), p);
     }
 
     left
@@ -138,7 +138,7 @@ fn parse_add(p: &mut Parser<'_>) -> Ast {
         p.bump();
 
         let right = parse_mul(p);
-        return add.finish(Ast::new(AstKind::Add, vec![left, right], loc), p);
+        return add.finish(Ast::new(AstKind::BinOp(BinOp::Add), vec![left, right], loc), p);
     }
 
     if p.at(TokenKind::Minus) {
@@ -146,7 +146,7 @@ fn parse_add(p: &mut Parser<'_>) -> Ast {
         p.bump();
 
         let right = parse_mul(p);
-        return add.finish(Ast::new(AstKind::Sub, vec![left, right], loc), p);
+        return add.finish(Ast::new(AstKind::BinOp(BinOp::Sub), vec![left, right], loc), p);
     }
 
     left
@@ -163,7 +163,7 @@ fn parse_eq(p: &mut Parser<'_>) -> Ast {
     p.bump();
 
     let right = parse_add(p);
-    eq.finish(Ast::new(AstKind::Eq, vec![left, right], loc), p)
+    eq.finish(Ast::new(AstKind::BinOp(BinOp::Eq), vec![left, right], loc), p)
 }
 
 fn parse_term(p: &mut Parser<'_>) -> Ast {

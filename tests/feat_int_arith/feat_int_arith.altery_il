@@ -1,35 +1,37 @@
-push_int 0
-push_int 0
-op_eq
-assert
-push_int 1
-push_int 1
-op_eq
-assert
-push_int 0
-push_int 1
-op_eq
-false
-op_eq
-assert
-push_int 2
-push_int 3
-op_add
-push_int 5
-op_eq
-assert
-push_int 84
-push_int 2
-op_div
-push_int 42
-op_eq
-assert
-push_int 48
-push_int 3
-push_int 2
-op_mul
-op_sub
-push_int 42
-op_eq
-assert
-exit
+(semi
+  (semi
+    (assert
+      (==
+        0
+        0))
+    (assert
+      (==
+        1
+        1))
+    (assert
+      (==
+        (==
+          0
+          1)
+        false))
+    (assert
+      (==
+        (+
+          2
+          3)
+        5))
+    (assert
+      (==
+        (/
+          84
+          2)
+        42))
+    (assert
+      (==
+        (-
+          48
+          (*
+            3
+            2))
+        42)))
+  (exit))

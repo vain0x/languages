@@ -1,65 +1,54 @@
-use crate::il::*;
 use crate::syntax::*;
+use al_aux::il::*;
 
-fn gen_expr(ast: &Ast, codes: &mut Vec<Code>) {
+fn gen_expr(ast: &Ast, t: &mut IlTree) -> usize {
     match ast.kind() {
-        AstKind::True => codes.push(Code::PushTrue),
-        AstKind::False => codes.push(Code::PushFalse),
+        AstKind::True => t.add_bool(true),
+        AstKind::False => t.add_bool(false),
         AstKind::Assert | AstKind::Ident(_) => unimplemented!(),
-        AstKind::Int(value) => codes.push(Code::PushInt(*value)),
-        AstKind::Add => {
+        AstKind::Int(value) => t.add_int(*value),
+        AstKind::Add | AstKind::Sub | AstKind::Mul | AstKind::Div | AstKind::Eq => {
+            let kind = match ast.kind() {
+                AstKind::Add => IlKind::OpAdd,
+                AstKind::Sub => IlKind::OpSub,
+                AstKind::Mul => IlKind::OpMul,
+                AstKind::Div => IlKind::OpDiv,
+                AstKind::Eq => IlKind::OpEq,
+                _ => unreachable!(),
+            };
+            let mut children = vec![];
             for child in ast.children() {
-                gen_expr(child, codes);
+                children.push(gen_expr(child, t));
             }
-            codes.push(Code::OpAdd);
+            t.add_node(kind, &children)
         }
-        AstKind::Sub => {
-            for child in ast.children() {
-                gen_expr(child, codes);
-            }
-            codes.push(Code::OpSub);
-        }
-        AstKind::Mul => {
-            for child in ast.children() {
-                gen_expr(child, codes);
-            }
-            codes.push(Code::OpMul);
-        }
-        AstKind::Div => {
-            for child in ast.children() {
-                gen_expr(child, codes);
-            }
-            codes.push(Code::OpDiv);
-        }
-        AstKind::Eq => match ast.children() {
-            [left, right] => {
-                gen_expr(&left, codes);
-                gen_expr(&right, codes);
-                codes.push(Code::OpEq);
-            }
-            _ => unreachable!(),
-        },
         AstKind::Call => match ast.children() {
             [cal, arg] => match cal.kind() {
                 AstKind::Assert => {
-                    gen_expr(&arg, codes);
-                    codes.push(Code::Assert);
+                    let arg = gen_expr(&arg, t);
+                    t.add_node(IlKind::Assert, &[arg])
                 }
                 _ => unimplemented!("{:?}", cal.kind()),
             },
             _ => unreachable!(),
         },
         AstKind::Semi => {
+            let mut children = vec![];
             for child in ast.children() {
-                gen_expr(child, codes);
+                children.push(gen_expr(child, t));
             }
+            t.add_node(IlKind::Semi, &children)
         }
     }
 }
 
-pub(crate) fn gen(ast: &Ast) -> Vec<Code> {
-    let mut codes = vec![];
-    gen_expr(ast, &mut codes);
-    codes.push(Code::Exit);
-    codes
+pub(crate) fn gen(ast: &Ast) -> IlTree {
+    let mut il_tree = IlTree::new();
+
+    let main = gen_expr(ast, &mut il_tree);
+    let exit = il_tree.add_leaf(IlKind::Exit);
+    let root = il_tree.add_node(IlKind::Semi, &[main, exit]);
+    il_tree.set_root(root);
+
+    il_tree
 }

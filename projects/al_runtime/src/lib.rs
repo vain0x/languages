@@ -1,11 +1,12 @@
-use crate::il::*;
+use crate::ins::*;
 
 pub(crate) mod il;
+pub(crate) mod ins;
 
 pub(crate) struct Runtime {
     table: Vec<i64>,
     stack_end: usize,
-    program: Vec<Code>,
+    inss: Vec<InsKind>,
     pc: usize,
 }
 
@@ -14,13 +15,9 @@ impl Runtime {
         Runtime {
             table: vec![0xcd; 1024],
             stack_end: 1024,
-            program: vec![],
+            inss: vec![],
             pc: 0,
         }
-    }
-
-    fn add_code(&mut self, code: Code) {
-        self.program.push(code);
     }
 
     fn stack_push(&mut self, value: i64) {
@@ -36,45 +33,42 @@ impl Runtime {
     fn run(&mut self) -> ! {
         loop {
             self.pc += 1;
-            match self.program[self.pc - 1] {
-                Code::Exit => std::process::exit(0),
-                Code::Assert => {
+            match self.inss[self.pc - 1] {
+                InsKind::Exit => std::process::exit(0),
+                InsKind::Assert => {
                     if self.stack_pop() == 0 {
                         eprintln!("assertion error");
                         std::process::abort()
                     }
                 }
-                Code::PushTrue => {
-                    self.stack_push(1);
+                InsKind::Bool(value) => {
+                    self.stack_push(if value { 1 } else { 0 });
                 }
-                Code::PushFalse => {
-                    self.stack_push(0);
-                }
-                Code::PushInt(value) => {
+                InsKind::Int(value) => {
                     self.stack_push(value);
                 }
-                Code::OpAdd => {
+                InsKind::OpAdd => {
                     let right = self.stack_pop();
                     let left = self.stack_pop();
                     self.stack_push(left + right);
                 }
-                Code::OpSub => {
+                InsKind::OpSub => {
                     let right = self.stack_pop();
                     let left = self.stack_pop();
                     self.stack_push(left - right);
                 }
-                Code::OpMul => {
+                InsKind::OpMul => {
                     let right = self.stack_pop();
                     let left = self.stack_pop();
                     self.stack_push(left * right);
                 }
-                Code::OpDiv => {
+                InsKind::OpDiv => {
                     let right = self.stack_pop();
                     let left = self.stack_pop();
                     // FIXME: ゼロ除算をエラーにする
                     self.stack_push(left / right);
                 }
-                Code::OpEq => {
+                InsKind::OpEq => {
                     let right = self.stack_pop();
                     let left = self.stack_pop();
                     self.stack_push(if left == right { 1 } else { 0 });
@@ -85,13 +79,11 @@ impl Runtime {
 }
 
 pub fn run(il_text: &str) -> ! {
-    let codes = il::parse::parse(il_text);
+    let il_tree = il::parse::parse(il_text);
+    let inss = ins::gen(&il_tree);
 
     let mut runtime = Runtime::new();
-    for code in codes {
-        runtime.add_code(code);
-    }
-
+    runtime.inss = inss;
     runtime.run()
 }
 

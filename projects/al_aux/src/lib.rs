@@ -1,3 +1,4 @@
+pub mod il;
 pub mod syntax;
 
 #[cfg(test)]

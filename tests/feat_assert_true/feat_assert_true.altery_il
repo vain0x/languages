@@ -1,5 +1,7 @@
-true
-assert
-true
-assert
-exit
+(semi
+  (semi
+    (assert
+      true)
+    (assert
+      true))
+  (exit))

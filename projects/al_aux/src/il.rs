@@ -1,3 +1,3 @@
-pub mod ast;
+pub(crate) mod il_tree;
 
-pub use ast::{Il, IlKind, IlTree};
+pub use il_tree::{Il, IlKind, IlTree};

@@ -3,12 +3,12 @@
 use super::*;
 use al_aux::il::*;
 
-fn gen_globals(il: usize, a: &mut AlAsm<'_>) {
-    for ci in 0..a.il().child_len(il) {
-        let child = a.il().child(il, ci);
-        match a.il().kind(child) {
+fn gen_globals(il: usize, t: &IlTree, a: &mut AlAsm) {
+    for ci in 0..t.child_len(il) {
+        let child = t.child(il, ci);
+        match t.kind(child) {
             IlKind::Ident(string_id) => {
-                let ident = a.il().get_string(string_id).to_owned();
+                let ident = t.get_string(string_id).to_owned();
                 a.globals.new_global(ident);
             }
             kind => unreachable!(
@@ -19,17 +19,17 @@ fn gen_globals(il: usize, a: &mut AlAsm<'_>) {
     }
 }
 
-fn gen_il(il: usize, a: &mut AlAsm<'_>) {
-    match a.il().kind(il) {
-        IlKind::Globals => return gen_globals(il, a),
+fn gen_il(il: usize, t: &IlTree, a: &mut AlAsm) {
+    match t.kind(il) {
+        IlKind::Globals => return gen_globals(il, t, a),
         _ => {}
     }
 
-    for ci in 0..a.il().child_len(il) {
-        gen_il(a.il().child(il, ci), a);
+    for ci in 0..t.child_len(il) {
+        gen_il(t.child(il, ci), t, a);
     }
 
-    match a.il().kind(il) {
+    match t.kind(il) {
         // 宣言:
 
         IlKind::Root | IlKind::CodeSection | IlKind::Globals => {}
@@ -54,7 +54,7 @@ fn gen_il(il: usize, a: &mut AlAsm<'_>) {
         // その他:
 
         IlKind::Ident(string_id) => {
-            let ident = a.il().get_string(string_id);
+            let ident = t.get_string(string_id);
             match a.globals.find(ident) {
                 Some(global_id) => a.new_instr(InstrKind::Int(global_id as i64)),
                 None => panic!("Unknown ident {}", ident),
@@ -63,10 +63,10 @@ fn gen_il(il: usize, a: &mut AlAsm<'_>) {
     }
 }
 
-pub(crate) fn assemble(t: &IlTree) -> AlAsm<'_> {
-    let mut a = AlAsm::new(t);
+pub(crate) fn assemble(t: &IlTree) -> AlAsm {
+    let mut a = AlAsm::new();
 
-    gen_il(a.il().root(), &mut a);
+    gen_il(t.root(), t, &mut a);
     a.instrs.push(InstrKind::Exit);
 
     a

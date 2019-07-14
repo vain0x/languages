@@ -115,6 +115,10 @@ fn find_files(tests_dir: &Path) -> Result<Vec<TestCase>, io::Error> {
 
     for dir in fs::read_dir(&tests_dir)? {
         let project_path = dir?.path();
+        if !project_path.is_dir() {
+            continue;
+        }
+
         let project_name = project_path
             .file_stem()
             .and_then(|name| name.to_str())

@@ -3,8 +3,10 @@
   (code_section
     (semi
       // assert(true)
-      (assert
-        true)
+      (pop
+        (assert
+          true))
       // assert(true)
-      (assert
-        true))))
+      (pop
+        (assert
+          true)))))

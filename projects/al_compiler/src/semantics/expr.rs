@@ -23,6 +23,7 @@ pub(crate) enum ExprKind {
     Ident(String),
     Global(usize, String),
     Call,
+    Do,
     Assign,
     Semi,
 }
@@ -78,6 +79,11 @@ impl Expr {
         &mut self.kind
     }
 
+    pub(crate) fn into_do(self) -> Expr {
+        let (main_loc, total_loc) = (*self.main_loc(), *self.total_loc());
+        Expr::new(ExprKind::Do, vec![self], main_loc, total_loc)
+    }
+
     pub(crate) fn children(&self) -> &[Expr] {
         &self.children
     }
@@ -86,9 +92,9 @@ impl Expr {
         &mut self.children
     }
 
-    // pub(crate) fn main_loc(&self) -> SourceLocation {
-    //     self.main_loc
-    // }
+    pub(crate) fn main_loc(&self) -> &SourceLocation {
+        &self.main_loc
+    }
 
     pub(crate) fn total_loc(&self) -> &SourceLocation {
         &self.total_loc
@@ -96,11 +102,8 @@ impl Expr {
 
     pub(crate) fn is_single_statement(&self) -> bool {
         match self.kind() {
-            ExprKind::Assign => true,
-            ExprKind::Call => match self.children()[0].kind() {
-                ExprKind::Prim(Prim::Assert) => true,
-                _ => false,
-            },
+            ExprKind::Semi => false,
+            ExprKind::Do | ExprKind::Assign => true,
             _ => false,
         }
     }

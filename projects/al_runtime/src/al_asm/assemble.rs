@@ -31,17 +31,15 @@ fn gen_il(il: usize, t: &IlTree, a: &mut AlAsm) {
 
     match t.kind(il) {
         // 宣言:
-
         IlKind::Root | IlKind::CodeSection | IlKind::Globals => {}
 
         // 文:
-
         IlKind::Semi => {}
+        IlKind::Pop => a.new_instr(InstrKind::Pop),
         IlKind::Assert => a.new_instr(InstrKind::Assert),
         IlKind::CellSet => a.new_instr(InstrKind::CellSet),
 
         // 式:
-
         IlKind::Bool(value) => a.new_instr(InstrKind::Bool(value)),
         IlKind::Int(value) => a.new_instr(InstrKind::Int(value)),
         IlKind::GlobalGet => a.new_instr(InstrKind::GlobalGet),
@@ -52,7 +50,6 @@ fn gen_il(il: usize, t: &IlTree, a: &mut AlAsm) {
         IlKind::OpEq => a.new_instr(InstrKind::OpEq),
 
         // その他:
-
         IlKind::Ident(string_id) => {
             let ident = t.get_string(string_id);
             match a.globals.find(ident) {

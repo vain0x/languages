@@ -5,6 +5,7 @@
 pub(crate) enum InstrKind {
     // 文
     Exit,
+    Pop,
     Assert,
     CellSet,
 

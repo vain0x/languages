@@ -67,6 +67,10 @@ impl VM {
         self.table_get(self.stack_end - 1)
     }
 
+    pub(crate) fn stack_top(&self) -> (CellTy, i64) {
+        self.table_get(self.stack_end)
+    }
+
     pub(crate) fn stack_pop_val(&mut self) -> (CellTy, i64) {
         match self.stack_pop() {
             (CellTy::Cell, addr) => self.table_get(addr as usize),
@@ -86,8 +90,11 @@ impl VM {
             self.pc += 1;
             match self.instrs()[self.pc - 1] {
                 InstrKind::Exit => std::process::exit(0),
+                InstrKind::Pop => {
+                    self.stack_pop();
+                }
                 InstrKind::Assert => {
-                    if self.stack_pop() != (CellTy::Bool, 1) {
+                    if self.stack_top() != (CellTy::Bool, 1) {
                         eprintln!("assertion error");
                         std::process::abort()
                     }

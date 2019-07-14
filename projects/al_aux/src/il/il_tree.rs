@@ -3,19 +3,17 @@
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum IlKind {
     // 宣言:
-
     Root,
     CodeSection,
     Globals,
 
     // 文:
-
     Semi,
+    Pop,
     Assert,
     CellSet,
 
     // 式:
-
     Bool(bool),
     Int(i64),
     GlobalGet,
@@ -26,7 +24,6 @@ pub enum IlKind {
     OpEq,
 
     // その他:
-
     Ident(usize),
 }
 
@@ -51,6 +48,7 @@ static IL_KIND_TEXTS: &[(&str, IlKind)] = &[
     ("code_section", IlKind::CodeSection),
     ("globals", IlKind::Globals),
     ("semi", IlKind::Semi),
+    ("pop", IlKind::Pop),
     ("assert", IlKind::Assert),
     ("cell_set", IlKind::CellSet),
     ("false", IlKind::Bool(false)),

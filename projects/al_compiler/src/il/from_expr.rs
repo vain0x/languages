@@ -65,6 +65,13 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
             }
             t.new_node(kind, &children)
         }
+        ExprKind::Do => {
+            let mut children = vec![];
+            for child in expr.children() {
+                children.push(gen_expr(child, t, s));
+            }
+            t.new_node(IlKind::Pop, &children)
+        }
         ExprKind::Semi => {
             let mut children = vec![];
             for child in expr.children() {

@@ -10,11 +10,12 @@
           $a)
         1)
       // assert(a == 1)
-      (assert
-        (==
-          (global_get
-            $a)
-          1))
+      (pop
+        (assert
+          (==
+            (global_get
+              $a)
+            1)))
       // a = 2
       (cell_set
         (global_get
@@ -26,14 +27,16 @@
           $b)
         3)
       // assert(a == 2)
-      (assert
-        (==
-          (global_get
-            $a)
-          2))
+      (pop
+        (assert
+          (==
+            (global_get
+              $a)
+            2)))
       // assert(b == 3)
-      (assert
-        (==
-          (global_get
-            $b)
-          3)))))
+      (pop
+        (assert
+          (==
+            (global_get
+              $b)
+            3))))))

@@ -24,6 +24,7 @@ pub fn build(entry_path: &str) -> io::Result<Output> {
     let mut expr = crate::semantics::from_ast::from_ast(&ast);
     let mut globals = HashMap::new();
     crate::semantics::name_res::name_res(&mut expr, &mut globals);
+    crate::semantics::canon::canon(&mut expr);
     let codes = crate::il::from_expr::from_expr(&expr, &mut globals, &sources);
     let il = crate::il::print::print(&codes)?;
 

@@ -15,16 +15,30 @@ impl VM {
     pub(crate) fn new(asm: AlAsm) -> VM {
         VM {
             asm,
-            table_tys: vec![CellTy::None; 1024],
-            table: vec![0xcd; 1024],
+            table_tys: vec![],
+            table: vec![],
             heap_end: 0,
-            stack_end: 1024,
+            stack_end: 0,
             pc: 0,
         }
     }
 
     fn instrs(&self) -> &[InstrKind] {
         &self.asm.instrs
+    }
+
+    fn table_initialize(&mut self) {
+        unsafe fn resize_vec<T>(v: &mut Vec<T>, len: usize) {
+            v.reserve(len);
+            v.set_len(len);
+            std::ptr::write_bytes(v.as_mut_ptr(), 0xcd, len);
+        };
+
+        let len = 1024;
+
+        unsafe { resize_vec(&mut self.table_tys, len) };
+        unsafe { resize_vec(&mut self.table, len) };
+        self.stack_end = len;
     }
 
     pub(crate) fn table_get(&self, addr: usize) -> (CellTy, i64) {
@@ -61,6 +75,7 @@ impl VM {
     }
 
     fn initialize(&mut self) {
+        self.table_initialize();
         self.heap_alloc(self.asm.global_count());
     }
 

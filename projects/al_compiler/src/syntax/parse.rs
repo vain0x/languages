@@ -95,7 +95,23 @@ fn parse_if(p: &mut Parser<'_>) -> Ast {
     }
     let body = parse_block(p);
 
-    if_expr.finish(Ast::new(AstKind::If, vec![cond, body], loc), p)
+    let alt = if p.at(TokenKind::Else) {
+        let else_loc = p.loc();
+        p.bump();
+
+        if p.at(TokenKind::If) {
+            parse_if(p)
+        } else if p.at(TokenKind::BraceL) {
+            parse_block(p)
+        } else {
+            panic!("expected if or block {:?}", else_loc)
+        }
+    } else {
+        // else がないときは `else {}` を自動で補う。
+        Ast::new(AstKind::Semi, vec![], loc)
+    };
+
+    if_expr.finish(Ast::new(AstKind::If, vec![cond, body, alt], loc), p)
 }
 
 /// アトム式。トークン1個か、カッコで構成される種類の式。

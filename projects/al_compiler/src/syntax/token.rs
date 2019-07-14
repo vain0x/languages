@@ -21,6 +21,7 @@ pub(crate) enum TokenKind {
     False,
     Assert,
     If,
+    Else,
 
     /// 整数
     Int,
@@ -63,6 +64,7 @@ static KEYWORD_TEXTS: &[(TokenKind, &str)] = &[
     (TokenKind::False, "false"),
     (TokenKind::Assert, "assert"),
     (TokenKind::If, "if"),
+    (TokenKind::Else, "else"),
 ];
 
 static SYMBOL_TEXTS: &[(TokenKind, &str)] = &[

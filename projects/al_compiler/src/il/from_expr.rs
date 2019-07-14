@@ -23,6 +23,11 @@ impl Label {
         t.new_node(IlKind::LabelGet, &[self.ident_il])
     }
 
+    fn new_jump_node(&self, t: &mut IlTree) -> usize {
+        let label = self.new_get_node(t);
+        t.new_node(IlKind::Jump, &[label])
+    }
+
     fn new_jump_unless_node(&self, cond: usize, t: &mut IlTree) -> usize {
         let label = self.new_get_node(t);
         t.new_node(IlKind::JumpUnless, &[label, cond])
@@ -125,15 +130,25 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             t.new_node(IlKind::Pop, &children)
         }
         ExprKind::If => match expr.children() {
-            [cond, body] => {
+            [cond, body, alt] => {
+                let else_label = labels.new_label("else", t);
                 let end_label = labels.new_label("end_if", t);
 
                 let cond = gen_expr(cond, t, labels, s);
-                let jump = end_label.new_jump_unless_node(cond, t);
+                let cond_with_jump = else_label.new_jump_unless_node(cond, t);
+
                 let body = gen_expr(body, t, labels, s);
+                let body_exit = end_label.new_jump_node(t);
+
+                let alt_entrance = else_label.new_def_node(t);
+                let alt = gen_expr(alt, t, labels, s);
+
                 let end = end_label.new_def_node(t);
 
-                t.new_node(IlKind::Semi, &[jump, body, end])
+                t.new_node(
+                    IlKind::Semi,
+                    &[cond_with_jump, body, body_exit, alt_entrance, alt, end],
+                )
             }
             _ => unimplemented!(),
         },

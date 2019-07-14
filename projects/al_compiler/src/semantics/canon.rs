@@ -45,9 +45,10 @@ fn canon_stmt(mut expr: Expr, stmts: &mut Vec<Expr>) {
         }
         ExprKind::If => {
             match expr.children_mut().as_mut_slice() {
-                [cond, body] => {
+                [cond, body, alt] => {
                     canon_term(cond, stmts);
                     canon_block(body);
+                    canon_block(alt);
                 }
                 _ => unimplemented!("no else yet"),
             }

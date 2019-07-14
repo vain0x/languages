@@ -2,16 +2,14 @@
 
 use super::*;
 use al_aux::il::*;
-use std::collections::HashMap;
 
-fn gen_globals(il: usize, t: &IlTree, globals: &mut HashMap<String, usize>) {
+fn gen_globals(il: usize, t: &IlTree, globals: &mut Globals) {
     for ci in 0..t.child_len(il) {
         let child = t.child(il, ci);
         match t.kind(child) {
             IlKind::Ident(string_id) => {
                 let ident = t.get_string(string_id).to_owned();
-                let global_id = globals.len();
-                globals.insert(ident, global_id);
+                globals.new_global(ident);
             }
             kind => unreachable!(
                 "globals の子ノードはすべて識別子でなければいけない {:?}",
@@ -21,7 +19,7 @@ fn gen_globals(il: usize, t: &IlTree, globals: &mut HashMap<String, usize>) {
     }
 }
 
-fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>, globals: &mut HashMap<String, usize>) {
+fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>, globals: &mut Globals) {
     match t.kind(il) {
         IlKind::Globals => return gen_globals(il, t, globals),
         _ => {}
@@ -57,8 +55,8 @@ fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>, globals: &mut HashMap
 
         IlKind::Ident(string_id) => {
             let ident = t.get_string(string_id);
-            match globals.get(ident) {
-                Some(global_id) => inss.push(InsKind::Int(*global_id as i64)),
+            match globals.find(ident) {
+                Some(global_id) => inss.push(InsKind::Int(global_id as i64)),
                 None => panic!("Unknown ident {}", ident),
             }
         }
@@ -67,7 +65,7 @@ fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>, globals: &mut HashMap
 
 pub(crate) fn assemble(t: &IlTree) -> (Vec<InsKind>, usize) {
     let mut inss = vec![];
-    let mut globals = HashMap::new();
+    let mut globals = Globals::new();
 
     gen_ins(t.root(), t, &mut inss, &mut globals);
     inss.push(InsKind::Exit);

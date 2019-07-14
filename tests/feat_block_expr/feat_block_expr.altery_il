@@ -1,0 +1,38 @@
+(root
+  (globals
+    $b
+    $a)
+  (code_section
+    (semi
+      // b = 0
+      (cell_set
+        (global_get
+          $b)
+        0)
+      // a = 2
+      (cell_set
+        (global_get
+          $a)
+        2)
+      // b = a + 3
+      (cell_set
+        (global_get
+          $b)
+        (+
+          (global_get
+            $a)
+          3))
+      // assert(a == 2)
+      (pop
+        (assert
+          (==
+            (global_get
+              $a)
+            2)))
+      // assert(b == 5)
+      (pop
+        (assert
+          (==
+            (global_get
+              $b)
+            5))))))

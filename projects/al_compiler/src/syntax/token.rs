@@ -24,10 +24,16 @@ pub(crate) enum TokenKind {
     /// 整数
     Int,
 
-    /// 左カッコ
+    /// `{`
+    BraceL,
+
+    /// `}`
+    BraceR,
+
+    /// `(`
     ParenL,
 
-    /// 右カッコ
+    /// `)`
     ParenR,
 
     /// `==`
@@ -58,6 +64,8 @@ static KEYWORD_TEXTS: &[(TokenKind, &str)] = &[
 ];
 
 static SYMBOL_TEXTS: &[(TokenKind, &str)] = &[
+    (TokenKind::BraceL, "{"),
+    (TokenKind::BraceR, "}"),
     (TokenKind::ParenL, "("),
     (TokenKind::ParenR, ")"),
     (TokenKind::EqEq, "=="),

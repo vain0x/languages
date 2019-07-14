@@ -63,6 +63,25 @@ static BIN_OP_TABLE: &[(BinOp, TokenKind)] = &[
     (BinOp::Eq, TokenKind::EqEq),
 ];
 
+/// ブロック式 `{ x; y; ..; z }`
+fn parse_block(p: &mut Parser<'_>) -> Ast {
+    let block = p.start();
+
+    assert_eq!(p.next(), TokenKind::BraceL);
+    let loc = p.loc();
+    p.bump();
+
+    let body = parse_semi(loc, TokenKind::BraceR, p);
+
+    if !p.at(TokenKind::BraceR) {
+        panic!("missing }")
+    }
+    p.bump();
+
+    block.finish(body, p)
+}
+
+/// アトム式。トークン1個か、カッコで構成される種類の式。
 fn parse_atom(p: &mut Parser<'_>) -> Ast {
     let loc = p.loc();
     let children = vec![];
@@ -100,6 +119,7 @@ fn parse_atom(p: &mut Parser<'_>) -> Ast {
             p.bump();
             group.finish(body, p)
         }
+        TokenKind::BraceL => parse_block(p),
         _ => {
             panic!("expected an expression");
         }
@@ -178,11 +198,11 @@ fn parse_term(p: &mut Parser<'_>) -> Ast {
 
 /// 項の並び。
 /// 一般的な言語の「セミコロンで区切られた文の並び」に相当するものなので、semi と呼ぶ。
-fn parse_semi(loc: SourceLocation, p: &mut Parser<'_>) -> Ast {
+fn parse_semi(loc: SourceLocation, end_kind: TokenKind, p: &mut Parser<'_>) -> Ast {
     let semi = p.start();
     let mut children = vec![];
 
-    while !p.at_eof() {
+    while !p.at_eof() && !p.at(end_kind) {
         let child = parse_term(p);
         children.push(child);
     }
@@ -195,7 +215,7 @@ fn parse_root(p: &mut Parser<'_>) -> Ast {
     let root = p.start();
 
     let loc = p.loc();
-    let body = parse_semi(loc, p);
+    let body = parse_semi(loc, TokenKind::Eof, p);
 
     if !p.at_eof() {
         panic!("expected EOF {:?}", p.loc())

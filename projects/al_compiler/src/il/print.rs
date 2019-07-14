@@ -5,24 +5,18 @@ use std::io::{self, Write};
 
 fn print_atom(kind: IlKind, t: &IlTree, out: &mut Vec<u8>) -> io::Result<()> {
     match kind {
-        IlKind::Root => write!(out, "root")?,
-        IlKind::CodeSection => write!(out, "code_section")?,
-        IlKind::Globals => write!(out, "globals")?,
-
-        IlKind::Semi => write!(out, "semi")?,
-        IlKind::Assert => write!(out, "assert")?,
-        IlKind::CellSet => write!(out, "cell_set")?,
-
-        IlKind::Bool(value) => write!(out, "{}", value)?,
         IlKind::Int(value) => write!(out, "{}", value)?,
-        IlKind::GlobalGet => write!(out, "global_get")?,
-        IlKind::OpAdd => write!(out, "+")?,
-        IlKind::OpSub => write!(out, "-")?,
-        IlKind::OpMul => write!(out, "*")?,
-        IlKind::OpDiv => write!(out, "/")?,
-        IlKind::OpEq => write!(out, "==")?,
-
         IlKind::Ident(ident) => write!(out, "${}", t.get_string(ident))?,
+        _ => {
+            if let Some(text) = IlKind::texts()
+                .into_iter()
+                .filter_map(|&(text, k)| if k == kind { Some(text) } else { None })
+                .next()
+            {
+                return write!(out, "{}", text);
+            }
+            unreachable!("Unknown kind {:?}", kind)
+        }
     };
     Ok(())
 }

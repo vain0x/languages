@@ -46,6 +46,29 @@ pub struct IlTree {
     root: usize,
 }
 
+static IL_KIND_TEXTS: &[(&str, IlKind)] = &[
+    ("root", IlKind::Root),
+    ("code_section", IlKind::CodeSection),
+    ("globals", IlKind::Globals),
+    ("semi", IlKind::Semi),
+    ("assert", IlKind::Assert),
+    ("cell_set", IlKind::CellSet),
+    ("false", IlKind::Bool(false)),
+    ("true", IlKind::Bool(true)),
+    ("global_get", IlKind::GlobalGet),
+    ("+", IlKind::OpAdd),
+    ("-", IlKind::OpSub),
+    ("*", IlKind::OpMul),
+    ("/", IlKind::OpDiv),
+    ("==", IlKind::OpEq),
+];
+
+impl IlKind {
+    pub fn texts() -> &'static [(&'static str, IlKind)] {
+        IL_KIND_TEXTS
+    }
+}
+
 impl Il {
     pub fn new(kind: IlKind, start: usize, end: usize) -> Self {
         Il {

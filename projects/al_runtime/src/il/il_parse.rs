@@ -6,23 +6,6 @@ use al_aux::syntax::*;
 
 type P<'a> = TokenParser<'a, IlToken>;
 
-static ATOM_KINDS: &[(&str, IlKind)] = &[
-    ("root", IlKind::Root),
-    ("code_section", IlKind::CodeSection),
-    ("globals", IlKind::Globals),
-    ("semi", IlKind::Semi),
-    ("assert", IlKind::Assert),
-    ("cell_set", IlKind::CellSet),
-    ("false", IlKind::Bool(false)),
-    ("true", IlKind::Bool(true)),
-    ("global_get", IlKind::GlobalGet),
-    ("+", IlKind::OpAdd),
-    ("-", IlKind::OpSub),
-    ("*", IlKind::OpMul),
-    ("/", IlKind::OpDiv),
-    ("==", IlKind::OpEq),
-];
-
 fn tokenize(text: &str) -> Vec<IlToken> {
     Tokenizer::new(IlTokenFactory, text).tokenize(|t| {
         if t.eat_while(|c| c.is_ascii_whitespace()) {
@@ -67,7 +50,7 @@ fn parse_atom(text: &str, t: &mut IlTree, p: &mut P<'_>) -> IlKind {
     match p.next() {
         IlTokenKind::Atom => {
             let x = next_text(text, p);
-            for &(y, kind) in ATOM_KINDS {
+            for &(y, kind) in IlKind::texts() {
                 if x == y {
                     p.bump();
                     return kind;

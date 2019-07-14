@@ -4,4 +4,5 @@ pub(crate) enum CellTy {
     Int,
     Bool,
     Cell,
+    Pc,
 }

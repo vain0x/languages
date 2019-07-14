@@ -1,0 +1,5 @@
+(root
+  (labels $loop)
+  (jump (label_get $loop))
+  (pop (assert false))
+  (semi (label_def $loop)))

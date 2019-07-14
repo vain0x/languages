@@ -5,6 +5,7 @@
 pub(crate) enum InstrKind {
     // 文
     Exit,
+    Jump,
     Pop,
     Assert,
     CellSet,
@@ -12,6 +13,8 @@ pub(crate) enum InstrKind {
     // 式
     Bool(bool),
     Int(i64),
+    Label(usize),
+    Pc(usize),
     GlobalGet,
     OpAdd,
     OpSub,

@@ -90,6 +90,12 @@ impl VM {
             self.pc += 1;
             match self.instrs()[self.pc - 1] {
                 InstrKind::Exit => std::process::exit(0),
+                InstrKind::Jump => match self.stack_pop() {
+                    (CellTy::Pc, pc) => {
+                        self.pc = pc as usize;
+                    }
+                    _ => panic!("expected pc"),
+                },
                 InstrKind::Pop => {
                     self.stack_pop();
                 }
@@ -112,6 +118,9 @@ impl VM {
                 }
                 InstrKind::Int(value) => {
                     self.stack_push((CellTy::Int, value));
+                }
+                InstrKind::Pc(value) => {
+                    self.stack_push((CellTy::Pc, value as i64));
                 }
                 InstrKind::GlobalGet => match self.stack_pop() {
                     (CellTy::Int, addr) => {
@@ -173,6 +182,7 @@ impl VM {
                         _ => self.stack_push((CellTy::Bool, false as i64)),
                     }
                 }
+                InstrKind::Label(_) => unreachable!("ラベルは解決済みのはず"),
             }
         }
     }

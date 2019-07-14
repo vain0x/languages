@@ -96,6 +96,16 @@ impl VM {
                     }
                     _ => panic!("expected pc"),
                 },
+                InstrKind::JumpUnless => {
+                    let cond = self.stack_pop();
+                    let label = self.stack_pop();
+                    match (label, cond) {
+                        ((CellTy::Pc, pc), (CellTy::Bool, 0)) => {
+                            self.pc = pc as usize;
+                        }
+                        _ => {}
+                    }
+                }
                 InstrKind::Pop => {
                     self.stack_pop();
                 }

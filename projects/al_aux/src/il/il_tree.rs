@@ -12,6 +12,7 @@ pub enum IlKind {
     // 文:
     Semi,
     Jump,
+    JumpUnless,
     Pop,
     Assert,
     CellSet,
@@ -55,6 +56,7 @@ static IL_KIND_TEXTS: &[(&str, IlKind)] = &[
     ("label_def", IlKind::LabelDef),
     ("semi", IlKind::Semi),
     ("jump", IlKind::Jump),
+    ("jump_unless", IlKind::JumpUnless),
     ("pop", IlKind::Pop),
     ("assert", IlKind::Assert),
     ("cell_set", IlKind::CellSet),
@@ -174,6 +176,16 @@ impl IlTree {
         let end = self.children.len();
 
         self.new_il(Il::new(kind, start, end))
+    }
+
+    pub fn new_label_def(&mut self, ident: String) -> usize {
+        let label = self.new_ident(ident);
+        self.new_node(IlKind::LabelDef, &[label])
+    }
+
+    pub fn new_label_get(&mut self, ident: String) -> usize {
+        let label = self.new_ident(ident);
+        self.new_node(IlKind::LabelGet, &[label])
     }
 
     pub fn add_string(&mut self, string: String) -> usize {

@@ -2,6 +2,7 @@
   (globals
     $b
     $a)
+  (labels)
   (code_section
     (semi
       // b = 0

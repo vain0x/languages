@@ -5,6 +5,58 @@ use crate::syntax::*;
 use al_aux::il::*;
 use std::collections::HashMap;
 
+#[derive(Clone, Copy)]
+struct Label {
+    ident_il: usize,
+}
+
+impl Label {
+    fn new(ident_il: usize) -> Label {
+        Label { ident_il }
+    }
+
+    fn new_def_node(&self, t: &mut IlTree) -> usize {
+        t.new_node(IlKind::LabelDef, &[self.ident_il])
+    }
+
+    fn new_get_node(&self, t: &mut IlTree) -> usize {
+        t.new_node(IlKind::LabelGet, &[self.ident_il])
+    }
+
+    fn new_jump_unless_node(&self, cond: usize, t: &mut IlTree) -> usize {
+        let label = self.new_get_node(t);
+        t.new_node(IlKind::JumpUnless, &[label, cond])
+    }
+}
+
+struct Labels {
+    inner: Vec<Label>,
+}
+
+impl Labels {
+    fn new() -> Labels {
+        Labels { inner: vec![] }
+    }
+
+    fn new_label(&mut self, hint: &str, t: &mut IlTree) -> Label {
+        let id = self.inner.len();
+        let name = format!("{}_{}", hint, 1 + id);
+        let ident_il = t.new_ident(name);
+        let label = Label::new(ident_il);
+        self.inner.push(label);
+        label
+    }
+
+    fn new_labels_node(&self, t: &mut IlTree) -> usize {
+        let children = self
+            .inner
+            .iter()
+            .map(|label| label.ident_il)
+            .collect::<Vec<_>>();
+        t.new_node(IlKind::Labels, &children)
+    }
+}
+
 fn kind_from_prim(prim: Prim) -> IlKind {
     match prim {
         Prim::Assert => IlKind::Assert,
@@ -37,7 +89,7 @@ fn gen_globals(globals: &HashMap<String, usize>, t: &mut IlTree) -> usize {
     t.new_node(IlKind::Globals, &children)
 }
 
-fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
+fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSystem) -> usize {
     let il = match expr.kind() {
         ExprKind::Lit(Lit::Bool(value)) => t.new_bool(*value),
         ExprKind::Lit(Lit::Int(value)) => t.new_int(*value),
@@ -48,8 +100,8 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
         }
         ExprKind::Assign => match expr.children() {
             [left, right] => {
-                let left = gen_expr(left, t, s);
-                let right = gen_expr(right, t, s);
+                let left = gen_expr(left, t, labels, s);
+                let right = gen_expr(right, t, labels, s);
                 t.new_node(IlKind::CellSet, &[left, right])
             }
             _ => unreachable!(),
@@ -61,21 +113,34 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, s: &SourceFileSystem) -> usize {
             };
             let mut children = vec![];
             for child in &expr.children()[1..] {
-                children.push(gen_expr(child, t, s));
+                children.push(gen_expr(child, t, labels, s));
             }
             t.new_node(kind, &children)
         }
         ExprKind::Do => {
             let mut children = vec![];
             for child in expr.children() {
-                children.push(gen_expr(child, t, s));
+                children.push(gen_expr(child, t, labels, s));
             }
             t.new_node(IlKind::Pop, &children)
         }
+        ExprKind::If => match expr.children() {
+            [cond, body] => {
+                let end_label = labels.new_label("end_if", t);
+
+                let cond = gen_expr(cond, t, labels, s);
+                let jump = end_label.new_jump_unless_node(cond, t);
+                let body = gen_expr(body, t, labels, s);
+                let end = end_label.new_def_node(t);
+
+                t.new_node(IlKind::Semi, &[jump, body, end])
+            }
+            _ => unimplemented!(),
+        },
         ExprKind::Semi => {
             let mut children = vec![];
             for child in expr.children() {
-                children.push(gen_expr(child, t, s));
+                children.push(gen_expr(child, t, labels, s));
             }
             t.new_node(IlKind::Semi, &children)
         }
@@ -95,11 +160,13 @@ pub(crate) fn from_expr(
     s: &SourceFileSystem,
 ) -> IlTree {
     let mut il_tree = IlTree::new();
+    let mut labels = Labels::new();
 
-    let top_level = gen_expr(expr, &mut il_tree, s);
+    let top_level = gen_expr(expr, &mut il_tree, &mut labels, s);
     let globals = gen_globals(globals, &mut il_tree);
+    let labels = labels.new_labels_node(&mut il_tree);
     let code_section = il_tree.new_node(IlKind::CodeSection, &[top_level]);
-    let root = il_tree.new_node(IlKind::Root, &[globals, code_section]);
+    let root = il_tree.new_node(IlKind::Root, &[globals, labels, code_section]);
     il_tree.set_root(root);
 
     il_tree

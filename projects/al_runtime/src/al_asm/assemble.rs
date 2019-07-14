@@ -103,6 +103,7 @@ fn gen_il(il: usize, t: &IlTree, a: &mut AlAsm) {
         // 文:
         IlKind::Semi => {}
         IlKind::Jump => a.new_instr(InstrKind::Jump),
+        IlKind::JumpUnless => a.new_instr(InstrKind::JumpUnless),
         IlKind::Pop => a.new_instr(InstrKind::Pop),
         IlKind::Assert => a.new_instr(InstrKind::Assert),
         IlKind::CellSet => a.new_instr(InstrKind::CellSet),

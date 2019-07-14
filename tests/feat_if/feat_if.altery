@@ -1,0 +1,9 @@
+a = 0
+if true {
+    a = a + 1
+    a = a + 2
+}
+if false {
+    a = a + 4
+}
+assert(a == 3)

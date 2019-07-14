@@ -81,6 +81,23 @@ fn parse_block(p: &mut Parser<'_>) -> Ast {
     block.finish(body, p)
 }
 
+fn parse_if(p: &mut Parser<'_>) -> Ast {
+    let if_expr = p.start();
+
+    assert!(p.at(TokenKind::If));
+    let loc = p.loc();
+    p.bump();
+
+    let cond = parse_term(p);
+
+    if !p.at(TokenKind::BraceL) {
+        panic!("missing brace {:?}", loc)
+    }
+    let body = parse_block(p);
+
+    if_expr.finish(Ast::new(AstKind::If, vec![cond, body], loc), p)
+}
+
 /// アトム式。トークン1個か、カッコで構成される種類の式。
 fn parse_atom(p: &mut Parser<'_>) -> Ast {
     let loc = p.loc();
@@ -119,6 +136,7 @@ fn parse_atom(p: &mut Parser<'_>) -> Ast {
             p.bump();
             group.finish(body, p)
         }
+        TokenKind::If => parse_if(p),
         TokenKind::BraceL => parse_block(p),
         _ => {
             panic!("expected an expression");

@@ -25,6 +25,7 @@ pub(crate) enum ExprKind {
     Call,
     Do,
     Assign,
+    If,
     Semi,
 }
 
@@ -103,7 +104,7 @@ impl Expr {
     pub(crate) fn is_single_statement(&self) -> bool {
         match self.kind() {
             ExprKind::Semi => false,
-            ExprKind::Do | ExprKind::Assign => true,
+            ExprKind::Do | ExprKind::If | ExprKind::Assign => true,
             _ => false,
         }
     }

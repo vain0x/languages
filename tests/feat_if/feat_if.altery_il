@@ -1,0 +1,61 @@
+(root
+  (globals
+    $a)
+  (labels
+    $end_if_1
+    $end_if_2)
+  (code_section
+    (semi
+      // a = 0
+      (cell_set
+        (global_get
+          $a)
+        0)
+      // if true {..
+      (semi
+        (jump_unless
+          (label_get
+            $end_if_1)
+          true)
+        (semi
+          // a = a + 1
+          (cell_set
+            (global_get
+              $a)
+            (+
+              (global_get
+                $a)
+              1))
+          // a = a + 2
+          (cell_set
+            (global_get
+              $a)
+            (+
+              (global_get
+                $a)
+              2)))
+        (label_def
+          $end_if_1))
+      // if false {..
+      (semi
+        (jump_unless
+          (label_get
+            $end_if_2)
+          false)
+        // a = a + 4
+        (cell_set
+          (global_get
+            $a)
+          (+
+            (global_get
+              $a)
+            4))
+        (label_def
+          $end_if_2))
+      // assert(a == 3)
+      (pop
+        (assert
+          (==
+            (global_get
+              $a)
+            3))))))

@@ -1,5 +1,6 @@
 (root
   (globals)
+  (labels)
   (code_section
     (semi
       // assert(0 == 0)

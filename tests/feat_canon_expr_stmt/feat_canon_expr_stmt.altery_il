@@ -1,7 +1,7 @@
 (root
   (globals)
+  (labels)
   (code_section
-    (semi
-      // 0
-      (pop
-        0))))
+    // 0
+    (pop
+      0)))

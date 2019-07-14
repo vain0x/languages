@@ -12,12 +12,9 @@ use vm::*;
 // 中間言語を実行する。
 pub fn run(il_text: &str) -> ! {
     let il_tree = il::il_parse::parse(il_text);
-    let mut asm = al_asm::assemble::assemble(&il_tree);
+    let asm = al_asm::assemble::assemble(&il_tree);
 
-    let mut vm = VM::new();
-    vm.instrs = asm.take_instrs();
-    vm.heap_alloc(asm.global_count());
-    vm.run()
+    VM::new(asm).run()
 }
 
 #[cfg(test)]

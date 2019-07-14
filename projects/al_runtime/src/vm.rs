@@ -3,24 +3,28 @@
 use crate::*;
 
 pub(crate) struct VM {
+    asm: AlAsm,
     table_tys: Vec<CellTy>,
     table: Vec<i64>,
     heap_end: usize,
     stack_end: usize,
-    pub(crate) instrs: Vec<InstrKind>,
     pc: usize,
 }
 
 impl VM {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(asm: AlAsm) -> VM {
         VM {
+            asm,
             table_tys: vec![CellTy::None; 1024],
             table: vec![0xcd; 1024],
             heap_end: 0,
             stack_end: 1024,
-            instrs: vec![],
             pc: 0,
         }
+    }
+
+    fn instrs(&self) -> &[InstrKind] {
+        &self.asm.instrs
     }
 
     pub(crate) fn table_get(&self, addr: usize) -> (CellTy, i64) {
@@ -56,10 +60,16 @@ impl VM {
         }
     }
 
+    fn initialize(&mut self) {
+        self.heap_alloc(self.asm.global_count());
+    }
+
     pub(crate) fn run(&mut self) -> ! {
+        self.initialize();
+
         loop {
             self.pc += 1;
-            match self.instrs[self.pc - 1] {
+            match self.instrs()[self.pc - 1] {
                 InstrKind::Exit => std::process::exit(0),
                 InstrKind::Assert => {
                     if self.stack_pop() != (CellTy::Bool, 1) {

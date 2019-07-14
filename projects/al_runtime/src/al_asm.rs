@@ -4,7 +4,6 @@ pub(crate) mod instr;
 pub(crate) use instr::*;
 
 use std::collections::HashMap;
-use std::mem::replace;
 
 pub(crate) struct Globals(HashMap<String, usize>);
 
@@ -42,10 +41,6 @@ impl AlAsm {
 
     pub(crate) fn new_instr(&mut self, instr: InstrKind) {
         self.instrs.push(instr);
-    }
-
-    pub(crate) fn take_instrs(&mut self) -> Vec<InstrKind> {
-        replace(&mut self.instrs, vec![])
     }
 
     pub(crate) fn global_count(&self) -> usize {

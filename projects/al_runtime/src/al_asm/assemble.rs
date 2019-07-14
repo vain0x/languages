@@ -19,14 +19,14 @@ fn gen_globals(il: usize, a: &mut AlAsm<'_>) {
     }
 }
 
-fn gen_instrs(il: usize, a: &mut AlAsm<'_>) {
+fn gen_il(il: usize, a: &mut AlAsm<'_>) {
     match a.il().kind(il) {
         IlKind::Globals => return gen_globals(il, a),
         _ => {}
     }
 
     for ci in 0..a.il().child_len(il) {
-        gen_instrs(a.il().child(il, ci), a);
+        gen_il(a.il().child(il, ci), a);
     }
 
     match a.il().kind(il) {
@@ -66,7 +66,7 @@ fn gen_instrs(il: usize, a: &mut AlAsm<'_>) {
 pub(crate) fn assemble(t: &IlTree) -> AlAsm<'_> {
     let mut a = AlAsm::new(t);
 
-    gen_instrs(a.il().root(), &mut a);
+    gen_il(a.il().root(), &mut a);
     a.instrs.push(InstrKind::Exit);
 
     a

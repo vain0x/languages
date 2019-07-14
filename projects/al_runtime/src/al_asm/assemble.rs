@@ -3,13 +3,13 @@
 use super::*;
 use al_aux::il::*;
 
-fn gen_globals(il: usize, t: &IlTree, globals: &mut Globals) {
-    for ci in 0..t.child_len(il) {
-        let child = t.child(il, ci);
-        match t.kind(child) {
+fn gen_globals(il: usize, a: &mut AlAsm<'_>) {
+    for ci in 0..a.il().child_len(il) {
+        let child = a.il().child(il, ci);
+        match a.il().kind(child) {
             IlKind::Ident(string_id) => {
-                let ident = t.get_string(string_id).to_owned();
-                globals.new_global(ident);
+                let ident = a.il().get_string(string_id).to_owned();
+                a.globals.new_global(ident);
             }
             kind => unreachable!(
                 "globals の子ノードはすべて識別子でなければいけない {:?}",
@@ -19,17 +19,17 @@ fn gen_globals(il: usize, t: &IlTree, globals: &mut Globals) {
     }
 }
 
-fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>, globals: &mut Globals) {
-    match t.kind(il) {
-        IlKind::Globals => return gen_globals(il, t, globals),
+fn gen_ins(il: usize, a: &mut AlAsm<'_>) {
+    match a.il().kind(il) {
+        IlKind::Globals => return gen_globals(il, a),
         _ => {}
     }
 
-    for ci in 0..t.child_len(il) {
-        gen_ins(t.child(il, ci), t, inss, globals);
+    for ci in 0..a.il().child_len(il) {
+        gen_ins(a.il().child(il, ci), a);
     }
 
-    match t.kind(il) {
+    match a.il().kind(il) {
         // 宣言:
 
         IlKind::Root | IlKind::CodeSection | IlKind::Globals => {}
@@ -37,38 +37,37 @@ fn gen_ins(il: usize, t: &IlTree, inss: &mut Vec<InsKind>, globals: &mut Globals
         // 文:
 
         IlKind::Semi => {}
-        IlKind::Assert => inss.push(InsKind::Assert),
-        IlKind::CellSet => inss.push(InsKind::CellSet),
+        IlKind::Assert => a.new_ins(InsKind::Assert),
+        IlKind::CellSet => a.new_ins(InsKind::CellSet),
 
         // 式:
 
-        IlKind::Bool(value) => inss.push(InsKind::Bool(value)),
-        IlKind::Int(value) => inss.push(InsKind::Int(value)),
-        IlKind::GlobalGet => inss.push(InsKind::GlobalGet),
-        IlKind::OpAdd => inss.push(InsKind::OpAdd),
-        IlKind::OpSub => inss.push(InsKind::OpSub),
-        IlKind::OpMul => inss.push(InsKind::OpMul),
-        IlKind::OpDiv => inss.push(InsKind::OpDiv),
-        IlKind::OpEq => inss.push(InsKind::OpEq),
+        IlKind::Bool(value) => a.new_ins(InsKind::Bool(value)),
+        IlKind::Int(value) => a.new_ins(InsKind::Int(value)),
+        IlKind::GlobalGet => a.new_ins(InsKind::GlobalGet),
+        IlKind::OpAdd => a.new_ins(InsKind::OpAdd),
+        IlKind::OpSub => a.new_ins(InsKind::OpSub),
+        IlKind::OpMul => a.new_ins(InsKind::OpMul),
+        IlKind::OpDiv => a.new_ins(InsKind::OpDiv),
+        IlKind::OpEq => a.new_ins(InsKind::OpEq),
 
         // その他:
 
         IlKind::Ident(string_id) => {
-            let ident = t.get_string(string_id);
-            match globals.find(ident) {
-                Some(global_id) => inss.push(InsKind::Int(global_id as i64)),
+            let ident = a.il().get_string(string_id);
+            match a.globals.find(ident) {
+                Some(global_id) => a.new_ins(InsKind::Int(global_id as i64)),
                 None => panic!("Unknown ident {}", ident),
             }
         }
     }
 }
 
-pub(crate) fn assemble(t: &IlTree) -> (Vec<InsKind>, usize) {
-    let mut inss = vec![];
-    let mut globals = Globals::new();
+pub(crate) fn assemble(t: &IlTree) -> AlAsm<'_> {
+    let mut a = AlAsm::new(t);
 
-    gen_ins(t.root(), t, &mut inss, &mut globals);
-    inss.push(InsKind::Exit);
+    gen_ins(a.il().root(), &mut a);
+    a.inss.push(InsKind::Exit);
 
-    (inss, globals.len())
+    a
 }

@@ -1,7 +1,7 @@
 pub(crate) mod assemble;
-pub(crate) mod ins;
+pub(crate) mod instr;
 
-pub(crate) use ins::*;
+pub(crate) use instr::*;
 
 use al_aux::il::*;
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ pub(crate) struct Globals(HashMap<String, usize>);
 pub(crate) struct AlAsm<'a> {
     pub(crate) il_tree: &'a IlTree,
     pub(crate) globals: Globals,
-    pub(crate) inss: Vec<InsKind>,
+    pub(crate) instrs: Vec<InstrKind>,
 }
 
 impl Globals {
@@ -39,7 +39,7 @@ impl AlAsm<'_> {
         AlAsm {
             il_tree,
             globals: Globals::new(),
-            inss: vec![],
+            instrs: vec![],
         }
     }
 
@@ -47,12 +47,12 @@ impl AlAsm<'_> {
         self.il_tree
     }
 
-    pub(crate) fn new_ins(&mut self, ins: InsKind) {
-        self.inss.push(ins);
+    pub(crate) fn new_instr(&mut self, instr: InstrKind) {
+        self.instrs.push(instr);
     }
 
-    pub(crate) fn take_inss(&mut self) -> Vec<InsKind> {
-        replace(&mut self.inss, vec![])
+    pub(crate) fn take_instrs(&mut self) -> Vec<InstrKind> {
+        replace(&mut self.instrs, vec![])
     }
 
     pub(crate) fn global_count(&self) -> usize {

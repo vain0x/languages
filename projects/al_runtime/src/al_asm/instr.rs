@@ -2,7 +2,7 @@
 
 /// 実行指令の一種
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub(crate) enum InsKind {
+pub(crate) enum InstrKind {
     // 文
     Exit,
     Assert,

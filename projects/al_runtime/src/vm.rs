@@ -7,7 +7,7 @@ pub(crate) struct VM {
     table: Vec<i64>,
     heap_end: usize,
     stack_end: usize,
-    pub(crate) inss: Vec<InsKind>,
+    pub(crate) instrs: Vec<InstrKind>,
     pc: usize,
 }
 
@@ -18,7 +18,7 @@ impl VM {
             table: vec![0xcd; 1024],
             heap_end: 0,
             stack_end: 1024,
-            inss: vec![],
+            instrs: vec![],
             pc: 0,
         }
     }
@@ -59,15 +59,15 @@ impl VM {
     pub(crate) fn run(&mut self) -> ! {
         loop {
             self.pc += 1;
-            match self.inss[self.pc - 1] {
-                InsKind::Exit => std::process::exit(0),
-                InsKind::Assert => {
+            match self.instrs[self.pc - 1] {
+                InstrKind::Exit => std::process::exit(0),
+                InstrKind::Assert => {
                     if self.stack_pop() != (CellTy::Bool, 1) {
                         eprintln!("assertion error");
                         std::process::abort()
                     }
                 }
-                InsKind::CellSet => {
+                InstrKind::CellSet => {
                     let right = self.stack_pop();
                     let left = match self.stack_pop() {
                         (CellTy::Cell, id) => id as usize,
@@ -75,19 +75,19 @@ impl VM {
                     };
                     self.table_set(left, right);
                 }
-                InsKind::Bool(value) => {
+                InstrKind::Bool(value) => {
                     self.stack_push((CellTy::Bool, value as i64));
                 }
-                InsKind::Int(value) => {
+                InstrKind::Int(value) => {
                     self.stack_push((CellTy::Int, value));
                 }
-                InsKind::GlobalGet => match self.stack_pop() {
+                InstrKind::GlobalGet => match self.stack_pop() {
                     (CellTy::Int, addr) => {
                         self.stack_push((CellTy::Cell, addr));
                     }
                     _ => panic!("Type error"),
                 },
-                InsKind::OpAdd => {
+                InstrKind::OpAdd => {
                     let right = self.stack_pop_val();
                     let left = self.stack_pop_val();
                     match (left, right) {
@@ -97,7 +97,7 @@ impl VM {
                         _ => panic!("Type error"),
                     }
                 }
-                InsKind::OpSub => {
+                InstrKind::OpSub => {
                     let right = self.stack_pop_val();
                     let left = self.stack_pop_val();
                     match (left, right) {
@@ -107,7 +107,7 @@ impl VM {
                         _ => panic!("Type error"),
                     }
                 }
-                InsKind::OpMul => {
+                InstrKind::OpMul => {
                     let right = self.stack_pop_val();
                     let left = self.stack_pop_val();
                     match (left, right) {
@@ -117,7 +117,7 @@ impl VM {
                         _ => panic!("Type error"),
                     }
                 }
-                InsKind::OpDiv => {
+                InstrKind::OpDiv => {
                     let right = self.stack_pop_val();
                     let left = self.stack_pop_val();
                     // FIXME: ゼロ除算をエラーにする
@@ -128,7 +128,7 @@ impl VM {
                         _ => panic!("Type error"),
                     }
                 }
-                InsKind::OpEq => {
+                InstrKind::OpEq => {
                     let right = self.stack_pop_val();
                     let left = self.stack_pop_val();
                     match (left, right) {

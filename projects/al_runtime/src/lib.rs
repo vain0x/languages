@@ -15,7 +15,7 @@ pub fn run(il_text: &str) -> ! {
     let mut asm = al_asm::assemble::assemble(&il_tree);
 
     let mut vm = VM::new();
-    vm.inss = asm.take_inss();
+    vm.instrs = asm.take_instrs();
     vm.heap_alloc(asm.global_count());
     vm.run()
 }

@@ -25,7 +25,7 @@ pub(crate) fn name_res(expr: &mut Expr, symbols: &mut Symbols) {
                 resolve_fun_ident(ident, symbols);
             }
             _ => {}
-        }
+        },
         _ => {}
     }
 

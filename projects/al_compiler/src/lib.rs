@@ -6,8 +6,8 @@ pub(crate) mod il;
 pub(crate) mod semantics;
 pub(crate) mod syntax;
 
-use crate::syntax::*;
 use crate::semantics::*;
+use crate::syntax::*;
 
 pub struct Output {
     pub il: String,

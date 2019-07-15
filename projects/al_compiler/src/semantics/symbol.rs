@@ -16,14 +16,12 @@ pub(crate) struct Fun {
 
 pub(crate) struct Symbols {
     vars: Vec<Var>,
-    funs: Vec<Fun>
+    funs: Vec<Fun>,
 }
 
 impl Var {
     pub(crate) fn new(ident: String) -> Var {
-        Var {
-            ident
-        }
+        Var { ident }
     }
 
     pub(crate) fn ident(&self) -> &str {
@@ -33,9 +31,7 @@ impl Var {
 
 impl Fun {
     pub(crate) fn new(ident: String) -> Fun {
-        Fun {
-            ident
-        }
+        Fun { ident }
     }
 
     pub(crate) fn ident(&self) -> &str {

@@ -16,7 +16,11 @@ fn canon_term(expr: &mut Expr, stmts: &mut Vec<Expr>) {
     }
 
     match expr.kind() {
-        ExprKind::Lit(..) | ExprKind::Prim(..) | ExprKind::Ident(..) | ExprKind::Fun(..) | ExprKind::Global(..) => {}
+        ExprKind::Lit(..)
+        | ExprKind::Prim(..)
+        | ExprKind::Ident(..)
+        | ExprKind::Fun(..)
+        | ExprKind::Global(..) => {}
         ExprKind::Call => {}
         ExprKind::Assign => unimplemented!("canon assign"),
         ExprKind::Do => unimplemented!("canon do"),

@@ -122,7 +122,7 @@ impl VM {
                         }
                         _ => panic!("expected pc"),
                     }
-                },
+                }
                 InstrKind::Pop => {
                     self.stack_pop();
                 }

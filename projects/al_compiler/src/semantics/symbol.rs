@@ -1,7 +1,7 @@
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum SymbolKind {
     Var,
-    Fn,
+    Fun,
 }
 
 #[derive(Clone, Debug)]
@@ -10,13 +10,13 @@ pub(crate) struct Var {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Fn {
+pub(crate) struct Fun {
     ident: String,
 }
 
 pub(crate) struct Symbols {
     vars: Vec<Var>,
-    fns: Vec<Fn>
+    funs: Vec<Fun>
 }
 
 impl Var {
@@ -31,11 +31,15 @@ impl Var {
     }
 }
 
-impl Fn {
-    pub(crate) fn new(ident: String) -> Fn {
-        Fn {
+impl Fun {
+    pub(crate) fn new(ident: String) -> Fun {
+        Fun {
             ident
         }
+    }
+
+    pub(crate) fn ident(&self) -> &str {
+        &self.ident
     }
 }
 
@@ -43,7 +47,7 @@ impl Symbols {
     pub(crate) fn new() -> Symbols {
         Symbols {
             vars: vec![],
-            fns: vec![],
+            funs: vec![],
         }
     }
 
@@ -52,12 +56,23 @@ impl Symbols {
     }
 
     pub(crate) fn find_or_new_var(&mut self, ident: String) -> usize {
-        match self.vars.iter().position(|var| var.ident == ident) {
+        match self.vars.iter().position(|var| var.ident() == ident) {
             Some(var_id) => var_id,
             None => {
                 let var_id = self.vars.len();
                 self.vars.push(Var::new(ident));
                 var_id
+            }
+        }
+    }
+
+    pub(crate) fn find_or_new_fun(&mut self, ident: String) -> usize {
+        match self.funs.iter().position(|fun| fun.ident() == ident) {
+            Some(fun_id) => fun_id,
+            None => {
+                let fun_id = self.funs.len();
+                self.funs.push(Fun::new(ident));
+                fun_id
             }
         }
     }

@@ -1,7 +1,5 @@
 (root
   (globals
-    $f
-    $g
     $b
     $a)
   (labels)

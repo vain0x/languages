@@ -21,6 +21,7 @@ pub(crate) enum ExprKind {
     Lit(Lit),
     Prim(Prim),
     Ident(String),
+    Fun(usize, String),
     Global(usize, String),
     Call,
     Do,

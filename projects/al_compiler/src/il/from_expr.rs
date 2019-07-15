@@ -100,6 +100,10 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
         ExprKind::Lit(Lit::Bool(value)) => t.new_bool(*value),
         ExprKind::Lit(Lit::Int(value)) => t.new_int(*value),
         ExprKind::Prim(prim) => t.new_leaf(kind_from_prim(*prim)),
+        ExprKind::Fun(_, ident) => {
+            let ident = t.new_ident(ident.to_owned());
+            t.new_node(IlKind::LabelGet, &[ident])
+        }
         ExprKind::Global(_, ident) => {
             let ident = t.new_ident(ident.to_owned());
             t.new_node(IlKind::GlobalGet, &[ident])

@@ -16,13 +16,14 @@
             $g_exit_2))
         (label_def
           $g_1)
-        // b = 2
-        (cell_set
-          (global_get
-            $b)
-          2)
-        (ret
-          0)
+        (semi
+          // b = 2
+          (cell_set
+            (global_get
+              $b)
+            2)
+          (ret
+            0))
         (label_def
           $g_exit_2))
       // fn f() {..
@@ -32,13 +33,14 @@
             $f_exit_4))
         (label_def
           $f_3)
-        // a = 1
-        (cell_set
-          (global_get
-            $a)
-          1)
-        (ret
-          0)
+        (semi
+          // a = 1
+          (cell_set
+            (global_get
+              $a)
+            1)
+          (ret
+            0))
         (label_def
           $f_exit_4))
       (semi))))

@@ -184,11 +184,9 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
                 let skip = end_label.new_jump_node(t);
                 let label_def = fun_label.new_def_node(t);
                 let body = gen_expr(body, t, labels, s);
-                let result = t.new_int(0);
-                let ret = t.new_node(IlKind::Ret, &[result]);
                 let end = end_label.new_def_node(t);
 
-                t.new_node(IlKind::Semi, &[skip, label_def, body, ret, end])
+                t.new_node(IlKind::Semi, &[skip, label_def, body, end])
             }
             _ => unreachable!(),
         },

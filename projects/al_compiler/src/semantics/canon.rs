@@ -8,6 +8,26 @@
 use super::*;
 use std::mem::replace;
 
+/// 関数の末尾に `return` を挿入する。
+fn auto_ret(expr: &mut Expr) {
+    assert_eq!(*expr.kind(), ExprKind::FnDecl);
+
+    let (main_loc, total_loc) = (*expr.main_loc(), *expr.total_loc());
+    let semi = Expr::new(ExprKind::Semi, vec![], main_loc, total_loc);
+    match expr.children_mut().as_mut_slice() {
+        [_ident, body] => {
+            // body => { ..body; return 0 }
+            let inner = replace(body, semi);
+            let result = Expr::new_int(0, main_loc);
+            let ret = Expr::new(ExprKind::Ret, vec![result], main_loc, total_loc);
+
+            body.children_mut().push(inner);
+            body.children_mut().push(ret);
+        }
+        _ => unreachable!(),
+    }
+}
+
 /// 式を項とみなして正準化する。
 /// 副作用を持つ入れ子の式は stmts に移動する。
 fn canon_term(expr: &mut Expr, stmts: &mut Vec<Expr>) {
@@ -62,6 +82,8 @@ fn canon_stmt(mut expr: Expr, stmts: &mut Vec<Expr>, decls: &mut Vec<Expr>) {
             stmts.push(expr);
         }
         ExprKind::FnDecl => {
+            auto_ret(&mut expr);
+
             match expr.children_mut().as_mut_slice() {
                 [ident, body] => {
                     assert!(ident.children().is_empty());

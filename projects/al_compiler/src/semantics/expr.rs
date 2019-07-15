@@ -1,12 +1,12 @@
 use crate::syntax::*;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Lit {
     Bool(bool),
     Int(i64),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Prim {
     Assert,
     OpAdd,
@@ -16,7 +16,7 @@ pub(crate) enum Prim {
     OpEq,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ExprKind {
     Lit(Lit),
     Prim(Prim),

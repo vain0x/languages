@@ -2,11 +2,43 @@
   (globals
     $b
     $a)
-  (labels)
+  (labels
+    $g_1
+    $g_exit_2
+    $f_3
+    $f_exit_4)
   (code_section
     (semi
       // fn g() {..
-      (semi)
+      (semi
+        (jump
+          (label_get
+            $g_exit_2))
+        (label_def
+          $g_1)
+        // b = 2
+        (cell_set
+          (global_get
+            $b)
+          2)
+        (ret
+          0)
+        (label_def
+          $g_exit_2))
       // fn f() {..
-      (semi)
+      (semi
+        (jump
+          (label_get
+            $f_exit_4))
+        (label_def
+          $f_3)
+        // a = 1
+        (cell_set
+          (global_get
+            $a)
+          1)
+        (ret
+          0)
+        (label_def
+          $f_exit_4))
       (semi))))

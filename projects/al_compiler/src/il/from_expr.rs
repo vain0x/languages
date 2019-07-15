@@ -164,10 +164,27 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             }
             t.new_node(IlKind::Semi, &children)
         }
-        ExprKind::FnDecl => {
-            // FIXME: impl
-            t.new_node(IlKind::Semi, &[])
-        }
+        ExprKind::FnDecl => match expr.children() {
+            [ident, body] => {
+                let (fun_label, end_label) = match ident.kind() {
+                    ExprKind::Fun(_, ident) => (
+                        labels.new_label(&ident, t),
+                        labels.new_label(&format!("{}_exit", ident), t),
+                    ),
+                    _ => unreachable!(),
+                };
+
+                let skip = end_label.new_jump_node(t);
+                let label_def = fun_label.new_def_node(t);
+                let body = gen_expr(body, t, labels, s);
+                let result = t.new_int(0);
+                let ret = t.new_node(IlKind::Ret, &[result]);
+                let end = end_label.new_def_node(t);
+
+                t.new_node(IlKind::Semi, &[skip, label_def, body, ret, end])
+            }
+            _ => unreachable!(),
+        },
         ExprKind::Ident(_) => unreachable!("名前解決で消えるはず"),
     };
 

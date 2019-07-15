@@ -41,6 +41,8 @@ fn gen_il(il: usize, t: &IlTree, a: &mut AlAsm, idents: &mut Vec<usize>) {
         // 文:
         IlKind::Jump => a.new_instr(InstrKind::Jump),
         IlKind::JumpUnless => a.new_instr(InstrKind::JumpUnless),
+        IlKind::Call => a.new_instr(InstrKind::Call),
+        IlKind::Ret => a.new_instr(InstrKind::Ret),
         IlKind::Pop => a.new_instr(InstrKind::Pop),
         IlKind::Assert => a.new_instr(InstrKind::Assert),
         IlKind::CellSet => a.new_instr(InstrKind::CellSet),

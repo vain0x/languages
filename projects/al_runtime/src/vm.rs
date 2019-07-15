@@ -106,6 +106,23 @@ impl VM {
                         _ => {}
                     }
                 }
+                InstrKind::Call => match self.stack_pop() {
+                    (CellTy::Pc, pc) => {
+                        self.stack_push((CellTy::Pc, self.pc as i64));
+                        self.pc = pc as usize;
+                    }
+                    _ => panic!("expected pc"),
+                },
+                InstrKind::Ret => {
+                    let result = self.stack_pop();
+                    match self.stack_pop() {
+                        (CellTy::Pc, pc) => {
+                            self.pc = pc as usize;
+                            self.stack_push(result);
+                        }
+                        _ => panic!("expected pc"),
+                    }
+                },
                 InstrKind::Pop => {
                     self.stack_pop();
                 }

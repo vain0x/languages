@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -8,6 +7,7 @@ pub(crate) mod semantics;
 pub(crate) mod syntax;
 
 use crate::syntax::*;
+use crate::semantics::*;
 
 pub struct Output {
     pub il: String,
@@ -22,10 +22,10 @@ pub fn build(entry_path: &str) -> io::Result<Output> {
 
     let ast = crate::syntax::parse::parse(file, sources.file_text(file));
     let mut expr = crate::semantics::from_ast::from_ast(&ast);
-    let mut globals = HashMap::new();
-    crate::semantics::name_res::name_res(&mut expr, &mut globals);
+    let mut symbols = Symbols::new();
+    crate::semantics::name_res::name_res(&mut expr, &mut symbols);
     crate::semantics::canon::canon(&mut expr);
-    let codes = crate::il::from_expr::from_expr(&expr, &mut globals, &sources);
+    let codes = crate::il::from_expr::from_expr(&expr, &mut symbols, &sources);
     let il = crate::il::print::print(&codes)?;
 
     Ok(Output {

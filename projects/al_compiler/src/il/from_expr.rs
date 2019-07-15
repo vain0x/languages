@@ -3,7 +3,6 @@
 use crate::semantics::*;
 use crate::syntax::*;
 use al_aux::il::*;
-use std::collections::HashMap;
 
 #[derive(Clone, Copy)]
 struct Label {
@@ -79,10 +78,12 @@ fn set_text_comment(il: usize, expr: &Expr, t: &mut IlTree, s: &SourceFileSystem
     t.set_comment(il, comment);
 }
 
-fn gen_globals(globals: &HashMap<String, usize>, t: &mut IlTree) -> usize {
-    let mut globals = globals
+fn gen_globals(symbols: &Symbols, t: &mut IlTree) -> usize {
+    let mut globals = symbols
+        .vars()
         .iter()
-        .map(|(ident, global_id)| (global_id, ident.to_owned()))
+        .enumerate()
+        .map(|(var_id, var)| (var_id, var.ident().to_owned()))
         .collect::<Vec<_>>();
     globals.sort();
 
@@ -173,16 +174,12 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
     il
 }
 
-pub(crate) fn from_expr(
-    expr: &Expr,
-    globals: &HashMap<String, usize>,
-    s: &SourceFileSystem,
-) -> IlTree {
+pub(crate) fn from_expr(expr: &Expr, symbols: &Symbols, s: &SourceFileSystem) -> IlTree {
     let mut il_tree = IlTree::new();
     let mut labels = Labels::new();
 
     let top_level = gen_expr(expr, &mut il_tree, &mut labels, s);
-    let globals = gen_globals(globals, &mut il_tree);
+    let globals = gen_globals(symbols, &mut il_tree);
     let labels = labels.new_labels_node(&mut il_tree);
     let code_section = il_tree.new_node(IlKind::CodeSection, &[top_level]);
     let root = il_tree.new_node(IlKind::Root, &[globals, labels, code_section]);

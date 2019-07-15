@@ -12,7 +12,7 @@ fn gen_il(il: usize, t: &IlTree, a: &mut AlAsm, idents: &mut Vec<usize>) {
         // 宣言:
         IlKind::Globals => {
             // (globals $a ..) の中身がすべてスタックに積まれているので、それらをグローバル変数として宣言する。
-            for ident in 0..idents.len() {
+            for &ident in idents.iter() {
                 let ident = t.get_string(ident).to_owned();
                 a.globals.new_global(ident);
             }
@@ -20,7 +20,7 @@ fn gen_il(il: usize, t: &IlTree, a: &mut AlAsm, idents: &mut Vec<usize>) {
         }
         IlKind::Labels => {
             // globals と同様
-            for ident in 0..idents.len() {
+            for &ident in idents.iter() {
                 let ident = t.get_string(ident).to_owned();
                 a.labels.new_label(ident);
             }

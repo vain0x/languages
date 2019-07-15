@@ -31,6 +31,12 @@ pub(crate) fn from_ast(ast: &Ast) -> Expr {
             ast.loc(),
             ast.total_loc(),
         ),
+        AstKind::FnDecl => Expr::new(
+            ExprKind::FnDecl,
+            map_children(ast).collect(),
+            ast.loc(),
+            ast.total_loc(),
+        ),
         AstKind::Bin(BinOp::Assign) => Expr::new(
             ExprKind::Assign,
             map_children(ast).collect(),

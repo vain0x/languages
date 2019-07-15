@@ -1,0 +1,10 @@
+(root
+  (globals
+    $f
+    $a)
+  (labels)
+  (code_section
+    (semi
+      // fn f() {..
+      (semi)
+      (semi))))

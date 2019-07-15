@@ -159,10 +159,14 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             }
             t.new_node(IlKind::Semi, &children)
         }
+        ExprKind::FnDecl => {
+            // FIXME: impl
+            t.new_node(IlKind::Semi, &[])
+        }
         ExprKind::Ident(_) => unreachable!("名前解決で消えるはず"),
     };
 
-    if expr.is_single_statement() {
+    if expr.is_statement() || expr.is_decl() {
         set_text_comment(il, expr, t, s);
     }
 

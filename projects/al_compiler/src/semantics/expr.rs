@@ -26,6 +26,10 @@ pub(crate) enum ExprKind {
     Do,
     Assign,
     If,
+
+    /// `fn f() { .. }`
+    FnDecl,
+
     Semi,
 }
 
@@ -101,10 +105,16 @@ impl Expr {
         &self.total_loc
     }
 
-    pub(crate) fn is_single_statement(&self) -> bool {
+    pub(crate) fn is_statement(&self) -> bool {
         match self.kind() {
-            ExprKind::Semi => false,
             ExprKind::Do | ExprKind::If | ExprKind::Assign => true,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn is_decl(&self) -> bool {
+        match self.kind() {
+            ExprKind::FnDecl => true,
             _ => false,
         }
     }

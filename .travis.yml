@@ -1,0 +1,10 @@
+name: rust
+os: linux
+language: rust
+rust: stable
+cache: cargo
+install:
+  - cargo build --all
+script:
+  - cargo test
+  - ./test

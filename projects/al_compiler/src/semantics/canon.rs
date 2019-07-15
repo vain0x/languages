@@ -56,6 +56,13 @@ fn canon_stmt(mut expr: Expr, stmts: &mut Vec<Expr>, decls: &mut Vec<Expr>) {
             stmts.push(expr);
         }
         ExprKind::FnDecl => {
+            match expr.children_mut().as_mut_slice() {
+                [ident, body] => {
+                    assert!(ident.children().is_empty());
+                    canon_block(body, decls);
+                }
+                _ => unreachable!(),
+            }
             decls.push(expr);
         }
         ExprKind::Semi => {

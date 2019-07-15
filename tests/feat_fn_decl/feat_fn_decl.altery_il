@@ -1,10 +1,14 @@
 (root
   (globals
     $f
+    $g
+    $b
     $a)
   (labels)
   (code_section
     (semi
+      // fn g() {..
+      (semi)
       // fn f() {..
       (semi)
       (semi))))

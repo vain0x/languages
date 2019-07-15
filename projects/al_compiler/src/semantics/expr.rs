@@ -28,6 +28,9 @@ pub(crate) enum ExprKind {
     Assign,
     If,
 
+    /// `return`
+    Ret,
+
     /// `fn f() { .. }`
     FnDecl,
 

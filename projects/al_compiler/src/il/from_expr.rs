@@ -157,6 +157,13 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             }
             _ => unimplemented!(),
         },
+        ExprKind::Ret => {
+            let result = match expr.children() {
+                [result] => gen_expr(result, t, labels, s),
+                _ => unreachable!(),
+            };
+            t.new_node(IlKind::Ret, &[result])
+        }
         ExprKind::Semi => {
             let mut children = vec![];
             for child in expr.children() {

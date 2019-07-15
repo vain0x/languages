@@ -25,6 +25,7 @@ fn canon_term(expr: &mut Expr, stmts: &mut Vec<Expr>) {
         ExprKind::Assign => unimplemented!("canon assign"),
         ExprKind::Do => unimplemented!("canon do"),
         ExprKind::If => unimplemented!("canon if"),
+        ExprKind::Ret => unimplemented!("canon ret"),
         ExprKind::FnDecl => unimplemented!("canon fn"),
         ExprKind::Semi => unimplemented!("canon semi"),
     }
@@ -42,7 +43,7 @@ fn canon_stmt(mut expr: Expr, stmts: &mut Vec<Expr>, decls: &mut Vec<Expr>) {
             canon_term(&mut expr, stmts);
             stmts.push(expr.into_do());
         }
-        ExprKind::Assign | ExprKind::Do => {
+        ExprKind::Assign | ExprKind::Do | ExprKind::Ret => {
             // NOTE: Assign の左辺はパターン
             for child in expr.children_mut() {
                 canon_term(child, stmts);

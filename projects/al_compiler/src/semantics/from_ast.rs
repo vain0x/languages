@@ -32,7 +32,7 @@ pub(crate) fn from_ast(ast: &Ast) -> Expr {
             ast.total_loc(),
         ),
         AstKind::FunDecl => Expr::new(
-            ExprKind::FunDecl,
+            ExprKind::FunDecl { fun_id: 0 },
             map_children(ast).collect(),
             ast.loc(),
             ast.total_loc(),

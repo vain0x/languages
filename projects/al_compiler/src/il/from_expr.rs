@@ -171,7 +171,7 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             }
             t.new_node(IlKind::Semi, &children)
         }
-        ExprKind::FunDecl => match expr.children() {
+        ExprKind::FunDecl { .. } => match expr.children() {
             [ident, body] => {
                 let (fun_label, end_label) = match ident.kind() {
                     ExprKind::Fun(_, ident) => (

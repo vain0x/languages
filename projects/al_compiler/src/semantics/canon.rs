@@ -10,7 +10,10 @@ use std::mem::replace;
 
 /// 関数の末尾に `return` を挿入する。
 fn auto_ret(expr: &mut Expr) {
-    assert_eq!(*expr.kind(), ExprKind::FunDecl);
+    assert!(match expr.kind() {
+        ExprKind::FunDecl { .. } => true,
+        _ => false,
+    });
 
     let (main_loc, total_loc) = (*expr.main_loc(), *expr.total_loc());
     let semi = Expr::new(ExprKind::Semi, vec![], main_loc, total_loc);
@@ -46,7 +49,7 @@ fn canon_term(expr: &mut Expr, stmts: &mut Vec<Expr>) {
         ExprKind::Do => unimplemented!("canon do"),
         ExprKind::If => unimplemented!("canon if"),
         ExprKind::Ret => unimplemented!("canon ret"),
-        ExprKind::FunDecl => unimplemented!("canon fn"),
+        ExprKind::FunDecl { .. } => unimplemented!("canon fn"),
         ExprKind::Semi => unimplemented!("canon semi"),
     }
 }
@@ -81,7 +84,7 @@ fn canon_stmt(mut expr: Expr, stmts: &mut Vec<Expr>, decls: &mut Vec<Expr>) {
             }
             stmts.push(expr);
         }
-        ExprKind::FunDecl => {
+        ExprKind::FunDecl { .. } => {
             auto_ret(&mut expr);
 
             match expr.children_mut().as_mut_slice() {

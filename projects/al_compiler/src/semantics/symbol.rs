@@ -51,6 +51,22 @@ impl Symbols {
         &self.vars
     }
 
+    pub(crate) fn find(&mut self, ident: &str) -> Option<(SymbolKind, usize)> {
+        let find_var = || {
+            self.vars
+                .iter()
+                .position(|var| var.ident() == ident)
+                .map(|var_id| (SymbolKind::Var, var_id))
+        };
+        let find_fun = || {
+            self.funs
+                .iter()
+                .position(|fun| fun.ident() == ident)
+                .map(|fun_id| (SymbolKind::Fun, fun_id))
+        };
+        find_var().or_else(find_fun)
+    }
+
     pub(crate) fn find_or_new_var(&mut self, ident: String) -> usize {
         match self.vars.iter().position(|var| var.ident() == ident) {
             Some(var_id) => var_id,

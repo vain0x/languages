@@ -20,7 +20,7 @@ pub(crate) fn name_res(expr: &mut Expr, symbols: &mut Symbols) {
             let var_id = symbols.find_or_new_var(ident.to_owned());
             *expr.kind_mut() = ExprKind::Global(var_id, ident);
         }
-        ExprKind::FnDecl => match expr.children_mut().as_mut_slice() {
+        ExprKind::FunDecl => match expr.children_mut().as_mut_slice() {
             [ident, _body] => {
                 resolve_fun_ident(ident, symbols);
             }

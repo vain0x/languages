@@ -15,7 +15,7 @@ pub(crate) enum AstKind {
     If,
 
     /// `fn f() { .. }`
-    FnDecl,
+    FunDecl,
 
     Bin(BinOp),
     Call,

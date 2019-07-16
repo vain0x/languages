@@ -31,8 +31,8 @@ pub(crate) fn from_ast(ast: &Ast) -> Expr {
             ast.loc(),
             ast.total_loc(),
         ),
-        AstKind::FnDecl => Expr::new(
-            ExprKind::FnDecl,
+        AstKind::FunDecl => Expr::new(
+            ExprKind::FunDecl,
             map_children(ast).collect(),
             ast.loc(),
             ast.total_loc(),

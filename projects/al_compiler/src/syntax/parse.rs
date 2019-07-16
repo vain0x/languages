@@ -142,7 +142,7 @@ fn parse_fn(p: &mut Parser<'_>) -> Ast {
     }
     let body = parse_block(p);
 
-    node.finish(Ast::new(AstKind::FnDecl, vec![ident, body], loc), p)
+    node.finish(Ast::new(AstKind::FunDecl, vec![ident, body], loc), p)
 }
 
 /// アトム式。トークン1個か、カッコで構成される種類の式。

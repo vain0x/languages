@@ -32,7 +32,7 @@ pub(crate) enum ExprKind {
     Ret,
 
     /// `fn f() { .. }`
-    FnDecl,
+    FunDecl,
 
     Semi,
 }
@@ -118,7 +118,7 @@ impl Expr {
 
     pub(crate) fn is_decl(&self) -> bool {
         match self.kind() {
-            ExprKind::FnDecl => true,
+            ExprKind::FunDecl => true,
             _ => false,
         }
     }

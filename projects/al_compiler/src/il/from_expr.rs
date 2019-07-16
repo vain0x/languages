@@ -3,6 +3,7 @@
 use crate::semantics::*;
 use crate::syntax::*;
 use al_aux::il::*;
+use std::collections::HashMap;
 
 #[derive(Clone, Copy)]
 struct Label {
@@ -35,11 +36,15 @@ impl Label {
 
 struct Labels {
     inner: Vec<Label>,
+    funs: HashMap<usize, Label>,
 }
 
 impl Labels {
     fn new() -> Labels {
-        Labels { inner: vec![] }
+        Labels {
+            inner: vec![],
+            funs: HashMap::new(),
+        }
     }
 
     fn new_label(&mut self, hint: &str, t: &mut IlTree) -> Label {
@@ -58,6 +63,14 @@ impl Labels {
             .map(|label| label.ident_il)
             .collect::<Vec<_>>();
         t.new_node(IlKind::Labels, &children)
+    }
+
+    fn new_fun_label(&mut self, fun_id: usize, ident: &str, t: &mut IlTree) -> Label {
+        if !self.funs.contains_key(&fun_id) {
+            let label = self.new_label(ident, t);
+            self.funs.insert(fun_id, label);
+        }
+        self.funs[&fun_id]
     }
 }
 
@@ -116,17 +129,26 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             }
             _ => unreachable!(),
         },
-        ExprKind::Call => {
-            let kind = match expr.children()[0].kind() {
-                ExprKind::Prim(prim) => kind_from_prim(*prim),
-                _ => unimplemented!(),
-            };
-            let mut children = vec![];
-            for child in &expr.children()[1..] {
-                children.push(gen_expr(child, t, labels, s));
+        ExprKind::Call => match expr.children()[0].kind() {
+            ExprKind::Prim(prim) => {
+                let kind = kind_from_prim(*prim);
+                let mut children = vec![];
+                for child in &expr.children()[1..] {
+                    children.push(gen_expr(child, t, labels, s));
+                }
+                t.new_node(kind, &children)
             }
-            t.new_node(kind, &children)
-        }
+            ExprKind::Fun(fun_id, ident) => {
+                let fun_label = labels.new_fun_label(*fun_id, &ident, t);
+
+                let mut children = vec![];
+                children.push(fun_label.new_get_node(t));
+                // FIXME: 引数を渡す
+
+                t.new_node(IlKind::Call, &children)
+            }
+            kind => unimplemented!("{:?}", kind),
+        },
         ExprKind::Do => {
             let mut children = vec![];
             for child in expr.children() {
@@ -171,11 +193,11 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             }
             t.new_node(IlKind::Semi, &children)
         }
-        ExprKind::FunDecl { .. } => match expr.children() {
+        ExprKind::FunDecl { fun_id } => match expr.children() {
             [ident, body] => {
                 let (fun_label, end_label) = match ident.kind() {
                     ExprKind::Fun(_, ident) => (
-                        labels.new_label(&ident, t),
+                        labels.new_fun_label(*fun_id, &ident, t),
                         labels.new_label(&format!("{}_exit", ident), t),
                     ),
                     _ => unreachable!(),

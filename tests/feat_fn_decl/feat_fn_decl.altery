@@ -1,7 +1,15 @@
+a = 0
+b = 0
+
 fn f() {
     fn g() {
-        b = 2
+        b = b + 2
     }
 
-    a = 1
+    a = a + 1
 }
+
+f(0)
+g(0)
+assert(a == 1)
+assert(b == 2)

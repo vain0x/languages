@@ -78,6 +78,10 @@ impl Symbols {
         }
     }
 
+    pub(crate) fn find_fun(&mut self, ident: &str) -> Option<usize> {
+        self.funs.iter().position(|fun| fun.ident() == ident)
+    }
+
     pub(crate) fn find_or_new_fun(&mut self, ident: String) -> usize {
         match self.funs.iter().position(|fun| fun.ident() == ident) {
             Some(fun_id) => fun_id,

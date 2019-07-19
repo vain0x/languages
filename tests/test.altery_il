@@ -1,5 +1,27 @@
 (root
-  (labels $loop)
-  (jump (label_get $loop))
-  (pop (assert false))
-  (semi (label_def $loop)))
+  (globals $a)
+  (labels $main $f)
+  (jump (label_get $main))
+
+  // fn f() { a = a + 1 }
+  (label_def $f)
+  (cell_set
+    (global_get $a)
+    (+
+      (global_get $a)
+      1))
+  (ret 0)
+
+  // fn main() { a = 0; f(); f() }
+  (label_def $main)
+  (cell_set
+    (global_get $a)
+    0)
+  (pop (call (label_get $f)))
+  (pop (call (label_get $f)))
+  (pop
+    (assert
+      (==
+        (global_get $a)
+        2)
+    )))

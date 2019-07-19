@@ -1,12 +1,12 @@
 use crate::syntax::*;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Lit {
     Bool(bool),
     Int(i64),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Prim {
     Assert,
     OpAdd,
@@ -16,16 +16,26 @@ pub(crate) enum Prim {
     OpEq,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ExprKind {
     Lit(Lit),
     Prim(Prim),
     Ident(String),
+    Fun(usize, String),
     Global(usize, String),
     Call,
     Do,
     Assign,
     If,
+
+    /// `return`
+    Ret,
+
+    /// `fn f() { .. }`
+    FunDecl {
+        fun_id: usize,
+    },
+
     Semi,
 }
 
@@ -101,10 +111,16 @@ impl Expr {
         &self.total_loc
     }
 
-    pub(crate) fn is_single_statement(&self) -> bool {
+    pub(crate) fn is_statement(&self) -> bool {
         match self.kind() {
-            ExprKind::Semi => false,
             ExprKind::Do | ExprKind::If | ExprKind::Assign => true,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn is_decl(&self) -> bool {
+        match self.kind() {
+            ExprKind::FunDecl { .. } => true,
             _ => false,
         }
     }

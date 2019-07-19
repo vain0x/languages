@@ -1,0 +1,86 @@
+(root
+  (globals
+    $a
+    $b)
+  (labels
+    $g_1
+    $g_exit_2
+    $f_3
+    $f_exit_4)
+  (code_section
+    (semi
+      // fn g() {..
+      (semi
+        (jump
+          (label_get
+            $g_exit_2))
+        (label_def
+          $g_1)
+        (semi
+          // b = b + 2
+          (cell_set
+            (global_get
+              $b)
+            (+
+              (global_get
+                $b)
+              2))
+          (ret
+            0))
+        (label_def
+          $g_exit_2))
+      // fn f() {..
+      (semi
+        (jump
+          (label_get
+            $f_exit_4))
+        (label_def
+          $f_3)
+        (semi
+          // a = a + 1
+          (cell_set
+            (global_get
+              $a)
+            (+
+              (global_get
+                $a)
+              1))
+          (ret
+            0))
+        (label_def
+          $f_exit_4))
+      (semi
+        // a = 0
+        (cell_set
+          (global_get
+            $a)
+          0)
+        // b = 0
+        (cell_set
+          (global_get
+            $b)
+          0)
+        // f(0)
+        (pop
+          (call
+            (label_get
+              $f_3)))
+        // g(0)
+        (pop
+          (call
+            (label_get
+              $g_1)))
+        // assert(a == 1)
+        (pop
+          (assert
+            (==
+              (global_get
+                $a)
+              1)))
+        // assert(b == 2)
+        (pop
+          (assert
+            (==
+              (global_get
+                $b)
+              2)))))))

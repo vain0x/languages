@@ -13,6 +13,10 @@ pub(crate) enum AstKind {
     Int(i64),
     Assert,
     If,
+
+    /// `fn f() { .. }`
+    FunDecl,
+
     Bin(BinOp),
     Call,
     Semi,

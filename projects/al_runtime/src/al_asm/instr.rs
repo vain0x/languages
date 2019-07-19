@@ -7,6 +7,8 @@ pub(crate) enum InstrKind {
     Exit,
     Jump,
     JumpUnless,
+    Call,
+    Ret,
     Pop,
     Assert,
     CellSet,

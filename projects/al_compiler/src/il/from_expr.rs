@@ -36,11 +36,15 @@ impl Label {
 
 struct Labels {
     inner: Vec<Label>,
+    funs: HashMap<usize, Label>,
 }
 
 impl Labels {
     fn new() -> Labels {
-        Labels { inner: vec![] }
+        Labels {
+            inner: vec![],
+            funs: HashMap::new(),
+        }
     }
 
     fn new_label(&mut self, hint: &str, t: &mut IlTree) -> Label {
@@ -59,6 +63,14 @@ impl Labels {
             .map(|label| label.ident_il)
             .collect::<Vec<_>>();
         t.new_node(IlKind::Labels, &children)
+    }
+
+    fn new_fun_label(&mut self, fun_id: usize, ident: &str, t: &mut IlTree) -> Label {
+        if !self.funs.contains_key(&fun_id) {
+            let label = self.new_label(ident, t);
+            self.funs.insert(fun_id, label);
+        }
+        self.funs[&fun_id]
     }
 }
 
@@ -79,10 +91,12 @@ fn set_text_comment(il: usize, expr: &Expr, t: &mut IlTree, s: &SourceFileSystem
     t.set_comment(il, comment);
 }
 
-fn gen_globals(globals: &HashMap<String, usize>, t: &mut IlTree) -> usize {
-    let mut globals = globals
+fn gen_globals(symbols: &Symbols, t: &mut IlTree) -> usize {
+    let mut globals = symbols
+        .vars()
         .iter()
-        .map(|(ident, global_id)| (global_id, ident.to_owned()))
+        .enumerate()
+        .map(|(var_id, var)| (var_id, var.ident().to_owned()))
         .collect::<Vec<_>>();
     globals.sort();
 
@@ -99,6 +113,10 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
         ExprKind::Lit(Lit::Bool(value)) => t.new_bool(*value),
         ExprKind::Lit(Lit::Int(value)) => t.new_int(*value),
         ExprKind::Prim(prim) => t.new_leaf(kind_from_prim(*prim)),
+        ExprKind::Fun(_, ident) => {
+            let ident = t.new_ident(ident.to_owned());
+            t.new_node(IlKind::LabelGet, &[ident])
+        }
         ExprKind::Global(_, ident) => {
             let ident = t.new_ident(ident.to_owned());
             t.new_node(IlKind::GlobalGet, &[ident])
@@ -111,17 +129,26 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             }
             _ => unreachable!(),
         },
-        ExprKind::Call => {
-            let kind = match expr.children()[0].kind() {
-                ExprKind::Prim(prim) => kind_from_prim(*prim),
-                _ => unimplemented!(),
-            };
-            let mut children = vec![];
-            for child in &expr.children()[1..] {
-                children.push(gen_expr(child, t, labels, s));
+        ExprKind::Call => match expr.children()[0].kind() {
+            ExprKind::Prim(prim) => {
+                let kind = kind_from_prim(*prim);
+                let mut children = vec![];
+                for child in &expr.children()[1..] {
+                    children.push(gen_expr(child, t, labels, s));
+                }
+                t.new_node(kind, &children)
             }
-            t.new_node(kind, &children)
-        }
+            ExprKind::Fun(fun_id, ident) => {
+                let fun_label = labels.new_fun_label(*fun_id, &ident, t);
+
+                let mut children = vec![];
+                children.push(fun_label.new_get_node(t));
+                // FIXME: 引数を渡す
+
+                t.new_node(IlKind::Call, &children)
+            }
+            kind => unimplemented!("{:?}", kind),
+        },
         ExprKind::Do => {
             let mut children = vec![];
             for child in expr.children() {
@@ -152,6 +179,13 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             }
             _ => unimplemented!(),
         },
+        ExprKind::Ret => {
+            let result = match expr.children() {
+                [result] => gen_expr(result, t, labels, s),
+                _ => unreachable!(),
+            };
+            t.new_node(IlKind::Ret, &[result])
+        }
         ExprKind::Semi => {
             let mut children = vec![];
             for child in expr.children() {
@@ -159,26 +193,41 @@ fn gen_expr(expr: &Expr, t: &mut IlTree, labels: &mut Labels, s: &SourceFileSyst
             }
             t.new_node(IlKind::Semi, &children)
         }
+        ExprKind::FunDecl { fun_id } => match expr.children() {
+            [ident, body] => {
+                let (fun_label, end_label) = match ident.kind() {
+                    ExprKind::Fun(_, ident) => (
+                        labels.new_fun_label(*fun_id, &ident, t),
+                        labels.new_label(&format!("{}_exit", ident), t),
+                    ),
+                    _ => unreachable!(),
+                };
+
+                let skip = end_label.new_jump_node(t);
+                let label_def = fun_label.new_def_node(t);
+                let body = gen_expr(body, t, labels, s);
+                let end = end_label.new_def_node(t);
+
+                t.new_node(IlKind::Semi, &[skip, label_def, body, end])
+            }
+            _ => unreachable!(),
+        },
         ExprKind::Ident(_) => unreachable!("名前解決で消えるはず"),
     };
 
-    if expr.is_single_statement() {
+    if expr.is_statement() || expr.is_decl() {
         set_text_comment(il, expr, t, s);
     }
 
     il
 }
 
-pub(crate) fn from_expr(
-    expr: &Expr,
-    globals: &HashMap<String, usize>,
-    s: &SourceFileSystem,
-) -> IlTree {
+pub(crate) fn from_expr(expr: &Expr, symbols: &Symbols, s: &SourceFileSystem) -> IlTree {
     let mut il_tree = IlTree::new();
     let mut labels = Labels::new();
 
     let top_level = gen_expr(expr, &mut il_tree, &mut labels, s);
-    let globals = gen_globals(globals, &mut il_tree);
+    let globals = gen_globals(symbols, &mut il_tree);
     let labels = labels.new_labels_node(&mut il_tree);
     let code_section = il_tree.new_node(IlKind::CodeSection, &[top_level]);
     let root = il_tree.new_node(IlKind::Root, &[globals, labels, code_section]);

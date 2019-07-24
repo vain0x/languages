@@ -289,6 +289,10 @@ impl PirProgram {
         panic!("Missing var {}", var_id)
     }
 
+    pub(crate) fn vars(&self) -> impl Iterator<Item = (VarId, &PirVarDef)> {
+        self.vars.iter().map(|(&var_id, var_def)| (var_id, var_def))
+    }
+
     pub(crate) fn funs(&self) -> impl Iterator<Item = (FunId, &PirFunDef)> {
         self.funs.iter().map(|(&fun_id, fun_def)| (fun_id, fun_def))
     }

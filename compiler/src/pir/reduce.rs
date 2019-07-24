@@ -9,7 +9,7 @@ macro_rules! decompose {
 
 enum StmtResult {
     None,
-    Keep,
+    Return,
     Set(VarId),
 }
 
@@ -269,8 +269,8 @@ impl ReducePir {
             StmtResult::None => {
                 // We can discard `init` because it doesn't cause side-effects.
             }
-            StmtResult::Keep => {
-                semi.push(init);
+            StmtResult::Return => {
+                semi.push(make_pir(PirKind::Return, vec![init], Ty::unit(), exp_id));
             }
             StmtResult::Set(var_id) => {
                 self.add_temporary_end(var_id, init, &mut semi);
@@ -303,7 +303,7 @@ impl ReducePir {
     fn reduce_pir(&mut self, pir: Pir) -> Pir {
         let pir = self.scale_ptr_indices(pir.kind, pir.args, pir.ty, pir.exp_id);
         let pir = self.reduce_prim(pir.kind, pir.args, pir.ty, pir.exp_id);
-        let pir = self.canonicalize_stmt(pir, StmtResult::Keep);
+        let pir = self.canonicalize_stmt(pir, StmtResult::Return);
         let pir = self.calc_size(pir.kind, pir.args, pir.ty, pir.exp_id);
         pir
     }

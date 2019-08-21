@@ -6,23 +6,28 @@
 //! 例えば、semi 文の直下にある項 (式文) は do 文に変形する。
 
 use super::*;
+use crate::syntax::*;
 use std::mem::replace;
 
 /// 関数の末尾に `return` を挿入する。
 fn auto_ret(expr: &mut Expr) {
+    fn zero_extent(extent: &SourceExtent) -> SourceExtent {
+        extent.shrink()
+    }
+
     assert!(match expr.kind() {
         ExprKind::FunDecl { .. } => true,
         _ => false,
     });
 
-    let (main_loc, total_loc) = (*expr.main_loc(), *expr.total_loc());
-    let semi = Expr::new(ExprKind::Semi, vec![], main_loc, total_loc);
+    let extent = *expr.extent();
+    let semi = Expr::new(ExprKind::Semi, vec![], extent);
     match expr.children_mut().as_mut_slice() {
         [_ident, body] => {
             // body => { ..body; return 0 }
             let inner = replace(body, semi);
-            let result = Expr::new_int(0, main_loc);
-            let ret = Expr::new(ExprKind::Ret, vec![result], main_loc, total_loc);
+            let result = Expr::new_int(0, zero_extent(&extent));
+            let ret = Expr::new(ExprKind::Ret, vec![result], extent);
 
             body.children_mut().push(inner);
             body.children_mut().push(ret);
@@ -108,8 +113,8 @@ fn canon_stmt(mut expr: Expr, stmts: &mut Vec<Expr>, decls: &mut Vec<Expr>) {
 /// 式の内部に含まれる複数の文からなる1個の semi 文に式を変換する。
 /// 文の子要素はすべて文であり、文の孫要素は文または項であり、項の子孫要素はすべて項である。
 fn canon_block(expr: &mut Expr, decls: &mut Vec<Expr>) {
-    let (main_loc, total_loc) = (*expr.main_loc(), *expr.total_loc());
-    let semi = Expr::new(ExprKind::Semi, vec![], main_loc, total_loc);
+    let extent = *expr.extent();
+    let semi = Expr::new(ExprKind::Semi, vec![], extent);
 
     let mut stmts = vec![];
     canon_stmt(replace(expr, semi), &mut stmts, decls);
@@ -126,8 +131,8 @@ fn canon_block(expr: &mut Expr, decls: &mut Vec<Expr>) {
 /// 式を宣言とみなして正準化する。
 /// トップレベルは semi 宣言であり、直下に宣言または文が並ぶ。
 fn canon_decl(expr: &mut Expr) {
-    let (main_loc, total_loc) = (*expr.main_loc(), *expr.total_loc());
-    let mut semi = Expr::new(ExprKind::Semi, vec![], main_loc, total_loc);
+    let extent = *expr.extent();
+    let mut semi = Expr::new(ExprKind::Semi, vec![], extent);
 
     let mut decls = vec![];
     canon_block(expr, &mut decls);

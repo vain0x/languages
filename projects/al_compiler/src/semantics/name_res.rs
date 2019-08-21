@@ -34,7 +34,7 @@ pub(crate) fn name_res(expr: &mut Expr, symbols: &mut Symbols) {
             Some((SymbolKind::Fun, fun_id)) => {
                 *expr.kind_mut() = ExprKind::Fun(fun_id, ident.to_owned())
             }
-            None => panic!("undefined identifier {} at {:?}", ident, expr.main_loc()),
+            None => panic!("undefined identifier {} at {:?}", ident, expr.extent()),
         },
         ExprKind::Assign => match expr.children_mut().as_mut_slice() {
             [left, _right] => {

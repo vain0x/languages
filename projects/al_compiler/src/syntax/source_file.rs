@@ -6,7 +6,7 @@ use std::cmp::{max, min};
 use std::path::PathBuf;
 
 /// ソースファイル上の範囲
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct SourceLocation {
     file: usize,
 
@@ -14,6 +14,16 @@ pub(crate) struct SourceLocation {
     start: usize,
 
     end: usize,
+}
+
+/// ソースファイル上の位置情報
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct SourceExtent {
+    // ノードの中心的な意味を持つ範囲。例えば `2 + 3` の `+` の部分。
+    main: SourceLocation,
+
+    // ノードの全体の範囲。例えば `(2 + 3)` のカッコも含めた部分。
+    total: SourceLocation,
 }
 
 #[derive(Clone, Debug)]
@@ -51,6 +61,37 @@ impl SourceLocation {
             start: min(self.start(), other.start()),
             end: max(self.end(), other.end()),
         }
+    }
+}
+
+impl SourceExtent {
+    pub(crate) fn new(main: SourceLocation, total: SourceLocation) -> SourceExtent {
+        SourceExtent {
+            main,
+            total,
+        }
+    }
+
+    pub(crate) fn main(&self) -> &SourceLocation {
+        &self.main
+    }
+
+    pub(crate) fn total(&self) -> &SourceLocation {
+        &self.total
+    }
+
+    pub(crate) fn shrink(&self) -> SourceExtent {
+        (*self.main()).into()
+    }
+
+    pub(crate) fn extend(&mut self, other: &SourceLocation) {
+        self.total = self.total().union(other);
+    }
+}
+
+impl From<SourceLocation> for SourceExtent {
+    fn from(loc: SourceLocation) -> SourceExtent {
+        SourceExtent::new(loc, loc)
     }
 }
 

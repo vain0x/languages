@@ -26,21 +26,15 @@ pub(crate) enum AstKind {
 pub(crate) struct Ast {
     kind: AstKind,
     children: Vec<Ast>,
-
-    // ノードの中心的な意味を持つ範囲。例えば `2 + 3` の `+` の部分。
-    main_loc: SourceLocation,
-
-    // ノードの全体の範囲。例えば `(2 + 3)` のカッコも含めた部分。
-    total_loc: SourceLocation,
+    extent: SourceExtent,
 }
 
 impl Ast {
-    pub(crate) fn new(kind: AstKind, children: Vec<Ast>, loc: SourceLocation) -> Self {
+    pub(crate) fn new(kind: AstKind, children: Vec<Ast>, extent: SourceExtent) -> Self {
         Ast {
             kind,
             children,
-            main_loc: loc,
-            total_loc: loc,
+            extent,
         }
     }
 
@@ -52,16 +46,12 @@ impl Ast {
         &self.children
     }
 
-    pub(crate) fn loc(&self) -> SourceLocation {
-        self.main_loc
-    }
-
-    pub(crate) fn total_loc(&self) -> SourceLocation {
-        self.total_loc
+    pub(crate) fn extent(&self) -> &SourceExtent {
+        &self.extent
     }
 
     // ノードの全体の範囲を拡張する。
-    pub(crate) fn extend_loc(&mut self, other_loc: &SourceLocation) {
-        self.total_loc = self.total_loc().union(other_loc);
+    pub(crate) fn extend_loc(&mut self, loc: &SourceLocation) {
+        self.extent.extend(loc)
     }
 }

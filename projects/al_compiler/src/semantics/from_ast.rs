@@ -20,49 +20,44 @@ fn map_children<'a>(ast: &'a Ast) -> impl Iterator<Item = Expr> + 'a {
 
 pub(crate) fn from_ast(ast: &Ast) -> Expr {
     match ast.kind() {
-        AstKind::True => Expr::new_bool(true, ast.loc()),
-        AstKind::False => Expr::new_bool(false, ast.loc()),
-        AstKind::Ident(ident) => Expr::new_ident(ident.to_owned(), ast.loc()),
-        AstKind::Int(value) => Expr::new_int(*value, ast.loc()),
-        AstKind::Assert => Expr::new_prim(Prim::Assert, ast.loc()),
+        AstKind::True => Expr::new_bool(true, *ast.extent()),
+        AstKind::False => Expr::new_bool(false, *ast.extent()),
+        AstKind::Ident(ident) => Expr::new_ident(ident.to_owned(), *ast.extent()),
+        AstKind::Int(value) => Expr::new_int(*value, *ast.extent()),
+        AstKind::Assert => Expr::new_prim(Prim::Assert, *ast.extent()),
         AstKind::If => Expr::new(
             ExprKind::If,
             map_children(ast).collect(),
-            ast.loc(),
-            ast.total_loc(),
+            *ast.extent(),
         ),
         AstKind::FunDecl => Expr::new(
             ExprKind::FunDecl { fun_id: 0 },
             map_children(ast).collect(),
-            ast.loc(),
-            ast.total_loc(),
+            *ast.extent(),
         ),
         AstKind::Bin(BinOp::Assign) => Expr::new(
             ExprKind::Assign,
             map_children(ast).collect(),
-            ast.loc(),
-            ast.total_loc(),
+            *ast.extent(),
         ),
         AstKind::Bin(bin_op) => {
             let prim = bin_op_to_prim(*bin_op);
 
             let mut children = vec![];
-            children.push(Expr::new_prim(prim, ast.loc()));
+            children.push(Expr::new_prim(prim, *ast.extent()));
             children.extend(map_children(ast));
 
-            Expr::new(ExprKind::Call, children, ast.loc(), ast.total_loc())
+            Expr::new(ExprKind::Call, children, *ast.extent())
         }
         AstKind::Call => Expr::new(
             ExprKind::Call,
             map_children(ast).collect(),
-            ast.loc(),
-            ast.total_loc(),
+            *ast.extent(),
         ),
         AstKind::Semi => Expr::new(
             ExprKind::Semi,
             map_children(ast).collect(),
-            ast.loc(),
-            ast.total_loc(),
+            *ast.extent(),
         ),
     }
 }

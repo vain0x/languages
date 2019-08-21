@@ -108,10 +108,10 @@ fn parse_if(p: &mut Parser<'_>) -> Ast {
         }
     } else {
         // else がないときは `else {}` を自動で補う。
-        Ast::new(AstKind::Semi, vec![], loc)
+        Ast::new(AstKind::Semi, vec![], loc.into())
     };
 
-    if_expr.finish(Ast::new(AstKind::If, vec![cond, body, alt], loc), p)
+    if_expr.finish(Ast::new(AstKind::If, vec![cond, body, alt], loc.into()), p)
 }
 
 /// 関数宣言 (`fn f() { .. }`)
@@ -142,7 +142,7 @@ fn parse_fn(p: &mut Parser<'_>) -> Ast {
     }
     let body = parse_block(p);
 
-    node.finish(Ast::new(AstKind::FunDecl, vec![ident, body], loc), p)
+    node.finish(Ast::new(AstKind::FunDecl, vec![ident, body], loc.into()), p)
 }
 
 /// アトム式。トークン1個か、カッコで構成される種類の式。
@@ -153,25 +153,25 @@ fn parse_atom(p: &mut Parser<'_>) -> Ast {
     match p.next() {
         TokenKind::True => {
             p.bump();
-            Ast::new(AstKind::True, children, loc)
+            Ast::new(AstKind::True, children, loc.into())
         }
         TokenKind::False => {
             p.bump();
-            Ast::new(AstKind::False, children, loc)
+            Ast::new(AstKind::False, children, loc.into())
         }
         TokenKind::Assert => {
             p.bump();
-            Ast::new(AstKind::Assert, children, loc)
+            Ast::new(AstKind::Assert, children, loc.into())
         }
         TokenKind::Ident => {
             let ident = p.text().to_string();
             p.bump();
-            Ast::new(AstKind::Ident(ident), children, loc)
+            Ast::new(AstKind::Ident(ident), children, loc.into())
         }
         TokenKind::Int => {
             let value = p.text().parse::<i64>().unwrap();
             p.bump();
-            Ast::new(AstKind::Int(value), children, loc)
+            Ast::new(AstKind::Int(value), children, loc.into())
         }
         TokenKind::ParenL => {
             let group = p.start();
@@ -204,7 +204,7 @@ fn parse_call(p: &mut Parser<'_>) -> Ast {
     let loc = p.loc();
     let arg = parse_atom(p);
 
-    call.finish(Ast::new(AstKind::Call, vec![cal, arg], loc), p)
+    call.finish(Ast::new(AstKind::Call, vec![cal, arg], loc.into()), p)
 }
 
 /// 二項演算式の左辺
@@ -240,11 +240,11 @@ fn parse_bin(level: BinOpLevel, p: &mut Parser<'_>) -> Ast {
             .next();
 
         if let Some(bin_op) = bin_op_opt {
-            let op_loc = p.loc();
+            let loc = p.loc();
             p.bump();
 
             let right = parse_bin_right(level, p);
-            let ast = bins.finish(Ast::new(AstKind::Bin(bin_op), vec![left, right], op_loc), p);
+            let ast = bins.finish(Ast::new(AstKind::Bin(bin_op), vec![left, right], loc.into()), p);
             left = ast;
             continue;
         }
@@ -273,7 +273,7 @@ fn parse_semi(loc: SourceLocation, end_kind: TokenKind, p: &mut Parser<'_>) -> A
         children.push(child);
     }
 
-    semi.finish(Ast::new(AstKind::Semi, children, loc), p)
+    semi.finish(Ast::new(AstKind::Semi, children, loc.into()), p)
 }
 
 /// ソースコード全体をパースする。

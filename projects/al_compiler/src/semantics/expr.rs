@@ -43,43 +43,36 @@ pub(crate) enum ExprKind {
 pub(crate) struct Expr {
     kind: ExprKind,
     children: Vec<Expr>,
-    main_loc: SourceLocation,
-    total_loc: SourceLocation,
+    extent: SourceExtent,
 }
 
 impl Expr {
-    pub(crate) fn new(
-        kind: ExprKind,
-        children: Vec<Expr>,
-        main_loc: SourceLocation,
-        total_loc: SourceLocation,
-    ) -> Expr {
+    pub(crate) fn new(kind: ExprKind, children: Vec<Expr>, extent: SourceExtent) -> Expr {
         Expr {
             kind,
             children,
-            main_loc,
-            total_loc,
+            extent,
         }
     }
 
-    pub(crate) fn new_leaf(kind: ExprKind, loc: SourceLocation) -> Expr {
-        Expr::new(kind, vec![], loc, loc)
+    pub(crate) fn new_leaf(kind: ExprKind, extent: SourceExtent) -> Expr {
+        Expr::new(kind, vec![], extent)
     }
 
-    pub(crate) fn new_bool(value: bool, loc: SourceLocation) -> Expr {
-        Expr::new_leaf(ExprKind::Lit(Lit::Bool(value)), loc)
+    pub(crate) fn new_bool(value: bool, extent: SourceExtent) -> Expr {
+        Expr::new_leaf(ExprKind::Lit(Lit::Bool(value)), extent)
     }
 
-    pub(crate) fn new_int(value: i64, loc: SourceLocation) -> Expr {
-        Expr::new_leaf(ExprKind::Lit(Lit::Int(value)), loc)
+    pub(crate) fn new_int(value: i64, extent: SourceExtent) -> Expr {
+        Expr::new_leaf(ExprKind::Lit(Lit::Int(value)), extent)
     }
 
-    pub(crate) fn new_prim(prim: Prim, loc: SourceLocation) -> Expr {
-        Expr::new_leaf(ExprKind::Prim(prim), loc)
+    pub(crate) fn new_prim(prim: Prim, extent: SourceExtent) -> Expr {
+        Expr::new_leaf(ExprKind::Prim(prim), extent)
     }
 
-    pub(crate) fn new_ident(ident: String, loc: SourceLocation) -> Expr {
-        Expr::new_leaf(ExprKind::Ident(ident), loc)
+    pub(crate) fn new_ident(ident: String, extent: SourceExtent) -> Expr {
+        Expr::new_leaf(ExprKind::Ident(ident), extent)
     }
 
     pub(crate) fn kind(&self) -> &ExprKind {
@@ -91,8 +84,8 @@ impl Expr {
     }
 
     pub(crate) fn into_do(self) -> Expr {
-        let (main_loc, total_loc) = (*self.main_loc(), *self.total_loc());
-        Expr::new(ExprKind::Do, vec![self], main_loc, total_loc)
+        let extent = *self.extent();
+        Expr::new(ExprKind::Do, vec![self], extent)
     }
 
     pub(crate) fn children(&self) -> &[Expr] {
@@ -103,12 +96,12 @@ impl Expr {
         &mut self.children
     }
 
-    pub(crate) fn main_loc(&self) -> &SourceLocation {
-        &self.main_loc
+    pub(crate) fn extent(&self) -> &SourceExtent {
+        &self.extent
     }
 
     pub(crate) fn total_loc(&self) -> &SourceLocation {
-        &self.total_loc
+        self.extent().total()
     }
 
     pub(crate) fn is_statement(&self) -> bool {

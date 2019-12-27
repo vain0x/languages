@@ -1,6 +1,14 @@
 module XbnfLang.Types
 
+open System.Collections.Generic
+
+type HashMap<'Key, 'Value> = Dictionary<'Key, 'Value>
+
 type Location = int * int
+
+type IsNullableFun = string -> bool
+
+type Comment = string
 
 type Token =
   | EofToken

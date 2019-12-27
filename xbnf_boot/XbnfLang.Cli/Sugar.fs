@@ -2,6 +2,7 @@ module rec XbnfLang.Sugar
 
 open XbnfLang.Helpers
 open XbnfLang.Types
+open XbnfLang.Nullability
 
 let rec sugarNode node =
   match node with

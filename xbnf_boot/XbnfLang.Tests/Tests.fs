@@ -3,6 +3,7 @@ module XbnfLang.Tests.Snapshots
 open System
 open System.IO
 open XbnfLang.Dump
+open XbnfLang.Nullability
 open XbnfLang.Lower
 open XbnfLang.Parse
 open XbnfLang.Reduce
@@ -41,7 +42,9 @@ let snapshotTest (name: string) =
     File.WriteAllText(fileName, content.TrimEnd() + "\n")
     y
 
-  File.ReadAllText(sourceName)
+  let sourceCode = File.ReadAllText(sourceName)
+
+  sourceCode
   |> withLog "tokenize" tokenize
   |> withLog "parse" parse
   |> withLog "lower" lower

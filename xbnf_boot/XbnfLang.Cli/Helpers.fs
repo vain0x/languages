@@ -4,6 +4,11 @@ open XbnfLang.Types
 
 let inline cons head tail = head :: tail
 
+let inline swap<'T> (first: byref<'T>) (second: byref<'T>) =
+  let t = first
+  first <- second
+  second <- t
+
 let noLocation = 0, 0
 
 /// x? ==> (x / ε)

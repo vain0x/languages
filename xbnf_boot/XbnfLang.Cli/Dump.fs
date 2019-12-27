@@ -27,10 +27,6 @@ let dumpTerm term acc =
         acc |> cons ")"
 
     match term with
-    | StrTerm (content, _) ->
-      // FIXME: escape
-      acc |> cons "\"" |> cons content |> cons "\""
-
     | TokenTerm (name, _) ->
       acc |> cons name
 

@@ -173,18 +173,16 @@ let scanCharLit (text: string) (i: int) =
   let rec go i =
     if i < text.Length && text.[i] = '\'' then
       // Success.
-      i, i + 1
+      i + 1
     else if i < text.Length && text.[i] <> '\n' then
       // Go ahead.
       go (i + 1)
     else
       // Missed the closing quote.
       assert (i = text.Length || text.[i] = '\n')
-      i, i
+      i
 
-  let m, r = go (i + 1)
-  let content = text |> strSlice (i + 1) m
-  content, r
+  go (i + 1)
 
 let lookStrLit (text: string) (i: int) =
   text.[i] = '"'
@@ -196,18 +194,16 @@ let scanStrLit (text: string) (i: int) =
   let rec go i =
     if i < text.Length && text.[i] = '"' then
       // Success.
-      i, i + 1
+      i + 1
     else if i < text.Length && text.[i] <> '\n' then
       // Go ahead.
       go (i + 1)
     else
       // Missed the closing quote.
       assert (i = text.Length || text.[i] = '\n')
-      i, i
+      i
 
-  let m, r = go (i + 1)
-  let content = text |> strSlice (i + 1) m
-  content, r
+  go (i + 1)
 
 // -----------------------------------------------
 // Tokenize rules
@@ -242,12 +238,14 @@ let tokenize (text: string) =
       acc |> cons (kind, i, r) |> go r
 
     else if lookCharLit text i then
-      let content, r = scanCharLit text i
-      acc |> cons (StrToken content, i, r) |> go r
+      let r = scanCharLit text i
+      let tokenText = text |> strSlice i r
+      acc |> cons (StrToken tokenText, i, r) |> go r
 
     else if lookStrLit text i then
-      let content, r = scanStrLit text i
-      acc |> cons (StrToken content, i, r) |> go r
+      let r = scanStrLit text i
+      let tokenText = text |> strSlice i r
+      acc |> cons (StrToken tokenText, i, r) |> go r
 
     else
       assert (lookOther text i)

@@ -7,11 +7,9 @@ open XbnfLang.Types
 let nodeIsNullable isNullable node =
   let rec go node =
     match node with
-    | StrNode ("", _)
     | EmptyNode _ ->
       true
 
-    | StrNode _
     | TokenNode _ ->
       false
 

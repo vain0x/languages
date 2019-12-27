@@ -5,11 +5,9 @@ open XbnfLang.Types
 
 let rec lowerTerm (term: Term) =
   match term with
-  | StrTerm ("", location) ->
+  | TokenTerm ("\"\"", location)
+  | TokenTerm ("''", location) ->
     EmptyNode location
-
-  | StrTerm (content, location) ->
-    StrNode (content, location)
 
   | TokenTerm (name, location) ->
     TokenNode (name, location)
@@ -31,12 +29,12 @@ let rec lowerTerm (term: Term) =
 
   | SepTerm (item, sep, location) ->
     let item = lowerTerm item
-    let sep = StrNode (sep, location)
+    let sep = TokenNode (sprintf "\"%s\"" sep, location)
     sepNode item sep location
 
   | Sep1Term (item, sep, location) ->
     let item = lowerTerm item
-    let sep = StrNode (sep, location)
+    let sep = TokenNode (sprintf "\"%s\"" sep, location)
     sep1Node item sep location
 
   | ConcatTerm (first, second, location) ->

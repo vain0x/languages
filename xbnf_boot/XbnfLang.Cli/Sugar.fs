@@ -6,9 +6,6 @@ open XbnfLang.Nullability
 
 let rec sugarNode node =
   match node with
-  | StrNode (content, location) ->
-    StrTerm (content, location)
-
   | TokenNode (name, location) ->
     TokenTerm (name, location)
 
@@ -16,7 +13,7 @@ let rec sugarNode node =
     SymbolTerm (name, location)
 
   | EmptyNode location ->
-    StrTerm ("", location)
+    TokenTerm ("\"\"", location)
 
   | Many1Node (item, location) ->
     let item = sugarNode item

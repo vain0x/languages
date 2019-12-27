@@ -5,9 +5,6 @@ open XbnfLang.Types
 
 let rec reduceNode (node: Node) =
   match node with
-  | StrNode ("", location) ->
-    EmptyNode location
-
   | Many1Node (EmptyNode location, _) ->
     EmptyNode location
 
@@ -18,7 +15,6 @@ let rec reduceNode (node: Node) =
   | ConcatNode (item, EmptyNode _, _) ->
     item
 
-  | StrNode _
   | TokenNode _
   | SymbolNode _
   | EmptyNode _ ->

@@ -6,7 +6,7 @@ open XbnfLang.Types
 let parseAtomTerm tokens =
   match tokens with
   | (StrToken content, l, r) :: tokens ->
-    StrTerm (content, (l, r)), tokens
+    TokenTerm (content, (l, r)), tokens
 
   | (LoudToken ident, l, r) :: tokens ->
     TokenTerm (ident, (l, r)), tokens

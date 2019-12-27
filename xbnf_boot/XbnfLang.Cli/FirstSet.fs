@@ -8,11 +8,9 @@ open XbnfLang.Types
 let nodeToFirstSet isNullable firstSet node =
   let rec go node =
     match node with
-    | StrNode ("", _)
     | EmptyNode _ ->
       Set.empty
 
-    | StrNode _
     | TokenNode _ ->
       Set.singleton node
 

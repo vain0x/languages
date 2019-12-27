@@ -28,9 +28,6 @@ type Token =
     of string
 
 type Term =
-  | StrTerm
-    of string * Location
-
   | TokenTerm
     of string * Location
 
@@ -63,9 +60,6 @@ type StmtTerm =
     of string * Term * Location
 
 type Node =
-  | StrNode
-    of string * Location
-
   | TokenNode
     of string * Location
 

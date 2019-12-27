@@ -1,0 +1,11 @@
+atom = STR / INT / IDENT / "(" expr ")"
+
+suffix = suffix ("(" (expr),* ")") / atom
+
+prefix = ("+" / "-") suffix / suffix
+
+mul = mul (("*" / "/") prefix) / prefix
+
+add = add (("+" / "-") mul) / mul
+
+expr = add

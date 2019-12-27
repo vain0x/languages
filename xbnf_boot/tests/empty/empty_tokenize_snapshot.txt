@@ -1,0 +1,2 @@
+[(SnakeToken "root", 0, 4); (PunToken "=", 5, 6); (LoudToken "EOF", 7, 10);
+ (EofToken, 11, 11)]

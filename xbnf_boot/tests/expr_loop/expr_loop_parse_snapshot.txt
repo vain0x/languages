@@ -1,0 +1,46 @@
+[RuleStmtTerm
+   ("atom",
+    OrTerm
+      (OrTerm
+         (OrTerm (TokenTerm ("STR",(7, 10)),TokenTerm ("INT",(13, 16)),(11, 12)),
+          TokenTerm ("IDENT",(19, 24)),(17, 18)),
+       ConcatTerm
+         (ConcatTerm
+            (StrTerm ("(",(27, 30)),SymbolTerm ("expr",(31, 35)),(0, 0)),
+          StrTerm (")",(36, 39)),(0, 0)),(25, 26)),(0, 4));
+ RuleStmtTerm
+   ("suffix",
+    ConcatTerm
+      (SymbolTerm ("atom",(50, 54)),
+       ManyTerm
+         (ConcatTerm
+            (ConcatTerm
+               (StrTerm ("(",(56, 59)),
+                SepTerm (SymbolTerm ("expr",(61, 65)),",",(66, 68)),(0, 0)),
+             StrTerm (")",(69, 72)),(0, 0)),(73, 74)),(0, 0)),(41, 47));
+ RuleStmtTerm
+   ("prefix",
+    ConcatTerm
+      (OptTerm
+         (OrTerm (StrTerm ("+",(86, 89)),StrTerm ("-",(92, 95)),(90, 91)),
+          (96, 97)),SymbolTerm ("suffix",(98, 104)),(0, 0)),(76, 82));
+ RuleStmtTerm
+   ("mul",
+    ConcatTerm
+      (SymbolTerm ("prefix",(112, 118)),
+       ManyTerm
+         (ConcatTerm
+            (OrTerm
+               (StrTerm ("*",(121, 124)),StrTerm ("/",(127, 130)),(125, 126)),
+             SymbolTerm ("prefix",(132, 138)),(0, 0)),(139, 140)),(0, 0)),
+    (106, 109));
+ RuleStmtTerm
+   ("add",
+    ConcatTerm
+      (SymbolTerm ("mul",(148, 151)),
+       ManyTerm
+         (ConcatTerm
+            (OrTerm
+               (StrTerm ("+",(154, 157)),StrTerm ("-",(160, 163)),(158, 159)),
+             SymbolTerm ("mul",(165, 168)),(0, 0)),(169, 170)),(0, 0)),
+    (142, 145)); RuleStmtTerm ("expr",SymbolTerm ("add",(179, 182)),(172, 176))]

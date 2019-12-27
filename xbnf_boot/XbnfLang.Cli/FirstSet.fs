@@ -11,8 +11,8 @@ let nodeToFirstSet isNullable firstSet node =
     | EmptyNode _ ->
       Set.empty
 
-    | TokenNode _ ->
-      Set.singleton node
+    | TokenNode (name, _) ->
+      Set.singleton name
 
     | SymbolNode (name, _) ->
       firstSet name
@@ -34,7 +34,7 @@ let nodeToFirstSet isNullable firstSet node =
 
 let ruleToFirstSet isNullable firstSet rule =
   match rule with
-  | Rule (_, body, _) ->
+  | Rule (_, body, _, _) ->
     nodeToFirstSet isNullable firstSet body
 
 let firstSet isNullable rules =
@@ -55,7 +55,7 @@ let firstSet isNullable rules =
 
     for rule in rules do
       match rule with
-      | Rule (name, body, _) ->
+      | Rule (name, body, _, _) ->
         let set = nodeToFirstSet isNullable firstSet body
         if set <> firstSet name then
           map.[name] <- set

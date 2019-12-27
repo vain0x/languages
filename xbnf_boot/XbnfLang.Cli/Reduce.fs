@@ -31,8 +31,8 @@ let rec reduceNode (node: Node) =
 
 let reduceRule rule =
   match rule with
-  | Rule (ruleId, body, location) ->
-    Rule (ruleId, reduceNode body, location)
+  | Rule (ruleId, body, comments, location) ->
+    Rule (ruleId, reduceNode body, comments, location)
 
 let reduce rules =
   rules |> List.map reduceRule

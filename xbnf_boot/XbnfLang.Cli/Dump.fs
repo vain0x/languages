@@ -68,7 +68,12 @@ let dumpTerm term acc =
 
 let dumpStmt stmt acc =
   match stmt with
-  | RuleStmtTerm (name, body, _) ->
+  | RuleStmtTerm (name, body, comments, _) ->
+    let acc =
+      comments |> List.fold (fun acc comment ->
+        acc |> cons "# " |> cons comment |> cons eol
+      ) acc
+
     let altHead = String.replicate (name.Length + 1) " " + "/ "
     let acc = acc |> cons name |> cons " "
 

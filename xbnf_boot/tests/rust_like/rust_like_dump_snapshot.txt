@@ -1,0 +1,47 @@
+# FIRST = {IDENT}
+ty = IDENT
+
+# FIRST = {IDENT}
+pat = IDENT
+
+# FIRST = {"(", "[", IDENT, INT}
+atom_expr = INT
+          / IDENT
+          / "(" expr ")"
+          / "[" (expr ("," expr)*)? "]"
+
+# FIRST = {"(", "[", "if", "{", IDENT, INT}
+atom_or_block_expr = atom_expr
+                   / block_like_expr
+
+# FIRST = {"{"}
+block_expr = "{" stmt* expr? "}"
+
+# FIRST = {"if"}
+if_expr = "if" cond_expr block_expr ("else" (block_expr / if_expr))?
+
+# FIRST = {"if", "{"}
+block_like_expr = block_expr
+                / if_expr
+
+# FIRST = {"(", "[", "if", "{", IDENT, INT}
+expr = atom_or_block_expr
+
+# FIRST = {"(", "[", "if", "{", IDENT, INT}
+stmt = block_like_expr
+     / expr ";"
+
+# NULLABLE
+# FIRST = {IDENT}
+param_list = (pat ":" ty ("," pat ":" ty)*)?
+
+# FIRST = {"fn"}
+item = "fn" IDENT "(" param_list ")" ("->" ty)? block_expr
+
+# NULLABLE
+# FIRST = {"fn"}
+items = item*
+
+# NULLABLE
+# FIRST = {"fn"}
+root = items

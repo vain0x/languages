@@ -10,6 +10,7 @@
     <Compile Include="Helpers.fs" />
     <Compile Include="Nullability.fs" />
     <Compile Include="FirstSet.fs" />
+    <Compile Include="Analyze.fs" />
     <Compile Include="Dump.fs" />
     <Compile Include="Lower.fs" />
     <Compile Include="Parse.fs" />

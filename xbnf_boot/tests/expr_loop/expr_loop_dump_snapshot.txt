@@ -1,14 +1,20 @@
+# FIRST = {"(", IDENT, INT, STR}
 atom = STR
      / INT
      / IDENT
      / "(" expr ")"
 
+# FIRST = {"(", IDENT, INT, STR}
 suffix = atom ("(" (expr ("," expr)*)? ")")*
 
+# FIRST = {"(", "+", "-", IDENT, INT, STR}
 prefix = ("+" / "-")? suffix
 
+# FIRST = {"(", "+", "-", IDENT, INT, STR}
 mul = prefix (("*" / "/") prefix)*
 
+# FIRST = {"(", "+", "-", IDENT, INT, STR}
 add = mul (("+" / "-") mul)*
 
+# FIRST = {"(", "+", "-", IDENT, INT, STR}
 expr = add

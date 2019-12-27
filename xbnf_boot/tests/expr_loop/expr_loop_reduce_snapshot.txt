@@ -7,7 +7,7 @@
        ConcatNode
          (ConcatNode
             (TokenNode (""("",(27, 30)),SymbolNode ("expr",(31, 35)),(0, 0)),
-          TokenNode ("")"",(36, 39)),(0, 0)),(25, 26)),(0, 4));
+          TokenNode ("")"",(36, 39)),(0, 0)),(25, 26)),[],(0, 4));
  Rule
    ("suffix",
     ConcatNode
@@ -28,7 +28,7 @@
                                (66, 68)),EmptyNode (66, 68),(66, 68)),(66, 68)),
                       EmptyNode (66, 68),(66, 68)),(0, 0)),
                 TokenNode ("")"",(69, 72)),(0, 0)),(73, 74)),EmptyNode (73, 74),
-          (73, 74)),(0, 0)),(41, 47));
+          (73, 74)),(0, 0)),[],(41, 47));
  Rule
    ("prefix",
     ConcatNode
@@ -36,7 +36,7 @@
          (OrNode
             (TokenNode (""+"",(86, 89)),TokenNode (""-"",(92, 95)),(90, 91)),
           EmptyNode (96, 97),(96, 97)),SymbolNode ("suffix",(98, 104)),(0, 0)),
-    (76, 82));
+    [],(76, 82));
  Rule
    ("mul",
     ConcatNode
@@ -47,7 +47,7 @@
                (OrNode
                   (TokenNode (""*"",(121, 124)),TokenNode (""/"",(127, 130)),
                    (125, 126)),SymbolNode ("prefix",(132, 138)),(0, 0)),
-             (139, 140)),EmptyNode (139, 140),(139, 140)),(0, 0)),(106, 109));
+             (139, 140)),EmptyNode (139, 140),(139, 140)),(0, 0)),[],(106, 109));
  Rule
    ("add",
     ConcatNode
@@ -58,5 +58,5 @@
                (OrNode
                   (TokenNode (""+"",(154, 157)),TokenNode (""-"",(160, 163)),
                    (158, 159)),SymbolNode ("mul",(165, 168)),(0, 0)),(169, 170)),
-          EmptyNode (169, 170),(169, 170)),(0, 0)),(142, 145));
- Rule ("expr",SymbolNode ("add",(179, 182)),(172, 176))]
+          EmptyNode (169, 170),(169, 170)),(0, 0)),[],(142, 145));
+ Rule ("expr",SymbolNode ("add",(179, 182)),[],(172, 176))]

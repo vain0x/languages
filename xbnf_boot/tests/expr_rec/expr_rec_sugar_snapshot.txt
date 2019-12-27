@@ -7,7 +7,8 @@
        ConcatTerm
          (ConcatTerm
             (TokenTerm (""("",(27, 30)),SymbolTerm ("expr",(31, 35)),(0, 0)),
-          TokenTerm ("")"",(36, 39)),(0, 0)),(25, 26)),(0, 4));
+          TokenTerm ("")"",(36, 39)),(0, 0)),(25, 26)),
+    ["FIRST = {"(", IDENT, INT, STR}"],(0, 4));
  RuleStmtTerm
    ("suffix",
     OrTerm
@@ -24,7 +25,8 @@
                            (TokenTerm ("","",(68, 70)),
                             SymbolTerm ("expr",(63, 67)),(68, 70)),(68, 70)),
                       (68, 70)),(68, 70)),(0, 0)),TokenTerm ("")"",(71, 74)),
-             (0, 0)),(0, 0)),SymbolTerm ("atom",(78, 82)),(76, 77)),(41, 47));
+             (0, 0)),(0, 0)),SymbolTerm ("atom",(78, 82)),(76, 77)),
+    ["FIRST = {"(", IDENT, INT, STR}"],(41, 47));
  RuleStmtTerm
    ("prefix",
     OrTerm
@@ -32,7 +34,8 @@
          (OrTerm
             (TokenTerm (""+"",(94, 97)),TokenTerm (""-"",(100, 103)),(98, 99)),
           SymbolTerm ("suffix",(105, 111)),(0, 0)),
-       SymbolTerm ("suffix",(114, 120)),(112, 113)),(84, 90));
+       SymbolTerm ("suffix",(114, 120)),(112, 113)),
+    ["FIRST = {"(", "+", "-", IDENT, INT, STR}"],(84, 90));
  RuleStmtTerm
    ("mul",
     OrTerm
@@ -42,7 +45,8 @@
             (OrTerm
                (TokenTerm (""*"",(134, 137)),TokenTerm (""/"",(140, 143)),
                 (138, 139)),SymbolTerm ("prefix",(145, 151)),(0, 0)),(0, 0)),
-       SymbolTerm ("prefix",(155, 161)),(153, 154)),(122, 125));
+       SymbolTerm ("prefix",(155, 161)),(153, 154)),
+    ["FIRST = {"(", "+", "-", IDENT, INT, STR}"],(122, 125));
  RuleStmtTerm
    ("add",
     OrTerm
@@ -52,5 +56,8 @@
             (OrTerm
                (TokenTerm (""+"",(175, 178)),TokenTerm (""-"",(181, 184)),
                 (179, 180)),SymbolTerm ("mul",(186, 189)),(0, 0)),(0, 0)),
-       SymbolTerm ("mul",(193, 196)),(191, 192)),(163, 166));
- RuleStmtTerm ("expr",SymbolTerm ("add",(205, 208)),(198, 202))]
+       SymbolTerm ("mul",(193, 196)),(191, 192)),
+    ["FIRST = {"(", "+", "-", IDENT, INT, STR}"],(163, 166));
+ RuleStmtTerm
+   ("expr",SymbolTerm ("add",(205, 208)),
+    ["FIRST = {"(", "+", "-", IDENT, INT, STR}"],(198, 202))]

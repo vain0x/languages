@@ -7,7 +7,8 @@
        ConcatTerm
          (ConcatTerm
             (TokenTerm (""("",(27, 30)),SymbolTerm ("expr",(31, 35)),(0, 0)),
-          TokenTerm ("")"",(36, 39)),(0, 0)),(25, 26)),(0, 4));
+          TokenTerm ("")"",(36, 39)),(0, 0)),(25, 26)),
+    ["FIRST = {"(", IDENT, INT, STR}"],(0, 4));
  RuleStmtTerm
    ("suffix",
     ConcatTerm
@@ -24,14 +25,16 @@
                            (TokenTerm ("","",(66, 68)),
                             SymbolTerm ("expr",(61, 65)),(66, 68)),(66, 68)),
                       (66, 68)),(66, 68)),(0, 0)),TokenTerm ("")"",(69, 72)),
-             (0, 0)),(73, 74)),(0, 0)),(41, 47));
+             (0, 0)),(73, 74)),(0, 0)),["FIRST = {"(", IDENT, INT, STR}"],
+    (41, 47));
  RuleStmtTerm
    ("prefix",
     ConcatTerm
       (OptTerm
          (OrTerm
             (TokenTerm (""+"",(86, 89)),TokenTerm (""-"",(92, 95)),(90, 91)),
-          (96, 97)),SymbolTerm ("suffix",(98, 104)),(0, 0)),(76, 82));
+          (96, 97)),SymbolTerm ("suffix",(98, 104)),(0, 0)),
+    ["FIRST = {"(", "+", "-", IDENT, INT, STR}"],(76, 82));
  RuleStmtTerm
    ("mul",
     ConcatTerm
@@ -41,7 +44,7 @@
             (OrTerm
                (TokenTerm (""*"",(121, 124)),TokenTerm (""/"",(127, 130)),
                 (125, 126)),SymbolTerm ("prefix",(132, 138)),(0, 0)),(139, 140)),
-       (0, 0)),(106, 109));
+       (0, 0)),["FIRST = {"(", "+", "-", IDENT, INT, STR}"],(106, 109));
  RuleStmtTerm
    ("add",
     ConcatTerm
@@ -51,5 +54,7 @@
             (OrTerm
                (TokenTerm (""+"",(154, 157)),TokenTerm (""-"",(160, 163)),
                 (158, 159)),SymbolTerm ("mul",(165, 168)),(0, 0)),(169, 170)),
-       (0, 0)),(142, 145));
- RuleStmtTerm ("expr",SymbolTerm ("add",(179, 182)),(172, 176))]
+       (0, 0)),["FIRST = {"(", "+", "-", IDENT, INT, STR}"],(142, 145));
+ RuleStmtTerm
+   ("expr",SymbolTerm ("add",(179, 182)),
+    ["FIRST = {"(", "+", "-", IDENT, INT, STR}"],(172, 176))]

@@ -2,8 +2,8 @@ module XbnfLang.Tests.Snapshots
 
 open System
 open System.IO
+open XbnfLang.Analyze
 open XbnfLang.Dump
-open XbnfLang.Nullability
 open XbnfLang.Lower
 open XbnfLang.Parse
 open XbnfLang.Reduce
@@ -49,6 +49,7 @@ let snapshotTest (name: string) =
   |> withLog "parse" parse
   |> withLog "lower" lower
   |> withLog "reduce" reduce
+  |> analyze
   |> withLog "sugar" sugar
   |> withLog "dump" dump
   |> ignore

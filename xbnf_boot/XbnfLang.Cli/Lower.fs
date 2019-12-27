@@ -49,8 +49,8 @@ let rec lowerTerm (term: Term) =
 
 let lowerStmt stmt =
   match stmt with
-  | RuleStmtTerm (name, body, location) ->
-    Rule (name, lowerTerm body, location)
+  | RuleStmtTerm (name, body, comments, location) ->
+    Rule (name, lowerTerm body, comments, location)
 
 let lower (stmts: StmtTerm list): Rule list =
   stmts |> List.map lowerStmt

@@ -107,7 +107,8 @@ let parseStmt tokens =
     :: (PunToken "=", _, _)
     :: tokens ->
     let second, tokens = parseTerm tokens
-    RuleStmtTerm (first, second, (l, r)), tokens
+    // FIXME: コメントをパースする
+    RuleStmtTerm (first, second, [], (l, r)), tokens
 
   | _ ->
     failwithf "Expected stmt at %A" tokens

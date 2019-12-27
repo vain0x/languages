@@ -57,7 +57,7 @@ type Term =
 
 type StmtTerm =
   | RuleStmtTerm
-    of string * Term * Location
+    of string * Term * Comment list * Location
 
 type Node =
   | TokenNode
@@ -80,4 +80,4 @@ type Node =
 
 type Rule =
   | Rule
-    of string * Node * Location
+    of string * Node * Comment list * Location

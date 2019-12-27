@@ -39,8 +39,8 @@ let rec sugarNode node =
 
 let sugarRule rule =
   match rule with
-  | Rule (name, body, location) ->
-    RuleStmtTerm (name, sugarNode body, location) |> Some
+  | Rule (name, body, comments, location) ->
+    RuleStmtTerm (name, sugarNode body, comments, location) |> Some
 
 let sugar rules =
   rules |> List.choose sugarRule

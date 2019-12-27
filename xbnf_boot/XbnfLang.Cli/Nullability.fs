@@ -29,7 +29,7 @@ let nodeIsNullable isNullable node =
 
 let ruleIsNullable isNullable rule =
   match rule with
-  | Rule (_, body, _) ->
+  | Rule (_, body, _, _) ->
     nodeIsNullable isNullable body
 
 let isNullableFun (rules: Rule list): IsNullableFun =
@@ -43,7 +43,7 @@ let isNullableFun (rules: Rule list): IsNullableFun =
   while not stuck do
     for rule in current do
       match rule with
-      | Rule (name, body, _) ->
+      | Rule (name, body, _, _) ->
         if nodeIsNullable isNullable body then
           set.Add(name) |> ignore
         else

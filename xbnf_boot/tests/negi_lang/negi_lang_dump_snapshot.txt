@@ -1,0 +1,70 @@
+# FIRST = {'(', '[', '{', IDENT, INT, STR}
+atom = '(' term ')'
+     / '[' list ']'
+     / '{' '}'
+     / INT
+     / STR
+     / IDENT
+
+# FIRST = {'(', '[', '{', IDENT, INT, STR}
+suffix = atom ('[' term ']')*
+
+# FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
+prefix = '-'? suffix
+
+# FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
+bin_mul = prefix (('*' / '/' / '%') prefix)*
+
+# FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
+bin_add = bin_mul (('+' / '-') bin_mul)*
+
+# FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
+bin_cmp = bin_add (('==' / '!=' / '<' / '<=' / '>' / '>=') bin_add)*
+
+# FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
+bin_set = bin_cmp (('=' / '+=' / '-=' / '*=' / '/=' / '%=') term)?
+
+# FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
+cond = bin_set ('?' term ':' term)?
+
+# FIRST = {'fun'}
+fun = 'fun' '(' (IDENT (',' IDENT)*)? ')' (block / term)
+
+# FIRST = {'(', '-', '[', 'fun', '{', IDENT, INT, STR}
+term = fun
+     / cond
+
+# NULLABLE
+# FIRST = {'(', '-', '[', 'fun', '{', IDENT, INT, STR}
+list = (term (',' term)*)?
+
+# FIRST = {'{'}
+block = '{' exp '}'
+
+# FIRST = {'let'}
+let = 'let' IDENT '=' term
+
+# FIRST = {'if'}
+if = 'if' '(' term ')' block ('else' (if / block))?
+
+# FIRST = {'while'}
+while = 'while' '(' term ')' block
+
+# FIRST = {'return'}
+return = 'return' term?
+
+# FIRST = {'(', '-', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}
+stmt = let
+     / if
+     / while
+     / 'break'
+     / return
+     / term
+
+# NULLABLE
+# FIRST = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}
+exp = (';'* stmt)* ';'*
+
+# NULLABLE
+# FIRST = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}
+program = exp

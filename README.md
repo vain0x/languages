@@ -11,7 +11,7 @@ X-BNF 言語の構文は以下の通りです。(少し簡略化したものに�
 # SNAKE: snake_case の識別子
 # CHAR: '...'
 # STR: "..."
-atom_term = LOUD | SNAKE | CHAR | STR
+atom_term = LOUD | SNAKE | CHAR | STR | "(" term ")"
 
 suffix_term = atom_term (("?" | "*" | "+") atom_term)*
 

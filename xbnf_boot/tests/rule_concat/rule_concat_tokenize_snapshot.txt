@@ -1,3 +1,0 @@
-[(SnakeToken "int_or_str", 0, 10); (PunToken "=", 11, 12);
- (LoudToken "INT", 13, 16); (SnakeToken "int_or_str", 17, 27);
- (PunToken "=", 28, 29); (LoudToken "STR", 30, 33); (EofToken, 34, 34)]

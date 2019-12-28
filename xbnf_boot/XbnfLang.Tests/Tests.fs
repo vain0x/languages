@@ -45,12 +45,12 @@ let snapshotTest (name: string) =
   let sourceCode = File.ReadAllText(sourceName)
 
   sourceCode
-  |> withLog "tokenize" tokenize
+  |> tokenize
   |> withLog "parse" parse
-  |> withLog "lower" lower
-  |> withLog "reduce" reduce
+  |> lower
+  |> reduce
   |> analyze
-  |> withLog "sugar" sugar
+  |> sugar
   |> withLog "dump" dump
   |> ignore
 

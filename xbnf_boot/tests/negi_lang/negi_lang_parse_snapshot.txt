@@ -7,61 +7,67 @@
                    ((OrTerm
                        ((ConcatTerm
                            ((ConcatTerm
-                               ((TokenTerm "'('", (50, 53)),
-                                (SymbolTerm "term", (54, 58))), (0, 0)),
-                            (TokenTerm "')'", (59, 62))), (0, 0)),
+                               ((TokenTerm "'('", ([], (50, 53))),
+                                (SymbolTerm "term", ([], (54, 58)))),
+                             ([], (0, 0))),(TokenTerm "')'", ([], (59, 62)))),
+                         ([], (0, 0))),
                         (ConcatTerm
                            ((ConcatTerm
-                               ((TokenTerm "'['", (69, 72)),
-                                (SymbolTerm "list", (73, 77))), (0, 0)),
-                            (TokenTerm "']'", (78, 81))), (0, 0))), (67, 68)),
+                               ((TokenTerm "'['", ([], (69, 72))),
+                                (SymbolTerm "list", ([], (73, 77)))),
+                             ([], (0, 0))),(TokenTerm "']'", ([], (78, 81)))),
+                         ([], (0, 0)))), ([], (67, 68))),
                     (ConcatTerm
-                       ((TokenTerm "'{'", (88, 91)),(TokenTerm "'}'", (92, 95))),
-                     (0, 0))), (86, 87)),(TokenTerm "INT", (102, 105))),
-             (100, 101)),(TokenTerm "STR", (108, 111))), (106, 107)),
-        (TokenTerm "IDENT", (114, 119))), (112, 113)),[],(39, 43));
+                       ((TokenTerm "'{'", ([], (88, 91))),
+                        (TokenTerm "'}'", ([], (92, 95)))), ([], (0, 0)))),
+                 ([], (86, 87))),(TokenTerm "INT", ([], (102, 105)))),
+             ([], (100, 101))),(TokenTerm "STR", ([], (108, 111)))),
+         ([], (106, 107))),(TokenTerm "IDENT", ([], (114, 119)))),
+     ([], (112, 113))),[],(39, 43));
  RuleStmtTerm
    ("suffix",
     (ConcatTerm
-       ((SymbolTerm "atom", (130, 134)),
+       ((SymbolTerm "atom", ([], (130, 134))),
         (ManyTerm
            (ConcatTerm
               ((ConcatTerm
-                  ((TokenTerm "'['", (137, 140)),(SymbolTerm "term", (141, 145))),
-                (0, 0)),(TokenTerm "']'", (146, 149))), (0, 0)), (151, 152))),
-     (0, 0)),[],(121, 127));
+                  ((TokenTerm "'['", ([], (137, 140))),
+                   (SymbolTerm "term", ([], (141, 145)))), ([], (0, 0))),
+               (TokenTerm "']'", ([], (146, 149)))), ([], (0, 0))),
+         ([], (151, 152)))), ([], (0, 0))),[],(121, 127));
  RuleStmtTerm
    ("prefix",
     (ConcatTerm
-       ((OptTerm (TokenTerm "'-'", (163, 166)), (166, 167)),
-        (SymbolTerm "suffix", (168, 174))), (0, 0)),[],(154, 160));
+       ((OptTerm (TokenTerm "'-'", ([], (163, 166))), ([], (166, 167))),
+        (SymbolTerm "suffix", ([], (168, 174)))), ([], (0, 0))),[],(154, 160));
  RuleStmtTerm
    ("bin_mul",
     (ConcatTerm
-       ((SymbolTerm "prefix", (186, 192)),
+       ((SymbolTerm "prefix", ([], (186, 192))),
         (ManyTerm
            (ConcatTerm
               ((OrTerm
                   ((OrTerm
-                      ((TokenTerm "'*'", (197, 200)),
-                       (TokenTerm "'/'", (203, 206))), (201, 202)),
-                   (TokenTerm "'%'", (209, 212))), (207, 208)),
-               (SymbolTerm "prefix", (215, 221))), (0, 0)), (223, 224))), (0, 0)),
-    [],(176, 183));
+                      ((TokenTerm "'*'", ([], (197, 200))),
+                       (TokenTerm "'/'", ([], (203, 206)))), ([], (201, 202))),
+                   (TokenTerm "'%'", ([], (209, 212)))), ([], (207, 208))),
+               (SymbolTerm "prefix", ([], (215, 221)))), ([], (0, 0))),
+         ([], (223, 224)))), ([], (0, 0))),[],(176, 183));
  RuleStmtTerm
    ("bin_add",
     (ConcatTerm
-       ((SymbolTerm "bin_mul", (236, 243)),
+       ((SymbolTerm "bin_mul", ([], (236, 243))),
         (ManyTerm
            (ConcatTerm
               ((OrTerm
-                  ((TokenTerm "'+'", (248, 251)),(TokenTerm "'-'", (254, 257))),
-                (252, 253)),(SymbolTerm "bin_mul", (260, 267))), (0, 0)),
-         (269, 270))), (0, 0)),[],(226, 233));
+                  ((TokenTerm "'+'", ([], (248, 251))),
+                   (TokenTerm "'-'", ([], (254, 257)))), ([], (252, 253))),
+               (SymbolTerm "bin_mul", ([], (260, 267)))), ([], (0, 0))),
+         ([], (269, 270)))), ([], (0, 0))),[],(226, 233));
  RuleStmtTerm
    ("bin_cmp",
     (ConcatTerm
-       ((SymbolTerm "bin_add", (282, 289)),
+       ((SymbolTerm "bin_add", ([], (282, 289))),
         (ManyTerm
            (ConcatTerm
               ((OrTerm
@@ -69,18 +75,20 @@
                       ((OrTerm
                           ((OrTerm
                               ((OrTerm
-                                  ((TokenTerm "'=='", (294, 298)),
-                                   (TokenTerm "'!='", (301, 305))), (299, 300)),
-                               (TokenTerm "'<'", (308, 311))), (306, 307)),
-                           (TokenTerm "'<='", (314, 318))), (312, 313)),
-                       (TokenTerm "'>'", (321, 324))), (319, 320)),
-                   (TokenTerm "'>='", (327, 331))), (325, 326)),
-               (SymbolTerm "bin_add", (334, 341))), (0, 0)), (343, 344))),
-     (0, 0)),[],(272, 279));
+                                  ((TokenTerm "'=='", ([], (294, 298))),
+                                   (TokenTerm "'!='", ([], (301, 305)))),
+                                ([], (299, 300))),
+                               (TokenTerm "'<'", ([], (308, 311)))),
+                            ([], (306, 307))),
+                           (TokenTerm "'<='", ([], (314, 318)))),
+                        ([], (312, 313))),(TokenTerm "'>'", ([], (321, 324)))),
+                    ([], (319, 320))),(TokenTerm "'>='", ([], (327, 331)))),
+                ([], (325, 326))),(SymbolTerm "bin_add", ([], (334, 341)))),
+            ([], (0, 0))), ([], (343, 344)))), ([], (0, 0))),[],(272, 279));
  RuleStmtTerm
    ("bin_set",
     (ConcatTerm
-       ((SymbolTerm "bin_cmp", (356, 363)),
+       ((SymbolTerm "bin_cmp", ([], (356, 363))),
         (OptTerm
            (ConcatTerm
               ((OrTerm
@@ -88,74 +96,82 @@
                       ((OrTerm
                           ((OrTerm
                               ((OrTerm
-                                  ((TokenTerm "'='", (368, 371)),
-                                   (TokenTerm "'+='", (374, 378))), (372, 373)),
-                               (TokenTerm "'-='", (381, 385))), (379, 380)),
-                           (TokenTerm "'*='", (388, 392))), (386, 387)),
-                       (TokenTerm "'/='", (395, 399))), (393, 394)),
-                   (TokenTerm "'%='", (402, 406))), (400, 401)),
-               (SymbolTerm "term", (409, 413))), (0, 0)), (415, 416))), (0, 0)),
-    [],(346, 353));
+                                  ((TokenTerm "'='", ([], (368, 371))),
+                                   (TokenTerm "'+='", ([], (374, 378)))),
+                                ([], (372, 373))),
+                               (TokenTerm "'-='", ([], (381, 385)))),
+                            ([], (379, 380))),
+                           (TokenTerm "'*='", ([], (388, 392)))),
+                        ([], (386, 387))),(TokenTerm "'/='", ([], (395, 399)))),
+                    ([], (393, 394))),(TokenTerm "'%='", ([], (402, 406)))),
+                ([], (400, 401))),(SymbolTerm "term", ([], (409, 413)))),
+            ([], (0, 0))), ([], (415, 416)))), ([], (0, 0))),[],(346, 353));
  RuleStmtTerm
    ("cond",
     (ConcatTerm
-       ((SymbolTerm "bin_set", (425, 432)),
+       ((SymbolTerm "bin_set", ([], (425, 432))),
         (OptTerm
            (ConcatTerm
               ((ConcatTerm
                   ((ConcatTerm
-                      ((TokenTerm "'?'", (435, 438)),
-                       (SymbolTerm "term", (439, 443))), (0, 0)),
-                   (TokenTerm "':'", (444, 447))), (0, 0)),
-               (SymbolTerm "term", (448, 452))), (0, 0)), (454, 455))), (0, 0)),
-    [],(418, 422));
+                      ((TokenTerm "'?'", ([], (435, 438))),
+                       (SymbolTerm "term", ([], (439, 443)))), ([], (0, 0))),
+                   (TokenTerm "':'", ([], (444, 447)))), ([], (0, 0))),
+               (SymbolTerm "term", ([], (448, 452)))), ([], (0, 0))),
+         ([], (454, 455)))), ([], (0, 0))),[],(418, 422));
  RuleStmtTerm
    ("fun",
     (ConcatTerm
        ((ConcatTerm
            ((ConcatTerm
                ((ConcatTerm
-                   ((TokenTerm "'fun'", (463, 468)),
-                    (TokenTerm "'('", (469, 472))), (0, 0)),
+                   ((TokenTerm "'fun'", ([], (463, 468))),
+                    (TokenTerm "'('", ([], (469, 472)))), ([], (0, 0))),
                 (OptTerm
                    (ConcatTerm
-                      ((TokenTerm "IDENT", (475, 480)),
+                      ((TokenTerm "IDENT", ([], (475, 480))),
                        (ManyTerm
                           (ConcatTerm
-                             ((TokenTerm "','", (483, 486)),
-                              (TokenTerm "IDENT", (487, 492))), (0, 0)),
-                        (494, 495))), (0, 0)), (497, 498))), (0, 0)),
-            (TokenTerm "')'", (499, 502))), (0, 0)),
+                             ((TokenTerm "','", ([], (483, 486))),
+                              (TokenTerm "IDENT", ([], (487, 492)))),
+                           ([], (0, 0))), ([], (494, 495)))), ([], (0, 0))),
+                 ([], (497, 498)))), ([], (0, 0))),
+            (TokenTerm "')'", ([], (499, 502)))), ([], (0, 0))),
         (OrTerm
-           ((SymbolTerm "block", (505, 510)),(SymbolTerm "term", (513, 517))),
-         (511, 512))), (0, 0)),[],(457, 460));
+           ((SymbolTerm "block", ([], (505, 510))),
+            (SymbolTerm "term", ([], (513, 517)))), ([], (511, 512)))),
+     ([], (0, 0))),[],(457, 460));
  RuleStmtTerm
    ("term",
-    (OrTerm ((SymbolTerm "fun", (528, 531)),(SymbolTerm "cond", (534, 538))),
-     (532, 533)),[],(521, 525));
+    (OrTerm
+       ((SymbolTerm "fun", ([], (528, 531))),
+        (SymbolTerm "cond", ([], (534, 538)))), ([], (532, 533))),[],(521, 525));
  RuleStmtTerm
    ("list",
     (OptTerm
        (ConcatTerm
-          ((SymbolTerm "term", (549, 553)),
+          ((SymbolTerm "term", ([], (549, 553))),
            (ManyTerm
               (ConcatTerm
-                 ((TokenTerm "','", (556, 559)),(SymbolTerm "term", (560, 564))),
-               (0, 0)), (566, 567))), (0, 0)), (569, 570)),[],(540, 544));
+                 ((TokenTerm "','", ([], (556, 559))),
+                  (SymbolTerm "term", ([], (560, 564)))), ([], (0, 0))),
+            ([], (566, 567)))), ([], (0, 0))), ([], (569, 570))),[],(540, 544));
  RuleStmtTerm
    ("block",
     (ConcatTerm
        ((ConcatTerm
-           ((TokenTerm "'{'", (580, 583)),(SymbolTerm "exp", (584, 587))),
-         (0, 0)),(TokenTerm "'}'", (588, 591))), (0, 0)),[],(572, 577));
+           ((TokenTerm "'{'", ([], (580, 583))),
+            (SymbolTerm "exp", ([], (584, 587)))), ([], (0, 0))),
+        (TokenTerm "'}'", ([], (588, 591)))), ([], (0, 0))),[],(572, 577));
  RuleStmtTerm
    ("let",
     (ConcatTerm
        ((ConcatTerm
            ((ConcatTerm
-               ((TokenTerm "'let'", (599, 604)),(TokenTerm "IDENT", (605, 610))),
-             (0, 0)),(TokenTerm "'='", (611, 614))), (0, 0)),
-        (SymbolTerm "term", (615, 619))), (0, 0)),[],(593, 596));
+               ((TokenTerm "'let'", ([], (599, 604))),
+                (TokenTerm "IDENT", ([], (605, 610)))), ([], (0, 0))),
+            (TokenTerm "'='", ([], (611, 614)))), ([], (0, 0))),
+        (SymbolTerm "term", ([], (615, 619)))), ([], (0, 0))),[],(593, 596));
  RuleStmtTerm
    ("if",
     (ConcatTerm
@@ -163,35 +179,35 @@
            ((ConcatTerm
                ((ConcatTerm
                    ((ConcatTerm
-                       ((TokenTerm "'if'", (626, 630)),
-                        (TokenTerm "'('", (631, 634))), (0, 0)),
-                    (SymbolTerm "term", (635, 639))), (0, 0)),
-                (TokenTerm "')'", (640, 643))), (0, 0)),
-            (SymbolTerm "block", (644, 649))), (0, 0)),
+                       ((TokenTerm "'if'", ([], (626, 630))),
+                        (TokenTerm "'('", ([], (631, 634)))), ([], (0, 0))),
+                    (SymbolTerm "term", ([], (635, 639)))), ([], (0, 0))),
+                (TokenTerm "')'", ([], (640, 643)))), ([], (0, 0))),
+            (SymbolTerm "block", ([], (644, 649)))), ([], (0, 0))),
         (OptTerm
            (ConcatTerm
-              ((TokenTerm "'else'", (652, 658)),
+              ((TokenTerm "'else'", ([], (652, 658))),
                (OrTerm
-                  ((SymbolTerm "if", (661, 663)),
-                   (SymbolTerm "block", (666, 671))), (664, 665))), (0, 0)),
-         (675, 676))), (0, 0)),[],(621, 623));
+                  ((SymbolTerm "if", ([], (661, 663))),
+                   (SymbolTerm "block", ([], (666, 671)))), ([], (664, 665)))),
+            ([], (0, 0))), ([], (675, 676)))), ([], (0, 0))),[],(621, 623));
  RuleStmtTerm
    ("while",
     (ConcatTerm
        ((ConcatTerm
            ((ConcatTerm
                ((ConcatTerm
-                   ((TokenTerm "'while'", (686, 693)),
-                    (TokenTerm "'('", (694, 697))), (0, 0)),
-                (SymbolTerm "term", (698, 702))), (0, 0)),
-            (TokenTerm "')'", (703, 706))), (0, 0)),
-        (SymbolTerm "block", (707, 712))), (0, 0)),[],(678, 683));
+                   ((TokenTerm "'while'", ([], (686, 693))),
+                    (TokenTerm "'('", ([], (694, 697)))), ([], (0, 0))),
+                (SymbolTerm "term", ([], (698, 702)))), ([], (0, 0))),
+            (TokenTerm "')'", ([], (703, 706)))), ([], (0, 0))),
+        (SymbolTerm "block", ([], (707, 712)))), ([], (0, 0))),[],(678, 683));
  RuleStmtTerm
    ("return",
     (ConcatTerm
-       ((TokenTerm "'return'", (723, 731)),
-        (OptTerm (SymbolTerm "term", (732, 736)), (736, 737))), (0, 0)),[],
-    (714, 720));
+       ((TokenTerm "'return'", ([], (723, 731))),
+        (OptTerm (SymbolTerm "term", ([], (732, 736))), ([], (736, 737)))),
+     ([], (0, 0))),[],(714, 720));
  RuleStmtTerm
    ("stmt",
     (OrTerm
@@ -199,19 +215,20 @@
            ((OrTerm
                ((OrTerm
                    ((OrTerm
-                       ((SymbolTerm "let", (750, 753)),
-                        (SymbolTerm "if", (760, 762))), (758, 759)),
-                    (SymbolTerm "while", (765, 770))), (763, 764)),
-                (TokenTerm "'break'", (773, 780))), (771, 772)),
-            (SymbolTerm "return", (787, 793))), (785, 786)),
-        (SymbolTerm "term", (800, 804))), (798, 799)),[],(739, 743));
+                       ((SymbolTerm "let", ([], (750, 753))),
+                        (SymbolTerm "if", ([], (760, 762)))), ([], (758, 759))),
+                    (SymbolTerm "while", ([], (765, 770)))), ([], (763, 764))),
+                (TokenTerm "'break'", ([], (773, 780)))), ([], (771, 772))),
+            (SymbolTerm "return", ([], (787, 793)))), ([], (785, 786))),
+        (SymbolTerm "term", ([], (800, 804)))), ([], (798, 799))),[],(739, 743));
  RuleStmtTerm
    ("exp",
     (ConcatTerm
        ((ManyTerm
            (ConcatTerm
-              ((ManyTerm (TokenTerm "';'", (814, 817)), (817, 818)),
-               (SymbolTerm "stmt", (819, 823))), (0, 0)), (825, 826)),
-        (ManyTerm (TokenTerm "';'", (827, 830)), (830, 831))), (0, 0)),[],
-    (806, 809));
- RuleStmtTerm ("program",(SymbolTerm "exp", (843, 846)),[],(833, 840))]
+              ((ManyTerm (TokenTerm "';'", ([], (814, 817))), ([], (817, 818))),
+               (SymbolTerm "stmt", ([], (819, 823)))), ([], (0, 0))),
+         ([], (825, 826))),
+        (ManyTerm (TokenTerm "';'", ([], (827, 830))), ([], (830, 831)))),
+     ([], (0, 0))),[],(806, 809));
+ RuleStmtTerm ("program",(SymbolTerm "exp", ([], (843, 846))),[],(833, 840))]

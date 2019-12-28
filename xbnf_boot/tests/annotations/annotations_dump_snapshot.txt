@@ -1,0 +1,13 @@
+# NULLABLE
+# FIRST = {}
+# FOLLOW = {}
+annotation_on_suffix = @opt(""?)
+
+# FIRST = {}
+# FOLLOW = {}
+nested_annotations = @first(@second(_))
+
+# FIRST = {}
+# FOLLOW = {"+", "-"}
+add = mul
+    | @recursive(add) ("+" | "-") mul

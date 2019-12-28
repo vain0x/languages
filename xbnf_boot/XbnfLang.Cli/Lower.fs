@@ -13,7 +13,7 @@ let ruleAppend first second =
   | Rule (name, body, comments, location),
     Rule (secondName, secondBody, secondComments, secondLocation) ->
     assert (name = secondName)
-    let body = OrNode (body, secondBody), secondLocation
+    let body = OrNode (body, secondBody), (noAnnotation, secondLocation)
     let comments = List.append comments secondComments
     Rule (name, body, comments, location)
 

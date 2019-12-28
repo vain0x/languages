@@ -10,6 +10,10 @@ type IsNullableFun = string -> bool
 
 type Comment = string
 
+type Annotation = string
+
+type AnnotationData = Annotation * Location
+
 type Token =
   | EofToken
 
@@ -59,7 +63,7 @@ type Term =
     of TermData * TermData
 
 type TermData =
-  Term * Location
+  Term * (AnnotationData list * Location)
 
 type StmtTerm =
   | RuleStmtTerm
@@ -84,7 +88,7 @@ type Node =
     of NodeData * NodeData
 
 type NodeData =
-  Node * Location
+  Node * (AnnotationData list * Location)
 
 type Rule =
   | Rule

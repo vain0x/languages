@@ -13,7 +13,18 @@ type Bp =
   | AtomBp
 
 let dumpTerm term acc =
-  let rec go (term, _) (superBp: Bp) acc =
+  let rec go (term, (annotations, location)) (superBp: Bp) acc =
+    match annotations with
+    | (annotation, _) :: annotations ->
+      acc
+      |> cons "@"
+      |> cons annotation
+      |> cons "("
+      |> go (term, (annotations, location)) OrBp
+      |> cons ")"
+
+    | [] ->
+
     let left (bp: Bp) acc =
       if superBp <= bp then
         acc

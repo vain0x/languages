@@ -2,7 +2,7 @@
 
 sep = "," | ";"
 
-atom_term = LOUD | SNAKE | CHAR | STR
+atom_term = LOUD | SNAKE | CHAR | STR | "@" SNAKE "(" term ")"
 
 suffix_term = atom_term (("?" | "*" | "+" | sep "*" | sep "+") atom_term)*
 

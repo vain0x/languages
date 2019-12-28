@@ -6,13 +6,31 @@ open XbnfLang.Types
 let parseAtomTerm tokens =
   match tokens with
   | (StrToken content, l, r) :: tokens ->
-    (TokenTerm content, (l, r)), tokens
+    (TokenTerm content, (noAnnotation, (l, r))), tokens
 
   | (LoudToken ident, l, r) :: tokens ->
-    (TokenTerm ident, (l, r)), tokens
+    (TokenTerm ident, (noAnnotation, (l, r))), tokens
 
   | (SnakeToken ident, l, r) :: tokens ->
-    (SymbolTerm ident, (l, r)), tokens
+    (SymbolTerm ident, (noAnnotation, (l, r))), tokens
+
+  | (PunToken "@", l, _)
+    :: (SnakeToken ident, _, r)
+    :: (PunToken "(", _, _)
+    :: tokens ->
+    let body, tokens = parseTerm tokens
+
+    let tokens =
+      match tokens with
+      | (PunToken ")", _, _) :: tokens ->
+        tokens
+
+      | _ ->
+        // FIXME: missing closing paren
+        tokens
+
+    let annotation = ident, (l, r)
+    termAddAnnotation annotation body, tokens
 
   | (PunToken "(", _, _) :: tokens ->
     let body, tokens = parseTerm tokens
@@ -35,33 +53,33 @@ let parseSuffixTerm tokens =
   let rec go first tokens =
     match tokens with
     | (PunToken "?", l, r) :: tokens ->
-      go (OptTerm first, (l, r)) tokens
+      go (OptTerm first, (noAnnotation, (l, r))) tokens
 
     | (PunToken "*", l, r) :: tokens ->
-      go (ManyTerm first, (l, r)) tokens
+      go (ManyTerm first, (noAnnotation, (l, r))) tokens
 
     | (PunToken "+", l, r) :: tokens ->
-      go (Many1Term first, (l, r)) tokens
+      go (Many1Term first, (noAnnotation, (l, r))) tokens
 
     | (PunToken ",", l, _)
       :: (PunToken "*", _, r)
       :: tokens ->
-      go (SepTerm (first, ","), (l, r)) tokens
+      go (SepTerm (first, ","), (noAnnotation, (l, r))) tokens
 
     | (PunToken ",", l, _)
       :: (PunToken "+", _, r)
       :: tokens ->
-      go (Sep1Term (first, ","), (l, r)) tokens
+      go (Sep1Term (first, ","), (noAnnotation, (l, r))) tokens
 
     | (PunToken ";", l, _)
       :: (PunToken "*", _, r)
       :: tokens ->
-      go (SepTerm (first, ";"), (l, r)) tokens
+      go (SepTerm (first, ";"), (noAnnotation, (l, r))) tokens
 
     | (PunToken ";", l, _)
       :: (PunToken "+", _, r)
       :: tokens ->
-      go (Sep1Term (first, ";"), (l, r)) tokens
+      go (Sep1Term (first, ";"), (noAnnotation, (l, r))) tokens
 
     | _ ->
       first, tokens
@@ -77,7 +95,7 @@ let parseConcatTerm tokens =
 
     | ((StrToken _ | LoudToken _ | SnakeToken _ | PunToken "("), _, _) :: _ ->
       let second, tokens = parseSuffixTerm tokens
-      go (ConcatTerm (first, second), noLocation) tokens
+      go (ConcatTerm (first, second), (noAnnotation, noLocation)) tokens
 
     | _ ->
       first, tokens
@@ -90,7 +108,7 @@ let parseOrTerm tokens =
     match tokens with
     | (PunToken "|", l, r) :: tokens ->
       let second, tokens = parseConcatTerm tokens
-      go (OrTerm (first, second), (l, r)) tokens
+      go (OrTerm (first, second), (noAnnotation, (l, r))) tokens
 
     | _ ->
       first, tokens

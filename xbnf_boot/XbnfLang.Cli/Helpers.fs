@@ -9,7 +9,12 @@ let inline swap<'T> (first: byref<'T>) (second: byref<'T>) =
   first <- second
   second <- t
 
+let noAnnotation = []
+
 let noLocation = 0, 0
+
+let termAddAnnotation annotation (term, (annotations, location)) =
+  term, (annotation :: annotations, location)
 
 /// x? ==> (x / ε)
 let optNode item location =

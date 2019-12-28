@@ -1,2 +1,2 @@
-[RuleStmtTerm ("int_or_str",TokenTerm ("INT",(13, 16)),[],(0, 10));
- RuleStmtTerm ("int_or_str",TokenTerm ("STR",(30, 33)),[],(17, 27))]
+[RuleStmtTerm ("int_or_str",(TokenTerm "INT", (13, 16)),[],(0, 10));
+ RuleStmtTerm ("int_or_str",(TokenTerm "STR", (30, 33)),[],(17, 27))]

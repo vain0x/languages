@@ -46,6 +46,7 @@ let charIsPun (c: char): bool =
   || c = '/'
   || c = '*'
   || c = '?'
+  || c = '@'
 
 let charIsAnyFirst (c: char) =
   charIsCommentFirst c

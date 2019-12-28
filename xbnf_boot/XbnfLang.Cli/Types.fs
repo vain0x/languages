@@ -1,4 +1,4 @@
-module XbnfLang.Types
+module rec XbnfLang.Types
 
 open System.Collections.Generic
 
@@ -27,57 +27,65 @@ type Token =
   | PunToken
     of string
 
+type TokenData =
+  Token * int * int
+
 type Term =
   | TokenTerm
-    of string * Location
+    of string
 
   | SymbolTerm
-    of string * Location
+    of string
 
   | OptTerm
-    of Term * Location
+    of TermData
 
   | ManyTerm
-    of Term * Location
+    of TermData
 
   | Many1Term
-    of Term * Location
+    of TermData
 
   | SepTerm
-    of item:Term * sep:string * Location
+    of item:TermData * sep:string
 
   | Sep1Term
-    of item:Term * sep:string * Location
+    of item:TermData * sep:string
 
   | ConcatTerm
-    of Term * Term * Location
+    of TermData * TermData
 
   | OrTerm
-    of Term * Term * Location
+    of TermData * TermData
+
+type TermData =
+  Term * Location
 
 type StmtTerm =
   | RuleStmtTerm
-    of string * Term * Comment list * Location
+    of string * TermData * Comment list * Location
 
 type Node =
   | TokenNode
-    of string * Location
+    of string
 
   | SymbolNode
-    of string * Location
+    of string
 
   | EmptyNode
-    of Location
 
   | Many1Node
-    of Node * Location
+    of NodeData
 
   | ConcatNode
-    of Node * Node * Location
+    of NodeData * NodeData
 
   | OrNode
-    of Node * Node * Location
+    of NodeData * NodeData
+
+type NodeData =
+  Node * Location
 
 type Rule =
   | Rule
-    of string * Node * Comment list * Location
+    of string * NodeData * Comment list * Location

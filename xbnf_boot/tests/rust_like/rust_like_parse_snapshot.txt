@@ -1,87 +1,89 @@
-[RuleStmtTerm ("ty",TokenTerm ("IDENT",(5, 10)),[],(0, 2));
- RuleStmtTerm ("pat",TokenTerm ("IDENT",(18, 23)),[],(12, 15));
+[RuleStmtTerm ("ty",(TokenTerm "IDENT", (5, 10)),[],(0, 2));
+ RuleStmtTerm ("pat",(TokenTerm "IDENT", (18, 23)),[],(12, 15));
  RuleStmtTerm
    ("atom_expr",
-    OrTerm
-      (OrTerm
-         (OrTerm
-            (TokenTerm ("INT",(37, 40)),TokenTerm ("IDENT",(47, 52)),(45, 46)),
-          ConcatTerm
+    (OrTerm
+       ((OrTerm
+           ((OrTerm ((TokenTerm "INT", (37, 40)),(TokenTerm "IDENT", (47, 52))),
+             (45, 46)),
             (ConcatTerm
-               (TokenTerm (""("",(59, 62)),SymbolTerm ("expr",(63, 67)),(0, 0)),
-             TokenTerm ("")"",(68, 71)),(0, 0)),(57, 58)),
-       ConcatTerm
-         (ConcatTerm
-            (TokenTerm (""["",(78, 81)),
-             SepTerm (SymbolTerm ("expr",(83, 87)),",",(88, 90)),(0, 0)),
-          TokenTerm (""]"",(91, 94)),(0, 0)),(76, 77)),[],(25, 34));
+               ((ConcatTerm
+                   ((TokenTerm ""("", (59, 62)),(SymbolTerm "expr", (63, 67))),
+                 (0, 0)),(TokenTerm "")"", (68, 71))), (0, 0))), (57, 58)),
+        (ConcatTerm
+           ((ConcatTerm
+               ((TokenTerm ""["", (78, 81)),
+                (SepTerm ((SymbolTerm "expr", (83, 87)),","), (88, 90))), (0, 0)),
+            (TokenTerm ""]"", (91, 94))), (0, 0))), (76, 77)),[],(25, 34));
  RuleStmtTerm
    ("atom_or_block_expr",
-    OrTerm
-      (SymbolTerm ("atom_expr",(117, 126)),
-       SymbolTerm ("block_like_expr",(129, 144)),(127, 128)),[],(96, 114));
+    (OrTerm
+       ((SymbolTerm "atom_expr", (117, 126)),
+        (SymbolTerm "block_like_expr", (129, 144))), (127, 128)),[],(96, 114));
  RuleStmtTerm
    ("block_expr",
-    ConcatTerm
-      (ConcatTerm
-         (ConcatTerm
-            (TokenTerm (""{"",(159, 162)),
-             ManyTerm (SymbolTerm ("stmt",(163, 167)),(167, 168)),(0, 0)),
-          OptTerm (SymbolTerm ("expr",(169, 173)),(173, 174)),(0, 0)),
-       TokenTerm (""}"",(175, 178)),(0, 0)),[],(146, 156));
+    (ConcatTerm
+       ((ConcatTerm
+           ((ConcatTerm
+               ((TokenTerm ""{"", (159, 162)),
+                (ManyTerm (SymbolTerm "stmt", (163, 167)), (167, 168))), (0, 0)),
+            (OptTerm (SymbolTerm "expr", (169, 173)), (173, 174))), (0, 0)),
+        (TokenTerm ""}"", (175, 178))), (0, 0)),[],(146, 156));
  RuleStmtTerm
    ("if_expr",
-    ConcatTerm
-      (ConcatTerm
-         (ConcatTerm
-            (TokenTerm (""if"",(190, 194)),SymbolTerm ("cond_expr",(195, 204)),
-             (0, 0)),SymbolTerm ("block_expr",(205, 215)),(0, 0)),
-       OptTerm
-         (ConcatTerm
-            (TokenTerm (""else"",(217, 223)),
-             OrTerm
-               (SymbolTerm ("block_expr",(225, 235)),
-                SymbolTerm ("if_expr",(238, 245)),(236, 237)),(0, 0)),(247, 248)),
-       (0, 0)),[],(180, 187));
+    (ConcatTerm
+       ((ConcatTerm
+           ((ConcatTerm
+               ((TokenTerm ""if"", (190, 194)),
+                (SymbolTerm "cond_expr", (195, 204))), (0, 0)),
+            (SymbolTerm "block_expr", (205, 215))), (0, 0)),
+        (OptTerm
+           (ConcatTerm
+              ((TokenTerm ""else"", (217, 223)),
+               (OrTerm
+                  ((SymbolTerm "block_expr", (225, 235)),
+                   (SymbolTerm "if_expr", (238, 245))), (236, 237))), (0, 0)),
+         (247, 248))), (0, 0)),[],(180, 187));
  RuleStmtTerm
    ("block_like_expr",
-    OrTerm
-      (SymbolTerm ("block_expr",(268, 278)),SymbolTerm ("if_expr",(281, 288)),
-       (279, 280)),[],(250, 265));
+    (OrTerm
+       ((SymbolTerm "block_expr", (268, 278)),(SymbolTerm "if_expr", (281, 288))),
+     (279, 280)),[],(250, 265));
  RuleStmtTerm
-   ("expr",SymbolTerm ("atom_or_block_expr",(297, 315)),[],(290, 294));
+   ("expr",(SymbolTerm "atom_or_block_expr", (297, 315)),[],(290, 294));
  RuleStmtTerm
    ("stmt",
-    OrTerm
-      (SymbolTerm ("block_like_expr",(324, 339)),
-       ConcatTerm
-         (SymbolTerm ("expr",(342, 346)),TokenTerm ("";"",(347, 350)),(0, 0)),
-       (340, 341)),[],(317, 321));
+    (OrTerm
+       ((SymbolTerm "block_like_expr", (324, 339)),
+        (ConcatTerm
+           ((SymbolTerm "expr", (342, 346)),(TokenTerm "";"", (347, 350))),
+         (0, 0))), (340, 341)),[],(317, 321));
  RuleStmtTerm
    ("param_list",
-    SepTerm
-      (ConcatTerm
-         (ConcatTerm
-            (SymbolTerm ("pat",(366, 369)),TokenTerm ("":"",(370, 373)),(0, 0)),
-          SymbolTerm ("ty",(374, 376)),(0, 0)),",",(377, 379)),[],(352, 362));
+    (SepTerm
+       ((ConcatTerm
+           ((ConcatTerm
+               ((SymbolTerm "pat", (366, 369)),(TokenTerm "":"", (370, 373))),
+             (0, 0)),(SymbolTerm "ty", (374, 376))), (0, 0)),","), (377, 379)),
+    [],(352, 362));
  RuleStmtTerm
    ("item",
-    ConcatTerm
-      (ConcatTerm
-         (ConcatTerm
-            (ConcatTerm
+    (ConcatTerm
+       ((ConcatTerm
+           ((ConcatTerm
+               ((ConcatTerm
+                   ((ConcatTerm
+                       ((ConcatTerm
+                           ((TokenTerm ""fn"", (388, 392)),
+                            (TokenTerm "IDENT", (393, 398))), (0, 0)),
+                        (TokenTerm ""("", (399, 402))), (0, 0)),
+                    (SymbolTerm "param_list", (403, 413))), (0, 0)),
+                (TokenTerm "")"", (414, 417))), (0, 0)),
+            (OptTerm
                (ConcatTerm
-                  (ConcatTerm
-                     (TokenTerm (""fn"",(388, 392)),
-                      TokenTerm ("IDENT",(393, 398)),(0, 0)),
-                   TokenTerm (""("",(399, 402)),(0, 0)),
-                SymbolTerm ("param_list",(403, 413)),(0, 0)),
-             TokenTerm ("")"",(414, 417)),(0, 0)),
-          OptTerm
-            (ConcatTerm
-               (TokenTerm (""->"",(419, 423)),SymbolTerm ("ty",(424, 426)),
-                (0, 0)),(427, 428)),(0, 0)),SymbolTerm ("block_expr",(429, 439)),
-       (0, 0)),[],(381, 385));
+                  ((TokenTerm ""->"", (419, 423)),(SymbolTerm "ty", (424, 426))),
+                (0, 0)), (427, 428))), (0, 0)),
+        (SymbolTerm "block_expr", (429, 439))), (0, 0)),[],(381, 385));
  RuleStmtTerm
-   ("items",ManyTerm (SymbolTerm ("item",(449, 453)),(453, 454)),[],(441, 446));
- RuleStmtTerm ("root",SymbolTerm ("items",(463, 468)),[],(456, 460))]
+   ("items",(ManyTerm (SymbolTerm "item", (449, 453)), (453, 454)),[],(441, 446));
+ RuleStmtTerm ("root",(SymbolTerm "items", (463, 468)),[],(456, 460))]

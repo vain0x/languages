@@ -13,7 +13,7 @@ let ruleAppend first second =
   | Rule (name, body, comments, location),
     Rule (secondName, secondBody, secondComments, secondLocation) ->
     assert (name = secondName)
-    let body = OrNode (body, secondBody, secondLocation)
+    let body = OrNode (body, secondBody), secondLocation
     let comments = List.append comments secondComments
     Rule (name, body, comments, location)
 
@@ -25,49 +25,49 @@ let ruleConcat rules =
   | rule :: rules ->
     rules |> List.fold ruleAppend rule
 
-let rec lowerTerm (term: Term) =
+let rec lowerTerm (term: TermData) =
   match term with
-  | TokenTerm ("\"\"", location)
-  | TokenTerm ("''", location) ->
-    EmptyNode location
+  | (TokenTerm "\"\"", location)
+  | (TokenTerm "''", location) ->
+    EmptyNode, location
 
-  | TokenTerm (name, location) ->
-    TokenNode (name, location)
+  | TokenTerm name, location ->
+    TokenNode name, location
 
-  | SymbolTerm (name, location) ->
-    SymbolNode (name, location)
+  | SymbolTerm name, location ->
+    SymbolNode name, location
 
-  | OptTerm (item, location) ->
+  | OptTerm item, location ->
     let item = lowerTerm item
     optNode item location
 
-  | ManyTerm (item, location) ->
+  | ManyTerm item, location ->
     let item = lowerTerm item
     manyNode item location
 
-  | Many1Term (item, location) ->
+  | Many1Term item, location ->
     let item = lowerTerm item
-    Many1Node (item, location)
+    Many1Node item, location
 
-  | SepTerm (item, sep, location) ->
+  | SepTerm (item, sep), location ->
     let item = lowerTerm item
-    let sep = TokenNode (sprintf "\"%s\"" sep, location)
+    let sep = TokenNode (sprintf "\"%s\"" sep), location
     sepNode item sep location
 
-  | Sep1Term (item, sep, location) ->
+  | Sep1Term (item, sep), location ->
     let item = lowerTerm item
-    let sep = TokenNode (sprintf "\"%s\"" sep, location)
+    let sep = TokenNode (sprintf "\"%s\"" sep), location
     sep1Node item sep location
 
-  | ConcatTerm (first, second, location) ->
+  | ConcatTerm (first, second), location ->
     let first = lowerTerm first
     let second = lowerTerm second
-    ConcatNode (first, second, location)
+    ConcatNode (first, second), location
 
-  | OrTerm (first, second, location) ->
+  | OrTerm (first, second), location ->
     let first = lowerTerm first
     let second = lowerTerm second
-    OrNode (first, second, location)
+    OrNode (first, second), location
 
 let lowerStmt stmt =
   match stmt with

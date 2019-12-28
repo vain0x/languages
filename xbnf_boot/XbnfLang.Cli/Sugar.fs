@@ -6,36 +6,36 @@ open XbnfLang.Nullability
 
 let rec sugarNode node =
   match node with
-  | TokenNode (name, location) ->
-    TokenTerm (name, location)
+  | TokenNode name, location ->
+    TokenTerm name, location
 
-  | SymbolNode (name, location) ->
-    SymbolTerm (name, location)
+  | SymbolNode name, location ->
+    SymbolTerm name, location
 
-  | EmptyNode location ->
-    TokenTerm ("\"\"", location)
+  | EmptyNode, location ->
+    TokenTerm "\"\"", location
 
-  | Many1Node (item, location) ->
+  | Many1Node item, location ->
     let item = sugarNode item
-    Many1Term (item, location)
+    Many1Term item, location
 
-  | ConcatNode (first, second, location) ->
+  | ConcatNode (first, second), location ->
     let first = sugarNode first
     let second = sugarNode second
-    ConcatTerm (first, second, location)
+    ConcatTerm (first, second), location
 
-  | OrNode (Many1Node (item, location), EmptyNode _, _) ->
+  | OrNode ((Many1Node item, location), (EmptyNode, _)), _ ->
     let item = sugarNode item
-    ManyTerm (item, location)
+    ManyTerm (item), location
 
-  | OrNode (first, EmptyNode _, location) ->
+  | OrNode (first, (EmptyNode, _)), location ->
     let first = sugarNode first
-    OptTerm (first, location)
+    OptTerm first, location
 
-  | OrNode (first, second, location) ->
+  | OrNode (first, second), location ->
     let first = sugarNode first
     let second = sugarNode second
-    OrTerm (first, second, location)
+    OrTerm (first, second), location
 
 let sugarRule rule =
   match rule with

@@ -5,7 +5,7 @@ open XbnfLang.Helpers
 open XbnfLang.Types
 
 let nodeIsNullable isNullable node =
-  let rec go node =
+  let rec go (node, _) =
     match node with
     | EmptyNode _ ->
       true
@@ -13,16 +13,16 @@ let nodeIsNullable isNullable node =
     | TokenNode _ ->
       false
 
-    | SymbolNode (name, _) ->
+    | SymbolNode name ->
       isNullable name
 
-    | Many1Node (item, _) ->
+    | Many1Node item ->
       go item
 
-    | ConcatNode (first, second, _) ->
+    | ConcatNode (first, second) ->
       go first && go second
 
-    | OrNode (first, second, _) ->
+    | OrNode (first, second) ->
       go first || go second
 
   go node

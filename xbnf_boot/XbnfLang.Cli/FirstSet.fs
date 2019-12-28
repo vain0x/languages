@@ -6,27 +6,27 @@ open XbnfLang.Nullability
 open XbnfLang.Types
 
 let nodeToFirstSet isNullable firstSet node =
-  let rec go node =
+  let rec go (node, _) =
     match node with
     | EmptyNode _ ->
       Set.empty
 
-    | TokenNode (name, _) ->
+    | TokenNode name ->
       Set.singleton name
 
-    | SymbolNode (name, _) ->
+    | SymbolNode name ->
       firstSet name
 
-    | Many1Node (item, _) ->
+    | Many1Node item ->
       go item
 
-    | ConcatNode (first, second, _) ->
+    | ConcatNode (first, second) ->
       if nodeIsNullable isNullable first then
         go first |> Set.union (go second)
       else
         go first
 
-    | OrNode (first, second, _) ->
+    | OrNode (first, second) ->
       go first
       |> Set.union (go second)
 

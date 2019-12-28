@@ -1,0 +1,17 @@
+# XBNF 言語自身の構文
+# LOUD: LOUD_CASE の識別子
+# SNAKE: snake_case の識別子
+
+sep = "," / ";"
+
+atom_term = LOUD / SNAKE / CHAR / STR
+
+suffix_term = atom_term (("?" / "*" / "+" / sep "*" / sep "+") atom_term)*
+
+concat_term = suffix_term+
+
+term = concat_term ("/" concat_term)*
+
+rule = SNAKE "=" term
+
+root = rule* EOF

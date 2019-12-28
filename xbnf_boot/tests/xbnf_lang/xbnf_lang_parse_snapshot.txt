@@ -1,0 +1,54 @@
+[RuleStmtTerm
+   ("sep",
+    OrTerm (TokenTerm ("","",(70, 73)),TokenTerm ("";"",(76, 79)),(74, 75)),[],
+    (64, 67));
+ RuleStmtTerm
+   ("atom_term",
+    OrTerm
+      (OrTerm
+         (OrTerm
+            (TokenTerm ("LOUD",(93, 97)),TokenTerm ("SNAKE",(100, 105)),(98, 99)),
+          TokenTerm ("CHAR",(108, 112)),(106, 107)),TokenTerm ("STR",(115, 118)),
+       (113, 114)),[],(81, 90));
+ RuleStmtTerm
+   ("suffix_term",
+    ConcatTerm
+      (SymbolTerm ("atom_term",(134, 143)),
+       ManyTerm
+         (ConcatTerm
+            (OrTerm
+               (OrTerm
+                  (OrTerm
+                     (OrTerm
+                        (TokenTerm (""?"",(146, 149)),
+                         TokenTerm (""*"",(152, 155)),(150, 151)),
+                      TokenTerm (""+"",(158, 161)),(156, 157)),
+                   ConcatTerm
+                     (SymbolTerm ("sep",(164, 167)),TokenTerm (""*"",(168, 171)),
+                      (0, 0)),(162, 163)),
+                ConcatTerm
+                  (SymbolTerm ("sep",(174, 177)),TokenTerm (""+"",(178, 181)),
+                   (0, 0)),(172, 173)),SymbolTerm ("atom_term",(183, 192)),
+             (0, 0)),(193, 194)),(0, 0)),[],(120, 131));
+ RuleStmtTerm
+   ("concat_term",Many1Term (SymbolTerm ("suffix_term",(210, 221)),(221, 222)),
+    [],(196, 207));
+ RuleStmtTerm
+   ("term",
+    ConcatTerm
+      (SymbolTerm ("concat_term",(231, 242)),
+       ManyTerm
+         (ConcatTerm
+            (TokenTerm (""/"",(244, 247)),SymbolTerm ("concat_term",(248, 259)),
+             (0, 0)),(260, 261)),(0, 0)),[],(224, 228));
+ RuleStmtTerm
+   ("rule",
+    ConcatTerm
+      (ConcatTerm
+         (TokenTerm ("SNAKE",(270, 275)),TokenTerm (""="",(276, 279)),(0, 0)),
+       SymbolTerm ("term",(280, 284)),(0, 0)),[],(263, 267));
+ RuleStmtTerm
+   ("root",
+    ConcatTerm
+      (ManyTerm (SymbolTerm ("rule",(293, 297)),(297, 298)),
+       TokenTerm ("EOF",(299, 302)),(0, 0)),[],(286, 290))]

@@ -1,0 +1,60 @@
+[Rule
+   ("sep",
+    OrNode (TokenNode ("","",(70, 73)),TokenNode ("";"",(76, 79)),(74, 75)),[],
+    (64, 67));
+ Rule
+   ("atom_term",
+    OrNode
+      (OrNode
+         (OrNode
+            (TokenNode ("LOUD",(93, 97)),TokenNode ("SNAKE",(100, 105)),(98, 99)),
+          TokenNode ("CHAR",(108, 112)),(106, 107)),TokenNode ("STR",(115, 118)),
+       (113, 114)),[],(81, 90));
+ Rule
+   ("suffix_term",
+    ConcatNode
+      (SymbolNode ("atom_term",(134, 143)),
+       OrNode
+         (Many1Node
+            (ConcatNode
+               (OrNode
+                  (OrNode
+                     (OrNode
+                        (OrNode
+                           (TokenNode (""?"",(146, 149)),
+                            TokenNode (""*"",(152, 155)),(150, 151)),
+                         TokenNode (""+"",(158, 161)),(156, 157)),
+                      ConcatNode
+                        (SymbolNode ("sep",(164, 167)),
+                         TokenNode (""*"",(168, 171)),(0, 0)),(162, 163)),
+                   ConcatNode
+                     (SymbolNode ("sep",(174, 177)),TokenNode (""+"",(178, 181)),
+                      (0, 0)),(172, 173)),SymbolNode ("atom_term",(183, 192)),
+                (0, 0)),(193, 194)),EmptyNode (193, 194),(193, 194)),(0, 0)),[],
+    (120, 131));
+ Rule
+   ("concat_term",Many1Node (SymbolNode ("suffix_term",(210, 221)),(221, 222)),
+    [],(196, 207));
+ Rule
+   ("term",
+    ConcatNode
+      (SymbolNode ("concat_term",(231, 242)),
+       OrNode
+         (Many1Node
+            (ConcatNode
+               (TokenNode (""/"",(244, 247)),
+                SymbolNode ("concat_term",(248, 259)),(0, 0)),(260, 261)),
+          EmptyNode (260, 261),(260, 261)),(0, 0)),[],(224, 228));
+ Rule
+   ("rule",
+    ConcatNode
+      (ConcatNode
+         (TokenNode ("SNAKE",(270, 275)),TokenNode (""="",(276, 279)),(0, 0)),
+       SymbolNode ("term",(280, 284)),(0, 0)),[],(263, 267));
+ Rule
+   ("root",
+    ConcatNode
+      (OrNode
+         (Many1Node (SymbolNode ("rule",(293, 297)),(297, 298)),
+          EmptyNode (297, 298),(297, 298)),TokenNode ("EOF",(299, 302)),(0, 0)),
+    [],(286, 290))]

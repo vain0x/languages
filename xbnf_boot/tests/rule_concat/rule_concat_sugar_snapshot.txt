@@ -1,4 +1,4 @@
 [RuleStmtTerm
    ("int_or_str",
     OrTerm (TokenTerm ("INT",(13, 16)),TokenTerm ("STR",(30, 33)),(17, 27)),
-    ["FIRST = {INT, STR}"],(0, 10))]
+    ["FIRST = {INT, STR}"; "FOLLOW = {}"],(0, 10))]

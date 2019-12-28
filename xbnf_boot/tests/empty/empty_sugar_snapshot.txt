@@ -1,1 +1,2 @@
-[RuleStmtTerm ("root",TokenTerm ("EOF",(7, 10)),["FIRST = {EOF}"],(0, 4))]
+[RuleStmtTerm
+   ("root",TokenTerm ("EOF",(7, 10)),["FIRST = {EOF}"; "FOLLOW = {}"],(0, 4))]

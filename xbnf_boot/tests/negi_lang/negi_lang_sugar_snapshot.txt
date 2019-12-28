@@ -18,7 +18,9 @@
                 (86, 87)),TokenTerm ("INT",(102, 105)),(100, 101)),
           TokenTerm ("STR",(108, 111)),(106, 107)),
        TokenTerm ("IDENT",(114, 119)),(112, 113)),
-    ["FIRST = {'(', '[', '{', IDENT, INT, STR}"],(39, 43));
+    ["FIRST = {'(', '[', '{', IDENT, INT, STR}";
+     "FOLLOW = {'!=', '%', '%=', '(', ')', '*', '*=', '+', '+=', ',', '-', '-=', '/', '/=', ':', ';', '<', '<=', '=', '==', '>', '>=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (39, 43));
  RuleStmtTerm
    ("suffix",
     ConcatTerm
@@ -28,13 +30,17 @@
             (ConcatTerm
                (TokenTerm ("'['",(137, 140)),SymbolTerm ("term",(141, 145)),
                 (0, 0)),TokenTerm ("']'",(146, 149)),(0, 0)),(151, 152)),(0, 0)),
-    ["FIRST = {'(', '[', '{', IDENT, INT, STR}"],(121, 127));
+    ["FIRST = {'(', '[', '{', IDENT, INT, STR}";
+     "FOLLOW = {'!=', '%', '%=', '(', ')', '*', '*=', '+', '+=', ',', '-', '-=', '/', '/=', ':', ';', '<', '<=', '=', '==', '>', '>=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (121, 127));
  RuleStmtTerm
    ("prefix",
     ConcatTerm
       (OptTerm (TokenTerm ("'-'",(163, 166)),(166, 167)),
        SymbolTerm ("suffix",(168, 174)),(0, 0)),
-    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}"],(154, 160));
+    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}";
+     "FOLLOW = {'!=', '%', '%=', '(', ')', '*', '*=', '+', '+=', ',', '-', '-=', '/', '/=', ':', ';', '<', '<=', '=', '==', '>', '>=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (154, 160));
  RuleStmtTerm
    ("bin_mul",
     ConcatTerm
@@ -46,7 +52,9 @@
                   (TokenTerm ("'*'",(197, 200)),TokenTerm ("'/'",(203, 206)),
                    (201, 202)),TokenTerm ("'%'",(209, 212)),(207, 208)),
              SymbolTerm ("prefix",(215, 221)),(0, 0)),(223, 224)),(0, 0)),
-    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}"],(176, 183));
+    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}";
+     "FOLLOW = {'!=', '%=', '(', ')', '*=', '+', '+=', ',', '-', '-=', '/=', ':', ';', '<', '<=', '=', '==', '>', '>=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (176, 183));
  RuleStmtTerm
    ("bin_add",
     ConcatTerm
@@ -56,7 +64,10 @@
             (OrTerm
                (TokenTerm ("'+'",(248, 251)),TokenTerm ("'-'",(254, 257)),
                 (252, 253)),SymbolTerm ("bin_mul",(260, 267)),(0, 0)),(269, 270)),
-       (0, 0)),["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}"],(226, 233));
+       (0, 0)),
+    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}";
+     "FOLLOW = {'!=', '%=', '(', ')', '*=', '+=', ',', '-', '-=', '/=', ':', ';', '<', '<=', '=', '==', '>', '>=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (226, 233));
  RuleStmtTerm
    ("bin_cmp",
     ConcatTerm
@@ -75,7 +86,9 @@
                    TokenTerm ("'>'",(321, 324)),(319, 320)),
                 TokenTerm ("'>='",(327, 331)),(325, 326)),
              SymbolTerm ("bin_add",(334, 341)),(0, 0)),(343, 344)),(0, 0)),
-    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}"],(272, 279));
+    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}";
+     "FOLLOW = {'%=', '(', ')', '*=', '+=', ',', '-', '-=', '/=', ':', ';', '=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (272, 279));
  RuleStmtTerm
    ("bin_set",
     ConcatTerm
@@ -94,7 +107,9 @@
                    TokenTerm ("'/='",(395, 399)),(393, 394)),
                 TokenTerm ("'%='",(402, 406)),(400, 401)),
              SymbolTerm ("term",(409, 413)),(0, 0)),(415, 416)),(0, 0)),
-    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}"],(346, 353));
+    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}";
+     "FOLLOW = {'(', ')', ',', '-', ':', ';', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (346, 353));
  RuleStmtTerm
    ("cond",
     ConcatTerm
@@ -106,7 +121,9 @@
                   (TokenTerm ("'?'",(435, 438)),SymbolTerm ("term",(439, 443)),
                    (0, 0)),TokenTerm ("':'",(444, 447)),(0, 0)),
              SymbolTerm ("term",(448, 452)),(0, 0)),(454, 455)),(0, 0)),
-    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}"],(418, 422));
+    ["FIRST = {'(', '-', '[', '{', IDENT, INT, STR}";
+     "FOLLOW = {'(', ')', ',', '-', ':', ';', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (418, 422));
  RuleStmtTerm
    ("fun",
     ConcatTerm
@@ -126,12 +143,17 @@
           (0, 0)),
        OrTerm
          (SymbolTerm ("block",(505, 510)),SymbolTerm ("term",(513, 517)),
-          (511, 512)),(0, 0)),["FIRST = {'fun'}"],(457, 460));
+          (511, 512)),(0, 0)),
+    ["FIRST = {'fun'}";
+     "FOLLOW = {'(', ')', ',', '-', ':', ';', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (457, 460));
  RuleStmtTerm
    ("term",
     OrTerm
       (SymbolTerm ("fun",(528, 531)),SymbolTerm ("cond",(534, 538)),(532, 533)),
-    ["FIRST = {'(', '-', '[', 'fun', '{', IDENT, INT, STR}"],(521, 525));
+    ["FIRST = {'(', '-', '[', 'fun', '{', IDENT, INT, STR}";
+     "FOLLOW = {'(', ')', ',', '-', ':', ';', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (521, 525));
  RuleStmtTerm
    ("list",
     OptTerm
@@ -141,14 +163,17 @@
             (ConcatTerm
                (TokenTerm ("','",(556, 559)),SymbolTerm ("term",(560, 564)),
                 (0, 0)),(566, 567)),(0, 0)),(569, 570)),
-    ["NULLABLE"; "FIRST = {'(', '-', '[', 'fun', '{', IDENT, INT, STR}"],
-    (540, 544));
+    ["NULLABLE"; "FIRST = {'(', '-', '[', 'fun', '{', IDENT, INT, STR}";
+     "FOLLOW = {']'}"],(540, 544));
  RuleStmtTerm
    ("block",
     ConcatTerm
       (ConcatTerm
          (TokenTerm ("'{'",(580, 583)),SymbolTerm ("exp",(584, 587)),(0, 0)),
-       TokenTerm ("'}'",(588, 591)),(0, 0)),["FIRST = {'{'}"],(572, 577));
+       TokenTerm ("'}'",(588, 591)),(0, 0)),
+    ["FIRST = {'{'}";
+     "FOLLOW = {'(', ')', ',', '-', ':', ';', '?', '[', ']', 'break', 'else', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (572, 577));
  RuleStmtTerm
    ("let",
     ConcatTerm
@@ -156,7 +181,10 @@
          (ConcatTerm
             (TokenTerm ("'let'",(599, 604)),TokenTerm ("IDENT",(605, 610)),
              (0, 0)),TokenTerm ("'='",(611, 614)),(0, 0)),
-       SymbolTerm ("term",(615, 619)),(0, 0)),["FIRST = {'let'}"],(593, 596));
+       SymbolTerm ("term",(615, 619)),(0, 0)),
+    ["FIRST = {'let'}";
+     "FOLLOW = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (593, 596));
  RuleStmtTerm
    ("if",
     ConcatTerm
@@ -173,7 +201,9 @@
             (TokenTerm ("'else'",(652, 658)),
              OrTerm
                (SymbolTerm ("if",(661, 663)),SymbolTerm ("block",(666, 671)),
-                (664, 665)),(0, 0)),(675, 676)),(0, 0)),["FIRST = {'if'}"],
+                (664, 665)),(0, 0)),(675, 676)),(0, 0)),
+    ["FIRST = {'if'}";
+     "FOLLOW = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
     (621, 623));
  RuleStmtTerm
    ("while",
@@ -184,13 +214,18 @@
                (TokenTerm ("'while'",(686, 693)),TokenTerm ("'('",(694, 697)),
                 (0, 0)),SymbolTerm ("term",(698, 702)),(0, 0)),
           TokenTerm ("')'",(703, 706)),(0, 0)),SymbolTerm ("block",(707, 712)),
-       (0, 0)),["FIRST = {'while'}"],(678, 683));
+       (0, 0)),
+    ["FIRST = {'while'}";
+     "FOLLOW = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (678, 683));
  RuleStmtTerm
    ("return",
     ConcatTerm
       (TokenTerm ("'return'",(723, 731)),
        OptTerm (SymbolTerm ("term",(732, 736)),(736, 737)),(0, 0)),
-    ["FIRST = {'return'}"],(714, 720));
+    ["FIRST = {'return'}";
+     "FOLLOW = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
+    (714, 720));
  RuleStmtTerm
    ("stmt",
     OrTerm
@@ -203,7 +238,8 @@
              TokenTerm ("'break'",(773, 780)),(771, 772)),
           SymbolTerm ("return",(787, 793)),(785, 786)),
        SymbolTerm ("term",(800, 804)),(798, 799)),
-    ["FIRST = {'(', '-', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}"],
+    ["FIRST = {'(', '-', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}";
+     "FOLLOW = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}"],
     (739, 743));
  RuleStmtTerm
    ("exp",
@@ -214,10 +250,10 @@
              SymbolTerm ("stmt",(819, 823)),(0, 0)),(825, 826)),
        ManyTerm (TokenTerm ("';'",(827, 830)),(830, 831)),(0, 0)),
     ["NULLABLE";
-     "FIRST = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}"],
-    (806, 809));
+     "FIRST = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}";
+     "FOLLOW = {'}'}"],(806, 809));
  RuleStmtTerm
    ("program",SymbolTerm ("exp",(843, 846)),
     ["NULLABLE";
-     "FIRST = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}"],
-    (833, 840))]
+     "FIRST = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}";
+     "FOLLOW = {}"],(833, 840))]

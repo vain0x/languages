@@ -3,6 +3,28 @@ module XbnfLang.Lower
 open XbnfLang.Helpers
 open XbnfLang.Types
 
+let ruleToName rule =
+  match rule with
+  | Rule (name, _, _, _) ->
+    name
+
+let ruleAppend first second =
+  match first, second with
+  | Rule (name, body, comments, location),
+    Rule (secondName, secondBody, secondComments, secondLocation) ->
+    assert (name = secondName)
+    let body = OrNode (body, secondBody, secondLocation)
+    let comments = List.append comments secondComments
+    Rule (name, body, comments, location)
+
+let ruleConcat rules =
+  match rules with
+  | [] ->
+    failwith "NEVER"
+
+  | rule :: rules ->
+    rules |> List.fold ruleAppend rule
+
 let rec lowerTerm (term: Term) =
   match term with
   | TokenTerm ("\"\"", location)
@@ -53,4 +75,9 @@ let lowerStmt stmt =
     Rule (name, lowerTerm body, comments, location)
 
 let lower (stmts: StmtTerm list): Rule list =
-  stmts |> List.map lowerStmt
+  let rules = stmts |> List.map lowerStmt
+
+  // シンボルのルールを1つにまとめる。
+  rules
+  |> List.groupBy ruleToName
+  |> List.map (fun (_, rules) -> rules |> Seq.toList |> ruleConcat)

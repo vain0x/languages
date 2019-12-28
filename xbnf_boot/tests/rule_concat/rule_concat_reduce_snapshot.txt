@@ -1,0 +1,4 @@
+[Rule
+   ("int_or_str",
+    OrNode (TokenNode ("INT",(13, 16)),TokenNode ("STR",(30, 33)),(17, 27)),[],
+    (0, 10))]

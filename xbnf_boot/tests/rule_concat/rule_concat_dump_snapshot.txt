@@ -1,0 +1,3 @@
+# FIRST = {INT, STR}
+int_or_str = INT
+           / STR

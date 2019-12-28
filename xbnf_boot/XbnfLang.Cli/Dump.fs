@@ -60,7 +60,7 @@ let dumpTerm term acc =
       acc
       |> left OrBp
       |> go first OrBp
-      |> cons " / "
+      |> cons " | "
       |> go second OrBp
       |> right OrBp
 
@@ -74,7 +74,7 @@ let dumpStmt stmt acc =
         acc |> cons "# " |> cons comment |> cons eol
       ) acc
 
-    let altHead = String.replicate (name.Length + 1) " " + "/ "
+    let altHead = String.replicate (name.Length + 1) " " + "| "
     let acc = acc |> cons name |> cons " "
 
     let bodies =

@@ -39,7 +39,7 @@
       (SymbolTerm ("concat_term",(231, 242)),
        ManyTerm
          (ConcatTerm
-            (TokenTerm (""/"",(244, 247)),SymbolTerm ("concat_term",(248, 259)),
+            (TokenTerm (""|"",(244, 247)),SymbolTerm ("concat_term",(248, 259)),
              (0, 0)),(260, 261)),(0, 0)),[],(224, 228));
  RuleStmtTerm
    ("rule",

@@ -1,29 +1,29 @@
 # FIRST = {"(", IDENT, INT, STR}
 # FOLLOW = {"(", ")", "*", "+", ",", "-", "/"}
 atom = STR
-     / INT
-     / IDENT
-     / "(" expr ")"
+     | INT
+     | IDENT
+     | "(" expr ")"
 
 # FIRST = {"(", IDENT, INT, STR}
 # FOLLOW = {"(", ")", "*", "+", ",", "-", "/"}
 suffix = suffix "(" (expr ("," expr)*)? ")"
-       / atom
+       | atom
 
 # FIRST = {"(", "+", "-", IDENT, INT, STR}
 # FOLLOW = {")", "*", "+", ",", "-", "/"}
-prefix = ("+" / "-") suffix
-       / suffix
+prefix = ("+" | "-") suffix
+       | suffix
 
 # FIRST = {"(", "+", "-", IDENT, INT, STR}
 # FOLLOW = {")", "*", "+", ",", "-", "/"}
-mul = mul ("*" / "/") prefix
-    / prefix
+mul = mul ("*" | "/") prefix
+    | prefix
 
 # FIRST = {"(", "+", "-", IDENT, INT, STR}
 # FOLLOW = {")", "+", ",", "-"}
-add = add ("+" / "-") mul
-    / mul
+add = add ("+" | "-") mul
+    | mul
 
 # FIRST = {"(", "+", "-", IDENT, INT, STR}
 # FOLLOW = {")", ","}

@@ -1,26 +1,26 @@
 # FIRST = {",", ";"}
 # FOLLOW = {"*", "+"}
 sep = ","
-    / ";"
+    | ";"
 
 # FIRST = {CHAR, LOUD, SNAKE, STR}
-# FOLLOW = {"*", "+", ",", "/", ";", "?", CHAR, EOF, LOUD, SNAKE, STR}
+# FOLLOW = {"*", "+", ",", ";", "?", "|", CHAR, EOF, LOUD, SNAKE, STR}
 atom_term = LOUD
-          / SNAKE
-          / CHAR
-          / STR
+          | SNAKE
+          | CHAR
+          | STR
 
 # FIRST = {CHAR, LOUD, SNAKE, STR}
-# FOLLOW = {"/", CHAR, EOF, LOUD, SNAKE, STR}
-suffix_term = atom_term (("?" / "*" / "+" / sep "*" / sep "+") atom_term)*
+# FOLLOW = {"|", CHAR, EOF, LOUD, SNAKE, STR}
+suffix_term = atom_term (("?" | "*" | "+" | sep "*" | sep "+") atom_term)*
 
 # FIRST = {CHAR, LOUD, SNAKE, STR}
-# FOLLOW = {"/", EOF, SNAKE}
+# FOLLOW = {"|", EOF, SNAKE}
 concat_term = suffix_term+
 
 # FIRST = {CHAR, LOUD, SNAKE, STR}
 # FOLLOW = {EOF, SNAKE}
-term = concat_term ("/" concat_term)*
+term = concat_term ("|" concat_term)*
 
 # FIRST = {SNAKE}
 # FOLLOW = {EOF, SNAKE}

@@ -1,11 +1,11 @@
 # FIRST = {'(', '[', '{', IDENT, INT, STR}
 # FOLLOW = {'!=', '%', '%=', '(', ')', '*', '*=', '+', '+=', ',', '-', '-=', '/', '/=', ':', ';', '<', '<=', '=', '==', '>', '>=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
 atom = '(' term ')'
-     / '[' list ']'
-     / '{' '}'
-     / INT
-     / STR
-     / IDENT
+     | '[' list ']'
+     | '{' '}'
+     | INT
+     | STR
+     | IDENT
 
 # FIRST = {'(', '[', '{', IDENT, INT, STR}
 # FOLLOW = {'!=', '%', '%=', '(', ')', '*', '*=', '+', '+=', ',', '-', '-=', '/', '/=', ':', ';', '<', '<=', '=', '==', '>', '>=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
@@ -17,19 +17,19 @@ prefix = '-'? suffix
 
 # FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
 # FOLLOW = {'!=', '%=', '(', ')', '*=', '+', '+=', ',', '-', '-=', '/=', ':', ';', '<', '<=', '=', '==', '>', '>=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
-bin_mul = prefix (('*' / '/' / '%') prefix)*
+bin_mul = prefix (('*' | '/' | '%') prefix)*
 
 # FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
 # FOLLOW = {'!=', '%=', '(', ')', '*=', '+=', ',', '-', '-=', '/=', ':', ';', '<', '<=', '=', '==', '>', '>=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
-bin_add = bin_mul (('+' / '-') bin_mul)*
+bin_add = bin_mul (('+' | '-') bin_mul)*
 
 # FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
 # FOLLOW = {'%=', '(', ')', '*=', '+=', ',', '-', '-=', '/=', ':', ';', '=', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
-bin_cmp = bin_add (('==' / '!=' / '<' / '<=' / '>' / '>=') bin_add)*
+bin_cmp = bin_add (('==' | '!=' | '<' | '<=' | '>' | '>=') bin_add)*
 
 # FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
 # FOLLOW = {'(', ')', ',', '-', ':', ';', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
-bin_set = bin_cmp (('=' / '+=' / '-=' / '*=' / '/=' / '%=') term)?
+bin_set = bin_cmp (('=' | '+=' | '-=' | '*=' | '/=' | '%=') term)?
 
 # FIRST = {'(', '-', '[', '{', IDENT, INT, STR}
 # FOLLOW = {'(', ')', ',', '-', ':', ';', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
@@ -37,12 +37,12 @@ cond = bin_set ('?' term ':' term)?
 
 # FIRST = {'fun'}
 # FOLLOW = {'(', ')', ',', '-', ':', ';', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
-fun = 'fun' '(' (IDENT (',' IDENT)*)? ')' (block / term)
+fun = 'fun' '(' (IDENT (',' IDENT)*)? ')' (block | term)
 
 # FIRST = {'(', '-', '[', 'fun', '{', IDENT, INT, STR}
 # FOLLOW = {'(', ')', ',', '-', ':', ';', '?', '[', ']', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
 term = fun
-     / cond
+     | cond
 
 # NULLABLE
 # FIRST = {'(', '-', '[', 'fun', '{', IDENT, INT, STR}
@@ -59,7 +59,7 @@ let = 'let' IDENT '=' term
 
 # FIRST = {'if'}
 # FOLLOW = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
-if = 'if' '(' term ')' block ('else' (if / block))?
+if = 'if' '(' term ')' block ('else' (if | block))?
 
 # FIRST = {'while'}
 # FOLLOW = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
@@ -72,11 +72,11 @@ return = 'return' term?
 # FIRST = {'(', '-', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}
 # FOLLOW = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', '}', IDENT, INT, STR}
 stmt = let
-     / if
-     / while
-     / 'break'
-     / return
-     / term
+     | if
+     | while
+     | 'break'
+     | return
+     | term
 
 # NULLABLE
 # FIRST = {'(', '-', ';', '[', 'break', 'fun', 'if', 'let', 'return', 'while', '{', IDENT, INT, STR}

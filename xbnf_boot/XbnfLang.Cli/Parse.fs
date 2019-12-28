@@ -88,7 +88,7 @@ let parseConcatTerm tokens =
 let parseOrTerm tokens =
   let rec go first tokens =
     match tokens with
-    | ((PunToken "/" | PunToken "|"), l, r) :: tokens ->
+    | (PunToken "|", l, r) :: tokens ->
       let second, tokens = parseConcatTerm tokens
       go (OrTerm (first, second, (l, r))) tokens
 

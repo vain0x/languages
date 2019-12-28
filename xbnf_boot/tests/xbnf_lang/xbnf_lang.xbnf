@@ -1,6 +1,4 @@
-# XBNF 言語自身の構文
-# LOUD: LOUD_CASE の識別子
-# SNAKE: snake_case の識別子
+# X-BNF 言語自身の構文
 
 sep = "," | ";"
 

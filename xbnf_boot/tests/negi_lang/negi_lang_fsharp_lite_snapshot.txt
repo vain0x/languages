@@ -1,0 +1,245 @@
+module rec XbnfLang.Parser
+
+open XbnfLang.Helpers
+open XbnfLang.Types
+
+let isFollowedByAtom tokens =
+  match tokens with
+  | PunToken ("(", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | PunToken ("[", _) :: tokens
+    when isFollowedByList tokens ->
+    true
+
+  | PunToken ("{", _) :: PunToken ("}", _) :: _ ->
+    true
+
+  | IntToken _ :: _ ->
+    true
+
+  | StrToken _ :: _ ->
+    true
+
+  | IdentToken _ :: _ ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedBySuffix tokens =
+  match tokens with
+  | _
+    when isFollowedByAtom tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByPrefix tokens =
+  match tokens with
+  | PunToken ("-", _) :: tokens
+    when isFollowedBySuffix tokens ->
+    true
+
+  | _
+    when isFollowedBySuffix tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByBinMul tokens =
+  match tokens with
+  | _
+    when isFollowedByPrefix tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByBinAdd tokens =
+  match tokens with
+  | _
+    when isFollowedByBinMul tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByBinCmp tokens =
+  match tokens with
+  | _
+    when isFollowedByBinAdd tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByBinSet tokens =
+  match tokens with
+  | _
+    when isFollowedByBinCmp tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByCond tokens =
+  match tokens with
+  | _
+    when isFollowedByBinSet tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByFun tokens =
+  match tokens with
+  | PunToken ("fun", _) :: PunToken ("(", _) :: IdentToken _ :: PunToken (",", _) :: IdentToken _ :: _ ->
+    true
+
+  | PunToken ("fun", _) :: PunToken ("(", _) :: IdentToken _ :: PunToken (")", _) :: tokens
+    when isFollowedByBlock tokens ->
+    true
+
+  | PunToken ("fun", _) :: PunToken ("(", _) :: IdentToken _ :: PunToken (")", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | PunToken ("fun", _) :: PunToken ("(", _) :: PunToken (")", _) :: tokens
+    when isFollowedByBlock tokens ->
+    true
+
+  | PunToken ("fun", _) :: PunToken ("(", _) :: PunToken (")", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByTerm tokens =
+  match tokens with
+  | _
+    when isFollowedByFun tokens ->
+    true
+
+  | _
+    when isFollowedByCond tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByList tokens =
+  match tokens with
+  | _
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByBlock tokens =
+  match tokens with
+  | PunToken ("{", _) :: tokens
+    when isFollowedByExp tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByLet tokens =
+  match tokens with
+  | PunToken ("let", _) :: IdentToken _ :: PunToken ("=", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByIf tokens =
+  match tokens with
+  | PunToken ("if", _) :: PunToken ("(", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByWhile tokens =
+  match tokens with
+  | PunToken ("while", _) :: PunToken ("(", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByReturn tokens =
+  match tokens with
+  | PunToken ("return", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | PunToken ("return", _) :: _ ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByStmt tokens =
+  match tokens with
+  | _
+    when isFollowedByLet tokens ->
+    true
+
+  | _
+    when isFollowedByIf tokens ->
+    true
+
+  | _
+    when isFollowedByWhile tokens ->
+    true
+
+  | PunToken ("break", _) :: _ ->
+    true
+
+  | _
+    when isFollowedByReturn tokens ->
+    true
+
+  | _
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByExp tokens =
+  match tokens with
+  | PunToken (";", _) :: _ ->
+    true
+
+  | _
+    when isFollowedByStmt tokens ->
+    true
+
+  | _ ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByProgram tokens =
+  match tokens with
+  | _
+    when isFollowedByExp tokens ->
+    true
+
+  | _ ->
+    false

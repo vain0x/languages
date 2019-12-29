@@ -1,0 +1,34 @@
+module rec XbnfLang.Parser
+
+open XbnfLang.Helpers
+open XbnfLang.Types
+
+let isFollowedByAnnotationOnSuffix tokens =
+  match tokens with
+  | _ ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByNestedAnnotations tokens =
+  match tokens with
+  | _
+    when isFollowedBy_ tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByAdd tokens =
+  match tokens with
+  | _
+    when isFollowedByMul tokens ->
+    true
+
+  | _
+    when isFollowedByAdd tokens ->
+    true
+
+  | _ ->
+    false

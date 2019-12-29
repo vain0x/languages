@@ -1,0 +1,88 @@
+module rec XbnfLang.Parser
+
+open XbnfLang.Helpers
+open XbnfLang.Types
+
+let isFollowedBySep tokens =
+  match tokens with
+  | PunToken (",", _) :: _ ->
+    true
+
+  | PunToken (";", _) :: _ ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByAtomTerm tokens =
+  match tokens with
+  | LoudToken _ :: _ ->
+    true
+
+  | SnakeToken _ :: _ ->
+    true
+
+  | CharToken _ :: _ ->
+    true
+
+  | StrToken _ :: _ ->
+    true
+
+  | PunToken ("@", _) :: SnakeToken _ :: PunToken ("(", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | PunToken ("(", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedBySuffixTerm tokens =
+  match tokens with
+  | _
+    when isFollowedByAtomTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByConcatTerm tokens =
+  match tokens with
+  | _
+    when isFollowedBySuffixTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByTerm tokens =
+  match tokens with
+  | _
+    when isFollowedByConcatTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByRule tokens =
+  match tokens with
+  | SnakeToken _ :: PunToken ("=", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByRoot tokens =
+  match tokens with
+  | _
+    when isFollowedByRule tokens ->
+    true
+
+  | EofToken _ :: _ ->
+    true
+
+  | _ ->
+    false

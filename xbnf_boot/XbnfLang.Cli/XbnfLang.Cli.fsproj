@@ -18,6 +18,7 @@
     <Compile Include="Reduce.fs" />
     <Compile Include="Sugar.fs" />
     <Compile Include="Tokenize.fs" />
+    <Compile Include="FSharpLite.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

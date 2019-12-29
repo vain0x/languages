@@ -1,0 +1,12 @@
+module rec XbnfLang.Parser
+
+open XbnfLang.Helpers
+open XbnfLang.Types
+
+let isFollowedByRoot tokens =
+  match tokens with
+  | EofToken _ :: _ ->
+    true
+
+  | _ ->
+    false

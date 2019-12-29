@@ -1,0 +1,75 @@
+module rec XbnfLang.Parser
+
+open XbnfLang.Helpers
+open XbnfLang.Types
+
+let isFollowedByAtom tokens =
+  match tokens with
+  | StrToken _ :: _ ->
+    true
+
+  | IntToken _ :: _ ->
+    true
+
+  | IdentToken _ :: _ ->
+    true
+
+  | PunToken ("(", _) :: tokens
+    when isFollowedByExpr tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedBySuffix tokens =
+  match tokens with
+  | _
+    when isFollowedByAtom tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByPrefix tokens =
+  match tokens with
+  | PunToken ("+", _) :: tokens
+    when isFollowedBySuffix tokens ->
+    true
+
+  | PunToken ("-", _) :: tokens
+    when isFollowedBySuffix tokens ->
+    true
+
+  | _
+    when isFollowedBySuffix tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByMul tokens =
+  match tokens with
+  | _
+    when isFollowedByPrefix tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByAdd tokens =
+  match tokens with
+  | _
+    when isFollowedByMul tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByExpr tokens =
+  match tokens with
+  | _
+    when isFollowedByAdd tokens ->
+    true
+
+  | _ ->
+    false

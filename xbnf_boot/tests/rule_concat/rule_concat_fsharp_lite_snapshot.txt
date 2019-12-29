@@ -1,0 +1,15 @@
+module rec XbnfLang.Parser
+
+open XbnfLang.Helpers
+open XbnfLang.Types
+
+let isFollowedByIntOrStr tokens =
+  match tokens with
+  | IntToken _ :: _ ->
+    true
+
+  | StrToken _ :: _ ->
+    true
+
+  | _ ->
+    false

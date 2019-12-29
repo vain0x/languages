@@ -4,6 +4,7 @@ open System
 open System.IO
 open XbnfLang.Analyze
 open XbnfLang.Dump
+open XbnfLang.FSharpLite
 open XbnfLang.Lower
 open XbnfLang.Parse
 open XbnfLang.Reduce
@@ -44,14 +45,30 @@ let snapshotTest (name: string) =
 
   let sourceCode = File.ReadAllText(sourceName)
 
-  sourceCode
-  |> tokenize
-  |> withLog "parse" parse
-  |> lower
-  |> reduce
-  |> analyze
+  let rules =
+    sourceCode
+    |> tokenize
+    |> withLog "parse" parse
+    |> lower
+    |> reduce
+    |> analyze
+
+  rules
   |> sugar
   |> withLog "dump" dump
+  |> ignore
+
+  let option =
+    let modulePath = ["XbnfLang"; "Parser"]
+    let openPaths =
+      [
+        ["XbnfLang"; "Helpers"]
+        ["XbnfLang"; "Types"]
+      ]
+    FSharpLiteOption (modulePath, openPaths)
+  rules
+  |> fsharpLiteGen option
+  |> withLog "fsharp_lite" fsharpLiteDump
   |> ignore
 
   true

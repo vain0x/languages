@@ -4,7 +4,7 @@ sep = "," | ";"
 
 atom_term = LOUD | SNAKE | CHAR | STR | "@" SNAKE "(" term ")" | "(" term ")"
 
-suffix_term = atom_term (("?" | "*" | "+" | sep "*" | sep "+") atom_term)*
+suffix_term = atom_term ("?" | "*" | "+" | sep "*" | sep "+")*
 
 concat_term = suffix_term+
 

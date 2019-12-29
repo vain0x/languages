@@ -14,7 +14,7 @@ atom_term = LOUD
 
 # FIRST = {"(", "@", CHAR, LOUD, SNAKE, STR}
 # FOLLOW = {"(", ")", "@", "|", CHAR, EOF, LOUD, SNAKE, STR}
-suffix_term = atom_term (("?" | "*" | "+" | sep "*" | sep "+") atom_term)*
+suffix_term = atom_term ("?" | "*" | "+" | sep "*" | sep "+")*
 
 # FIRST = {"(", "@", CHAR, LOUD, SNAKE, STR}
 # FOLLOW = {")", "|", EOF, SNAKE}

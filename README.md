@@ -13,7 +13,7 @@ X-BNF 言語の構文は以下の通りです。(少し簡略化したものに�
 # STR: "..."
 atom_term = LOUD | SNAKE | CHAR | STR | "(" term ")"
 
-suffix_term = atom_term (("?" | "*" | "+") atom_term)*
+suffix_term = atom_term ("?" | "*" | "+")*
 
 concat_term = suffix_term+
 

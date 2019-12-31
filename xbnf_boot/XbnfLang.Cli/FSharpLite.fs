@@ -1,12 +1,15 @@
 module rec XbnfLang.FSharpLite
 
 open System
+open XbnfLang.FirstSet
 open XbnfLang.Helpers
+open XbnfLang.Nullability
 open XbnfLang.Types
 
 type FSharpBindingPower =
   | MinFbp
   | OrFbp
+  | TupleFbp
   | AndFbp
   | ConsFbp
   | AppFbp
@@ -39,7 +42,7 @@ type FSharpPat =
     of FSharpTerm
 
   | OrFP
-    of FSharpTerm * FSharpTerm
+    of FSharpPat * FSharpPat
 
 type FSharpExpr =
   FSharpTerm
@@ -83,8 +86,11 @@ let orFT first second =
 let consFP first second =
   TermFP (consFT first second)
 
+let orFP first second =
+  OrFP (first, second)
+
 // -----------------------------------------------
-// Gen
+// Gen helpers
 // -----------------------------------------------
 
 let wordToPascal (word: string) =
@@ -129,8 +135,15 @@ let tokenToTerm (name: string) args =
   else
     k (snakeToPascalCase name + "Token" |> IdentFT) args
 
+let tokenDataTerm (name: string) args data =
+  TupleFT [tokenToTerm name args; data]
+
 let symbolToTerm name args =
   appFT (snakeToCamelCase name + "Node" |> IdentFT) args
+
+// -----------------------------------------------
+// Gen "isFollowedBy"
+// -----------------------------------------------
 
 let fsharpLiteGenIsFollowedByFuns rules =
   let append first second =
@@ -224,15 +237,315 @@ let fsharpLiteGenIsFollowedByFuns rules =
 
   rules |> List.map gen
 
+// -----------------------------------------------
+// Gen parse
+// -----------------------------------------------
+
+let fsharpLiteGenParseFuns rules =
+  let isNullable = isNullableFun rules
+  let firstSet = firstSet isNullable rules
+
+  let raiseTerm _name =
+    appFT (IdentFT "failwith") (StringFT "Parse error")
+
+  let pairTerm =
+    TupleFT [
+      IdentFT "tokens"
+      IdentFT "state"
+    ]
+
+  let x = IdentFT "x"
+  let a = IdentFT "a"
+
+  let emitTokenTerm token =
+    appManyFT (IdentFT "emit") [
+      appFT (IdentFT "TokenEvent") (tokenDataTerm token [x] a)
+      IdentFT "tokens"
+      IdentFT "state"
+    ]
+
+  let rec go k (node: NodeData) =
+    match node with
+    | TokenNode name, _ ->
+      // match tokens with
+      k (
+        MatchFS (
+          IdentFT "tokens",
+          [
+            // | (TOKEN x, a) :: tokens ->
+            //   emit (TokenEvent (TOKEN x, a)) tokens state
+            TermFP (consFT (TupleFT [tokenToTerm name [x]; a]) (IdentFT "tokens")),
+              None,
+              [TermFS (emitTokenTerm name)]
+
+            // | _ ->
+            //   error
+            TermFP (IdentFT "_"),
+              None,
+              [TermFS (raiseTerm name)]
+          ])
+      )
+
+    | SymbolNode name, _ ->
+      // parse<name> emit tokens state
+      k (
+        TermFS (
+          appManyFT ("parse" + snakeToPascalCase name |> IdentFT) [
+            IdentFT "emit"
+            IdentFT "tokens"
+            IdentFT "state"
+          ])
+      )
+
+    | EmptyNode, _ ->
+      // tokens, state
+      k (TermFS pairTerm)
+
+    // | ConcatNode ((OrNode (f1, f2), fa), second), a ->
+    //   [
+    //     LetFunFS (
+    //       "f",
+    //       ["tokens"; "state"],
+    //       go second
+    //     )
+    //     yield! go node
+    //   ]
+
+    //   let node =
+    //     OrNode (
+    //       (ConcatNode (f1, second), fa),
+    //       (ConcatNode (f2, second), fa)
+    //     ), a
+    //   go node
+
+    | ConcatNode _, _ ->
+      let rec flatten node =
+        match node with
+        | ConcatNode (first, second), _ ->
+          List.append (flatten first) (flatten second)
+
+        | _ ->
+          [node]
+
+      flatten node
+      |> List.rev
+      |> List.mapi (fun i node ->
+        if i = 0 then
+          go k node
+        else
+          go (fun body -> [LetValFS (TermFP pairTerm, [body])]) node
+      )
+      |> List.rev
+      |> List.concat
+
+    | OrNode ((Many1Node item, _), (EmptyNode _, _)), _ ->
+      // item*
+
+      let __ = IdentFT "_"
+      let goTerm = appManyFT (IdentFT "go") [IdentFT "tokens"; IdentFT "state"]
+
+      [
+        LetFunFS (
+          "rec go",
+          ["tokens"; "state"],
+          [
+            MatchFS (
+              IdentFT "tokens",
+              [
+                match item with
+                | ConcatNode ((TokenNode token, _), item), _ ->
+                  TermFP (consFT (TupleFT [tokenToTerm token [x]; a]) (IdentFT "tokens")),
+                    None,
+                    [
+                      TermFS (emitTokenTerm token)
+                      yield! go (fun stmt -> [LetValFS (TermFP pairTerm, [stmt])]) item
+                      TermFS goTerm
+                    ]
+
+                  // | _ -> tokens, state
+                  TermFP __,
+                    None,
+                    [TermFS pairTerm]
+
+                | _ ->
+
+                let pat =
+                  nodeToFirstSet isNullable firstSet item
+                  |> Set.toSeq
+                  |> Seq.map (fun token -> consFT (TupleFT [tokenToTerm token [__]; __]) __ |> TermFP)
+                  |> Seq.reduce orFP
+
+                pat,
+                  None,
+                  [
+                    yield! go (fun stmt -> [LetValFS (TermFP pairTerm, [stmt])]) item
+                    TermFS goTerm
+                  ]
+
+                // | _ -> tokens, state
+                TermFP __,
+                  None,
+                  [TermFS pairTerm]
+              ])
+          ])
+
+        // go tokens state
+        yield! k (TermFS goTerm)
+      ]
+
+    | OrNode _, _ ->
+      let rec flatten node =
+        match node with
+        | OrNode (first, second), _ ->
+          List.append (flatten first) (flatten second)
+
+        | _ ->
+          [node]
+
+      let __ = IdentFT "_"
+      let mutable handledSet = Set.empty
+      let mutable isExhaustive = false
+
+      k (
+        MatchFS (
+          IdentFT "tokens",
+          [
+            for node in flatten node do
+              match node with
+              | EmptyNode _, _ ->
+                TermFP (IdentFT "_"),
+                  None,
+                  [TermFS pairTerm]
+
+                isExhaustive <- true
+
+              | TokenNode token, _ ->
+                let x = IdentFT "x"
+                let a = IdentFT "a"
+
+                // | (TOKEN x, a) :: tokens ->
+                //   emit (TokenEvent (TOKEN x, a)) tokens state
+                TermFP (consFT (TupleFT [tokenToTerm token [x]; a]) (IdentFT "tokens")),
+                  None,
+                  [
+                    TermFS (
+                      appManyFT (IdentFT "emit") [
+                        appFT (IdentFT "TokenEvent") (tokenDataTerm token [x] a)
+                        IdentFT "tokens"
+                        IdentFT "state"
+                      ]
+                    )
+                  ]
+
+              | _ ->
+
+              let nodeFirst =
+                let s = nodeToFirstSet isNullable firstSet node
+                Set.difference s handledSet
+
+              if nodeFirst |> Set.isEmpty |> not then
+                let pat =
+                  nodeFirst
+                  |> Seq.map (fun token -> TermFP (consFT (TupleFT [tokenToTerm token [__]; __]) __))
+                  |> Seq.reduce orFP
+                pat,
+                  None,
+                  go (fun stmt -> [stmt]) node
+
+              handledSet <- Set.union handledSet nodeFirst
+
+            // | _ -> <error>
+            if not isExhaustive then
+              TermFP __,
+                None,
+                [TermFS (raiseTerm "???")]
+          ])
+      )
+
+    | Many1Node item, _ ->
+      let __ = IdentFT "_"
+      let goTerm = appManyFT (IdentFT "go") [IdentFT "tokens"; IdentFT "state"]
+
+      [
+        LetFunFS (
+          "rec go",
+          ["tokens"; "state"],
+          [
+            yield! go (fun stmt -> [LetValFS (TermFP pairTerm, [stmt])]) item
+
+            MatchFS (
+              IdentFT "tokens",
+              [
+                let pat =
+                  nodeToFirstSet isNullable firstSet item
+                  |> Set.toSeq
+                  |> Seq.map (fun token -> consFT (TupleFT [tokenToTerm token [__]; __]) __ |> TermFP)
+                  |> Seq.reduce orFP
+
+                pat,
+                  None,
+                  [TermFS goTerm]
+
+                // | _ -> tokens, state
+                TermFP __,
+                  None,
+                  [TermFS pairTerm]
+              ])
+          ])
+
+        // go tokens state
+        yield! k (TermFS goTerm)
+      ]
+
+  let gen rule =
+    match rule with
+    | Rule (symbol, body, _, _) ->
+      let funName = "parse" + snakeToPascalCase symbol
+      LetFunFS (funName, ["emit"; "tokens"; "state"], go (fun stmt -> [stmt]) body)
+
+  rules |> List.map gen
+
+// -----------------------------------------------
+// Gen main
+// -----------------------------------------------
+
 let fsharpLiteGen option rules =
   match option with
   | FSharpLiteOption (modulePath, openPaths) ->
-    let moduleBody = fsharpLiteGenIsFollowedByFuns rules
+    let moduleBody =
+      [
+        yield! fsharpLiteGenIsFollowedByFuns rules
+        yield! fsharpLiteGenParseFuns rules
+      ]
     FSharpModule (modulePath, openPaths, moduleBody)
 
 // -----------------------------------------------
 // Dump
 // -----------------------------------------------
+
+let bpNext bp =
+  match bp with
+  | MinFbp ->
+    OrFbp
+
+  | OrFbp ->
+    TupleFbp
+
+  | TupleFbp ->
+    AndFbp
+
+  | AndFbp ->
+    ConsFbp
+
+  | ConsFbp ->
+    AppFbp
+
+  | AppFbp ->
+    AtomFbp
+
+  | AtomFbp ->
+
+    AtomFbp
 
 let binToBp bin =
   match bin with
@@ -296,7 +609,7 @@ let fsharpLiteDumpTerm term eol acc =
       acc |> cons name
 
     | TupleFT items ->
-      let acc = acc |> cons "("
+      let acc = acc |> left TupleFbp
 
       let _, acc =
         items |> List.fold (fun (sep, acc) item ->
@@ -307,7 +620,7 @@ let fsharpLiteDumpTerm term eol acc =
           ", ", acc
         ) ("", acc)
 
-      acc |> cons ")"
+      acc |> right TupleFbp
 
     | ListFT [] ->
       acc |> cons "[]"
@@ -341,7 +654,7 @@ let fsharpLiteDumpTerm term eol acc =
       |> left bp
       |> go first eol bp
       |> cons (binToString bin)
-      |> go second eol bp
+      |> go second eol (bpNext bp)
       |> right bp
 
   acc |> go term eol MinFbp
@@ -351,8 +664,12 @@ let fsharpLiteDumpPat pat eol acc =
   | TermFP term ->
     acc |> fsharpLiteDumpTerm term eol
 
-  | OrFP _ ->
-    failwith "unimpl"
+  | OrFP (first, second) ->
+    acc
+    |> fsharpLiteDumpPat first eol
+    |> cons eol
+    |> cons "| "
+    |> fsharpLiteDumpPat second eol
 
 let fsharpLiteDumpStmt stmt eol acc =
   let deepEol = eol + "  "
@@ -377,7 +694,7 @@ let fsharpLiteDumpStmt stmt eol acc =
           |> cons sep
           |> cons eol
           |> cons "| "
-          |> fsharpLiteDumpPat pat deepEol
+          |> fsharpLiteDumpPat pat eol
 
         let acc =
           match guardOpt with
@@ -427,12 +744,14 @@ let fsharpLiteDumpStmt stmt eol acc =
 let fsharpLiteDumpSemi stmts eol acc =
   assert (stmts |> List.isEmpty |> not)
 
+  let doubleEol = "\n" + eol
+
   stmts |> List.fold (fun (sep, acc) stmt ->
     let acc =
       acc
       |> cons sep
       |> fsharpLiteDumpStmt stmt eol
-    eol, acc
+    doubleEol, acc
   ) ("", acc)
   |> snd
 

@@ -1,7 +1,7 @@
-module rec XbnfLang.Parser
+module rec XbnfLang.ParseV2
 
-open XbnfLang.Helpers
-open XbnfLang.Types
+open XbnfLang.HelpersV2
+open XbnfLang.TypesV2
 
 let isFollowedByIntOrStr tokens =
   match tokens with
@@ -13,3 +13,14 @@ let isFollowedByIntOrStr tokens =
 
   | _ ->
     false
+
+let parseIntOrStr emit tokens state =
+  match tokens with
+  | (IntToken x, a) :: tokens ->
+    emit (TokenEvent (IntToken x, a)) tokens state
+
+  | (StrToken x, a) :: tokens ->
+    emit (TokenEvent (StrToken x, a)) tokens state
+
+  | _ ->
+    failwith "Parse error"

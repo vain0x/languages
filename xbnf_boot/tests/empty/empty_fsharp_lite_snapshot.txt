@@ -1,7 +1,7 @@
-module rec XbnfLang.Parser
+module rec XbnfLang.ParseV2
 
-open XbnfLang.Helpers
-open XbnfLang.Types
+open XbnfLang.HelpersV2
+open XbnfLang.TypesV2
 
 let isFollowedByRoot tokens =
   match tokens with
@@ -10,3 +10,11 @@ let isFollowedByRoot tokens =
 
   | _ ->
     false
+
+let parseRoot emit tokens state =
+  match tokens with
+  | (EofToken x, a) :: tokens ->
+    emit (TokenEvent (EofToken x, a)) tokens state
+
+  | _ ->
+    failwith "Parse error"

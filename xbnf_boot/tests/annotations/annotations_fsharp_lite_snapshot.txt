@@ -1,7 +1,7 @@
-module rec XbnfLang.Parser
+module rec XbnfLang.ParseV2
 
-open XbnfLang.Helpers
-open XbnfLang.Types
+open XbnfLang.HelpersV2
+open XbnfLang.TypesV2
 
 let isFollowedByAnnotationOnSuffix tokens =
   match tokens with
@@ -32,3 +32,19 @@ let isFollowedByAdd tokens =
 
   | _ ->
     false
+
+let parseAnnotationOnSuffix emit tokens state =
+  match tokens with
+  | _ ->
+    tokens, state
+
+  | _ ->
+    tokens, state
+
+let parseNestedAnnotations emit tokens state =
+  parse_ emit tokens state
+
+let parseAdd emit tokens state =
+  match tokens with
+  | _ ->
+    failwith "Parse error"

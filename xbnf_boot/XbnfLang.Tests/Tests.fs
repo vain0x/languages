@@ -59,11 +59,11 @@ let snapshotTest (name: string) =
   |> ignore
 
   let option =
-    let modulePath = ["XbnfLang"; "Parser"]
+    let modulePath = ["XbnfLang"; "ParseV2"]
     let openPaths =
       [
-        ["XbnfLang"; "Helpers"]
-        ["XbnfLang"; "Types"]
+        ["XbnfLang"; "HelpersV2"]
+        ["XbnfLang"; "TypesV2"]
       ]
     FSharpLiteOption (modulePath, openPaths)
   rules

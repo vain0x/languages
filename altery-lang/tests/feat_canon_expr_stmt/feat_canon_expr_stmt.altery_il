@@ -1,0 +1,7 @@
+(root
+  (globals)
+  (labels)
+  (code_section
+    // 0
+    (pop
+      0)))

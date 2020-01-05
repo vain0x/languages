@@ -1,0 +1,186 @@
+(root
+  (globals
+    $a
+    $b
+    $c)
+  (labels
+    $else_1
+    $end_if_2
+    $else_3
+    $end_if_4
+    $else_5
+    $end_if_6
+    $else_7
+    $end_if_8
+    $else_9
+    $end_if_10)
+  (code_section
+    (semi
+      // a = 0
+      (cell_set
+        (global_get
+          $a)
+        0)
+      // if true {..
+      (semi
+        (jump_unless
+          (label_get
+            $else_1)
+          true)
+        (semi
+          // a = a + 1
+          (cell_set
+            (global_get
+              $a)
+            (+
+              (global_get
+                $a)
+              1))
+          // a = a + 2
+          (cell_set
+            (global_get
+              $a)
+            (+
+              (global_get
+                $a)
+              2)))
+        (jump
+          (label_get
+            $end_if_2))
+        (label_def
+          $else_1)
+        (semi)
+        (label_def
+          $end_if_2))
+      // if false {..
+      (semi
+        (jump_unless
+          (label_get
+            $else_3)
+          false)
+        // a = a + 4
+        (cell_set
+          (global_get
+            $a)
+          (+
+            (global_get
+              $a)
+            4))
+        (jump
+          (label_get
+            $end_if_4))
+        (label_def
+          $else_3)
+        (semi)
+        (label_def
+          $end_if_4))
+      // assert(a == 3)
+      (pop
+        (assert
+          (==
+            (global_get
+              $a)
+            3)))
+      // b = 0
+      (cell_set
+        (global_get
+          $b)
+        0)
+      // if false {..
+      (semi
+        (jump_unless
+          (label_get
+            $else_5)
+          false)
+        // b = b + 1
+        (cell_set
+          (global_get
+            $b)
+          (+
+            (global_get
+              $b)
+            1))
+        (jump
+          (label_get
+            $end_if_6))
+        (label_def
+          $else_5)
+        // b = b + 2
+        (cell_set
+          (global_get
+            $b)
+          (+
+            (global_get
+              $b)
+            2))
+        (label_def
+          $end_if_6))
+      // assert(b == 2)
+      (pop
+        (assert
+          (==
+            (global_get
+              $b)
+            2)))
+      // c = 0
+      (cell_set
+        (global_get
+          $c)
+        0)
+      // if false {..
+      (semi
+        (jump_unless
+          (label_get
+            $else_7)
+          false)
+        // c = c + 1
+        (cell_set
+          (global_get
+            $c)
+          (+
+            (global_get
+              $c)
+            1))
+        (jump
+          (label_get
+            $end_if_8))
+        (label_def
+          $else_7)
+        // if true {..
+        (semi
+          (jump_unless
+            (label_get
+              $else_9)
+            true)
+          // c = c + 2
+          (cell_set
+            (global_get
+              $c)
+            (+
+              (global_get
+                $c)
+              2))
+          (jump
+            (label_get
+              $end_if_10))
+          (label_def
+            $else_9)
+          // c = c + 4
+          (cell_set
+            (global_get
+              $c)
+            (+
+              (global_get
+                $c)
+              4))
+          (label_def
+            $end_if_10))
+        (label_def
+          $end_if_8))
+      // assert(c == 2)
+      (pop
+        (assert
+          (==
+            (global_get
+              $c)
+            2))))))

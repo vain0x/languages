@@ -1,0 +1,15 @@
+a = 0
+b = 0
+
+fn f() {
+    fn g() {
+        b = b + 2
+    }
+
+    a = a + 1
+}
+
+f(0)
+g(0)
+assert(a == 1)
+assert(b == 2)

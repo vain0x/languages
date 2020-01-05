@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cargo build --bin alteryc --bin altery \
+    && cargo run --bin al_test \
+    && cargo run --bin altery ./tests/test.altery_il

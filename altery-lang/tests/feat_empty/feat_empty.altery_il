@@ -1,0 +1,5 @@
+(root
+  (globals)
+  (labels)
+  (code_section
+    (semi)))

@@ -1,0 +1,13 @@
+(root
+  (globals)
+  (labels)
+  (code_section
+    (semi
+      // assert(true)
+      (pop
+        (assert
+          true))
+      // assert(true)
+      (pop
+        (assert
+          true)))))

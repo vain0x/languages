@@ -1,0 +1,63 @@
+(root
+  (globals)
+  (labels)
+  (code_section
+    (semi
+      // assert(0 == 0)
+      (pop
+        (assert
+          (==
+            0
+            0)))
+      // assert(1 == 1)
+      (pop
+        (assert
+          (==
+            1
+            1)))
+      // assert((0 == 1) == false)
+      (pop
+        (assert
+          (==
+            (==
+              0
+              1)
+            false)))
+      // assert(2 + 3 == 5)
+      (pop
+        (assert
+          (==
+            (+
+              2
+              3)
+            5)))
+      // assert(84 / 2 == 42)
+      (pop
+        (assert
+          (==
+            (/
+              84
+              2)
+            42)))
+      // assert(48 - 3 * 2 == 42)
+      (pop
+        (assert
+          (==
+            (-
+              48
+              (*
+                3
+                2))
+            42)))
+      // assert(2 + 3 * 4 + 5 == 19)
+      (pop
+        (assert
+          (==
+            (+
+              (+
+                2
+                (*
+                  3
+                  4))
+              5)
+            19))))))

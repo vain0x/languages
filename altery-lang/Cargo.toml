@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "projects/al_aux",
+    "projects/al_compiler",
+    "projects/al_runtime",
+    "projects/al_test"
+]

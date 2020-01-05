@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Use old version of Rust compiler
+# because AtCoder doesn't support newer versions for now.
+rustup install 1.15.1
+rustup override set 1.15.1

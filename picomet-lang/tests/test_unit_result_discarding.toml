@@ -1,0 +1,8 @@
+[[error]]
+src = """\
+if 0 == 0 { 0; } else { 0 }
+"""
+
+err = """\
+At 1:25..1:26 Type Error
+"""

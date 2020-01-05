@@ -1,0 +1,40 @@
+# <https://atcoder.jp/contests/abs/tasks/abc081_b?lang=en>
+
+src = """\
+    let N = read_int();
+    let min_count = 1000000000;
+    let i = 0;
+    while i < N {
+        let A = read_int();
+        let count = 0;
+        while A % 2 == 0 {
+            A = A / 2;
+            count += 1;
+        }
+        if min_count > count {
+            min_count = count;
+        }
+        i += 1;
+    }
+    println_int(min_count);
+"""
+
+[[io]]
+stdin = """
+3
+8 12 40
+"""
+
+stdout = """\
+2
+"""
+
+[[io]]
+stdin = """
+4
+5 6 8 10
+"""
+
+stdout = """\
+0
+"""

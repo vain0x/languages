@@ -1,0 +1,108 @@
+[[eval]]
+name = "with_no_args"
+
+src = """\
+    let f = || 2;
+    println_int(84 / f());
+
+    let g = | | 2;
+    println_int(84 / g());
+"""
+
+stdout = """\
+42
+42
+"""
+
+[[eval]]
+name = "with_arg"
+
+src = """\
+    let half = |x| x / 2;
+    println_int(half(84));
+"""
+
+stdout = """\
+42
+"""
+
+[[eval]]
+name = "with_two_args"
+
+src = """\
+    let div = |x, y| x / y;
+    println_int(div(126, 3));
+"""
+
+stdout = """\
+42
+"""
+
+[[eval]]
+name = "with_args_and_locals"
+
+src = """\
+    let digit_sum = |x| {
+        let s = 0;
+        while x > 0 {
+            s += x % 10;
+            x = x / 10;
+        }
+        s
+    };
+    println_int(digit_sum(314159));
+"""
+
+stdout = """\
+23
+"""
+
+[[eval]]
+name = "modify_globals"
+
+src = """\
+    let x = 0;
+    let f = || x += 1;
+    f();
+    println_int(x);
+"""
+
+stdout = """\
+1
+"""
+
+[[eval]]
+name = "return_early"
+
+src = """\
+    let f = |x| {
+        if x % 2 == 0 {
+            return x / 2;
+        }
+        x * 3 + 1
+    };
+    println_int(1 + f(1) + 1);
+    println_int(4 + f(4) + 4);
+    if 0 == 0 { return }
+    println_int(-1)
+"""
+
+stdout = """\
+6
+10
+"""
+
+[[error]]
+name = "return_same_type"
+
+src = """\
+    let f = |x| {
+        if x == 0 { return }
+        0
+    };
+    f(0);
+"""
+
+err = """\
+At 3:9..3:10 Type Error
+"""

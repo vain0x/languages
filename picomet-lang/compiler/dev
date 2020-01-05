@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cargo watch -w ../compiler -w ../runtime -x test

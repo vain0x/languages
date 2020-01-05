@@ -1,0 +1,24 @@
+[[eval]]
+name = "of_byte"
+
+src = """\
+let s = "Hello!";
+println_int(slice_len(s));
+"""
+
+stdout = """\
+6
+"""
+
+[[eval]]
+name = "of_int"
+
+src = """\
+let xs = mem_alloc(1);
+xs[0] = 0;
+println_int(slice_len(xs));
+"""
+
+stdout = """\
+1
+"""

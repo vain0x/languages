@@ -1,0 +1,12 @@
+[[eval]]
+src = """\
+println_int(12 & 10);
+println_int(12 | 10);
+println_int(12 ^ 10);
+"""
+
+stdout = """\
+8
+14
+6
+"""

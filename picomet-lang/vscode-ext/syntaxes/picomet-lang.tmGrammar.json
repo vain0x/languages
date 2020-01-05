@@ -1,0 +1,104 @@
+{
+    "scopeName": "source.picomet-lang",
+    "patterns": [
+        {
+            "include": "#expression"
+        }
+    ],
+    "repository": {
+        "expression": {
+            "patterns": [
+                {
+                    "begin": "//",
+                    "end": "$",
+                    "name": "comment.line.double-slash.picomet-lang"
+                },
+                {
+                    "match": "-?[0-9]+",
+                    "name": "constant.numeric.int.picomet-lang"
+                },
+                {
+                    "name": "string.quoted.single.picomet-lang",
+                    "match": "'(\\\\x[0-9a-fA-F]{2,6}|\\\\.|.)'"
+                },
+                {
+                    "name": "string.quoted.double.picomet-lang",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "include": "#escaped_character"
+                        }
+                    ]
+                },
+                {
+                    "name": "keyword.operator.comparison.picomet-lang",
+                    "match": "(&&|\\|\\||==|!=)"
+                },
+                {
+                    "name": "keyword.operator.assignment.picomet-lang",
+                    "match": "(\\+=|-=|/=|\\*=|%=|\\^=|&=|\\|=|<<=|>>=|=)"
+                },
+                {
+                    "name": "keyword.operator.arithmetic.picomet-lang",
+                    "match": "(!|\\+|-|/|\\*|%|\\^|&|\\||<<|>>)"
+                },
+                {
+                    "name": "entity.name.type.picomet-lang",
+                    "match": "\\b(unit|byte|int)\\b"
+                },
+                {
+                    "match": "\\b(return|if|else|while|break|continue|for|in)\\b",
+                    "name": "keyword.control.picomet-lang"
+                },
+                {
+                    "match": "\\b(do|as|let|rec|type|struct|enum|trait|impl|mod|pub|use|extern)\\b",
+                    "name": "keyword.other.picomet-lang"
+                },
+                {
+                    "match": "\\b([A-Za-z_][A-Za-z0-9_]*|_)\\s*\\(",
+                    "captures": {
+                        "1": {
+                            "name": "entity.name.function.picomet-lang"
+                        }
+                    }
+                },
+                {
+                    "match": "[A-Z][0-9a-zA-Z_]*",
+                    "name": "entity.name.type"
+                },
+                {
+                    "match": "[a-z_][0-9a-zA-Z_]*",
+                    "name": "entity.name"
+                },
+                {
+                    "include": "#group-expression"
+                }
+            ]
+        },
+        "escaped_character": {
+            "name": "constant.character.escape.picomet-lang",
+            "match": "\\\\(x[0-9A-Fa-f]{2}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)"
+        },
+        "group-expression": {
+            "begin": "\\(",
+            "end": "\\)",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.paren.open"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.paren.close"
+                }
+            },
+            "name": "expression.group",
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        }
+    }
+}

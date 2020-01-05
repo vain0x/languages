@@ -1,0 +1,49 @@
+# <https://atcoder.jp/contests/abs/tasks/abc081_a?lang=en>
+
+src = """\
+    let n = read_int();
+    let k = 0;
+    while n > 0 {
+        if n % 10 == 1 {
+            k += 1;
+        }
+        n = n / 10;
+    }
+    println_int(k);
+"""
+
+[[io]]
+stdin = """\
+101
+"""
+
+stdout = """\
+2
+"""
+
+[[io]]            
+stdin = """\
+000
+"""
+
+stdout = """\
+0
+"""
+
+[[io]]            
+stdin = """\
+111
+"""
+
+stdout = """\
+3
+"""
+
+[[io]]            
+stdin = """\
+010
+"""
+
+stdout = """\
+1
+"""

@@ -1,0 +1,9 @@
+[[eval]]
+src = """\
+println_int(42)
+"""
+
+stdin = ""
+stdout = """\
+42
+"""

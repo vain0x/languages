@@ -1,0 +1,64 @@
+[[eval]]
+name = "fact"
+
+src = """\
+    let rec fact = |x| if x <= 1 {
+        1
+    } else {
+        x * fact(x - 1)
+    };
+    println_int(fact(read_int()));
+"""
+
+stdin = """\
+5
+"""
+
+stdout = """\
+120
+"""
+
+[[eval]]
+name = "mutually"
+
+src = """\
+    let rec even = |x| if x > 0 { odd(x - 1) } else { 1 };
+    let rec odd = |x| if x > 0 { even(x - 1) } else { 0 };
+    println_int(even(8));
+"""
+
+stdout = """\
+1
+"""
+
+[[eval]]
+name = "norec_shadowing"
+
+src = """\
+    let f = || 2;
+    println_int(f());
+    let f = || 3 * f();
+    println_int(f());
+"""
+
+stdout = """\
+2
+6
+"""
+
+[[eval]]
+name = "rec_shadowing"
+
+src = """\
+    println_int(f());
+    let rec f = || 1;
+    println_int(f());
+    let rec f = || 2;
+    println_int(f());
+"""
+
+stdout = """\
+2
+2
+2
+"""

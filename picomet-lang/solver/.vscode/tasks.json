@@ -1,0 +1,40 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "gen_rust",
+            "type": "shell",
+            "command": "${command:getPicometBin}",
+            "args": [
+                "gen_rust",
+                "${workspaceFolder}/src/main.picomet",
+                "${workspaceFolder}/../runtime/src/lib.rs",
+                "${workspaceFolder}/src/main.rs"
+            ],
+            "group": {
+                "isDefault": true,
+                "kind": "build"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "run",
+            "type": "shell",
+            "command": "${command:getPicometBin}",
+            "args": [
+                "run",
+                "${workspaceFolder}/src/main.picomet"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [],
+            "dependsOn": "gen_rust"
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+extern fn assert_eq(in actual, in expected);
+
+fn inc(ref x) {
+    x = x + 1;
+}
+
+fn main() {
+    let mut a = 1;
+    assert_eq(a, 1);
+    inc(ref a);
+    assert_eq(a, 2);
+    inc(ref a);
+    assert_eq(a, 3);
+}

@@ -7,9 +7,10 @@ fix fn assert_eq(in actual: int, in expected: int) -> () {
 }
 
 fix fn inc(ref x: int) -> int {
+  let n = 1
   let prim_add_res = prim_add(
     move x
-    move 1
+    move n
   )
   let prim_assign_res = prim_assign(
     ref x
@@ -19,25 +20,29 @@ fix fn inc(ref x: int) -> int {
 }
 
 fix fn main() -> int {
+  let n_2 = 1
   fix label a_next(mut a: int) -> never {
+    let n_3 = 1
     let assert_eq_res_2 = assert_eq(
       in a
-      in 1
+      in n_3
     )
     let inc_res = inc(ref a)
+    let n_4 = 2
     let assert_eq_res_3 = assert_eq(
       in a
-      in 2
+      in n_4
     )
     let inc_res_2 = inc(ref a)
+    let n_5 = 3
     let assert_eq_res_4 = assert_eq(
       in a
-      in 3
+      in n_5
     )
     jump return(move assert_eq_res_4)
   }
 
-  jump a_next(in 1)
+  jump a_next(in n_2)
 }
 
-0
+__noop

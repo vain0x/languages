@@ -12,10 +12,13 @@ fix fn print(in s: int) -> () {
 }
 
 fix fn main() -> int {
-  let print_res_2 = print(in "before loop")
+  let s_2 = "before loop"
+  let print_res_2 = print(in s_2)
+  let n = 0
   fix label a_next(mut a: int) -> never {
     fix label do_break() -> never {
-      let print_res_3 = print(in "after loop")
+      let s_3 = "after loop"
+      let print_res_3 = print(in s_3)
       jump return(move print_res_3)
     }
 
@@ -24,19 +27,22 @@ fix fn main() -> int {
         in a
         in a
       )
+      let n_2 = 5
       let prim_eq_res = prim_eq(
         in a
-        in 5
+        in n_2
       )
       fix label if_next(mut res: int) -> never {
+        let n_3 = 2
         let prim_eq_res_2 = prim_eq(
           in a
-          in 2
+          in n_3
         )
         fix label if_next_2(mut res_2: int) -> never {
+          let n_4 = 1
           let prim_add_res = prim_add(
             move a
-            move 1
+            move n_4
           )
           let prim_assign_res = prim_assign(
             ref a
@@ -46,9 +52,10 @@ fix fn main() -> int {
         }
 
         if prim_eq_res_2 {
+          let n_5 = 2
           let prim_add_res_2 = prim_add(
             move a
-            move 2
+            move n_5
           )
           let prim_assign_res_2 = prim_assign(
             ref a
@@ -56,21 +63,21 @@ fix fn main() -> int {
           )
           jump do_continue()
         } else {
-          jump if_next_2(move 0)
+          jump if_next_2(move __noop)
         }
       }
 
       if prim_eq_res {
         jump do_break()
       } else {
-        jump if_next(move 0)
+        jump if_next(move __noop)
       }
     }
 
     jump do_continue()
   }
 
-  jump a_next(in 0)
+  jump a_next(in n)
 }
 
-0
+__noop

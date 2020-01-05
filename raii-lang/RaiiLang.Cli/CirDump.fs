@@ -120,9 +120,7 @@ let cdTerm term (superBp: CBindingPower) acc =
     acc |> cons text
 
    | CStr segments ->
-    let acc = acc |> cons "\""
-    let acc = segments |> List.fold (fun acc (StrVerbatim text) -> acc |> cons text) acc
-    acc |> cons "\""
+    acc |> strUnescape segments
 
   | CName name ->
     acc |> cons name

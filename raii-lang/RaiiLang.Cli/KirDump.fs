@@ -89,37 +89,28 @@ let kdResult (KResult resultTy) indent acc =
 
 let kdNode node indent acc =
   match node with
-  | KBool false ->
-    acc |> cons "false"
-
-  | KBool true ->
-    acc |> cons "true"
-
-  | KInt intText ->
-    acc |> cons intText
-
-  | KStr segments ->
-    let acc = acc |> cons "\""
-
-    let acc =
-      segments |> List.fold (fun acc segment ->
-        match segment with
-        | StrVerbatim text ->
-          acc |> cons text
-      ) acc
-
-    acc |> cons "\""
+  | KNoop ->
+    acc |> cons "__noop"
 
   | KName name ->
     acc |> cons name
 
   | KPrim (prim, args, res, next) ->
+    let acc =
+      acc
+      |> cons "let "
+      |> cons res
+      |> cons " = "
+      |> cons (kPrimToString prim)
+
+    let acc =
+      if prim |> kPrimIsLiteral then
+        assert (args |> List.isEmpty)
+        acc
+      else
+        acc |> kdArgList args indent
+
     acc
-    |> cons "let "
-    |> cons res
-    |> cons " = "
-    |> cons (kPrimToString prim)
-    |> kdArgList args indent
     |> cons indent
     |> kdNode next indent
 

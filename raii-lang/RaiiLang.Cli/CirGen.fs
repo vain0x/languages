@@ -80,6 +80,12 @@ let cgArg context (KArg (passBy, arg)) =
     CUni (CRefUni, arg)
 
 let cgPrimTerm context prim args result next =
+  let onLiteral body ty =
+    let local = CLocalStmt (result, ty, Some body)
+    context.Stmts.Add(local)
+    cgNode context next
+    CName result
+
   let onBin bin first second =
     let first = first |> cgArg context
     let second = second |> cgArg context
@@ -97,6 +103,18 @@ let cgPrimTerm context prim args result next =
     CName result
 
   match prim, args with
+  | KBoolLiteralPrim false, [] ->
+    onLiteral (CInt "0") CIntTy
+
+  | KBoolLiteralPrim true, [] ->
+    onLiteral (CInt "1") CIntTy
+
+  | KIntLiteralPrim intText, [] ->
+    onLiteral (CInt intText) CIntTy
+
+  | KStrLiteralPrim segments, [] ->
+    onLiteral (CStr segments) (CPtrTy CCharTy)
+
   | KEqPrim, [first; second] ->
     onBin CEqBin first second
 
@@ -117,17 +135,8 @@ let cgPrimTerm context prim args result next =
 
 let cgTerm (context: CirGenContext) (node: KNode) =
   match node with
-  | KBool false ->
-    CInt "0"
-
-  | KBool true ->
-    CInt "1"
-
-  | KInt text ->
-    CInt text
-
-  | KStr segments ->
-    CStr segments
+  | KNoop ->
+    CName "// noop"
 
   | KName name ->
     CName name
@@ -195,9 +204,7 @@ let cgTerm (context: CirGenContext) (node: KNode) =
 
 let cgNode context (node: KNode) =
   match node with
-  | KBool _
-  | KInt _
-  | KStr _
+  | KNoop _
   | KName _ ->
     ()
 

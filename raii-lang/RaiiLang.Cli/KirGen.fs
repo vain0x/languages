@@ -4,8 +4,6 @@ open RaiiLang.Helpers
 open RaiiLang.Kir
 open RaiiLang.Syntax
 
-let unitNode = KInt "0"
-
 [<Struct>]
 type KirGenLoop =
   {
@@ -45,7 +43,7 @@ let kgLoop context exit bodyFun =
       ContinueLabel = KLabel continueLabel
     } :: loopStack
 
-  let onBreak = exit unitNode
+  let onBreak = exit KNoop
   let onContinue = bodyFun breakNode continueNode (fun (_: KNode) -> continueNode)
 
   context.LoopStack <- loopStack
@@ -68,13 +66,16 @@ let kgLoop context exit bodyFun =
 let kgTerm (context: KirGenContext) exit term =
   match term with
   | ABoolLiteral (value, _) ->
-    KBool value |> exit
+    let res = context.FreshName "b"
+    KPrim (KBoolLiteralPrim value, [], res, exit (KName res))
 
   | AIntLiteral (Some intText, _) ->
-    KInt intText |> exit
+    let res = context.FreshName "n"
+    KPrim (KIntLiteralPrim intText, [], res, exit (KName res))
 
   | AStrLiteral (segments, _) ->
-    KStr segments |> exit
+    let res = context.FreshName "s"
+    KPrim (KStrLiteralPrim segments, [], res, exit (KName res))
 
   | ANameTerm (AName (Some name, _)) ->
     KName name |> exit
@@ -152,12 +153,12 @@ let kgTerm (context: KirGenContext) exit term =
     let bodyFun next =
       body
       |> Option.map (kgTerm context next)
-      |> Option.defaultWith (fun () -> next unitNode)
+      |> Option.defaultWith (fun () -> next KNoop)
 
     let altFun next =
       alt
       |> Option.map (kgTerm context next)
-      |> Option.defaultWith (fun () -> next unitNode)
+      |> Option.defaultWith (fun () -> next KNoop)
 
     cond |> kgTerm context (fun cond ->
       KFix (
@@ -251,7 +252,7 @@ let kgStmt context exit stmt =
           KReturnLabel,
           [KArg (ByMove, KName res)]
         )),
-      exit unitNode
+      exit KNoop
     )
 
   | AFnStmt (Some (AName (Some funName, _)), args, resultOpt, Some body, _) ->
@@ -278,7 +279,7 @@ let kgStmt context exit stmt =
       body |> kgTerm context (fun res ->
         KJump (KReturnLabel, [KArg (ByMove, res)])
       ),
-      exit unitNode
+      exit KNoop
     )
 
   | ASemiStmt (stmts, _) ->
@@ -290,7 +291,7 @@ let kgStmt context exit stmt =
 let kgStmts context exit stmts =
   match stmts with
   | [] ->
-    exit unitNode
+    exit KNoop
 
   | [stmt] ->
     kgStmt context exit stmt

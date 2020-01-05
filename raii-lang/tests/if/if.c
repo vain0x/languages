@@ -9,25 +9,34 @@ int fn_print(int* s) {
 }
 
 int fn_main() {
-    int prim_eq_res = &0 == &0;
+    int n = 0;
+    int n_2 = 0;
+    int prim_eq_res = &n == &n_2;
     int res;
-    int print_res_7 = fn_print(&"0 == 0");
+    char* s_7 = "0 == 0";
+    int print_res_7 = fn_print(&s_7);
     goto if_next;
 
 if_next:;
-    int prim_eq_res_2 = &0 == &1;
+    int n_3 = 0;
+    int n_4 = 1;
+    int prim_eq_res_2 = &n_3 == &n_4;
     int res_2;
-    int print_res_5 = fn_print(&"0 == 1");
+    char* s_5 = "0 == 1";
+    int print_res_5 = fn_print(&s_5);
     goto if_next_2;
 
 if_next_2:;
+    int n_5 = 2;
     int x;
     goto x_next;
 
 x_next:;
-    int prim_eq_res_3 = &x == &1;
+    int n_6 = 1;
+    int prim_eq_res_3 = &x == &n_6;
     int res_3;
-    int print_res_2 = fn_print(&"0 == 1");
+    char* s_2 = "0 == 1";
+    int print_res_2 = fn_print(&s_2);
     goto if_next_3;
 
 if_next_3:;

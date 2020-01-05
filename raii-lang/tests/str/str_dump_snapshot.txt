@@ -9,7 +9,8 @@ fix fn string_clone(in s_2: int) -> () {
 }
 
 fix fn main() -> int {
-  let string_clone_res_2 = string_clone(in "hello")
+  let s_3 = "hello"
+  let string_clone_res_2 = string_clone(in s_3)
   fix label s_next(val s: int) -> never {
     let print_res_2 = print(in s)
     jump return(move print_res_2)
@@ -18,4 +19,4 @@ fix fn main() -> int {
   jump s_next(move string_clone_res_2)
 }
 
-0
+__noop

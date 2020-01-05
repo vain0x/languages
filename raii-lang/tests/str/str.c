@@ -9,7 +9,8 @@ int fn_string_clone(int* s_2) {
 }
 
 int fn_main() {
-    int string_clone_res_2 = fn_string_clone(&"hello");
+    char* s_3 = "hello";
+    int string_clone_res_2 = fn_string_clone(&s_3);
     int s;
     goto s_next;
 

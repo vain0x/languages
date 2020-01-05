@@ -18,11 +18,24 @@ type KFixKind =
 
 [<Struct>]
 type KPrim =
+  | KBoolLiteralPrim
+    of boolValue:bool
+
+  | KIntLiteralPrim
+    of intText:string
+
+  | KStrLiteralPrim
+    of strSegments:StrSegment list
+
   | KEqPrim
+
   | KAddPrim
+
   | KAssignPrim
+
   | KFnPrim
     of fnName:string
+
   | KExternFnPrim
     of externFnName:string
 
@@ -51,14 +64,7 @@ type KLabel =
   | KExitLabel
 
 type KNode =
-  | KBool
-    of boolValue:bool
-
-  | KInt
-    of intText:string
-
-  | KStr
-    of strSegments:StrSegment list
+  | KNoop
 
   | KName
     of name:string
@@ -97,8 +103,23 @@ let kPrimFromBin bin =
   | AAssignBin ->
     KAssignPrim
 
+let kPrimIsLiteral prim =
+  match prim with
+  | KBoolLiteralPrim _
+  | KIntLiteralPrim _
+  | KStrLiteralPrim _ ->
+    true
+
+  | _ ->
+    false
+
 let kPrimToSig prim =
   match prim with
+  | KBoolLiteralPrim _
+  | KIntLiteralPrim _
+  | KStrLiteralPrim _ ->
+    []
+
   | KEqPrim ->
     [ByIn; ByIn]
 
@@ -114,6 +135,18 @@ let kPrimToSig prim =
 
 let kPrimToString prim =
   match prim with
+  | KBoolLiteralPrim false ->
+    "false"
+
+  | KBoolLiteralPrim true ->
+    "true"
+
+  | KIntLiteralPrim intText ->
+    intText
+
+  | KStrLiteralPrim segments ->
+    [] |> strUnescape segments |> List.rev |> String.concat ""
+
   | KEqPrim ->
     "prim_eq"
 

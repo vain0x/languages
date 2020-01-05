@@ -12,66 +12,80 @@ fix fn print(in s: int) -> () {
 }
 
 fix fn main() -> int {
+  let n = 0
+  let n_2 = 0
   let prim_eq_res = prim_eq(
-    in 0
-    in 0
+    in n
+    in n_2
   )
   fix label if_next(mut res: int) -> never {
+    let n_3 = 0
+    let n_4 = 1
     let prim_eq_res_2 = prim_eq(
-      in 0
-      in 1
+      in n_3
+      in n_4
     )
     fix label if_next_2(mut res_2: int) -> never {
+      let n_5 = 2
       fix label x_next(val x: int) -> never {
+        let n_6 = 1
         let prim_eq_res_3 = prim_eq(
           in x
-          in 1
+          in n_6
         )
         fix label if_next_3(mut res_3: int) -> never {
           jump return(move res_3)
         }
 
         if prim_eq_res_3 {
-          let print_res_2 = print(in "0 == 1")
+          let s_2 = "0 == 1"
+          let print_res_2 = print(in s_2)
           jump if_next_3(move print_res_2)
         } else {
+          let n_7 = 2
           let prim_eq_res_4 = prim_eq(
             in x
-            in 2
+            in n_7
           )
           fix label if_next_4(mut res_4: int) -> never {
             jump if_next_3(move res_4)
           }
 
           if prim_eq_res_4 {
-            let print_res_3 = print(in "x == 2")
+            let s_3 = "x == 2"
+            let print_res_3 = print(in s_3)
             jump if_next_4(move print_res_3)
           } else {
-            let print_res_4 = print(in "x != 1, x != 2")
+            let s_4 = "x != 1, x != 2"
+            let print_res_4 = print(in s_4)
             jump if_next_4(move print_res_4)
           }
         }
       }
 
-      jump x_next(in 2)
+      jump x_next(in n_5)
     }
 
     if prim_eq_res_2 {
-      let print_res_5 = print(in "0 == 1")
+      let s_5 = "0 == 1"
+      let print_res_5 = print(in s_5)
       jump if_next_2(move print_res_5)
     } else {
-      let print_res_6 = print(in "0 != 1")
+      let s_6 = "0 != 1"
+      let print_res_6 = print(in s_6)
       jump if_next_2(move print_res_6)
     }
   }
 
   if prim_eq_res {
-    let print_res_7 = print(in "0 == 0")
+    let s_7 = "0 == 0"
+    let print_res_7 = print(in s_7)
     jump if_next(move print_res_7)
   } else {
-    let print_res_8 = print(in "0 != 0")
+    let s_8 = "0 != 0"
+    let print_res_8 = print(in s_8)
     jump if_next(move print_res_8)
   }
 }
 
-0
+__noop

@@ -116,6 +116,18 @@ let strSlice (start: int) (endIndex: int) (s: string): string =
   else
     s.[start..endIndex - 1]
 
+let strUnescape segments acc =
+  let acc = acc |> cons "\""
+
+  let acc =
+    segments |> List.fold (fun acc segment ->
+      match segment with
+      | StrVerbatim text ->
+        acc |> cons text
+    ) acc
+
+  acc |> cons "\""
+
 // -----------------------------------------------
 // Mode
 // -----------------------------------------------

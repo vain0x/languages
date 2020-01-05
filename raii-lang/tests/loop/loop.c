@@ -1,15 +1,15 @@
-int assert_eq(int* actual, int* expected) {
+int fn_assert_eq(int* actual, int* expected) {
     int assert_eq_res = assert_eq(&actual, &expected);
     return assert_eq_res;
 }
 
-int print(int* s) {
+int fn_print(int* s) {
     int print_res = print(&s);
     return print_res;
 }
 
-int main() {
-    int print_res_2 = print(&"before loop");
+int fn_main() {
+    int print_res_2 = fn_print(&"before loop");
     int a;
     goto a_next;
 
@@ -17,7 +17,7 @@ a_next:;
     goto do_continue;
 
 do_continue:;
-    int assert_eq_res_2 = assert_eq(&a, &a);
+    int assert_eq_res_2 = fn_assert_eq(&a, &a);
     int prim_eq_res = &a == &5;
     int res;
     goto do_break;
@@ -35,6 +35,6 @@ if_next_2:;
     goto do_continue;
 
 do_break:;
-    int print_res_3 = print(&"after loop");
+    int print_res_3 = fn_print(&"after loop");
     return print_res_3;
 }

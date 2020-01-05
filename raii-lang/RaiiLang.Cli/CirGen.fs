@@ -25,6 +25,8 @@ let cgContextDerive (context: CirGenContext) =
 
 let neverTerm = CName "__never__"
 
+let addPrefix name = sprintf "fn_%s" name
+
 let kTyToCTy ty =
   match ty with
   | KNeverTy ->
@@ -54,17 +56,17 @@ let kTyToCTy ty =
       resultTy |> kTyToCTy
     CFunTy (paramList, resultTy)
 
-let cgParam _context (KParam (mode, arg, ty)) =
+let cgParam _context (KParam (mode, name, ty)) =
   let ty = kTyToCTy ty
 
   match mode with
   | ValMode
   | MutMode ->
-    CParam (arg, ty)
+    CParam (name, ty)
 
   | InMode
   | RefMode ->
-    CParam (arg, CPtrTy ty)
+    CParam (name, CPtrTy ty)
 
 let cgArg context (KArg (passBy, arg)) =
   let arg = cgTerm context arg
@@ -105,7 +107,7 @@ let cgPrimTerm context prim args result next =
     onBin CAssignBin first second
 
   | KFnPrim fnName, _ ->
-    onCall fnName
+    onCall (addPrefix fnName)
 
   | KExternFnPrim fnName, _ ->
     onCall fnName
@@ -186,7 +188,7 @@ let cgTerm (context: CirGenContext) (node: KNode) =
     cgNode bodyContext body
     let body = bodyContext.Stmts |> Seq.toList
 
-    let fnDecl = CFnDecl (funName, paramList, resultTy, body)
+    let fnDecl = CFnDecl (addPrefix funName, paramList, resultTy, body)
     context.Decls.Add(fnDecl)
 
     cgTerm context next

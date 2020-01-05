@@ -1,6 +1,6 @@
 # My Programming Languages
 
-## Pattern Match Exhaustivity Checking ★★☆
+## Pattern Matching Exhaustivity Checking ★★☆
 
 [pattern-matching-exhaustivity-checking](https://github.com/vain0x/pattern-matching-exhaustivity-checking)
 

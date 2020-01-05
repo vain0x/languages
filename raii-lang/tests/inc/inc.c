@@ -17,12 +17,12 @@ int fn_main() {
 
 let_next:;
     int n_3 = 1;
-    int assert_eq_res_2 = fn_assert_eq(&a, &n_3);
-    int inc_res = fn_inc(&a);
+    void assert_eq_res_2 = fn_assert_eq(&a, &n_3);
+    void inc_res = fn_inc(&a);
     int n_4 = 2;
-    int assert_eq_res_3 = fn_assert_eq(&a, &n_4);
-    int inc_res_2 = fn_inc(&a);
+    void assert_eq_res_3 = fn_assert_eq(&a, &n_4);
+    void inc_res_2 = fn_inc(&a);
     int n_5 = 3;
-    int assert_eq_res_4 = fn_assert_eq(&a, &n_5);
+    void assert_eq_res_4 = fn_assert_eq(&a, &n_5);
     return assert_eq_res_4;
 }

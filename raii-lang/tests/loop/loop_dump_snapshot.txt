@@ -1,5 +1,5 @@
 fix fn assert_eq(in actual: int, in expected: int) -> () {
-  let assert_eq_res = extern_assert_eq(
+  let mut assert_eq_res: () = extern_assert_eq(
     in actual
     in expected
   )
@@ -7,44 +7,44 @@ fix fn assert_eq(in actual: int, in expected: int) -> () {
 }
 
 fix fn print(in s: string) -> () {
-  let print_res = extern_print(in s)
+  let mut print_res: () = extern_print(in s)
   jump return(move print_res)
 }
 
 fix fn main() -> () {
-  let s_2 = "before loop"
-  let print_res_2 = print(in s_2)
-  let n = 0
+  let mut s_2: string = "before loop"
+  let mut print_res_2: infer = print(in s_2)
+  let mut n: int = 0
   fix label let_next(mut a: infer) -> never {
     fix label do_break() -> never {
-      let s_3 = "after loop"
-      let print_res_3 = print(in s_3)
+      let mut s_3: string = "after loop"
+      let mut print_res_3: infer = print(in s_3)
       jump return(move print_res_3)
     }
 
     fix label do_continue() -> never {
-      let assert_eq_res_2 = assert_eq(
+      let mut assert_eq_res_2: infer = assert_eq(
         in a
         in a
       )
-      let n_2 = 5
-      let prim_eq_res = prim_eq(
+      let mut n_2: int = 5
+      let mut prim_eq_res: bool = prim_eq(
         in a
         in n_2
       )
       fix label if_next(mut res: int) -> never {
-        let n_3 = 2
-        let prim_eq_res_2 = prim_eq(
+        let mut n_3: int = 2
+        let mut prim_eq_res_2: bool = prim_eq(
           in a
           in n_3
         )
         fix label if_next_2(mut res_2: int) -> never {
-          let n_4 = 1
-          let prim_add_res = prim_add(
+          let mut n_4: int = 1
+          let mut prim_add_res: int = prim_add(
             move a
             move n_4
           )
-          let prim_assign_res = prim_assign(
+          let mut prim_assign_res: () = prim_assign(
             ref a
             move prim_add_res
           )
@@ -52,12 +52,12 @@ fix fn main() -> () {
         }
 
         if prim_eq_res_2 {
-          let n_5 = 2
-          let prim_add_res_2 = prim_add(
+          let mut n_5: int = 2
+          let mut prim_add_res_2: int = prim_add(
             move a
             move n_5
           )
-          let prim_assign_res_2 = prim_assign(
+          let mut prim_assign_res_2: () = prim_assign(
             ref a
             move prim_add_res_2
           )

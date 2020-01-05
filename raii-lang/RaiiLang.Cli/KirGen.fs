@@ -121,16 +121,31 @@ let kgLoop context exit bodyFun =
 let kgTerm (context: KirGenContext) exit term =
   match term with
   | ABoolLiteral (value, _) ->
-    let res = context.FreshName "b"
-    KPrim (KBoolLiteralPrim value, [], res, exit (KName res))
+    let result = context.FreshName "b"
+    KPrim (
+      KBoolLiteralPrim value,
+      [],
+      KParam (MutMode, result, KBoolTy),
+      exit (KName result)
+    )
 
   | AIntLiteral (Some intText, _) ->
-    let res = context.FreshName "n"
-    KPrim (KIntLiteralPrim intText, [], res, exit (KName res))
+    let result = context.FreshName "n"
+    KPrim (
+      KIntLiteralPrim intText,
+      [],
+      KParam (MutMode, result, KIntTy),
+      exit (KName result)
+    )
 
   | AStrLiteral (segments, _) ->
-    let res = context.FreshName "s"
-    KPrim (KStrLiteralPrim segments, [], res, exit (KName res))
+    let result = context.FreshName "s"
+    KPrim (
+      KStrLiteralPrim segments,
+      [],
+      KParam (MutMode, result, KStrTy),
+      exit (KName result)
+    )
 
   | ANameTerm (AName (Some name, _)) ->
     KName name |> exit
@@ -161,24 +176,29 @@ let kgTerm (context: KirGenContext) exit term =
     kgLoop context exit (fun _ _ k -> body |> kgTerm context k)
 
   | ACallTerm (Some (ANameTerm (AName (Some funName, _))), args, _) ->
-    let res = context.FreshName (sprintf "%s_res" funName)
+    let result = context.FreshName (sprintf "%s_res" funName)
 
     args |> kgArgList context (fun args ->
-      KPrim (KFnPrim funName, args, res, exit (KName res))
-    )
+      KPrim (
+        KFnPrim funName,
+        args,
+        KParam (MutMode, result, KInferTy),
+        exit (KName result)
+      ))
 
   | ABinTerm (Some bin, Some first, Some second, _) ->
     let prim = kPrimFromBin bin
     let name = prim |> kPrimToString
-    let res = context.FreshName (sprintf "%s_res" name)
+    let resultName = context.FreshName (sprintf "%s_res" name)
+
+    let paramList, resultTy = kPrimToSig prim
 
     first |> kgTerm context (fun first ->
       second |> kgTerm context (fun second ->
-        let args =
-          List.zip (kPrimToSig prim) [first; second]
-          |> List.map KArg
+        let args = List.zip paramList [first; second] |> List.map KArg
+        let result = KParam (MutMode, resultName, resultTy)
 
-        KPrim (prim, args, res, exit (KName res))
+        KPrim (prim, args, result, exit (KName resultName))
       ))
 
   | AIfTerm (Some cond, body, alt, _) ->
@@ -253,36 +273,43 @@ let kgStmt context exit stmt =
     ))
 
   | AExternFnStmt (Some (AName (Some funName, _)), paramList, resultOpt, _) ->
+    // 外部関数を呼び出すラッパー関数を定義する。
+
     // extern fn f(params)
     // ==> fix_fn f(params) { let res = extern_fn"f"(params); jump return(res) }
 
-    let res = context.FreshName (sprintf "%s_res" funName)
+    let resultName = context.FreshName (sprintf "%s_res" funName)
 
     let paramList = paramList |> List.map (kgParam context)
 
-    let result =
+    let fnResult =
       resultOpt
       |> Option.map (kgResult context)
       |> Option.defaultValue KUnitTy
       |> KResult
 
-    let args =
+    let primArgs =
       paramList |> List.map (fun (KParam (mode, name, _)) ->
         KArg (mode |> modeToPassBy, KName name)
       )
+
+    let primResult =
+      match fnResult with
+      | KResult resultTy ->
+        KParam (MutMode, resultName, resultTy)
 
     KFix (
       funName,
       KFnFix,
       paramList,
-      result,
+      fnResult,
       KPrim (
         KExternFnPrim funName,
-        args,
-        res,
+        primArgs,
+        primResult,
         KJump (
           KReturnLabel,
-          [KArg (ByMove, KName res)]
+          [KArg (ByMove, KName resultName)]
         )),
       exit KNoop
     )
@@ -291,7 +318,7 @@ let kgStmt context exit stmt =
     // 関数を fix で定義して、後続の計算を行う。
 
     // fn f(params) { return body }; exit
-    // => fix fn f(params) { return body }; exit
+    // ==> fix fn f(params) { jump return(body) }; exit
 
     let paramList = paramList |> List.map (kgParam context)
 
@@ -306,8 +333,8 @@ let kgStmt context exit stmt =
       KFnFix,
       paramList,
       result,
-      body |> kgTerm context (fun res ->
-        KJump (KReturnLabel, [KArg (ByMove, res)])
+      body |> kgTerm context (fun body ->
+        KJump (KReturnLabel, [KArg (ByMove, body)])
       ),
       exit KNoop
     )

@@ -1,18 +1,18 @@
 fix fn print(in s: string) -> () {
-  let print_res = extern_print(in s)
+  let mut print_res: () = extern_print(in s)
   jump return(move print_res)
 }
 
 fix fn string_clone(in s_2: string) -> string {
-  let string_clone_res = extern_string_clone(in s_2)
+  let mut string_clone_res: string = extern_string_clone(in s_2)
   jump return(move string_clone_res)
 }
 
 fix fn main() -> () {
-  let s_4 = "hello"
-  let string_clone_res_2 = string_clone(in s_4)
+  let mut s_4: string = "hello"
+  let mut string_clone_res_2: infer = string_clone(in s_4)
   fix label let_next(val s_3: infer) -> never {
-    let print_res_2 = print(in s)
+    let mut print_res_2: infer = print(in s)
     jump return(move print_res_2)
   }
 

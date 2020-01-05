@@ -1,5 +1,5 @@
 fix fn assert_eq(in actual: int, in expected: int) -> () {
-  let assert_eq_res = extern_assert_eq(
+  let mut assert_eq_res: () = extern_assert_eq(
     in actual
     in expected
   )
@@ -7,13 +7,13 @@ fix fn assert_eq(in actual: int, in expected: int) -> () {
 }
 
 fix fn main() -> () {
-  let b = true
+  let mut b: bool = true
   fix label let_next(mut ok: infer) -> never {
-    let n = 0
+    let mut n: int = 0
     fix label let_next_2(mut a: infer) -> never {
       fix label do_break() -> never {
-        let n_2 = 5
-        let assert_eq_res_2 = assert_eq(
+        let mut n_2: int = 5
+        let mut assert_eq_res_2: infer = assert_eq(
           in a
           in n_2
         )
@@ -22,21 +22,21 @@ fix fn main() -> () {
 
       fix label do_continue() -> never {
         if ok {
-          let assert_eq_res_3 = assert_eq(
+          let mut assert_eq_res_3: infer = assert_eq(
             in a
             in a
           )
-          let n_3 = 1
-          let prim_add_res = prim_add(
+          let mut n_3: int = 1
+          let mut prim_add_res: int = prim_add(
             move a
             move n_3
           )
-          let prim_assign_res = prim_assign(
+          let mut prim_assign_res: () = prim_assign(
             ref a
             move prim_add_res
           )
-          let n_4 = 5
-          let prim_eq_res = prim_eq(
+          let mut n_4: int = 5
+          let mut prim_eq_res: bool = prim_eq(
             in a
             in n_4
           )
@@ -45,8 +45,8 @@ fix fn main() -> () {
           }
 
           if prim_eq_res {
-            let b_2 = false
-            let prim_assign_res_2 = prim_assign(
+            let mut b_2: bool = false
+            let mut prim_assign_res_2: () = prim_assign(
               ref ok
               move b_2
             )

@@ -17,7 +17,7 @@ let_next_2:;
     goto do_continue;
 
 do_continue:;
-    int assert_eq_res_3 = fn_assert_eq(&a, &a);
+    void assert_eq_res_3 = fn_assert_eq(&a, &a);
     int n_3 = 1;
     int prim_add_res = a + n_3;
     int prim_assign_res = &a = prim_add_res;
@@ -33,6 +33,6 @@ if_next:;
 
 do_break:;
     int n_2 = 5;
-    int assert_eq_res_2 = fn_assert_eq(&a, &n_2);
+    void assert_eq_res_2 = fn_assert_eq(&a, &n_2);
     return assert_eq_res_2;
 }

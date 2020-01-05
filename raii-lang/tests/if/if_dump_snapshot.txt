@@ -1,5 +1,5 @@
 fix fn assert_eq(in actual: int, in expected: int) -> () {
-  let assert_eq_res = extern_assert_eq(
+  let mut assert_eq_res: () = extern_assert_eq(
     in actual
     in expected
   )
@@ -7,29 +7,29 @@ fix fn assert_eq(in actual: int, in expected: int) -> () {
 }
 
 fix fn print(in s: string) -> () {
-  let print_res = extern_print(in s)
+  let mut print_res: () = extern_print(in s)
   jump return(move print_res)
 }
 
 fix fn main() -> () {
-  let n = 0
-  let n_2 = 0
-  let prim_eq_res = prim_eq(
+  let mut n: int = 0
+  let mut n_2: int = 0
+  let mut prim_eq_res: bool = prim_eq(
     in n
     in n_2
   )
   fix label if_next(mut res: int) -> never {
-    let n_3 = 0
-    let n_4 = 1
-    let prim_eq_res_2 = prim_eq(
+    let mut n_3: int = 0
+    let mut n_4: int = 1
+    let mut prim_eq_res_2: bool = prim_eq(
       in n_3
       in n_4
     )
     fix label if_next_2(mut res_2: int) -> never {
-      let n_5 = 2
+      let mut n_5: int = 2
       fix label let_next(val x: infer) -> never {
-        let n_6 = 1
-        let prim_eq_res_3 = prim_eq(
+        let mut n_6: int = 1
+        let mut prim_eq_res_3: bool = prim_eq(
           in x
           in n_6
         )
@@ -38,12 +38,12 @@ fix fn main() -> () {
         }
 
         if prim_eq_res_3 {
-          let s_2 = "0 == 1"
-          let print_res_2 = print(in s_2)
+          let mut s_2: string = "0 == 1"
+          let mut print_res_2: infer = print(in s_2)
           jump if_next_3(move print_res_2)
         } else {
-          let n_7 = 2
-          let prim_eq_res_4 = prim_eq(
+          let mut n_7: int = 2
+          let mut prim_eq_res_4: bool = prim_eq(
             in x
             in n_7
           )
@@ -52,12 +52,12 @@ fix fn main() -> () {
           }
 
           if prim_eq_res_4 {
-            let s_3 = "x == 2"
-            let print_res_3 = print(in s_3)
+            let mut s_3: string = "x == 2"
+            let mut print_res_3: infer = print(in s_3)
             jump if_next_4(move print_res_3)
           } else {
-            let s_4 = "x != 1, x != 2"
-            let print_res_4 = print(in s_4)
+            let mut s_4: string = "x != 1, x != 2"
+            let mut print_res_4: infer = print(in s_4)
             jump if_next_4(move print_res_4)
           }
         }
@@ -67,23 +67,23 @@ fix fn main() -> () {
     }
 
     if prim_eq_res_2 {
-      let s_5 = "0 == 1"
-      let print_res_5 = print(in s_5)
+      let mut s_5: string = "0 == 1"
+      let mut print_res_5: infer = print(in s_5)
       jump if_next_2(move print_res_5)
     } else {
-      let s_6 = "0 != 1"
-      let print_res_6 = print(in s_6)
+      let mut s_6: string = "0 != 1"
+      let mut print_res_6: infer = print(in s_6)
       jump if_next_2(move print_res_6)
     }
   }
 
   if prim_eq_res {
-    let s_7 = "0 == 0"
-    let print_res_7 = print(in s_7)
+    let mut s_7: string = "0 == 0"
+    let mut print_res_7: infer = print(in s_7)
     jump if_next(move print_res_7)
   } else {
-    let s_8 = "0 != 0"
-    let print_res_8 = print(in s_8)
+    let mut s_8: string = "0 != 0"
+    let mut print_res_8: infer = print(in s_8)
     jump if_next(move print_res_8)
   }
 }

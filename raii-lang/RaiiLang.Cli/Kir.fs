@@ -75,7 +75,7 @@ type KNode =
   | KPrim
     of prim:KPrim
       * args:KArg list
-      * result:string
+      * result:KParam
       * next:KNode
 
   | KJump
@@ -118,19 +118,23 @@ let kPrimIsLiteral prim =
 
 let kPrimToSig prim =
   match prim with
-  | KBoolLiteralPrim _
-  | KIntLiteralPrim _
+  | KBoolLiteralPrim _ ->
+    [], KBoolTy
+
+  | KIntLiteralPrim _ ->
+    [], KIntTy
+
   | KStrLiteralPrim _ ->
-    []
+    [], KStrTy
 
   | KEqPrim ->
-    [ByIn; ByIn]
+    [ByIn; ByIn], KBoolTy
 
   | KAddPrim ->
-    [ByMove; ByMove]
+    [ByMove; ByMove], KIntTy
 
   | KAssignPrim ->
-    [ByRef; ByMove]
+    [ByRef; ByMove], KUnitTy
 
   | KFnPrim _
   | KExternFnPrim _ ->

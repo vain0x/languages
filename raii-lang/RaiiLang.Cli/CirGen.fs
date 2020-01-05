@@ -82,40 +82,45 @@ let cgArg context (KArg (passBy, arg)) =
     CUni (CRefUni, arg)
 
 let cgPrimTerm context prim args result next =
-  let onLiteral body ty =
-    let local = CLocalStmt (result, ty, Some body)
+  let resultName, resultTy =
+    match cgParam context result with
+    | CParam (name, ty) ->
+      name, ty
+
+  let onLiteral body =
+    let local = CLocalStmt (resultName, resultTy, Some body)
     context.Stmts.Add(local)
     cgNode context next
-    CName result
+    CName resultName
 
   let onBin bin first second =
     let first = first |> cgArg context
     let second = second |> cgArg context
     let body = CBin (bin, first, second)
-    let local = CLocalStmt (result, CIntTy, Some body)
+    let local = CLocalStmt (resultName, resultTy, Some body)
     context.Stmts.Add(local)
     cgNode context next
-    CName result
+    CName resultName
 
   let onCall fnName =
     let args = args |> List.map (cgArg context)
-    let local = CLocalStmt (result, CIntTy, Some (CCall (CName fnName, args)))
+    let local = CLocalStmt (resultName, resultTy, Some (CCall (CName fnName, args)))
     context.Stmts.Add(local)
     cgNode context next
-    CName result
+    CName resultName
 
   match prim, args with
   | KBoolLiteralPrim false, [] ->
-    onLiteral (CInt "0") CIntTy
+    onLiteral (CInt "0")
 
   | KBoolLiteralPrim true, [] ->
-    onLiteral (CInt "1") CIntTy
+    onLiteral (CInt "1")
 
   | KIntLiteralPrim intText, [] ->
-    onLiteral (CInt intText) CIntTy
+    onLiteral (CInt intText)
 
   | KStrLiteralPrim segments, [] ->
-    onLiteral (CStr segments) (CPtrTy CCharTy)
+    onLiteral (CStr segments)
 
   | KEqPrim, [first; second] ->
     onBin CEqBin first second

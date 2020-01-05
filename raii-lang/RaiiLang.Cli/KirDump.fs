@@ -101,11 +101,11 @@ let kdNode node indent acc =
   | KName name ->
     acc |> cons name
 
-  | KPrim (prim, args, res, next) ->
+  | KPrim (prim, args, result, next) ->
     let acc =
       acc
       |> cons "let "
-      |> cons res
+      |> kdParam result indent
       |> cons " = "
       |> cons (kPrimToString prim)
 

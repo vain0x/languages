@@ -164,7 +164,7 @@ let lowerResult (node: NodeData) =
 
   let ty =
     node
-    |> nodeToFirstNode ((=) NameNode)
+    |> nodeToFirstNode ((=) TyNode)
     |> Option.map lowerTy
 
   AResult (ty, node)

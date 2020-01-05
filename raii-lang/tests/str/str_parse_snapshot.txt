@@ -53,12 +53,17 @@ N(SemiNode) [
       ]
       T(RightParenToken) `)`
       T(SpaceToken) ` `
+      T(SlimArrowToken) `->`
+      T(SpaceToken) ` `
+      N(ResultNode) [
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `string`
+          ]
+        ]
+      ]
+      T(SemiToken) `;`
     ]
-    E(ExpectedError "文")
-    T(SlimArrowToken) `->`
-    T(SpaceToken) ` `
-    T(IdentToken) `string`
-    T(SemiToken) `;`
     N(FnNode) [
       T(EolToken) `
 `

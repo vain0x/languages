@@ -377,6 +377,10 @@ let parseStmt (p: P) =
 
     p.Eat(ExternToken) |> is true
     parseFnHead p
+
+    if p.Eat(SlimArrowToken) then
+      parseResult p
+
     p.Eat(SemiToken) |> ignore
 
     p.EndNode(ExternFnNode)

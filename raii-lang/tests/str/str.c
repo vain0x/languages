@@ -3,7 +3,7 @@ int fn_print(char** s) {
     return print_res;
 }
 
-int fn_string_clone(char** s_2) {
+char* fn_string_clone(char** s_2) {
     int string_clone_res = string_clone(&s_2);
     return string_clone_res;
 }

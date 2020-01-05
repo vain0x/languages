@@ -3,7 +3,7 @@ fix fn print(in s: string) -> () {
   jump return(move print_res)
 }
 
-fix fn string_clone(in s_2: string) -> () {
+fix fn string_clone(in s_2: string) -> string {
   let string_clone_res = extern_string_clone(in s_2)
   jump return(move string_clone_res)
 }

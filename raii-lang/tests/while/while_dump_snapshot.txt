@@ -6,11 +6,11 @@ fix fn assert_eq(in actual: int, in expected: int) -> () {
   jump return(move assert_eq_res)
 }
 
-fix fn main() -> int {
+fix fn main() -> () {
   let b = true
-  fix label ok_next(mut ok: int) -> never {
+  fix label let_next(mut ok: infer) -> never {
     let n = 0
-    fix label a_next(mut a: int) -> never {
+    fix label let_next_2(mut a: infer) -> never {
       fix label do_break() -> never {
         let n_2 = 5
         let assert_eq_res_2 = assert_eq(
@@ -62,10 +62,10 @@ fix fn main() -> int {
       jump do_continue()
     }
 
-    jump a_next(in n)
+    jump let_next_2(in n)
   }
 
-  jump ok_next(in b)
+  jump let_next(in b)
 }
 
 __noop

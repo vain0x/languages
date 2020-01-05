@@ -6,7 +6,7 @@ fix fn assert_eq(in actual: int, in expected: int) -> () {
   jump return(move assert_eq_res)
 }
 
-fix fn inc(ref x: int) -> int {
+fix fn inc(ref x: int) -> () {
   let n = 1
   let prim_add_res = prim_add(
     move x
@@ -19,9 +19,9 @@ fix fn inc(ref x: int) -> int {
   jump return(move prim_assign_res)
 }
 
-fix fn main() -> int {
+fix fn main() -> () {
   let n_2 = 1
-  fix label a_next(mut a: int) -> never {
+  fix label let_next(mut a: infer) -> never {
     let n_3 = 1
     let assert_eq_res_2 = assert_eq(
       in a
@@ -42,7 +42,7 @@ fix fn main() -> int {
     jump return(move assert_eq_res_4)
   }
 
-  jump a_next(in n_2)
+  jump let_next(in n_2)
 }
 
 __noop

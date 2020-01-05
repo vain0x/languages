@@ -3,7 +3,7 @@ int fn_assert_eq(int* actual, int* expected) {
     return assert_eq_res;
 }
 
-int fn_print(int* s) {
+int fn_print(char** s) {
     int print_res = print(&s);
     return print_res;
 }
@@ -12,10 +12,10 @@ int fn_main() {
     char* s_2 = "before loop";
     int print_res_2 = fn_print(&s_2);
     int n = 0;
-    int a;
-    goto a_next;
+    void a;
+    goto let_next;
 
-a_next:;
+let_next:;
     goto do_continue;
 
 do_continue:;

@@ -5,15 +5,15 @@ int fn_assert_eq(int* actual, int* expected) {
 
 int fn_main() {
     int b = 1;
-    int ok;
-    goto ok_next;
+    void ok;
+    goto let_next;
 
-ok_next:;
+let_next:;
     int n = 0;
-    int a;
-    goto a_next;
+    void a;
+    goto let_next_2;
 
-a_next:;
+let_next_2:;
     goto do_continue;
 
 do_continue:;

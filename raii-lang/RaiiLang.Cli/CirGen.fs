@@ -29,6 +29,8 @@ let addPrefix name = sprintf "fn_%s" name
 
 let kTyToCTy ty =
   match ty with
+  | KNameTy _
+  | KInferTy
   | KNeverTy ->
     CVoidTy
 

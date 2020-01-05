@@ -414,7 +414,12 @@ let lowerStmt (node: NodeData) =
       |> nodeToFilterNode ((=) ParamNode)
       |> List.map lowerParam
 
-    AExternFnStmt (name, args, node)
+    let result =
+      node
+      |> nodeToFirstNode ((=) ResultNode)
+      |> Option.map lowerResult
+
+    AExternFnStmt (name, args, result, node)
 
   | FnNode ->
     let name =

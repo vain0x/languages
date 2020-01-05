@@ -12,10 +12,10 @@ int fn_inc(int* x) {
 
 int fn_main() {
     int n_2 = 1;
-    int a;
-    goto a_next;
+    void a;
+    goto let_next;
 
-a_next:;
+let_next:;
     int n_3 = 1;
     int assert_eq_res_2 = fn_assert_eq(&a, &n_3);
     int inc_res = fn_inc(&a);

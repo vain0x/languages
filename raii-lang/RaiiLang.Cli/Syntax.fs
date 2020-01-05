@@ -203,7 +203,7 @@ type AStmt =
     of AParam option * AArg option * NodeData
 
   | AExternFnStmt
-    of AName option * AParam list * NodeData
+    of AName option * AParam list * AResult option * NodeData
 
   | AFnStmt
     of AName option * AParam list * AResult option * ATerm option * NodeData

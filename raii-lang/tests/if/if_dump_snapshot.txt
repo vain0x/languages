@@ -6,12 +6,12 @@ fix fn assert_eq(in actual: int, in expected: int) -> () {
   jump return(move assert_eq_res)
 }
 
-fix fn print(in s: int) -> () {
+fix fn print(in s: string) -> () {
   let print_res = extern_print(in s)
   jump return(move print_res)
 }
 
-fix fn main() -> int {
+fix fn main() -> () {
   let n = 0
   let n_2 = 0
   let prim_eq_res = prim_eq(
@@ -27,7 +27,7 @@ fix fn main() -> int {
     )
     fix label if_next_2(mut res_2: int) -> never {
       let n_5 = 2
-      fix label x_next(val x: int) -> never {
+      fix label let_next(val x: infer) -> never {
         let n_6 = 1
         let prim_eq_res_3 = prim_eq(
           in x
@@ -63,7 +63,7 @@ fix fn main() -> int {
         }
       }
 
-      jump x_next(in n_5)
+      jump let_next(in n_5)
     }
 
     if prim_eq_res_2 {

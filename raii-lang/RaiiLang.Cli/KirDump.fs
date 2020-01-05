@@ -5,6 +5,12 @@ open RaiiLang.Kir
 
 let kdTy ty indent acc =
   match ty with
+  | KNameTy name ->
+    acc |> cons "ty\"" |> cons name |> cons "\""
+
+  | KInferTy ->
+    acc |> cons "infer"
+
   | KNeverTy ->
     acc |> cons "never"
 

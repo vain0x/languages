@@ -6,16 +6,16 @@ fix fn assert_eq(in actual: int, in expected: int) -> () {
   jump return(move assert_eq_res)
 }
 
-fix fn print(in s: int) -> () {
+fix fn print(in s: string) -> () {
   let print_res = extern_print(in s)
   jump return(move print_res)
 }
 
-fix fn main() -> int {
+fix fn main() -> () {
   let s_2 = "before loop"
   let print_res_2 = print(in s_2)
   let n = 0
-  fix label a_next(mut a: int) -> never {
+  fix label let_next(mut a: infer) -> never {
     fix label do_break() -> never {
       let s_3 = "after loop"
       let print_res_3 = print(in s_3)
@@ -77,7 +77,7 @@ fix fn main() -> int {
     jump do_continue()
   }
 
-  jump a_next(in n)
+  jump let_next(in n)
 }
 
 __noop

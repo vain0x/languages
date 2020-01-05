@@ -3,7 +3,7 @@ int fn_assert_eq(int* actual, int* expected) {
     return assert_eq_res;
 }
 
-int fn_print(int* s) {
+int fn_print(char** s) {
     int print_res = print(&s);
     return print_res;
 }
@@ -28,10 +28,10 @@ if_next:;
 
 if_next_2:;
     int n_5 = 2;
-    int x;
-    goto x_next;
+    void x;
+    goto let_next;
 
-x_next:;
+let_next:;
     int n_6 = 1;
     int prim_eq_res_3 = &x == &n_6;
     int res_3;

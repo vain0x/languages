@@ -1,22 +1,22 @@
-fix fn print(in s: int) -> () {
+fix fn print(in s: string) -> () {
   let print_res = extern_print(in s)
   jump return(move print_res)
 }
 
-fix fn string_clone(in s_2: int) -> () {
+fix fn string_clone(in s_2: string) -> () {
   let string_clone_res = extern_string_clone(in s_2)
   jump return(move string_clone_res)
 }
 
-fix fn main() -> int {
-  let s_3 = "hello"
-  let string_clone_res_2 = string_clone(in s_3)
-  fix label s_next(val s: int) -> never {
+fix fn main() -> () {
+  let s_4 = "hello"
+  let string_clone_res_2 = string_clone(in s_4)
+  fix label let_next(val s_3: infer) -> never {
     let print_res_2 = print(in s)
     jump return(move print_res_2)
   }
 
-  jump s_next(move string_clone_res_2)
+  jump let_next(move string_clone_res_2)
 }
 
 __noop

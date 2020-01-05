@@ -12,22 +12,15 @@ fix fn print(in s) {
 }
 
 fix fn main() {
-  let print_res_2 = print(
-    move print_ret
-    in "before loop"
-  )
+  let print_res_2 = print(in "before loop")
   fix label a_next(mut a) {
-    fix label break() {
-      let print_res_3 = print(
-        move print_ret_2
-        in "after loop"
-      )
+    fix label do_break() {
+      let print_res_3 = print(in "after loop")
       jump return(move print_res_3)
     }
 
-    fix label continue() {
+    fix label do_continue() {
       let assert_eq_res_2 = assert_eq(
-        move assert_eq_ret
         in a
         in a
       )
@@ -49,7 +42,7 @@ fix fn main() {
             ref a
             move prim_add_res
           )
-          jump continue()
+          jump do_continue()
         }
 
         if prim_eq_res_2 {
@@ -61,20 +54,20 @@ fix fn main() {
             ref a
             move prim_add_res_2
           )
-          jump continue()
+          jump do_continue()
         } else {
           jump if_next_2(move 0)
         }
       }
 
       if prim_eq_res {
-        jump break()
+        jump do_break()
       } else {
         jump if_next(move 0)
       }
     }
 
-    jump continue()
+    jump do_continue()
   }
 
   jump a_next(in 0)

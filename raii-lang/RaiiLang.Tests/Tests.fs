@@ -2,6 +2,9 @@ module Tests
 
 open System
 open System.IO
+open RaiiLang.Cir
+open RaiiLang.CirDump
+open RaiiLang.CirGen
 open RaiiLang.KirDump
 open RaiiLang.KirGen
 open RaiiLang.SyntaxLower
@@ -27,9 +30,9 @@ let snapshotTest (name: string) =
     false
   else
 
-  let writeLog title ext x =
+  let writeLog suffix x =
     let fileName =
-      sprintf "%s/%s/%s_%s_snapshot%s" testsDir name name title ext
+      sprintf "%s/%s/%s%s" testsDir name name suffix
     let content =
       match box x with
       | :? string as x ->
@@ -38,18 +41,20 @@ let snapshotTest (name: string) =
         sprintf "%A" x
     File.WriteAllText(fileName, content.TrimEnd() + "\n")
 
-  let tee title ext f x =
-    writeLog title ext (f x)
+  let tee suffix f x =
+    writeLog suffix (f x)
     x
 
   let sourceCode = File.ReadAllText(sourceName)
 
   sourceCode
   |> parse
-  |> tee "parse" ".txt" nodeToSnapshot
+  |> tee "_parse_snapshot.txt" nodeToSnapshot
   |> lower
   |> kirGen
-  |> tee "dump" ".txt" kirDump
+  |> tee "_dump_snapshot.txt" kirDump
+  |> cirGen
+  |> tee ".c" cirDump
   |> ignore
 
   true

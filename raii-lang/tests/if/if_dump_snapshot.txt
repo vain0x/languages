@@ -32,10 +32,7 @@ fix fn main() {
         }
 
         if prim_eq_res_3 {
-          let print_res_2 = print(
-            move print_ret
-            in "0 == 1"
-          )
+          let print_res_2 = print(in "0 == 1")
           jump if_next_3(move print_res_2)
         } else {
           let prim_eq_res_4 = prim_eq(
@@ -47,16 +44,10 @@ fix fn main() {
           }
 
           if prim_eq_res_4 {
-            let print_res_3 = print(
-              move print_ret_2
-              in "x == 2"
-            )
+            let print_res_3 = print(in "x == 2")
             jump if_next_4(move print_res_3)
           } else {
-            let print_res_4 = print(
-              move print_ret_3
-              in "x != 1, x != 2"
-            )
+            let print_res_4 = print(in "x != 1, x != 2")
             jump if_next_4(move print_res_4)
           }
         }
@@ -66,31 +57,19 @@ fix fn main() {
     }
 
     if prim_eq_res_2 {
-      let print_res_5 = print(
-        move print_ret_4
-        in "0 == 1"
-      )
+      let print_res_5 = print(in "0 == 1")
       jump if_next_2(move print_res_5)
     } else {
-      let print_res_6 = print(
-        move print_ret_5
-        in "0 != 1"
-      )
+      let print_res_6 = print(in "0 != 1")
       jump if_next_2(move print_res_6)
     }
   }
 
   if prim_eq_res {
-    let print_res_7 = print(
-      move print_ret_6
-      in "0 == 0"
-    )
+    let print_res_7 = print(in "0 == 0")
     jump if_next(move print_res_7)
   } else {
-    let print_res_8 = print(
-      move print_ret_7
-      in "0 != 0"
-    )
+    let print_res_8 = print(in "0 != 0")
     jump if_next(move print_res_8)
   }
 }

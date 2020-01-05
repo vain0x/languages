@@ -4,7 +4,10 @@ open RaiiLang.Helpers
 open RaiiLang.Syntax
 
 type KTy =
+  | KNeverTy
+  | KBoolTy
   | KIntTy
+  | KStrTy
   | KFunTy
     of (Mode * KTy) list
 

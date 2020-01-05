@@ -15,8 +15,14 @@ let kiContextNew (): KirInferContext =
 
 let kiNode (context: KirInferContext) node =
   match node with
+  | KBool _ ->
+    KBoolTy
+
   | KInt _ ->
     KIntTy
+
+  | KStr _ ->
+    KStrTy
 
   | KName name ->
     match context.TyMap.TryGetValue(name) with
@@ -29,7 +35,7 @@ let kiNode (context: KirInferContext) node =
   | KPrim (_, _, _, next) ->
     next |> kiNode context
 
-  | KApp (cal, args) ->
+  | KJump (KLabel label, args) ->
     let argTys =
       args |> List.map (fun (KArg (callBy, arg)) ->
         let ty = arg |> kiNode context
@@ -39,11 +45,11 @@ let kiNode (context: KirInferContext) node =
     let funTy =
       KFunTy argTys
 
-    context.TyMap.[cal] <- funTy
+    context.TyMap.[label] <- funTy
 
-    KIntTy
+    KNeverTy
 
-  | KFix (_, _, body, next) ->
+  | KFix (_, _, _, body, next) ->
     body |> kiNode context |> ignore
     next |> kiNode context
 

@@ -9,15 +9,9 @@ fix fn string_clone(in s_2) {
 }
 
 fix fn main() {
-  let string_clone_res_2 = string_clone(
-    move string_clone_ret
-    in "hello"
-  )
+  let string_clone_res_2 = string_clone(in "hello")
   fix label s_next(val s) {
-    let print_res_2 = print(
-      move print_ret
-      in s
-    )
+    let print_res_2 = print(in s)
     jump return(move print_res_2)
   }
 

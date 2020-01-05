@@ -9,19 +9,17 @@ fix fn assert_eq(in actual, in expected) {
 fix fn main() {
   fix label ok_next(mut ok) {
     fix label a_next(mut a) {
-      fix label break() {
+      fix label do_break() {
         let assert_eq_res_2 = assert_eq(
-          move assert_eq_ret
           in a
           in 5
         )
         jump return(move assert_eq_res_2)
       }
 
-      fix label continue() {
+      fix label do_continue() {
         if ok {
           let assert_eq_res_3 = assert_eq(
-            move assert_eq_ret_2
             in a
             in a
           )
@@ -38,7 +36,7 @@ fix fn main() {
             in 5
           )
           fix label if_next(mut res) {
-            jump continue()
+            jump do_continue()
           }
 
           if prim_eq_res {
@@ -51,11 +49,11 @@ fix fn main() {
             jump if_next(move 0)
           }
         } else {
-          jump break()
+          jump do_break()
         }
       }
 
-      jump continue()
+      jump do_continue()
     }
 
     jump a_next(in 0)

@@ -21,25 +21,16 @@ fix fn inc(ref x) {
 fix fn main() {
   fix label a_next(mut a) {
     let assert_eq_res_2 = assert_eq(
-      move assert_eq_ret
       in a
       in 1
     )
-    let inc_res = inc(
-      move inc_ret
-      ref a
-    )
+    let inc_res = inc(ref a)
     let assert_eq_res_3 = assert_eq(
-      move assert_eq_ret_2
       in a
       in 2
     )
-    let inc_res_2 = inc(
-      move inc_ret_2
-      ref a
-    )
+    let inc_res_2 = inc(ref a)
     let assert_eq_res_4 = assert_eq(
-      move assert_eq_ret_3
       in a
       in 3
     )

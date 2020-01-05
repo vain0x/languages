@@ -32,8 +32,8 @@ let kgLoop context exit bodyFun =
   //     fix continue() { let _ = body; jump continue() }
   //     jump continue()
 
-  let breakLabel = context.FreshName "break"
-  let continueLabel = context.FreshName "continue"
+  let breakLabel = context.FreshName "do_break"
+  let continueLabel = context.FreshName "do_continue"
 
   let breakNode = KJump (KLabel breakLabel, [])
   let continueNode = KJump (KLabel continueLabel, [])
@@ -103,11 +103,7 @@ let kgTerm (context: KirGenContext) exit term =
     kgLoop context exit (fun _ _ k -> body |> kgTerm context k)
 
   | ACallTerm (Some (ANameTerm (AName (Some funName, _))), args, _) ->
-    // 関数から戻ってきた後の計算を中間関数 ret と定める。
-    // ret を追加の引数として渡して、関数にジャンプする。
-
     let res = context.FreshName (sprintf "%s_res" funName)
-    let ret = context.FreshName (sprintf "%s_ret" funName)
 
     let rec go exit args =
       match args with
@@ -124,7 +120,6 @@ let kgTerm (context: KirGenContext) exit term =
         go exit args
 
     args |> go (fun args ->
-      let args = KArg (ByMove, KName ret) :: args
       KPrim (KFnPrim funName, args, res, exit (KName res))
     )
 
@@ -257,7 +252,7 @@ let kgStmt context exit stmt =
     // 関数を fix で定義して、後続の計算を行う。
 
     // fn f(params) { return body }; exit
-    // => fix_fn f(params) { return body }; exit
+    // => fix fn f(params) { return body }; exit
 
     let args =
       args |> List.choose (fun arg ->

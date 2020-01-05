@@ -19,7 +19,7 @@
 [curage-lang](https://github.com/vain0x/curage-lang)
 
 - Example of Language Server Protocol server implementation for obvious language as first step
-- Written in: TypeScript, 2018
+- Written in: TypeScript, 2018-2019
 
 ## Friends Language ★☆☆
 
@@ -41,8 +41,6 @@
 ## Zoaride language ☆☆☆
 
 [zoaride-lang](https://github.com/vain0x/zoaride-lang)
-
-(WIP)
 
 - Example of IDE-oriented programming language
 - Written in: TypeScript, 2019
@@ -75,3 +73,19 @@ No longer available.
 - Script language inspired with JavaScript and Ruby
 - Horrible implementation and terribly poor performance
 - Written in: HSP3, 2008-2015
+
+# Notes
+
+- [2020 compiling-with-continuations](https://github.com/vain0x/playground/tree/master/play/2020-01-04-compiling-with-continuations)
+- [2020 raii-lang](https://github.com/vain0x/playground/tree/master/play/2020-01-01-raii-lang)
+- [2019 algebraic-effects](https://github.com/vain0x/playground/tree/master/play/2019-11-05-algebraic-effects)
+- [2019 ide-by-wasm](https://github.com/vain0x/playground/tree/master/play/2019-11-02-ide-by-wasm)
+- [2019 clog](https://github.com/vain0x/playground/tree/master/play/2019-10-29-clog-lang)
+- [2019 brorog](https://github.com/vain0x/playground/tree/master/play/2019-10-29-brorog)
+- [2019 parse-study](https://github.com/vain0x/playground/tree/master/play/2019-08-31-parse-study)
+- [2019 event-based parser](https://github.com/vain0x/playground/tree/master/play/2019-05-04-event-based-parser)
+- [2018 puqqing-lang](https://github.com/vain0x/playground/tree/master/play/2018-07-05-puqqing-lang)
+- [2017 Bracky-lang](https://github.com/vain0x/playground/tree/master/play/2017-01-24-bracky-lang)
+- [2015 TaPL in F#](https://github.com/vain0x/playground/tree/master/play/2015-09-29-tapl-fs)
+- [2015 "Write Yourself a Scheme in 48 Hours"](https://github.com/vain0x/playground/tree/master/play/2015-09-08-scheme-in-48h)
+- [2015 KlacFs](https://github.com/vain0x/playground/tree/master/play/2015-08-22-klac-fs)

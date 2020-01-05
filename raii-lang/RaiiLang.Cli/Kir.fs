@@ -5,11 +5,12 @@ open RaiiLang.Syntax
 
 type KTy =
   | KNeverTy
+  | KUnitTy
   | KBoolTy
   | KIntTy
   | KStrTy
   | KFunTy
-    of (Mode * KTy) list
+    of KParam list * KResult
 
 type KFixKind =
   | KLabelFix
@@ -26,14 +27,19 @@ type KPrim =
     of externFnName:string
 
 [<Struct>]
-type KParam =
-  | KParam
-    of Mode * paramName:string
-
-[<Struct>]
 type KArg =
   | KArg
     of PassBy * argNode:KNode
+
+[<Struct>]
+type KParam =
+  | KParam
+    of Mode * paramName:string * paramTy:KTy
+
+[<Struct>]
+type KResult =
+  | KResult
+    of resultTy:KTy
 
 [<Struct>]
 type KLabel =
@@ -76,6 +82,7 @@ type KNode =
     of funName:string
       * kind:KFixKind
       * paramList:KParam list
+      * result:KResult
       * funBody:KNode
       * next:KNode
 

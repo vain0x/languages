@@ -1,4 +1,4 @@
-fix fn assert_eq(in actual, in expected) {
+fix fn assert_eq(in actual: int, in expected: int) -> () {
   let assert_eq_res = extern_assert_eq(
     in actual
     in expected
@@ -6,28 +6,28 @@ fix fn assert_eq(in actual, in expected) {
   jump return(move assert_eq_res)
 }
 
-fix fn print(in s) {
+fix fn print(in s: int) -> () {
   let print_res = extern_print(in s)
   jump return(move print_res)
 }
 
-fix fn main() {
+fix fn main() -> int {
   let prim_eq_res = prim_eq(
     in 0
     in 0
   )
-  fix label if_next(mut res) {
+  fix label if_next(mut res: int) -> never {
     let prim_eq_res_2 = prim_eq(
       in 0
       in 1
     )
-    fix label if_next_2(mut res_2) {
-      fix label x_next(val x) {
+    fix label if_next_2(mut res_2: int) -> never {
+      fix label x_next(val x: int) -> never {
         let prim_eq_res_3 = prim_eq(
           in x
           in 1
         )
-        fix label if_next_3(mut res_3) {
+        fix label if_next_3(mut res_3: int) -> never {
           jump return(move res_3)
         }
 
@@ -39,7 +39,7 @@ fix fn main() {
             in x
             in 2
           )
-          fix label if_next_4(mut res_4) {
+          fix label if_next_4(mut res_4: int) -> never {
             jump if_next_3(move res_4)
           }
 

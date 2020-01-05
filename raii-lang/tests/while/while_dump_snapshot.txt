@@ -1,4 +1,4 @@
-fix fn assert_eq(in actual, in expected) {
+fix fn assert_eq(in actual: int, in expected: int) -> () {
   let assert_eq_res = extern_assert_eq(
     in actual
     in expected
@@ -6,10 +6,10 @@ fix fn assert_eq(in actual, in expected) {
   jump return(move assert_eq_res)
 }
 
-fix fn main() {
-  fix label ok_next(mut ok) {
-    fix label a_next(mut a) {
-      fix label do_break() {
+fix fn main() -> int {
+  fix label ok_next(mut ok: int) -> never {
+    fix label a_next(mut a: int) -> never {
+      fix label do_break() -> never {
         let assert_eq_res_2 = assert_eq(
           in a
           in 5
@@ -17,7 +17,7 @@ fix fn main() {
         jump return(move assert_eq_res_2)
       }
 
-      fix label do_continue() {
+      fix label do_continue() -> never {
         if ok {
           let assert_eq_res_3 = assert_eq(
             in a
@@ -35,7 +35,7 @@ fix fn main() {
             in a
             in 5
           )
-          fix label if_next(mut res) {
+          fix label if_next(mut res: int) -> never {
             jump do_continue()
           }
 

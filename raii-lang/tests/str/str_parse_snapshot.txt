@@ -15,6 +15,13 @@ N(SemiNode) [
         N(NameNode) [
           T(IdentToken) `s`
         ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `string`
+          ]
+        ]
       ]
       T(RightParenToken) `)`
       T(SemiToken) `;`
@@ -36,10 +43,22 @@ N(SemiNode) [
         N(NameNode) [
           T(IdentToken) `s`
         ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `string`
+          ]
+        ]
       ]
       T(RightParenToken) `)`
-      T(SemiToken) `;`
+      T(SpaceToken) ` `
     ]
+    E(ExpectedError "文")
+    T(SlimArrowToken) `->`
+    T(SpaceToken) ` `
+    T(IdentToken) `string`
+    T(SemiToken) `;`
     N(FnNode) [
       T(EolToken) `
 `

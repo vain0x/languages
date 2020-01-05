@@ -1,14 +1,14 @@
-void assert_eq(int* actual, int* expected) {
+int assert_eq(int* actual, int* expected) {
     int assert_eq_res = assert_eq(&actual, &expected);
     return assert_eq_res;
 }
 
-void print(int* s) {
+int print(int* s) {
     int print_res = print(&s);
     return print_res;
 }
 
-void main() {
+int main() {
     int print_res_2 = print(&"before loop");
     int a;
     goto a_next;

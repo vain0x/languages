@@ -1,4 +1,4 @@
-fix fn assert_eq(in actual, in expected) {
+fix fn assert_eq(in actual: int, in expected: int) -> () {
   let assert_eq_res = extern_assert_eq(
     in actual
     in expected
@@ -6,7 +6,7 @@ fix fn assert_eq(in actual, in expected) {
   jump return(move assert_eq_res)
 }
 
-fix fn inc(ref x) {
+fix fn inc(ref x: int) -> int {
   let prim_add_res = prim_add(
     move x
     move 1
@@ -18,8 +18,8 @@ fix fn inc(ref x) {
   jump return(move prim_assign_res)
 }
 
-fix fn main() {
-  fix label a_next(mut a) {
+fix fn main() -> int {
+  fix label a_next(mut a: int) -> never {
     let assert_eq_res_2 = assert_eq(
       in a
       in 1

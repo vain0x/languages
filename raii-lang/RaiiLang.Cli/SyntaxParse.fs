@@ -16,7 +16,7 @@ let tokenIsStmtKeyword token =
   | _ ->
     false
 
-let tokenIsAtomFirst token =
+let tokenIsAtomTermFirst token =
   match token with
   | FalseToken
   | TrueToken
@@ -34,7 +34,7 @@ let tokenIsAtomFirst token =
     false
 
 let tokenIsTermFirst token =
-  tokenIsAtomFirst token
+  tokenIsAtomTermFirst token
 
 let tokenIsArgFirst token =
   match token with
@@ -185,7 +185,7 @@ let parseAtomTerm (p: P) =
     parseLoopTerm p
 
   | _ ->
-    p.Next |> tokenIsAtomFirst |> is false
+    p.Next |> tokenIsAtomTermFirst |> is false
 
 let parseCallTerm (p: P) =
   parseAtomTerm p
@@ -309,7 +309,24 @@ let parseParam (p: P) =
   (p.Eat(InToken) || p.Eat(MutToken) || p.Eat(RefToken)) |> ignore
   parseCallTerm p
 
+  if p.Eat(ColonToken) then
+    parseTy p
+
   p.EndNode(ParamNode)
+
+let parseResult (p: P) =
+  p.StartNode()
+
+  parseTy p
+
+  p.EndNode(ResultNode)
+
+let parseTy (p: P) =
+  p.StartNode()
+
+  parseCallTerm p
+
+  p.EndNode(TyNode)
 
 // `fn name(param*)`
 let parseFnHead (p: P) =
@@ -373,6 +390,9 @@ let parseStmt (p: P) =
       parseBlockTerm p
     else
       p.AddError(ExpectedError "ブロック")
+
+    if p.Eat(SlimArrowToken) then
+      parseResult p
 
     p.EndNode(FnNode)
 

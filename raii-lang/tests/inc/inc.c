@@ -1,15 +1,15 @@
-void assert_eq(int* actual, int* expected) {
+int assert_eq(int* actual, int* expected) {
     int assert_eq_res = assert_eq(&actual, &expected);
     return assert_eq_res;
 }
 
-void inc(int* x) {
+int inc(int* x) {
     int prim_add_res = x + 1;
     int prim_assign_res = &x = prim_add_res;
     return prim_assign_res;
 }
 
-void main() {
+int main() {
     int a;
     goto a_next;
 

@@ -1,4 +1,4 @@
-extern fn assert_eq(in actual, in expected);
+extern fn assert_eq(in actual: int, in expected: int);
 
 fn main() {
     let mut ok = true;

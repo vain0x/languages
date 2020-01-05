@@ -44,6 +44,7 @@ type Token =
   | WhileToken
 
   // 記号類
+  | ColonToken
   | CommaToken
   | EqualEqualToken
   | EqualToken
@@ -53,6 +54,8 @@ type Token =
   | RightBraceToken
   | RightParenToken
   | SemiToken
+  /// `->`
+  | SlimArrowToken
 
 [<Struct>]
 type TokenData =
@@ -74,10 +77,10 @@ type TokenFat =
 
 type Node =
   // 項
-  | NameNode
   | BoolLiteralNode
   | IntLiteralNode
   | StrLiteralNode
+  | NameNode
   | GroupNode
   | BlockNode
   | BreakNode
@@ -90,9 +93,13 @@ type Node =
   | ElseNode
   | BinNode
 
-  // 引数
+  // その他
   | ParamNode
   | ArgNode
+  | ResultNode
+
+  // 型
+  | TyNode
 
   // 文
   | ExprNode
@@ -129,6 +136,11 @@ type AName =
     of string option * NodeData
 
 [<Struct>]
+type ATy =
+  | ATy
+    of string option * NodeData
+
+[<Struct>]
 type AArg =
   | AArg
     of PassBy * ATerm option * NodeData
@@ -136,7 +148,12 @@ type AArg =
 [<Struct>]
 type AParam =
   | AParam
-    of Mode * AName option * NodeData
+    of Mode * AName option * ATy option * NodeData
+
+[<Struct>]
+type AResult =
+  | AResult
+    of ATy option * NodeData
 
 type ATerm =
   | ABoolLiteral
@@ -189,7 +206,7 @@ type AStmt =
     of AName option * AParam list * NodeData
 
   | AFnStmt
-    of AName option * AParam list * ATerm option * NodeData
+    of AName option * AParam list * AResult option * ATerm option * NodeData
 
   | ASemiStmt
     of AStmt list * NodeData
@@ -216,6 +233,7 @@ let keywords =
 
 let punctuations =
   [
+    ColonToken, ":"
     CommaToken, ","
     EqualEqualToken, "=="
     EqualToken, "="
@@ -225,6 +243,7 @@ let punctuations =
     RightBraceToken, "}"
     RightParenToken, ")"
     SemiToken, ";"
+    SlimArrowToken, "->"
   ]
 
 let tokenIsTrivia token =

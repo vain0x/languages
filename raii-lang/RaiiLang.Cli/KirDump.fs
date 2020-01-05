@@ -3,13 +3,39 @@ module rec RaiiLang.KirDump
 open RaiiLang.Helpers
 open RaiiLang.Kir
 
-let kdParam param _indent acc =
+let kdTy ty indent acc =
+  match ty with
+  | KNeverTy ->
+    acc |> cons "never"
+
+  | KUnitTy ->
+    acc |> cons "()"
+
+  | KBoolTy ->
+    acc |> cons "bool"
+
+  | KIntTy ->
+    acc |> cons "int"
+
+  | KStrTy ->
+    acc |> cons "string"
+
+  | KFunTy (paramList, result) ->
+    acc
+    |> cons "Fn"
+    |> kdParamList paramList indent
+    |> cons " -> "
+    |> kdResult result indent
+
+let kdParam param indent acc =
   match param with
-  | KParam (mode, name) ->
+  | KParam (mode, name, ty) ->
     acc
     |> cons (modeToString mode)
     |> cons " "
     |> cons name
+    |> cons ": "
+    |> kdTy ty indent
 
 let kdParamList paramList indent acc =
   let acc = acc |> cons "("
@@ -57,6 +83,9 @@ let kdArgList args indent acc =
       |> cons indent
 
   acc |> cons ")"
+
+let kdResult (KResult resultTy) indent acc =
+  acc |> kdTy resultTy indent
 
 let kdNode node indent acc =
   match node with
@@ -127,7 +156,7 @@ let kdNode node indent acc =
     |> cons indent
     |> cons "}"
 
-  | KFix (funName, fixKind, paramList, body, next) ->
+  | KFix (funName, fixKind, paramList, result, body, next) ->
     let deepIndent = indent + "  "
 
     let kind =
@@ -144,6 +173,8 @@ let kdNode node indent acc =
     |> cons " "
     |> cons funName
     |> kdParamList paramList indent
+    |> cons " -> "
+    |> kdResult result indent
     |> cons " {"
     |> cons deepIndent
     |> kdNode body deepIndent

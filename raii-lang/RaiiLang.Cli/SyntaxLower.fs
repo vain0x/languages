@@ -152,7 +152,33 @@ let lowerParam (node: NodeData) =
     |> nodeToFirstNode ((=) NameNode)
     |> Option.map lowerName
 
-  AParam (mode, name, node)
+  let ty =
+    node
+    |> nodeToFirstNode ((=) TyNode)
+    |> Option.map lowerTy
+
+  AParam (mode, name, ty, node)
+
+let lowerResult (node: NodeData) =
+  assert (node.Node = ResultNode)
+
+  let ty =
+    node
+    |> nodeToFirstNode ((=) NameNode)
+    |> Option.map lowerTy
+
+  AResult (ty, node)
+
+let lowerTy (node: NodeData) =
+  assert (node.Node = TyNode)
+
+  let name =
+    node
+    |> nodeToFirstNode ((=) NameNode)
+    |> Option.bind (nodeToFirstToken ((=) IdentToken))
+    |> Option.map tokenToText
+
+  ATy (name, node)
 
 let lowerBoolLiteral (node: NodeData) =
   assert (node.Node = BoolLiteralNode)
@@ -401,12 +427,17 @@ let lowerStmt (node: NodeData) =
       |> nodeToFilterNode ((=) ParamNode)
       |> List.map lowerParam
 
+    let result =
+      node
+      |> nodeToFirstNode ((=) ResultNode)
+      |> Option.map lowerResult
+
     let body =
       node
       |> nodeToFirstNode ((=) BlockNode)
       |> Option.map lowerTerm
 
-    AFnStmt (name, args, body, node)
+    AFnStmt (name, args, result, body, node)
 
   | SemiNode ->
     let stmts =

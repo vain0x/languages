@@ -1,5 +1,5 @@
-extern fn assert_eq(in actual, in expected);
-extern fn print(in s);
+extern fn assert_eq(in actual: int, in expected: int);
+extern fn print(in s: string);
 
 fn main() {
     0 == 0 then {

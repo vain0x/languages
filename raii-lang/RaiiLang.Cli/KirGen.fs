@@ -54,11 +54,13 @@ let kgLoop context exit bodyFun =
     breakLabel,
     KLabelFix,
     [],
+    KResult KNeverTy,
     onBreak,
     KFix (
       continueLabel,
       KLabelFix,
       [],
+      KResult KNeverTy,
       onContinue,
       continueNode
     ))
@@ -161,7 +163,8 @@ let kgTerm (context: KirGenContext) exit term =
       KFix (
         nextLabel,
         KLabelFix,
-        [KParam (MutMode, res)],
+        [KParam (MutMode, res, KIntTy)],
+        KResult KNeverTy,
         exit (KName res),
         KIf (
           cond,
@@ -191,7 +194,7 @@ let kgStmt context exit stmt =
 
   | ALetStmt
       (
-        Some (AParam (mode, Some (AName (Some varName, _)), _)),
+        Some (AParam (mode, Some (AName (Some varName, _)), tyOpt, _)),
         Some (AArg (passBy, Some body, _)),
         _
       ) ->
@@ -208,7 +211,8 @@ let kgStmt context exit stmt =
       KFix (
         nextLabel,
         KLabelFix,
-        [KParam (mode, varName)],
+        [KParam (mode, varName, KIntTy)],
+        KResult KNeverTy,
         (exit (KName varName)),
         KJump (KLabel nextLabel, [KArg (passBy, body)])
     ))
@@ -216,20 +220,21 @@ let kgStmt context exit stmt =
   | AExternFnStmt (Some (AName (Some funName, _)), args, _) ->
     // extern fn f(params)
     // ==> fix_fn f(params) { let res = extern_fn"f"(params); jump return(res) }
+
     let res = context.FreshName (sprintf "%s_res" funName)
 
     let paramList =
       args |> List.choose (fun arg ->
         match arg with
-        | AParam (mode, Some (AName (Some name, _)), _) ->
-          KParam (mode, context.FreshName name) |> Some
+        | AParam (mode, Some (AName (Some name, _)), tyOpt, _) ->
+          KParam (mode, context.FreshName name, KIntTy) |> Some
 
         | _ ->
           None
       )
 
     let args =
-      paramList |> List.map (fun (KParam (mode, name)) ->
+      paramList |> List.map (fun (KParam (mode, name, _)) ->
         KArg (mode |> modeToPassBy, KName name)
       )
 
@@ -237,6 +242,7 @@ let kgStmt context exit stmt =
       funName,
       KFnFix,
       paramList,
+      KResult KUnitTy,
       KPrim (
         KExternFnPrim funName,
         args,
@@ -248,7 +254,7 @@ let kgStmt context exit stmt =
       exit unitNode
     )
 
-  | AFnStmt (Some (AName (Some funName, _)), args, Some body, _) ->
+  | AFnStmt (Some (AName (Some funName, _)), args, resultOpt, Some body, _) ->
     // 関数を fix で定義して、後続の計算を行う。
 
     // fn f(params) { return body }; exit
@@ -257,8 +263,8 @@ let kgStmt context exit stmt =
     let args =
       args |> List.choose (fun arg ->
         match arg with
-        | AParam (callBy, Some (AName (Some name, _)), _) ->
-          KParam (callBy, context.FreshName name) |> Some
+        | AParam (callBy, Some (AName (Some name, _)), tyOpt, _) ->
+          KParam (callBy, context.FreshName name, KIntTy) |> Some
 
         | _ ->
           None
@@ -268,6 +274,7 @@ let kgStmt context exit stmt =
       funName,
       KFnFix,
       args,
+      KResult KIntTy,
       body |> kgTerm context (fun res ->
         KJump (KReturnLabel, [KArg (ByMove, res)])
       ),

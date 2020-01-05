@@ -1,9 +1,9 @@
-void assert_eq(int* actual, int* expected) {
+int assert_eq(int* actual, int* expected) {
     int assert_eq_res = assert_eq(&actual, &expected);
     return assert_eq_res;
 }
 
-void main() {
+int main() {
     int ok;
     goto ok_next;
 

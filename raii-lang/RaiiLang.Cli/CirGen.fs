@@ -30,6 +30,7 @@ let kTyToCTy ty =
   | KNeverTy ->
     CVoidTy
 
+  | KUnitTy
   | KBoolTy
   | KIntTy ->
     CIntTy
@@ -37,9 +38,9 @@ let kTyToCTy ty =
   | KStrTy ->
     CPtrTy CCharTy
 
-  | KFunTy paramList ->
+  | KFunTy (paramList, KResult resultTy) ->
     let paramList =
-      paramList |> List.map (fun (mode, ty) ->
+      paramList |> List.map (fun (KParam (mode, _, ty)) ->
         match mode with
         | ValMode
         | MutMode ->
@@ -49,10 +50,12 @@ let kTyToCTy ty =
         | RefMode ->
           ty |> kTyToCTy |> CPtrTy
       )
-    CFunTy (paramList, CVoidTy)
+    let resultTy =
+      resultTy |> kTyToCTy
+    CFunTy (paramList, resultTy)
 
-let cgParam _context (KParam (mode, arg)) =
-  let ty = CIntTy
+let cgParam _context (KParam (mode, arg, ty)) =
+  let ty = kTyToCTy ty
 
   match mode with
   | ValMode
@@ -161,9 +164,10 @@ let cgTerm (context: CirGenContext) (node: KNode) =
 
     neverTerm
 
-  | KFix (funName, KLabelFix, paramList, body, next) ->
-    for KParam (_mode, paramName) in paramList do
-      let localStmt = CLocalStmt (paramName, CIntTy, None)
+  | KFix (funName, KLabelFix, paramList, _, body, next) ->
+    for KParam (_mode, paramName, paramTy) in paramList do
+      let paramTy = paramTy |> kTyToCTy
+      let localStmt = CLocalStmt (paramName, paramTy, None)
       context.Stmts.Add(localStmt)
 
     cgTerm context next |> ignore
@@ -174,14 +178,15 @@ let cgTerm (context: CirGenContext) (node: KNode) =
 
     neverTerm
 
-  | KFix (funName, KFnFix, paramList, body, next) ->
+  | KFix (funName, KFnFix, paramList, KResult resultTy, body, next) ->
     let paramList = paramList |> List.map (cgParam context)
+    let resultTy = resultTy |> kTyToCTy
 
     let bodyContext = cgContextDerive context
     cgNode bodyContext body
     let body = bodyContext.Stmts |> Seq.toList
 
-    let fnDecl = CFnDecl (funName, paramList, CVoidTy, body)
+    let fnDecl = CFnDecl (funName, paramList, resultTy, body)
     context.Decls.Add(fnDecl)
 
     cgTerm context next

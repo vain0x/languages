@@ -1,92 +1,83 @@
-fix assert_eq(mut assert_eq_ret, in actual, in expected) {
+fix fn assert_eq(in actual, in expected) {
   let assert_eq_res = extern_assert_eq(
     in actual
     in expected
   )
-  assert_eq_ret(move assert_eq_res)
+  jump return(move assert_eq_res)
 }
 
-fix print(mut print_ret, in s) {
+fix fn print(in s) {
   let print_res = extern_print(in s)
-  print_ret(move print_res)
+  jump return(move print_res)
 }
 
-fix main(mut main_ret) {
-  fix print_ret_2(mut print_res_2) {
-    fix a_next(mut a) {
-      fix break() {
-        fix print_ret_3(mut print_res_3) {
-          main_ret(move print_res_3)
-        }
-
-        print(
-          move print_ret_3
-          in "after loop"
-        )
-      }
-
-      fix continue() {
-        fix assert_eq_ret_2(mut assert_eq_res_2) {
-          let prim_eq_res = prim_eq(
-            in a
-            in 5
-          )
-          fix if_next(mut res) {
-            let prim_eq_res_2 = prim_eq(
-              in a
-              in 2
-            )
-            fix if_next_2(mut res_2) {
-              let prim_add_res = prim_add(
-                move a
-                move 1
-              )
-              let prim_assign_res = prim_assign(
-                ref a
-                move prim_add_res
-              )
-              continue()
-            }
-
-            if prim_eq_res_2 {
-              let prim_add_res_2 = prim_add(
-                move a
-                move 2
-              )
-              let prim_assign_res_2 = prim_assign(
-                ref a
-                move prim_add_res_2
-              )
-              continue()
-            } else {
-              if_next_2(move 0)
-            }
-          }
-
-          if prim_eq_res {
-            break()
-          } else {
-            if_next(move 0)
-          }
-        }
-
-        assert_eq(
-          move assert_eq_ret_2
-          in a
-          in a
-        )
-      }
-
-      continue()
-    }
-
-    a_next(in 0)
-  }
-
-  print(
-    move print_ret_2
+fix fn main() {
+  let print_res_2 = print(
+    move print_ret
     in "before loop"
   )
+  fix label a_next(mut a) {
+    fix label break() {
+      let print_res_3 = print(
+        move print_ret_2
+        in "after loop"
+      )
+      jump return(move print_res_3)
+    }
+
+    fix label continue() {
+      let assert_eq_res_2 = assert_eq(
+        move assert_eq_ret
+        in a
+        in a
+      )
+      let prim_eq_res = prim_eq(
+        in a
+        in 5
+      )
+      fix label if_next(mut res) {
+        let prim_eq_res_2 = prim_eq(
+          in a
+          in 2
+        )
+        fix label if_next_2(mut res_2) {
+          let prim_add_res = prim_add(
+            move a
+            move 1
+          )
+          let prim_assign_res = prim_assign(
+            ref a
+            move prim_add_res
+          )
+          jump continue()
+        }
+
+        if prim_eq_res_2 {
+          let prim_add_res_2 = prim_add(
+            move a
+            move 2
+          )
+          let prim_assign_res_2 = prim_assign(
+            ref a
+            move prim_add_res_2
+          )
+          jump continue()
+        } else {
+          jump if_next_2(move 0)
+        }
+      }
+
+      if prim_eq_res {
+        jump break()
+      } else {
+        jump if_next(move 0)
+      }
+    }
+
+    jump continue()
+  }
+
+  jump a_next(in 0)
 }
 
 0

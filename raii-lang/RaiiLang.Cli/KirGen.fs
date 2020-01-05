@@ -9,8 +9,8 @@ let unitNode = KInt "0"
 [<Struct>]
 type KirGenLoop =
   {
-    BreakFun: string
-    ContinueFun: string
+    BreakLabel: KLabel
+    ContinueLabel: KLabel
   }
 
 type KirGenContext =
@@ -29,20 +29,20 @@ let kgContextNew (): KirGenContext =
 let kgLoop context exit bodyFun =
   // loop { body }; k
   // ==> fix break() { k }
-  //     fix continue() { let _ = body; continue() }
-  //     continue()
+  //     fix continue() { let _ = body; jump continue() }
+  //     jump continue()
 
-  let breakFun = context.FreshName "break"
-  let continueFun = context.FreshName "continue"
+  let breakLabel = context.FreshName "break"
+  let continueLabel = context.FreshName "continue"
 
-  let breakNode = KApp (breakFun, [])
-  let continueNode = KApp (continueFun, [])
+  let breakNode = KJump (KLabel breakLabel, [])
+  let continueNode = KJump (KLabel continueLabel, [])
 
   let loopStack = context.LoopStack
   context.LoopStack <-
     {
-      BreakFun = breakFun
-      ContinueFun = continueFun
+      BreakLabel = KLabel breakLabel
+      ContinueLabel = KLabel continueLabel
     } :: loopStack
 
   let onBreak = exit unitNode
@@ -51,11 +51,13 @@ let kgLoop context exit bodyFun =
   context.LoopStack <- loopStack
 
   KFix (
-    breakFun,
+    breakLabel,
+    KLabelFix,
     [],
     onBreak,
     KFix (
-      continueFun,
+      continueLabel,
+      KLabelFix,
       [],
       onContinue,
       continueNode
@@ -86,16 +88,16 @@ let kgTerm (context: KirGenContext) exit term =
     | [] ->
       failwith "break out of loop"
 
-    | { BreakFun = breakFun } :: _ ->
-      KApp (breakFun, [])
+    | { BreakLabel = breakLabel } :: _ ->
+      KJump (breakLabel, [])
 
   | AContinueTerm _ ->
     match context.LoopStack with
     | [] ->
       failwith "continue out of loop"
 
-    | { ContinueFun = continueFun } :: _ ->
-      KApp (continueFun, [])
+    | { ContinueLabel = continueLabel } :: _ ->
+      KJump (continueLabel, [])
 
   | ALoopTerm (Some body, _) ->
     kgLoop context exit (fun _ _ k -> body |> kgTerm context k)
@@ -123,12 +125,8 @@ let kgTerm (context: KirGenContext) exit term =
 
     args |> go (fun args ->
       let args = KArg (ByMove, KName ret) :: args
-      KFix (
-        ret,
-        [KParam (MutMode, res)],
-        exit (KName res),
-        KApp (funName, args)
-      ))
+      KPrim (KFnPrim funName, args, res, exit (KName res))
+    )
 
   | ABinTerm (Some bin, Some first, Some second, _) ->
     let prim = kPrimFromBin bin
@@ -147,10 +145,10 @@ let kgTerm (context: KirGenContext) exit term =
   | AIfTerm (Some cond, body, alt, _) ->
     // body または alt の結果を受け取って後続の計算を行う関数 if_next をおく。
     // 条件式の結果に基づいて body または alt を計算して、
-    // その結果をもって if_next を呼ぶ。
+    // その結果をもって if_next にジャンプする。
 
-    let funName = context.FreshName "if_next"
-    let next res = KApp (funName, [KArg (ByMove, res)])
+    let nextLabel = context.FreshName "if_next"
+    let next res = KJump (KLabel nextLabel, [KArg (ByMove, res)])
 
     let res = context.FreshName "res"
 
@@ -166,7 +164,8 @@ let kgTerm (context: KirGenContext) exit term =
 
     cond |> kgTerm context (fun cond ->
       KFix (
-        funName,
+        nextLabel,
+        KLabelFix,
         [KParam (MutMode, res)],
         exit (KName res),
         KIf (
@@ -201,27 +200,28 @@ let kgStmt context exit stmt =
         Some (AArg (passBy, Some body, _)),
         _
       ) ->
+    // let x = body; y
+    // ==> fix next(x) { y }; jump next(body)
+
     // 右辺を計算する。
     // 後続の計算を行う中間関数 next を定義する。
     // 計算結果を引数に渡して next にジャンプする。
 
-    let funName = context.FreshName (sprintf "%s_next" varName)
+    let nextLabel = context.FreshName (sprintf "%s_next" varName)
 
     body |> kgTerm context (fun body ->
       KFix (
-        funName,
+        nextLabel,
+        KLabelFix,
         [KParam (mode, varName)],
         (exit (KName varName)),
-        KApp (funName, [KArg (passBy, body)])
+        KJump (KLabel nextLabel, [KArg (passBy, body)])
     ))
 
   | AExternFnStmt (Some (AName (Some funName, _)), args, _) ->
-    // extern fn f(params);
-    // ==> fn f(params) { extern_fn"f"(params) }
-    // ==> fix f(ret, params) { let res = extern_fn"f"(params); ret(res) }
-
+    // extern fn f(params)
+    // ==> fix_fn f(params) { let res = extern_fn"f"(params); jump return(res) }
     let res = context.FreshName (sprintf "%s_res" funName)
-    let ret = context.FreshName (sprintf "%s_ret" funName)
 
     let paramList =
       args |> List.choose (fun arg ->
@@ -240,13 +240,14 @@ let kgStmt context exit stmt =
 
     KFix (
       funName,
-      (KParam (MutMode, ret)) :: paramList,
+      KFnFix,
+      paramList,
       KPrim (
         KExternFnPrim funName,
         args,
         res,
-        KApp (
-          ret,
+        KJump (
+          KReturnLabel,
           [KArg (ByMove, KName res)]
         )),
       exit unitNode
@@ -255,10 +256,8 @@ let kgStmt context exit stmt =
   | AFnStmt (Some (AName (Some funName, _)), args, Some body, _) ->
     // 関数を fix で定義して、後続の計算を行う。
 
-    // fn f(x) { return y; }; k
-    // => fix f(ret, x) { ret(y); }; k
-
-    let ret = context.FreshName (sprintf "%s_ret" funName)
+    // fn f(params) { return body }; exit
+    // => fix_fn f(params) { return body }; exit
 
     let args =
       args |> List.choose (fun arg ->
@@ -272,11 +271,11 @@ let kgStmt context exit stmt =
 
     KFix (
       funName,
-      (KParam (MutMode, ret)) :: args,
-      kgTerm
-        context
-        (fun res -> KApp (ret, [KArg (ByMove, res)]))
-        body,
+      KFnFix,
+      args,
+      body |> kgTerm context (fun res ->
+        KJump (KReturnLabel, [KArg (ByMove, res)])
+      ),
       exit unitNode
     )
 

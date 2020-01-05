@@ -94,9 +94,21 @@ let kdNode node indent acc =
     |> cons indent
     |> kdNode next indent
 
-  | KApp (cal, args) ->
+  | KJump (label, args) ->
+    let labelName =
+      match label with
+      | KLabel name ->
+        name
+
+      | KReturnLabel ->
+        "return"
+
+      | KExitLabel ->
+        "exit"
+
     acc
-    |> cons cal
+    |> cons "jump "
+    |> cons labelName
     |> kdArgList args indent
 
   | KIf (cond, body, alt) ->
@@ -115,11 +127,21 @@ let kdNode node indent acc =
     |> cons indent
     |> cons "}"
 
-  | KFix (funName, paramList, body, next) ->
+  | KFix (funName, fixKind, paramList, body, next) ->
     let deepIndent = indent + "  "
+
+    let kind =
+      match fixKind with
+      | KLabelFix ->
+        "label"
+
+      | KFnFix ->
+        "fn"
 
     acc
     |> cons "fix "
+    |> cons kind
+    |> cons " "
     |> cons funName
     |> kdParamList paramList indent
     |> cons " {"

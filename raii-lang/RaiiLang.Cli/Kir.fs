@@ -8,32 +8,51 @@ type KTy =
   | KFunTy
     of (Mode * KTy) list
 
+type KFixKind =
+  | KLabelFix
+  | KFnFix
+
+[<Struct>]
 type KPrim =
   | KEqPrim
   | KAddPrim
   | KAssignPrim
+  | KFnPrim
+    of fnName:string
   | KExternFnPrim
-    of string
+    of externFnName:string
 
 [<Struct>]
 type KParam =
   | KParam
-    of Mode * name:string
+    of Mode * paramName:string
 
 [<Struct>]
 type KArg =
   | KArg
-    of PassBy * node:KNode
+    of PassBy * argNode:KNode
+
+[<Struct>]
+type KLabel =
+  | KLabel
+    of labelName:string
+
+  | KReturnLabel
+
+  | KExitLabel
 
 type KNode =
   | KBool
-    of bool
+    of boolValue:bool
 
   | KInt
     of intText:string
 
   | KStr
-    of StrSegment list
+    of strSegments:StrSegment list
+
+  | KName
+    of name:string
 
   | KPrim
     of prim:KPrim
@@ -41,11 +60,8 @@ type KNode =
       * result:string
       * next:KNode
 
-  | KName
-    of name:string
-
-  | KApp
-    of cal:string
+  | KJump
+    of KLabel
       * args:KArg list
 
   | KIf
@@ -54,9 +70,10 @@ type KNode =
       * alt:KNode
 
   | KFix
-    of name:string
+    of funName:string
+      * kind:KFixKind
       * paramList:KParam list
-      * body:KNode
+      * funBody:KNode
       * next:KNode
 
 let kPrimFromBin bin =
@@ -81,8 +98,9 @@ let kPrimToSig prim =
   | KAssignPrim ->
     [ByRef; ByMove]
 
+  | KFnPrim _
   | KExternFnPrim _ ->
-    failwith "NEVER"
+    failwithf "kPrimToSig では関数のシグネチャを取得できません: %A" prim
 
 let kPrimToString prim =
   match prim with
@@ -94,6 +112,9 @@ let kPrimToString prim =
 
   | KAssignPrim ->
     "prim_assign"
+
+  | KFnPrim name ->
+    name
 
   | KExternFnPrim name ->
     sprintf "extern_%s" name

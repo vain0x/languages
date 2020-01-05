@@ -1,12 +1,12 @@
-fix assert_eq(mut assert_eq_ret, in actual, in expected) {
+fix fn assert_eq(in actual, in expected) {
   let assert_eq_res = extern_assert_eq(
     in actual
     in expected
   )
-  assert_eq_ret(move assert_eq_res)
+  jump return(move assert_eq_res)
 }
 
-fix inc(mut inc_ret, ref x) {
+fix fn inc(ref x) {
   let prim_add_res = prim_add(
     move x
     move 1
@@ -15,53 +15,38 @@ fix inc(mut inc_ret, ref x) {
     ref x
     move prim_add_res
   )
-  inc_ret(move prim_assign_res)
+  jump return(move prim_assign_res)
 }
 
-fix main(mut main_ret) {
-  fix a_next(mut a) {
-    fix assert_eq_ret_2(mut assert_eq_res_2) {
-      fix inc_ret_2(mut inc_res) {
-        fix assert_eq_ret_3(mut assert_eq_res_3) {
-          fix inc_ret_3(mut inc_res_2) {
-            fix assert_eq_ret_4(mut assert_eq_res_4) {
-              main_ret(move assert_eq_res_4)
-            }
-
-            assert_eq(
-              move assert_eq_ret_4
-              in a
-              in 3
-            )
-          }
-
-          inc(
-            move inc_ret_3
-            ref a
-          )
-        }
-
-        assert_eq(
-          move assert_eq_ret_3
-          in a
-          in 2
-        )
-      }
-
-      inc(
-        move inc_ret_2
-        ref a
-      )
-    }
-
-    assert_eq(
-      move assert_eq_ret_2
+fix fn main() {
+  fix label a_next(mut a) {
+    let assert_eq_res_2 = assert_eq(
+      move assert_eq_ret
       in a
       in 1
     )
+    let inc_res = inc(
+      move inc_ret
+      ref a
+    )
+    let assert_eq_res_3 = assert_eq(
+      move assert_eq_ret_2
+      in a
+      in 2
+    )
+    let inc_res_2 = inc(
+      move inc_ret_2
+      ref a
+    )
+    let assert_eq_res_4 = assert_eq(
+      move assert_eq_ret_3
+      in a
+      in 3
+    )
+    jump return(move assert_eq_res_4)
   }
 
-  a_next(in 1)
+  jump a_next(in 1)
 }
 
 0

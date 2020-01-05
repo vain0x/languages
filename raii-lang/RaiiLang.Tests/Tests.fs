@@ -3,7 +3,6 @@ module Tests
 open System
 open System.IO
 open RaiiLang.KirDump
-open RaiiLang.KirEval
 open RaiiLang.KirGen
 open RaiiLang.SyntaxLower
 open RaiiLang.SyntaxParse
@@ -17,7 +16,7 @@ let findTestsDirectory () =
   let cwd = Environment.CurrentDirectory
   Seq.unfold (fun (dir: string) -> let p = Path.GetDirectoryName(dir) in Some (p, p)) cwd
   |> Seq.take 10
-  |> Seq.find (fun (dir: string) -> Path.GetFileName(dir) = "2020-01-01-raii-lang")
+  |> Seq.find (fun (dir: string) -> Path.GetFileName(dir) = "raii-lang")
   |> fun dir -> Path.Combine(dir, "tests")
 
 let snapshotTest (name: string) =
@@ -51,7 +50,6 @@ let snapshotTest (name: string) =
   |> lower
   |> kirGen
   |> tee "dump" ".txt" kirDump
-  |> tee "eval" ".txt" kirEval
   |> ignore
 
   true

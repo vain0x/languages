@@ -1,118 +1,97 @@
-fix assert_eq(mut assert_eq_ret, in actual, in expected) {
+fix fn assert_eq(in actual, in expected) {
   let assert_eq_res = extern_assert_eq(
     in actual
     in expected
   )
-  assert_eq_ret(move assert_eq_res)
+  jump return(move assert_eq_res)
 }
 
-fix print(mut print_ret, in s) {
+fix fn print(in s) {
   let print_res = extern_print(in s)
-  print_ret(move print_res)
+  jump return(move print_res)
 }
 
-fix main(mut main_ret) {
+fix fn main() {
   let prim_eq_res = prim_eq(
     in 0
     in 0
   )
-  fix if_next(mut res) {
+  fix label if_next(mut res) {
     let prim_eq_res_2 = prim_eq(
       in 0
       in 1
     )
-    fix if_next_2(mut res_2) {
-      fix x_next(val x) {
+    fix label if_next_2(mut res_2) {
+      fix label x_next(val x) {
         let prim_eq_res_3 = prim_eq(
           in x
           in 1
         )
-        fix if_next_3(mut res_3) {
-          main_ret(move res_3)
+        fix label if_next_3(mut res_3) {
+          jump return(move res_3)
         }
 
         if prim_eq_res_3 {
-          fix print_ret_2(mut print_res_2) {
-            if_next_3(move print_res_2)
-          }
-
-          print(
-            move print_ret_2
+          let print_res_2 = print(
+            move print_ret
             in "0 == 1"
           )
+          jump if_next_3(move print_res_2)
         } else {
           let prim_eq_res_4 = prim_eq(
             in x
             in 2
           )
-          fix if_next_4(mut res_4) {
-            if_next_3(move res_4)
+          fix label if_next_4(mut res_4) {
+            jump if_next_3(move res_4)
           }
 
           if prim_eq_res_4 {
-            fix print_ret_3(mut print_res_3) {
-              if_next_4(move print_res_3)
-            }
-
-            print(
-              move print_ret_3
+            let print_res_3 = print(
+              move print_ret_2
               in "x == 2"
             )
+            jump if_next_4(move print_res_3)
           } else {
-            fix print_ret_4(mut print_res_4) {
-              if_next_4(move print_res_4)
-            }
-
-            print(
-              move print_ret_4
+            let print_res_4 = print(
+              move print_ret_3
               in "x != 1, x != 2"
             )
+            jump if_next_4(move print_res_4)
           }
         }
       }
 
-      x_next(in 2)
+      jump x_next(in 2)
     }
 
     if prim_eq_res_2 {
-      fix print_ret_5(mut print_res_5) {
-        if_next_2(move print_res_5)
-      }
-
-      print(
-        move print_ret_5
+      let print_res_5 = print(
+        move print_ret_4
         in "0 == 1"
       )
+      jump if_next_2(move print_res_5)
     } else {
-      fix print_ret_6(mut print_res_6) {
-        if_next_2(move print_res_6)
-      }
-
-      print(
-        move print_ret_6
+      let print_res_6 = print(
+        move print_ret_5
         in "0 != 1"
       )
+      jump if_next_2(move print_res_6)
     }
   }
 
   if prim_eq_res {
-    fix print_ret_7(mut print_res_7) {
-      if_next(move print_res_7)
-    }
-
-    print(
-      move print_ret_7
+    let print_res_7 = print(
+      move print_ret_6
       in "0 == 0"
     )
+    jump if_next(move print_res_7)
   } else {
-    fix print_ret_8(mut print_res_8) {
-      if_next(move print_res_8)
-    }
-
-    print(
-      move print_ret_8
+    let print_res_8 = print(
+      move print_ret_7
       in "0 != 0"
     )
+    jump if_next(move print_res_8)
   }
 }
 

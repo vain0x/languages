@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="Helpers.fs" />
+    <Compile Include="Nullability.fs" />
+    <Compile Include="FirstSet.fs" />
+    <Compile Include="FollowSet.fs" />
+    <Compile Include="Analyze.fs" />
+    <Compile Include="Dump.fs" />
+    <Compile Include="Lower.fs" />
+    <Compile Include="Parse.fs" />
+    <Compile Include="Reduce.fs" />
+    <Compile Include="Sugar.fs" />
+    <Compile Include="Tokenize.fs" />
+    <Compile Include="FSharpLite.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+</Project>

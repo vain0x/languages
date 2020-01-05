@@ -1,0 +1,293 @@
+module rec XbnfLang.ParseV2
+
+open XbnfLang.HelpersV2
+open XbnfLang.TypesV2
+
+let isFollowedBySep tokens =
+  match tokens with
+  | PunToken (",", _) :: _ ->
+    true
+
+  | PunToken (";", _) :: _ ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByAtomTerm tokens =
+  match tokens with
+  | LoudToken _ :: _ ->
+    true
+
+  | SnakeToken _ :: _ ->
+    true
+
+  | CharToken _ :: _ ->
+    true
+
+  | StrToken _ :: _ ->
+    true
+
+  | PunToken ("@", _) :: SnakeToken _ :: PunToken ("(", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | PunToken ("(", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedBySuffixTerm tokens =
+  match tokens with
+  | _
+    when isFollowedByAtomTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByConcatTerm tokens =
+  match tokens with
+  | _
+    when isFollowedBySuffixTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByTerm tokens =
+  match tokens with
+  | _
+    when isFollowedByConcatTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByRule tokens =
+  match tokens with
+  | SnakeToken _ :: PunToken ("=", _) :: tokens
+    when isFollowedByTerm tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByRoot tokens =
+  match tokens with
+  | _
+    when isFollowedByRule tokens ->
+    true
+
+  | EofToken _ :: _ ->
+    true
+
+  | _ ->
+    false
+
+let parseSep emit tokens state =
+  match tokens with
+  | (PunToken (",", x), a) :: tokens ->
+    emit (TokenEvent (PunToken (",", x), a)) tokens state
+
+  | (PunToken (";", x), a) :: tokens ->
+    emit (TokenEvent (PunToken (";", x), a)) tokens state
+
+  | _ ->
+    failwith "Parse error"
+
+let parseAtomTerm emit tokens state =
+  match tokens with
+  | (LoudToken x, a) :: tokens ->
+    emit (TokenEvent (LoudToken x, a)) tokens state
+
+  | (SnakeToken x, a) :: tokens ->
+    emit (TokenEvent (SnakeToken x, a)) tokens state
+
+  | (CharToken x, a) :: tokens ->
+    emit (TokenEvent (CharToken x, a)) tokens state
+
+  | (StrToken x, a) :: tokens ->
+    emit (TokenEvent (StrToken x, a)) tokens state
+
+  | (PunToken ("@", _), _) :: _ ->
+    let tokens, state =
+      match tokens with
+      | (PunToken ("@", x), a) :: tokens ->
+        emit (TokenEvent (PunToken ("@", x), a)) tokens state
+
+      | _ ->
+        failwith "Parse error"
+
+    let tokens, state =
+      match tokens with
+      | (SnakeToken x, a) :: tokens ->
+        emit (TokenEvent (SnakeToken x, a)) tokens state
+
+      | _ ->
+        failwith "Parse error"
+
+    let tokens, state =
+      match tokens with
+      | (PunToken ("(", x), a) :: tokens ->
+        emit (TokenEvent (PunToken ("(", x), a)) tokens state
+
+      | _ ->
+        failwith "Parse error"
+
+    let tokens, state =
+      parseTerm emit tokens state
+
+    match tokens with
+    | (PunToken (")", x), a) :: tokens ->
+      emit (TokenEvent (PunToken (")", x), a)) tokens state
+
+    | _ ->
+      failwith "Parse error"
+
+  | (PunToken ("(", _), _) :: _ ->
+    let tokens, state =
+      match tokens with
+      | (PunToken ("(", x), a) :: tokens ->
+        emit (TokenEvent (PunToken ("(", x), a)) tokens state
+
+      | _ ->
+        failwith "Parse error"
+
+    let tokens, state =
+      parseTerm emit tokens state
+
+    match tokens with
+    | (PunToken (")", x), a) :: tokens ->
+      emit (TokenEvent (PunToken (")", x), a)) tokens state
+
+    | _ ->
+      failwith "Parse error"
+
+  | _ ->
+    failwith "Parse error"
+
+let parseSuffixTerm emit tokens state =
+  let tokens, state =
+    parseAtomTerm emit tokens state
+
+  let rec go tokens state =
+    match tokens with
+    | (PunToken ("*", _), _) :: _
+    | (PunToken ("+", _), _) :: _
+    | (PunToken (",", _), _) :: _
+    | (PunToken (";", _), _) :: _
+    | (PunToken ("?", _), _) :: _ ->
+      let tokens, state =
+        match tokens with
+        | (PunToken ("?", x), a) :: tokens ->
+          emit (TokenEvent (PunToken ("?", x), a)) tokens state
+
+        | (PunToken ("*", x), a) :: tokens ->
+          emit (TokenEvent (PunToken ("*", x), a)) tokens state
+
+        | (PunToken ("+", x), a) :: tokens ->
+          emit (TokenEvent (PunToken ("+", x), a)) tokens state
+
+        | (PunToken (",", _), _) :: _
+        | (PunToken (";", _), _) :: _ ->
+          let tokens, state =
+            parseSep emit tokens state
+
+          match tokens with
+          | (PunToken ("*", x), a) :: tokens ->
+            emit (TokenEvent (PunToken ("*", x), a)) tokens state
+
+          | _ ->
+            failwith "Parse error"
+
+        | _ ->
+          failwith "Parse error"
+
+      go tokens state
+
+    | _ ->
+      tokens, state
+
+  go tokens state
+
+let parseConcatTerm emit tokens state =
+  let rec go tokens state =
+    let tokens, state =
+      parseSuffixTerm emit tokens state
+
+    match tokens with
+    | (PunToken ("(", _), _) :: _
+    | (PunToken ("@", _), _) :: _
+    | (CharToken _, _) :: _
+    | (LoudToken _, _) :: _
+    | (SnakeToken _, _) :: _
+    | (StrToken _, _) :: _ ->
+      go tokens state
+
+    | _ ->
+      tokens, state
+
+  go tokens state
+
+let parseTerm emit tokens state =
+  let tokens, state =
+    parseConcatTerm emit tokens state
+
+  let rec go tokens state =
+    match tokens with
+    | (PunToken ("|", x), a) :: tokens ->
+      emit (TokenEvent (PunToken ("|", x), a)) tokens state
+
+      let tokens, state =
+        parseConcatTerm emit tokens state
+
+      go tokens state
+
+    | _ ->
+      tokens, state
+
+  go tokens state
+
+let parseRule emit tokens state =
+  let tokens, state =
+    match tokens with
+    | (SnakeToken x, a) :: tokens ->
+      emit (TokenEvent (SnakeToken x, a)) tokens state
+
+    | _ ->
+      failwith "Parse error"
+
+  let tokens, state =
+    match tokens with
+    | (PunToken ("=", x), a) :: tokens ->
+      emit (TokenEvent (PunToken ("=", x), a)) tokens state
+
+    | _ ->
+      failwith "Parse error"
+
+  parseTerm emit tokens state
+
+let parseRoot emit tokens state =
+  let rec go tokens state =
+    match tokens with
+    | (SnakeToken _, _) :: _ ->
+      let tokens, state =
+        parseRule emit tokens state
+
+      go tokens state
+
+    | _ ->
+      tokens, state
+
+  let tokens, state =
+    go tokens state
+
+  match tokens with
+  | (EofToken x, a) :: tokens ->
+    emit (TokenEvent (EofToken x, a)) tokens state
+
+  | _ ->
+    failwith "Parse error"

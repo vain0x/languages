@@ -1,0 +1,5 @@
+annotation_on_suffix = @opt(""?)
+
+nested_annotations = @first(@second(_))
+
+add = @binary(mul | @recursive(add) ("+" | "-") mul)

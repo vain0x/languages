@@ -1,0 +1,60 @@
+# FIRST = {IDENT}
+# FOLLOW = {")", ",", "{"}
+ty = IDENT
+
+# FIRST = {IDENT}
+# FOLLOW = {":"}
+pat = IDENT
+
+# FIRST = {"(", "[", IDENT, INT}
+# FOLLOW = {")", ",", ";", "]", "}"}
+atom_expr = INT
+          | IDENT
+          | "(" expr ")"
+          | "[" (expr ("," expr)*)? "]"
+
+# FIRST = {"(", "[", "if", "{", IDENT, INT}
+# FOLLOW = {")", ",", ";", "]", "}"}
+atom_or_block_expr = atom_expr
+                   | block_like_expr
+
+# FIRST = {"{"}
+# FOLLOW = {"(", ")", ",", ";", "[", "]", "else", "fn", "if", "{", "}", IDENT, INT}
+block_expr = "{" stmt* expr? "}"
+
+# FIRST = {"if"}
+# FOLLOW = {"(", ")", ",", ";", "[", "]", "if", "{", "}", IDENT, INT}
+if_expr = "if" cond_expr block_expr ("else" (block_expr | if_expr))?
+
+# FIRST = {"if", "{"}
+# FOLLOW = {"(", ")", ",", ";", "[", "]", "if", "{", "}", IDENT, INT}
+block_like_expr = block_expr
+                | if_expr
+
+# FIRST = {"(", "[", "if", "{", IDENT, INT}
+# FOLLOW = {")", ",", ";", "]", "}"}
+expr = atom_or_block_expr
+
+# FIRST = {"(", "[", "if", "{", IDENT, INT}
+# FOLLOW = {"(", "[", "if", "{", "}", IDENT, INT}
+stmt = block_like_expr
+     | expr ";"
+
+# NULLABLE
+# FIRST = {IDENT}
+# FOLLOW = {")"}
+param_list = (pat ":" ty ("," pat ":" ty)*)?
+
+# FIRST = {"fn"}
+# FOLLOW = {"fn"}
+item = "fn" IDENT "(" param_list ")" ("->" ty)? block_expr
+
+# NULLABLE
+# FIRST = {"fn"}
+# FOLLOW = {}
+items = item*
+
+# NULLABLE
+# FIRST = {"fn"}
+# FOLLOW = {}
+root = items

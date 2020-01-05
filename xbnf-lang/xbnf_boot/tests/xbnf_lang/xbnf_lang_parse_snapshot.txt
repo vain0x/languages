@@ -1,0 +1,78 @@
+[RuleStmtTerm
+   ("sep",
+    (OrTerm
+       ((TokenTerm "","", ([], (23, 26))),(TokenTerm "";"", ([], (29, 32)))),
+     ([], (27, 28))),[],(17, 20));
+ RuleStmtTerm
+   ("atom_term",
+    (OrTerm
+       ((OrTerm
+           ((OrTerm
+               ((OrTerm
+                   ((OrTerm
+                       ((TokenTerm "LOUD", ([], (46, 50))),
+                        (TokenTerm "SNAKE", ([], (53, 58)))), ([], (51, 52))),
+                    (TokenTerm "CHAR", ([], (61, 65)))), ([], (59, 60))),
+                (TokenTerm "STR", ([], (68, 71)))), ([], (66, 67))),
+            (ConcatTerm
+               ((ConcatTerm
+                   ((ConcatTerm
+                       ((ConcatTerm
+                           ((TokenTerm ""@"", ([], (74, 77))),
+                            (TokenTerm "SNAKE", ([], (78, 83)))), ([], (0, 0))),
+                        (TokenTerm ""("", ([], (84, 87)))), ([], (0, 0))),
+                    (SymbolTerm "term", ([], (88, 92)))), ([], (0, 0))),
+                (TokenTerm "")"", ([], (93, 96)))), ([], (0, 0)))),
+         ([], (72, 73))),
+        (ConcatTerm
+           ((ConcatTerm
+               ((TokenTerm ""("", ([], (99, 102))),
+                (SymbolTerm "term", ([], (103, 107)))), ([], (0, 0))),
+            (TokenTerm "")"", ([], (108, 111)))), ([], (0, 0)))), ([], (97, 98))),
+    [],(34, 43));
+ RuleStmtTerm
+   ("suffix_term",
+    (ConcatTerm
+       ((SymbolTerm "atom_term", ([], (127, 136))),
+        (ManyTerm
+           (OrTerm
+              ((OrTerm
+                  ((OrTerm
+                      ((OrTerm
+                          ((TokenTerm ""?"", ([], (138, 141))),
+                           (TokenTerm ""*"", ([], (144, 147)))),
+                        ([], (142, 143))),(TokenTerm ""+"", ([], (150, 153)))),
+                    ([], (148, 149))),
+                   (ConcatTerm
+                      ((SymbolTerm "sep", ([], (156, 159))),
+                       (TokenTerm ""*"", ([], (160, 163)))), ([], (0, 0)))),
+                ([], (154, 155))),
+               (ConcatTerm
+                  ((SymbolTerm "sep", ([], (166, 169))),
+                   (TokenTerm ""+"", ([], (170, 173)))), ([], (0, 0)))),
+            ([], (164, 165))), ([], (174, 175)))), ([], (0, 0))),[],(113, 124));
+ RuleStmtTerm
+   ("concat_term",
+    (Many1Term (SymbolTerm "suffix_term", ([], (191, 202))), ([], (202, 203))),
+    [],(177, 188));
+ RuleStmtTerm
+   ("term",
+    (ConcatTerm
+       ((SymbolTerm "concat_term", ([], (212, 223))),
+        (ManyTerm
+           (ConcatTerm
+              ((TokenTerm ""|"", ([], (225, 228))),
+               (SymbolTerm "concat_term", ([], (229, 240)))), ([], (0, 0))),
+         ([], (241, 242)))), ([], (0, 0))),[],(205, 209));
+ RuleStmtTerm
+   ("rule",
+    (ConcatTerm
+       ((ConcatTerm
+           ((TokenTerm "SNAKE", ([], (251, 256))),
+            (TokenTerm ""="", ([], (257, 260)))), ([], (0, 0))),
+        (SymbolTerm "term", ([], (261, 265)))), ([], (0, 0))),[],(244, 248));
+ RuleStmtTerm
+   ("root",
+    (ConcatTerm
+       ((ManyTerm (SymbolTerm "rule", ([], (274, 278))), ([], (278, 279))),
+        (TokenTerm "EOF", ([], (280, 283)))), ([], (0, 0))),[],(267, 271))]

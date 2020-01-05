@@ -1,0 +1,15 @@
+# X-BNF 言語自身の構文
+
+sep = "," | ";"
+
+atom_term = LOUD | SNAKE | CHAR | STR | "@" SNAKE "(" term ")" | "(" term ")"
+
+suffix_term = atom_term ("?" | "*" | "+" | sep "*" | sep "+")*
+
+concat_term = suffix_term+
+
+term = concat_term ("|" concat_term)*
+
+rule = SNAKE "=" term
+
+root = rule* EOF

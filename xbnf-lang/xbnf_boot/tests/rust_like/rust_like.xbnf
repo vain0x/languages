@@ -1,0 +1,28 @@
+ty = IDENT
+
+pat = IDENT
+
+atom_expr = INT
+    | IDENT
+    | "(" expr ")"
+    | "[" (expr),* "]"
+
+atom_or_block_expr = atom_expr | block_like_expr
+
+block_expr = "{" stmt* expr? "}"
+
+if_expr = "if" cond_expr block_expr ("else" (block_expr | if_expr))?
+
+block_like_expr = block_expr | if_expr
+
+expr = atom_or_block_expr
+
+stmt = block_like_expr | expr ";"
+
+param_list = (pat ":" ty),*
+
+item = "fn" IDENT "(" param_list ")" ("->" ty)? block_expr
+
+items = item*
+
+root = items

@@ -1,0 +1,50 @@
+module rec XbnfLang.ParseV2
+
+open XbnfLang.HelpersV2
+open XbnfLang.TypesV2
+
+let isFollowedByAnnotationOnSuffix tokens =
+  match tokens with
+  | _ ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByNestedAnnotations tokens =
+  match tokens with
+  | _
+    when isFollowedBy_ tokens ->
+    true
+
+  | _ ->
+    false
+
+let isFollowedByAdd tokens =
+  match tokens with
+  | _
+    when isFollowedByMul tokens ->
+    true
+
+  | _
+    when isFollowedByAdd tokens ->
+    true
+
+  | _ ->
+    false
+
+let parseAnnotationOnSuffix emit tokens state =
+  match tokens with
+  | _ ->
+    tokens, state
+
+  | _ ->
+    tokens, state
+
+let parseNestedAnnotations emit tokens state =
+  parse_ emit tokens state
+
+let parseAdd emit tokens state =
+  match tokens with
+  | _ ->
+    failwith "Parse error"

@@ -1,0 +1,47 @@
+# https:||github.com|vain0x|negi-lang
+
+atom
+    = '(' term ')'
+    | '[' list ']'
+    | '{' '}'
+    | INT | STR | IDENT
+
+suffix = atom ( '[' term ']' )*
+
+prefix = '-'? suffix
+
+bin_mul = prefix ( ( '*' | '/' | '%' ) prefix )*
+
+bin_add = bin_mul ( ( '+' | '-' ) bin_mul )*
+
+bin_cmp = bin_add ( ( '==' | '!=' | '<' | '<=' | '>' | '>=' ) bin_add )*
+
+bin_set = bin_cmp ( ( '=' | '+=' | '-=' | '*=' | '/=' | '%=' ) term )?
+
+cond = bin_set ( '?' term ':' term )?
+
+fun = 'fun' '(' ( IDENT ( ',' IDENT )* )? ')' ( block | term )
+
+term = fun | cond
+
+list = ( term ( ',' term )* )?
+
+block = '{' exp '}'
+
+let = 'let' IDENT '=' term
+
+if = 'if' '(' term ')' block ( 'else' ( if | block ) )?
+
+while = 'while' '(' term ')' block
+
+return = 'return' term?
+
+stmt =
+    let
+    | if | while | 'break'
+    | return
+    | term
+
+exp = ( ';'* stmt )* ';'*
+
+program = exp

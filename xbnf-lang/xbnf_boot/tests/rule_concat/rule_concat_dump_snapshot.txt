@@ -1,0 +1,4 @@
+# FIRST = {INT, STR}
+# FOLLOW = {}
+int_or_str = INT
+           | STR

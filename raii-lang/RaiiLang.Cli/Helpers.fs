@@ -50,6 +50,9 @@ type PassBy =
 
 let eol = "\n"
 
+let inline (===) (first: ^T) (second: ^T) =
+  System.Object.ReferenceEquals(first :> obj, second :> obj)
+
 let inline is< ^T when ^T : equality> (actual: ^T) (expected: ^T) =
   assert (actual = expected)
 

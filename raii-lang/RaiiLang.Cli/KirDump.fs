@@ -4,12 +4,9 @@ open RaiiLang.Helpers
 open RaiiLang.Kir
 
 let kdTy ty indent acc =
-  match ty with
-  | KNameTy name ->
-    acc |> cons "ty\"" |> cons name |> cons "\""
-
-  | KInferTy ->
-    acc |> cons "infer"
+  match ty |> kTyDeref with
+  | KInferTy (name, _) ->
+    acc |> cons "'" |> cons name
 
   | KNeverTy ->
     acc |> cons "never"

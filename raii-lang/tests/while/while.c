@@ -5,19 +5,19 @@ int fn_assert_eq(int actual, int expected) {
 
 int fn_main() {
     int b = 1;
-    void ok;
+    int ok;
     goto let_next;
 
 let_next:;
     int n = 0;
-    void a;
+    int a;
     goto let_next_2;
 
 let_next_2:;
     goto do_continue;
 
 do_continue:;
-    void assert_eq_res_3 = fn_assert_eq(a, a);
+    int assert_eq_res_3 = fn_assert_eq(a, a);
     int n_3 = 1;
     int prim_add_res = a + n_3;
     int prim_assign_res = &a = prim_add_res;
@@ -33,6 +33,6 @@ if_next:;
 
 do_break:;
     int n_2 = 5;
-    void assert_eq_res_2 = fn_assert_eq(a, n_2);
+    int assert_eq_res_2 = fn_assert_eq(a, n_2);
     return assert_eq_res_2;
 }

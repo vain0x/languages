@@ -21,21 +21,21 @@ fix fn inc(ref x: int) -> () {
 
 fix fn main() -> () {
   let mut n_2: int = 1
-  fix label let_next(mut a: infer) -> never {
+  fix label let_next(mut a: int) -> never {
     let mut n_3: int = 1
-    let mut assert_eq_res_2: infer = assert_eq(
+    let mut assert_eq_res_2: () = assert_eq(
       in a
       in n_3
     )
-    let mut inc_res: infer = inc(ref a)
+    let mut inc_res: () = inc(ref a)
     let mut n_4: int = 2
-    let mut assert_eq_res_3: infer = assert_eq(
+    let mut assert_eq_res_3: () = assert_eq(
       in a
       in n_4
     )
-    let mut inc_res_2: infer = inc(ref a)
+    let mut inc_res_2: () = inc(ref a)
     let mut n_5: int = 3
-    let mut assert_eq_res_4: infer = assert_eq(
+    let mut assert_eq_res_4: () = assert_eq(
       in a
       in n_5
     )

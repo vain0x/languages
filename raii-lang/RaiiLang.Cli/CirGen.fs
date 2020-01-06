@@ -28,9 +28,8 @@ let neverTerm = CName "__never__"
 let addPrefix name = sprintf "fn_%s" name
 
 let kTyToCTy ty =
-  match ty with
-  | KNameTy _
-  | KInferTy
+  match ty |> kTyDeref with
+  | KInferTy _
   | KNeverTy ->
     CVoidTy
 

@@ -36,7 +36,7 @@ let kgArgList context exit args =
         ))
 
     | _ ->
-      failwithf "引数がありません %A" args
+      failwithf "ERROR: 引数がありません %A" args
 
   go exit args
 
@@ -49,19 +49,20 @@ let kgParam context param =
     let ty =
       tyOpt
       |> Option.map (kgTy context)
-      |> Option.defaultValue KInferTy
+      |> Option.defaultWith (fun () -> KInferTy (name, ref None))
 
     KParam (mode, name, ty)
 
   | _ ->
-    failwithf "パラメータ名がありません %A" param
+    failwithf "ERROR: パラメータ名がありません %A" param
 
 let kgResult context result =
   match result with
-  | AResult (tyOpt, _) ->
-    tyOpt
-    |> Option.map (kgTy context)
-    |> Option.defaultValue KInferTy
+  | AResult (Some ty, _) ->
+    ty |> kgTy context
+
+  | AResult (None, _) ->
+    failwithf "ERROR: 結果型がありません %A" result
 
 let kgTy _context ty =
   match ty with
@@ -73,10 +74,10 @@ let kgTy _context ty =
 
   | ATy (Some name, _) ->
     // FIXME: 後で名前解決する
-    KNameTy name
+    KInferTy (name, ref None)
 
   | ATy (None, _) ->
-    KUnitTy
+    failwithf "ERROR: 型名がありません %A" ty
 
 /// bodyFun: ループの残りの部分を生成する関数を受け取って、ループの本体を返す関数
 let kgLoop context exit bodyFun =
@@ -182,7 +183,7 @@ let kgTerm (context: KirGenContext) exit term =
       KPrim (
         KFnPrim funName,
         args,
-        KParam (MutMode, result, KInferTy),
+        KParam (MutMode, result, KInferTy (result, ref None)),
         exit (KName result)
       ))
 

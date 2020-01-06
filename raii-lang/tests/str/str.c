@@ -10,11 +10,11 @@ char* fn_string_clone(char* s_2) {
 
 int fn_main() {
     char* s_4 = "hello";
-    void string_clone_res_2 = fn_string_clone(s_4);
-    void s_3;
+    char* string_clone_res_2 = fn_string_clone(s_4);
+    char* s_3;
     goto let_next;
 
 let_next:;
-    void print_res_2 = fn_print(s);
+    int print_res_2 = fn_print(s);
     return print_res_2;
 }

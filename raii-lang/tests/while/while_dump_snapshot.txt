@@ -8,12 +8,12 @@ fix fn assert_eq(in actual: int, in expected: int) -> () {
 
 fix fn main() -> () {
   let mut b: bool = true
-  fix label let_next(mut ok: infer) -> never {
+  fix label let_next(mut ok: bool) -> never {
     let mut n: int = 0
-    fix label let_next_2(mut a: infer) -> never {
+    fix label let_next_2(mut a: int) -> never {
       fix label do_break() -> never {
         let mut n_2: int = 5
-        let mut assert_eq_res_2: infer = assert_eq(
+        let mut assert_eq_res_2: () = assert_eq(
           in a
           in n_2
         )
@@ -22,7 +22,7 @@ fix fn main() -> () {
 
       fix label do_continue() -> never {
         if ok {
-          let mut assert_eq_res_3: infer = assert_eq(
+          let mut assert_eq_res_3: () = assert_eq(
             in a
             in a
           )

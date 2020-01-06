@@ -12,17 +12,17 @@ int fn_inc(int* x) {
 
 int fn_main() {
     int n_2 = 1;
-    void a;
+    int a;
     goto let_next;
 
 let_next:;
     int n_3 = 1;
-    void assert_eq_res_2 = fn_assert_eq(a, n_3);
-    void inc_res = fn_inc(&a);
+    int assert_eq_res_2 = fn_assert_eq(a, n_3);
+    int inc_res = fn_inc(&a);
     int n_4 = 2;
-    void assert_eq_res_3 = fn_assert_eq(a, n_4);
-    void inc_res_2 = fn_inc(&a);
+    int assert_eq_res_3 = fn_assert_eq(a, n_4);
+    int inc_res_2 = fn_inc(&a);
     int n_5 = 3;
-    void assert_eq_res_4 = fn_assert_eq(a, n_5);
+    int assert_eq_res_4 = fn_assert_eq(a, n_5);
     return assert_eq_res_4;
 }

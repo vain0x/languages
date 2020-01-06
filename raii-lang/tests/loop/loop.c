@@ -10,16 +10,16 @@ int fn_print(char* s) {
 
 int fn_main() {
     char* s_2 = "before loop";
-    void print_res_2 = fn_print(s_2);
+    int print_res_2 = fn_print(s_2);
     int n = 0;
-    void a;
+    int a;
     goto let_next;
 
 let_next:;
     goto do_continue;
 
 do_continue:;
-    void assert_eq_res_2 = fn_assert_eq(a, a);
+    int assert_eq_res_2 = fn_assert_eq(a, a);
     int n_2 = 5;
     int prim_eq_res = a == n_2;
     int res;
@@ -42,6 +42,6 @@ if_next_2:;
 
 do_break:;
     char* s_3 = "after loop";
-    void print_res_3 = fn_print(s_3);
+    int print_res_3 = fn_print(s_3);
     return print_res_3;
 }

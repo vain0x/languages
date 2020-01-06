@@ -4,9 +4,6 @@ open RaiiLang.Helpers
 open RaiiLang.Syntax
 
 type KTy =
-  | KNameTy
-    of string
-  | KInferTy
   | KNeverTy
   | KUnitTy
   | KBoolTy
@@ -14,6 +11,9 @@ type KTy =
   | KStrTy
   | KFunTy
     of KParam list * KResult
+
+  | KInferTy
+    of string * KTy option ref
 
 type KFixKind =
   | KLabelFix
@@ -168,3 +168,16 @@ let kPrimToString prim =
 
   | KExternFnPrim name ->
     sprintf "extern_%s" name
+
+let kTyDeref ty =
+  match ty with
+  | KInferTy (_, tyOpt) ->
+    match !tyOpt with
+    | Some ty ->
+      ty |> kTyDeref
+
+    | None ->
+      ty
+
+  | _ ->
+    ty

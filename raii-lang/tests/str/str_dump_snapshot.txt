@@ -10,9 +10,9 @@ fix fn string_clone(in s_2: string) -> string {
 
 fix fn main() -> () {
   let mut s_4: string = "hello"
-  let mut string_clone_res_2: infer = string_clone(in s_4)
-  fix label let_next(val s_3: infer) -> never {
-    let mut print_res_2: infer = print(in s)
+  let mut string_clone_res_2: string = string_clone(in s_4)
+  fix label let_next(val s_3: string) -> never {
+    let mut print_res_2: () = print(in s)
     jump return(move print_res_2)
   }
 

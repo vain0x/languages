@@ -13,17 +13,17 @@ fix fn print(in s: string) -> () {
 
 fix fn main() -> () {
   let mut s_2: string = "before loop"
-  let mut print_res_2: infer = print(in s_2)
+  let mut print_res_2: () = print(in s_2)
   let mut n: int = 0
-  fix label let_next(mut a: infer) -> never {
+  fix label let_next(mut a: int) -> never {
     fix label do_break() -> never {
       let mut s_3: string = "after loop"
-      let mut print_res_3: infer = print(in s_3)
+      let mut print_res_3: () = print(in s_3)
       jump return(move print_res_3)
     }
 
     fix label do_continue() -> never {
-      let mut assert_eq_res_2: infer = assert_eq(
+      let mut assert_eq_res_2: () = assert_eq(
         in a
         in a
       )

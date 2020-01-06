@@ -14,7 +14,7 @@ int fn_main() {
     int prim_eq_res = n == n_2;
     int res;
     char* s_7 = "0 == 0";
-    void print_res_7 = fn_print(s_7);
+    int print_res_7 = fn_print(s_7);
     goto if_next;
 
 if_next:;
@@ -23,12 +23,12 @@ if_next:;
     int prim_eq_res_2 = n_3 == n_4;
     int res_2;
     char* s_5 = "0 == 1";
-    void print_res_5 = fn_print(s_5);
+    int print_res_5 = fn_print(s_5);
     goto if_next_2;
 
 if_next_2:;
     int n_5 = 2;
-    void x;
+    int x;
     goto let_next;
 
 let_next:;
@@ -36,7 +36,7 @@ let_next:;
     int prim_eq_res_3 = x == n_6;
     int res_3;
     char* s_2 = "0 == 1";
-    void print_res_2 = fn_print(s_2);
+    int print_res_2 = fn_print(s_2);
     goto if_next_3;
 
 if_next_3:;

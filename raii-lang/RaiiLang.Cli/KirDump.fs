@@ -3,6 +3,17 @@ module rec RaiiLang.KirDump
 open RaiiLang.Helpers
 open RaiiLang.Kir
 
+let kdLabel label acc =
+  match label with
+  | KLabel name ->
+    acc |> cons name
+
+  | KReturnLabel ->
+    acc |> cons "return"
+
+  | KExitLabel ->
+    acc |> cons "exit"
+
 let kdTy ty indent acc =
   match ty |> kTyDeref with
   | KInferTy (name, _) ->
@@ -55,7 +66,7 @@ let kdParamList paramList indent acc =
 
   acc |> cons ")"
 
-let kdArg arg indent acc =
+let kdArg arg _indent acc =
   match arg with
   | KArg (passBy, name) ->
     acc
@@ -95,13 +106,10 @@ let kdNode node indent acc =
   | KName name ->
     acc |> cons name
 
-  | KPrim (prim, args, result, next) ->
-    let acc =
-      acc
-      |> cons "let "
-      |> kdParam result indent
-      |> cons " = "
-      |> cons (kPrimToString prim)
+  | KPrim (prim, args, next) ->
+    let acc = acc |> cons "jump " |> kdLabel next |> cons "("
+
+    let acc = acc |> cons (kPrimToString prim)
 
     let acc =
       if prim |> kPrimIsLiteral then
@@ -110,26 +118,7 @@ let kdNode node indent acc =
       else
         acc |> kdArgList args indent
 
-    acc
-    |> cons indent
-    |> kdNode next indent
-
-  | KJump (label, args) ->
-    let labelName =
-      match label with
-      | KLabel name ->
-        name
-
-      | KReturnLabel ->
-        "return"
-
-      | KExitLabel ->
-        "exit"
-
-    acc
-    |> cons "jump "
-    |> cons labelName
-    |> kdArgList args indent
+    acc |> cons ")"
 
   | KIf (cond, body, alt) ->
     let deepIndent = indent + "  "

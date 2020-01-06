@@ -56,90 +56,154 @@ let kiUnify context first second =
   | _ ->
     eprintfn "WARN: Type error %A" (first, second)
 
-let kiArg context arg =
-  match arg with
-  | KArg (_, arg) ->
-    KName arg |> kiNode context
-
-let kiParam (context: KirInferContext) param =
-  match param with
-  | KParam (_, name, ty) ->
-    context.TyMap <- context.TyMap |> Map.add name ty
-
-let kiCall context name args =
-  let argTys = args |> List.map (kiArg context)
-
+let kiName context name =
   match context.TyMap.TryGetValue(name) with
-  | true, KFunTy (paramList, KResult resultTy)
-    when List.length paramList = List.length args ->
-
-    // FIXME: 引数の型や渡し方を検査
-    for argTy, KParam (_, _, paramTy) in List.zip argTys paramList do
-      kiUnify context argTy paramTy
-
-    resultTy
-
-  | true, _ ->
-    eprintfn "WARN: 関数ではないものを関数呼び出ししています %s" name
-    KNeverTy
+  | true, ty ->
+    kTyDeref ty
 
   | false, _ ->
-    // 未定義の関数？
+    // FIXME: 未定義の変数？
     KNeverTy
 
-let kiPrim context prim args =
-  let argTys = args |> List.map (kiArg context)
+let kiLabel context label =
+  match label with
+  | KLabel label ->
+    kiName context label
 
-  match prim, argTys with
-  | KBoolLiteralPrim _, _ ->
-    KBoolTy
+  | KReturnLabel ->
+    // FIXME: 現在の関数の結果型を引数とする関数型
+    KNeverTy
 
-  | KIntLiteralPrim _, _ ->
-    KIntTy
+  | KExitLabel ->
+    KFunTy ([], KResult KNeverTy)
 
-  | KStrLiteralPrim _, _ ->
-    KStrTy
+let kiArg context arg =
+  match arg with
+  | KArg (passBy, arg) ->
+    let arg = kiName context arg
+    passBy, arg
 
-  | KEqPrim, [first; second] ->
-    kiUnify context first second
-    first
+let kiCall context funTy args =
+  // 渡された引数から関数型を逆算する。
+  let paramList =
+    args |> List.map (fun (passBy, argTy) ->
+      KParam (passByToMode passBy, "_", argTy)
+    )
+  let result =
+    KInferTy ("result", ref None)
+    |> KResult
+  let expectedTy =
+    KFunTy (paramList, result)
 
-  | KAddPrim, [first; second] ->
-    kiUnify context first second
-    first
+  // 呼び出し先の関数の型と単一化する。
+  kiUnify context funTy expectedTy
 
-  | KAssignPrim, [first; second] ->
-    kiUnify context first second
-    first
+  expectedTy
 
-  | KFnPrim name, _ ->
-    kiCall context name args
+let kiJump context label args =
+  let labelTy = kiLabel context label
+  kiCall context labelTy args
 
-  | KExternFnPrim name, _ ->
-    KInferTy (name, ref None)
+let kiPrim context prim args next =
+  let args = args |> List.map (kiArg context)
 
-  | _ ->
-    failwithf "unimpl %A" (prim, argTys)
+  let unifyNext funTy =
+    match funTy with
+    | KFunTy (_, KResult resultTy) ->
+      let labelTy = kiLabel context next
+      kiUnify context labelTy (
+        KFunTy (
+          [KParam (MutMode, "result", resultTy)],
+          KResult (KInferTy ("_", ref None))
+        ))
+
+    | _ ->
+      ()
+
+  // 1個の結果と1個の継続を持つケース
+  let onPrim1 paramList result =
+    let funTy = KFunTy (paramList, result)
+
+    // 引数の型の推論
+    kiCall context funTy args |> ignore
+
+    // 継続の型の推論
+    unifyNext funTy
+
+    funTy
+
+  let onBin funTyFun =
+    match args with
+    | [(_, first); (_, second)] ->
+      let paramList, result = funTyFun first second
+      onPrim1 paramList result
+
+    | _ ->
+      failwithf "NEVER: 二項演算の引数は2個"
+
+  match prim with
+  | KBoolLiteralPrim _ ->
+    onPrim1 [] (KResult KBoolTy)
+
+  | KIntLiteralPrim _ ->
+    onPrim1 [] (KResult KIntTy)
+
+  | KStrLiteralPrim _ ->
+    onPrim1 [] (KResult KStrTy)
+
+  | KEqPrim ->
+    onBin (fun first second ->
+      kiUnify context first second
+      (
+        [
+          KParam (InMode, "first", first)
+          KParam (InMode, "second", second)
+        ],
+        KResult KBoolTy
+      ))
+
+  | KAddPrim ->
+    onBin (fun first second ->
+      kiUnify context first second
+      (
+        [
+          KParam (ValMode, "first", first)
+          KParam (ValMode, "second", second)
+        ],
+        KResult first
+      ))
+
+  | KAssignPrim ->
+    onBin (fun first second ->
+      kiUnify context first second
+      (
+        [
+          KParam (InMode, "first", first)
+          KParam (InMode, "second", second)
+        ],
+        KResult KUnitTy
+      ))
+
+  | KJumpPrim ->
+    kiJump context next []
+
+  | KFnPrim name ->
+    let funTy = kiName context name
+    unifyNext funTy
+    kiCall context funTy args
+
+  | KExternFnPrim name ->
+    let funTy = KInferTy (name, ref None)
+    unifyNext funTy
+    kiCall context funTy args
 
 let kiNode (context: KirInferContext) node =
   match node with
   | KName name ->
-    match context.TyMap.TryGetValue(name) with
-    | true, ty ->
-      ty
+    kiName context name
 
-    | false, _ ->
-      // 未定義の変数？
-      KNeverTy
-
-  | KPrim (prim, args, KParam (_, resultName, resultTy), next) ->
-    // FIXME: モードを検査
-    let ty = kiPrim context prim args
-    kiUnify context ty resultTy
-
-    context.TyMap <- context.TyMap |> Map.add resultName resultTy
-
-    next |> kiNode context
+  | KPrim (prim, args, next) ->
+    kiPrim context prim args next
 
   | KIf (cond, body, alt) ->
     KName cond |> kiNode context |> kiUnify context KBoolTy
@@ -151,17 +215,16 @@ let kiNode (context: KirInferContext) node =
 
     bodyTy
 
-  | KJump (KLabel name, args) ->
-    kiCall context name args
-
-  | KJump _ ->
-    KNeverTy
-
   | KFix (funName, _, paramList, result, body, next) ->
     context.TyMap <- context.TyMap |> Map.add funName (KFunTy (paramList, result))
 
     let tyMap = context.TyMap
+
+    for KParam (_, paramName, paramTy) in paramList do
+      context.TyMap <- context.TyMap |> Map.add paramName paramTy
+
     body |> kiNode context |> ignore
+
     context.TyMap <- tyMap
 
     next |> kiNode context

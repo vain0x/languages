@@ -1,22 +1,29 @@
 fix fn print(in s: string) -> () {
-  let mut print_res: () = extern_print(in s)
-  jump return(move print_res)
+  jump return(extern_print(in s))
 }
 
 fix fn string_clone(in s_2: string) -> string {
-  let mut string_clone_res: string = extern_string_clone(in s_2)
-  jump return(move string_clone_res)
+  jump return(extern_string_clone(in s_2))
 }
 
 fix fn main() -> () {
-  let mut s_4: string = "hello"
-  let mut string_clone_res_2: string = string_clone(in s_4)
-  fix label let_next(val s_3: string) -> never {
-    let mut print_res_2: () = print(in s)
-    jump return(move print_res_2)
+  fix label next(mut result: string) -> never {
+    fix label next_2(mut result_2: string) -> never {
+      fix label let_next(val s_3: 's_3) -> never {
+        fix label next_3(mut result_3: ()) -> never {
+          jump return(prim_jump(move result_3))
+        }
+
+        jump next_3(print(in s))
+      }
+
+      jump let_next(prim_jump(move result_2))
+    }
+
+    jump next_2(string_clone(in result))
   }
 
-  jump let_next(move string_clone_res_2)
+  jump next("hello")
 }
 
 __noop

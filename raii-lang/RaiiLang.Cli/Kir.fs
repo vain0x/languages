@@ -42,6 +42,8 @@ type KPrim =
   | KExternFnPrim
     of externFnName:string
 
+  | KJumpPrim
+
 [<Struct>]
 type KArg =
   | KArg
@@ -73,12 +75,7 @@ type KNode =
   | KPrim
     of prim:KPrim
       * args:KArg list
-      * result:KParam
-      * next:KNode
-
-  | KJump
-    of KLabel
-      * args:KArg list
+      * next:KLabel
 
   | KIf
     of cond:string
@@ -134,6 +131,9 @@ let kPrimToSig prim =
   | KAssignPrim ->
     [ByRef; ByMove], KUnitTy
 
+  | KJumpPrim ->
+    [], KNeverTy
+
   | KFnPrim _
   | KExternFnPrim _ ->
     failwithf "kPrimToSig では関数のシグネチャを取得できません: %A" prim
@@ -160,6 +160,9 @@ let kPrimToString prim =
 
   | KAssignPrim ->
     "prim_assign"
+
+  | KJumpPrim ->
+    "prim_jump"
 
   | KFnPrim name ->
     name

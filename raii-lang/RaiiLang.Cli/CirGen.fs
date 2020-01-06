@@ -80,33 +80,44 @@ let cgArg _context (KArg (passBy, arg)) =
   | ByRef ->
     CUni (CRefUni, arg)
 
-let cgPrimTerm context prim args result next =
-  let resultName, resultTy =
-    match cgParam context result with
-    | CParam (name, ty) ->
-      name, ty
+let cgJump context label args =
+  match label with
+  | KLabel label ->
+    // FIXME: ジャンプ先のパラメータに args を代入する
+    for arg in args do
+      let assignStmt = CTermStmt (CBin (CAssignBin, CName "_", arg))
+      context.Stmts.Add(assignStmt)
 
+    let gotoStmt = CGotoStmt label
+    context.Stmts.Add(gotoStmt)
+
+  | KReturnLabel ->
+    assert (args |> List.length <= 1)
+
+    let argOpt = args |> List.tryHead
+    let returnStmt = CReturn argOpt
+    context.Stmts.Add(returnStmt)
+
+  | KExitLabel ->
+    assert (args |> List.isEmpty)
+
+    let exitStmt = CTermStmt (CCall (CName "exit", [CInt "0"]))
+    context.Stmts.Add(exitStmt)
+
+let cgPrimTerm context prim args next =
   let onLiteral body =
-    let local = CLocalStmt (resultName, resultTy, Some body)
-    context.Stmts.Add(local)
-    cgNode context next
-    CName resultName
+    cgJump context next [body]
 
   let onBin bin first second =
     let first = first |> cgArg context
     let second = second |> cgArg context
     let body = CBin (bin, first, second)
-    let local = CLocalStmt (resultName, resultTy, Some body)
-    context.Stmts.Add(local)
-    cgNode context next
-    CName resultName
+    cgJump context next [body]
 
   let onCall fnName =
     let args = args |> List.map (cgArg context)
-    let local = CLocalStmt (resultName, resultTy, Some (CCall (CName fnName, args)))
-    context.Stmts.Add(local)
-    cgNode context next
-    CName resultName
+    let body = CCall (CName fnName, args)
+    cgJump context next [body]
 
   match prim, args with
   | KBoolLiteralPrim false, [] ->
@@ -130,6 +141,10 @@ let cgPrimTerm context prim args result next =
   | KAssignPrim, [first; second] ->
     onBin CAssignBin first second
 
+  | KJumpPrim, _ ->
+    let args = args |> List.map (cgArg context)
+    cgJump context next args
+
   | KFnPrim fnName, _ ->
     onCall (addPrefix fnName)
 
@@ -144,39 +159,13 @@ let cgTerm (context: CirGenContext) (node: KNode) =
   | KName name ->
     CName name
 
-  | KPrim (prim, args, result, next) ->
-    cgPrimTerm context prim args result next
+  | KPrim (prim, args, next) ->
+    cgPrimTerm context prim args next
+    neverTerm
 
   | KIf (cond, body, alt) ->
     // FIXME: 実装
     body |> cgTerm context
-
-  | KJump (KLabel label, args) ->
-    let args = args |> List.map (cgArg context)
-
-    // FIXME: ジャンプ先のパラメータに args を代入する
-
-    let gotoStmt = CGotoStmt label
-    context.Stmts.Add(gotoStmt)
-
-    neverTerm
-
-  | KJump (KReturnLabel, args) ->
-    assert (args |> List.length <= 1)
-
-    let argOpt = args |> List.map (cgArg context) |> List.tryHead
-    let returnStmt = CReturn argOpt
-    context.Stmts.Add(returnStmt)
-
-    neverTerm
-
-  | KJump (KExitLabel, args) ->
-    assert (args |> List.isEmpty)
-
-    let exitStmt = CTermStmt (CCall (CName "exit", [CInt "0"]))
-    context.Stmts.Add(exitStmt)
-
-    neverTerm
 
   | KFix (funName, KLabelFix, paramList, _, body, next) ->
     for KParam (_mode, paramName, paramTy) in paramList do
@@ -211,7 +200,6 @@ let cgNode context (node: KNode) =
     ()
 
   | KPrim _
-  | KJump _
   | KIf _
   | KFix _ ->
     cgTerm context node |> ignore

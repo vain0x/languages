@@ -1,48 +1,83 @@
 fix fn assert_eq(in actual: int, in expected: int) -> () {
-  let mut assert_eq_res: () = extern_assert_eq(
+  jump return(extern_assert_eq(
     in actual
     in expected
-  )
-  jump return(move assert_eq_res)
+  ))
 }
 
 fix fn inc(ref x: int) -> () {
-  let mut n: int = 1
-  let mut prim_add_res: int = prim_add(
-    move x
-    move n
-  )
-  let mut prim_assign_res: () = prim_assign(
-    ref x
-    move prim_add_res
-  )
-  jump return(move prim_assign_res)
+  fix label next(mut result: int) -> never {
+    fix label next_2(mut result_2: int) -> never {
+      fix label next_3(mut result_3: ()) -> never {
+        jump return(prim_jump(move result_3))
+      }
+
+      jump next_3(prim_assign(
+        ref x
+        move result_2
+      ))
+    }
+
+    jump next_2(prim_add(
+      move x
+      move result
+    ))
+  }
+
+  jump next(1)
 }
 
 fix fn main() -> () {
-  let mut n_2: int = 1
-  fix label let_next(mut a: int) -> never {
-    let mut n_3: int = 1
-    let mut assert_eq_res_2: () = assert_eq(
-      in a
-      in n_3
-    )
-    let mut inc_res: () = inc(ref a)
-    let mut n_4: int = 2
-    let mut assert_eq_res_3: () = assert_eq(
-      in a
-      in n_4
-    )
-    let mut inc_res_2: () = inc(ref a)
-    let mut n_5: int = 3
-    let mut assert_eq_res_4: () = assert_eq(
-      in a
-      in n_5
-    )
-    jump return(move assert_eq_res_4)
+  fix label next_4(mut result_4: int) -> never {
+    fix label let_next(mut a: int) -> never {
+      fix label next_5(mut result_5: int) -> never {
+        fix label next_6(mut result_6: ()) -> never {
+          fix label next_7(mut result_7: ()) -> never {
+            fix label next_8(mut result_8: int) -> never {
+              fix label next_9(mut result_9: ()) -> never {
+                fix label next_10(mut result_10: ()) -> never {
+                  fix label next_11(mut result_11: int) -> never {
+                    fix label next_12(mut result_12: ()) -> never {
+                      jump return(prim_jump(move result_12))
+                    }
+
+                    jump next_12(assert_eq(
+                      in a
+                      in result_11
+                    ))
+                  }
+
+                  jump next_11(3)
+                }
+
+                jump next_10(inc(ref a))
+              }
+
+              jump next_9(assert_eq(
+                in a
+                in result_8
+              ))
+            }
+
+            jump next_8(2)
+          }
+
+          jump next_7(inc(ref a))
+        }
+
+        jump next_6(assert_eq(
+          in a
+          in result_5
+        ))
+      }
+
+      jump next_5(1)
+    }
+
+    jump let_next(prim_jump(in result_4))
   }
 
-  jump let_next(in n_2)
+  jump next_4(1)
 }
 
 __noop

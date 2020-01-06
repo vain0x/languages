@@ -1,91 +1,164 @@
 fix fn assert_eq(in actual: int, in expected: int) -> () {
-  let mut assert_eq_res: () = extern_assert_eq(
+  jump return(extern_assert_eq(
     in actual
     in expected
-  )
-  jump return(move assert_eq_res)
+  ))
 }
 
 fix fn print(in s: string) -> () {
-  let mut print_res: () = extern_print(in s)
-  jump return(move print_res)
+  jump return(extern_print(in s))
 }
 
 fix fn main() -> () {
-  let mut n: int = 0
-  let mut n_2: int = 0
-  let mut prim_eq_res: bool = prim_eq(
-    in n
-    in n_2
-  )
-  fix label if_next(mut res: int) -> never {
-    let mut n_3: int = 0
-    let mut n_4: int = 1
-    let mut prim_eq_res_2: bool = prim_eq(
-      in n_3
-      in n_4
-    )
-    fix label if_next_2(mut res_2: int) -> never {
-      let mut n_5: int = 2
-      fix label let_next(val x: int) -> never {
-        let mut n_6: int = 1
-        let mut prim_eq_res_3: bool = prim_eq(
-          in x
-          in n_6
-        )
-        fix label if_next_3(mut res_3: int) -> never {
-          jump return(move res_3)
+  fix label next(mut result: int) -> never {
+    fix label next_2(mut result_2: int) -> never {
+      fix label next_3(mut result_3: bool) -> never {
+        fix label if_next(mut res: int) -> never {
+          fix label next_4(mut result_4: int) -> never {
+            fix label next_5(mut result_5: int) -> never {
+              fix label next_6(mut result_6: bool) -> never {
+                fix label if_next_2(mut res_2: int) -> never {
+                  fix label next_7(mut result_7: int) -> never {
+                    fix label let_next(val x: int) -> never {
+                      fix label next_8(mut result_8: int) -> never {
+                        fix label next_9(mut result_9: bool) -> never {
+                          fix label if_next_3(mut res_3: int) -> never {
+                            jump return(prim_jump(move res_3))
+                          }
+
+                          if result_9 {
+                            fix label next_10(mut result_10: string) -> never {
+                              fix label next_11(mut result_11: ()) -> never {
+                                jump if_next_3(prim_jump(move result_11))
+                              }
+
+                              jump next_11(print(in result_10))
+                            }
+
+                            jump next_10("0 == 1")
+                          } else {
+                            fix label next_12(mut result_12: int) -> never {
+                              fix label next_13(mut result_13: bool) -> never {
+                                fix label if_next_4(mut res_4: int) -> never {
+                                  jump if_next_3(prim_jump(move res_4))
+                                }
+
+                                if result_13 {
+                                  fix label next_14(mut result_14: string) -> never {
+                                    fix label next_15(mut result_15: ()) -> never {
+                                      jump if_next_4(prim_jump(move result_15))
+                                    }
+
+                                    jump next_15(print(in result_14))
+                                  }
+
+                                  jump next_14("x == 2")
+                                } else {
+                                  fix label next_16(mut result_16: string) -> never {
+                                    fix label next_17(mut result_17: ()) -> never {
+                                      jump if_next_4(prim_jump(move result_17))
+                                    }
+
+                                    jump next_17(print(in result_16))
+                                  }
+
+                                  jump next_16("x != 1, x != 2")
+                                }
+                              }
+
+                              jump next_13(prim_eq(
+                                in x
+                                in result_12
+                              ))
+                            }
+
+                            jump next_12(2)
+                          }
+                        }
+
+                        jump next_9(prim_eq(
+                          in x
+                          in result_8
+                        ))
+                      }
+
+                      jump next_8(1)
+                    }
+
+                    jump let_next(prim_jump(in result_7))
+                  }
+
+                  jump next_7(2)
+                }
+
+                if result_6 {
+                  fix label next_18(mut result_18: string) -> never {
+                    fix label next_19(mut result_19: ()) -> never {
+                      jump if_next_2(prim_jump(move result_19))
+                    }
+
+                    jump next_19(print(in result_18))
+                  }
+
+                  jump next_18("0 == 1")
+                } else {
+                  fix label next_20(mut result_20: string) -> never {
+                    fix label next_21(mut result_21: ()) -> never {
+                      jump if_next_2(prim_jump(move result_21))
+                    }
+
+                    jump next_21(print(in result_20))
+                  }
+
+                  jump next_20("0 != 1")
+                }
+              }
+
+              jump next_6(prim_eq(
+                in result_4
+                in result_5
+              ))
+            }
+
+            jump next_5(1)
+          }
+
+          jump next_4(0)
         }
 
-        if prim_eq_res_3 {
-          let mut s_2: string = "0 == 1"
-          let mut print_res_2: () = print(in s_2)
-          jump if_next_3(move print_res_2)
-        } else {
-          let mut n_7: int = 2
-          let mut prim_eq_res_4: bool = prim_eq(
-            in x
-            in n_7
-          )
-          fix label if_next_4(mut res_4: int) -> never {
-            jump if_next_3(move res_4)
+        if result_3 {
+          fix label next_22(mut result_22: string) -> never {
+            fix label next_23(mut result_23: ()) -> never {
+              jump if_next(prim_jump(move result_23))
+            }
+
+            jump next_23(print(in result_22))
           }
 
-          if prim_eq_res_4 {
-            let mut s_3: string = "x == 2"
-            let mut print_res_3: () = print(in s_3)
-            jump if_next_4(move print_res_3)
-          } else {
-            let mut s_4: string = "x != 1, x != 2"
-            let mut print_res_4: () = print(in s_4)
-            jump if_next_4(move print_res_4)
+          jump next_22("0 == 0")
+        } else {
+          fix label next_24(mut result_24: string) -> never {
+            fix label next_25(mut result_25: ()) -> never {
+              jump if_next(prim_jump(move result_25))
+            }
+
+            jump next_25(print(in result_24))
           }
+
+          jump next_24("0 != 0")
         }
       }
 
-      jump let_next(in n_5)
+      jump next_3(prim_eq(
+        in result
+        in result_2
+      ))
     }
 
-    if prim_eq_res_2 {
-      let mut s_5: string = "0 == 1"
-      let mut print_res_5: () = print(in s_5)
-      jump if_next_2(move print_res_5)
-    } else {
-      let mut s_6: string = "0 != 1"
-      let mut print_res_6: () = print(in s_6)
-      jump if_next_2(move print_res_6)
-    }
+    jump next_2(0)
   }
 
-  if prim_eq_res {
-    let mut s_7: string = "0 == 0"
-    let mut print_res_7: () = print(in s_7)
-    jump if_next(move print_res_7)
-  } else {
-    let mut s_8: string = "0 != 0"
-    let mut print_res_8: () = print(in s_8)
-    jump if_next(move print_res_8)
-  }
+  jump next(0)
 }
 
 __noop

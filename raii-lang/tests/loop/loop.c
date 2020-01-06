@@ -1,47 +1,110 @@
 int fn_assert_eq(int actual, int expected) {
-    int assert_eq_res = assert_eq(actual, expected);
-    return assert_eq_res;
+    return assert_eq(actual, expected);
 }
 
 int fn_print(char* s) {
-    int print_res = print(s);
-    return print_res;
+    return print(s);
 }
 
 int fn_main() {
-    char* s_2 = "before loop";
-    int print_res_2 = fn_print(s_2);
-    int n = 0;
+    char* result;
+    _ = "before loop";
+    goto next;
+
+next:;
+    int result_2;
+    _ = fn_print(result);
+    goto next_2;
+
+next_2:;
+    int result_3;
+    _ = 0;
+    goto next_3;
+
+next_3:;
     int a;
+    _ = result_3;
     goto let_next;
 
 let_next:;
     goto do_continue;
 
 do_continue:;
-    int assert_eq_res_2 = fn_assert_eq(a, a);
-    int n_2 = 5;
-    int prim_eq_res = a == n_2;
+    int result_6;
+    _ = fn_assert_eq(a, a);
+    goto next_6;
+
+next_6:;
+    int result_7;
+    _ = 5;
+    goto next_7;
+
+next_7:;
+    int result_8;
+    _ = a == result_7;
+    goto next_8;
+
+next_8:;
     int res;
     goto do_break;
 
 if_next:;
-    int n_3 = 2;
-    int prim_eq_res_2 = a == n_3;
+    int result_9;
+    _ = 2;
+    goto next_9;
+
+next_9:;
+    int result_10;
+    _ = a == result_9;
+    goto next_10;
+
+next_10:;
     int res_2;
-    int n_5 = 2;
-    int prim_add_res_2 = a + n_5;
-    int prim_assign_res_2 = &a = prim_add_res_2;
+    int result_14;
+    _ = 2;
+    goto next_14;
+
+next_14:;
+    int result_15;
+    _ = a + result_14;
+    goto next_15;
+
+next_15:;
+    int result_16;
+    _ = &a = result_15;
+    goto next_16;
+
+next_16:;
     goto do_continue;
 
 if_next_2:;
-    int n_4 = 1;
-    int prim_add_res = a + n_4;
-    int prim_assign_res = &a = prim_add_res;
+    int result_11;
+    _ = 1;
+    goto next_11;
+
+next_11:;
+    int result_12;
+    _ = a + result_11;
+    goto next_12;
+
+next_12:;
+    int result_13;
+    _ = &a = result_12;
+    goto next_13;
+
+next_13:;
     goto do_continue;
 
 do_break:;
-    char* s_3 = "after loop";
-    int print_res_3 = fn_print(s_3);
-    return print_res_3;
+    char* result_4;
+    _ = "after loop";
+    goto next_4;
+
+next_4:;
+    int result_5;
+    _ = fn_print(result_4);
+    goto next_5;
+
+next_5:;
+    return result_5;
 }

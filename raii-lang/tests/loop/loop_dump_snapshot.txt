@@ -1,83 +1,129 @@
 fix fn assert_eq(in actual: int, in expected: int) -> () {
-  let mut assert_eq_res: () = extern_assert_eq(
+  jump return(extern_assert_eq(
     in actual
     in expected
-  )
-  jump return(move assert_eq_res)
+  ))
 }
 
 fix fn print(in s: string) -> () {
-  let mut print_res: () = extern_print(in s)
-  jump return(move print_res)
+  jump return(extern_print(in s))
 }
 
 fix fn main() -> () {
-  let mut s_2: string = "before loop"
-  let mut print_res_2: () = print(in s_2)
-  let mut n: int = 0
-  fix label let_next(mut a: int) -> never {
-    fix label do_break() -> never {
-      let mut s_3: string = "after loop"
-      let mut print_res_3: () = print(in s_3)
-      jump return(move print_res_3)
-    }
+  fix label next(mut result: string) -> never {
+    fix label next_2(mut result_2: ()) -> never {
+      fix label next_3(mut result_3: int) -> never {
+        fix label let_next(mut a: int) -> never {
+          fix label do_break() -> never {
+            fix label next_4(mut result_4: string) -> never {
+              fix label next_5(mut result_5: ()) -> never {
+                jump return(prim_jump(move result_5))
+              }
 
-    fix label do_continue() -> never {
-      let mut assert_eq_res_2: () = assert_eq(
-        in a
-        in a
-      )
-      let mut n_2: int = 5
-      let mut prim_eq_res: bool = prim_eq(
-        in a
-        in n_2
-      )
-      fix label if_next(mut res: int) -> never {
-        let mut n_3: int = 2
-        let mut prim_eq_res_2: bool = prim_eq(
-          in a
-          in n_3
-        )
-        fix label if_next_2(mut res_2: int) -> never {
-          let mut n_4: int = 1
-          let mut prim_add_res: int = prim_add(
-            move a
-            move n_4
-          )
-          let mut prim_assign_res: () = prim_assign(
-            ref a
-            move prim_add_res
-          )
-          jump do_continue()
+              jump next_5(print(in result_4))
+            }
+
+            jump next_4("after loop")
+          }
+
+          fix label do_continue() -> never {
+            fix label next_6(mut result_6: ()) -> never {
+              fix label next_7(mut result_7: int) -> never {
+                fix label next_8(mut result_8: bool) -> never {
+                  fix label if_next(mut res: int) -> never {
+                    fix label next_9(mut result_9: int) -> never {
+                      fix label next_10(mut result_10: bool) -> never {
+                        fix label if_next_2(mut res_2: int) -> never {
+                          fix label next_11(mut result_11: int) -> never {
+                            fix label next_12(mut result_12: int) -> never {
+                              fix label next_13(mut result_13: ()) -> never {
+                                jump do_continue(prim_jump())
+                              }
+
+                              jump next_13(prim_assign(
+                                ref a
+                                move result_12
+                              ))
+                            }
+
+                            jump next_12(prim_add(
+                              move a
+                              move result_11
+                            ))
+                          }
+
+                          jump next_11(1)
+                        }
+
+                        if result_10 {
+                          fix label next_14(mut result_14: int) -> never {
+                            fix label next_15(mut result_15: int) -> never {
+                              fix label next_16(mut result_16: ()) -> never {
+                                jump do_continue(prim_jump())
+                              }
+
+                              jump next_16(prim_assign(
+                                ref a
+                                move result_15
+                              ))
+                            }
+
+                            jump next_15(prim_add(
+                              move a
+                              move result_14
+                            ))
+                          }
+
+                          jump next_14(2)
+                        } else {
+                          jump if_next_2(prim_jump(move __noop))
+                        }
+                      }
+
+                      jump next_10(prim_eq(
+                        in a
+                        in result_9
+                      ))
+                    }
+
+                    jump next_9(2)
+                  }
+
+                  if result_8 {
+                    jump do_break(prim_jump())
+                  } else {
+                    jump if_next(prim_jump(move __noop))
+                  }
+                }
+
+                jump next_8(prim_eq(
+                  in a
+                  in result_7
+                ))
+              }
+
+              jump next_7(5)
+            }
+
+            jump next_6(assert_eq(
+              in a
+              in a
+            ))
+          }
+
+          jump do_continue(prim_jump())
         }
 
-        if prim_eq_res_2 {
-          let mut n_5: int = 2
-          let mut prim_add_res_2: int = prim_add(
-            move a
-            move n_5
-          )
-          let mut prim_assign_res_2: () = prim_assign(
-            ref a
-            move prim_add_res_2
-          )
-          jump do_continue()
-        } else {
-          jump if_next_2(move __noop)
-        }
+        jump let_next(prim_jump(in result_3))
       }
 
-      if prim_eq_res {
-        jump do_break()
-      } else {
-        jump if_next(move __noop)
-      }
+      jump next_3(0)
     }
 
-    jump do_continue()
+    jump next_2(print(in result))
   }
 
-  jump let_next(in n)
+  jump next("before loop")
 }
 
 __noop

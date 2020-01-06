@@ -91,8 +91,8 @@ let kgLoop context exit bodyFun =
   let breakLabel = context.FreshName "do_break"
   let continueLabel = context.FreshName "do_continue"
 
-  let breakNode = KJump (KLabel breakLabel, [])
-  let continueNode = KJump (KLabel continueLabel, [])
+  let breakNode = KPrim (KJumpPrim, [], KLabel breakLabel)
+  let continueNode = KPrim (KJumpPrim, [], KLabel continueLabel)
 
   let loopStack = context.LoopStack
   context.LoopStack <-
@@ -121,37 +121,32 @@ let kgLoop context exit bodyFun =
       continueNode
     ))
 
+/// 1つの結果と1つの継続を持つプリミティブノードを作る。
+let kPrim1 context prim args exit =
+  let labelName = context.FreshName "next"
+  let resultName = context.FreshName "result"
+  KFix (
+    labelName,
+    KLabelFix,
+    [KParam (MutMode, resultName, KInferTy (resultName, ref None))],
+    KResult KNeverTy,
+    exit resultName,
+    KPrim (prim, args, KLabel labelName)
+  )
+
 let kgTerm (context: KirGenContext) exit term =
   match term with
   | ABoolLiteral (value, _) ->
-    let result = context.FreshName "b"
-    KPrim (
-      KBoolLiteralPrim value,
-      [],
-      KParam (MutMode, result, KBoolTy),
-      exit result
-    )
+    kPrim1 context (KBoolLiteralPrim value) [] exit
 
   | AIntLiteral (Some intText, _) ->
-    let result = context.FreshName "n"
-    KPrim (
-      KIntLiteralPrim intText,
-      [],
-      KParam (MutMode, result, KIntTy),
-      exit result
-    )
+    kPrim1 context (KIntLiteralPrim intText) [] exit
 
   | AStrLiteral (segments, _) ->
-    let result = context.FreshName "s"
-    KPrim (
-      KStrLiteralPrim segments,
-      [],
-      KParam (MutMode, result, KStrTy),
-      exit result
-    )
+    kPrim1 context (KStrLiteralPrim segments) [] exit
 
   | ANameTerm (AName (Some name, _)) ->
-    name |> exit
+    exit name
 
   | AGroupTerm (Some term, _) ->
     kgTerm context exit term
@@ -165,7 +160,7 @@ let kgTerm (context: KirGenContext) exit term =
       failwith "break out of loop"
 
     | { BreakLabel = breakLabel } :: _ ->
-      KJump (breakLabel, [])
+      KPrim (KJumpPrim, [], breakLabel)
 
   | AContinueTerm _ ->
     match context.LoopStack with
@@ -173,35 +168,24 @@ let kgTerm (context: KirGenContext) exit term =
       failwith "continue out of loop"
 
     | { ContinueLabel = continueLabel } :: _ ->
-      KJump (continueLabel, [])
+      KPrim (KJumpPrim, [], continueLabel)
 
   | ALoopTerm (Some body, _) ->
     kgLoop context exit (fun _ _ k -> body |> kgTerm context k)
 
   | ACallTerm (Some (ANameTerm (AName (Some funName, _))), args, _) ->
-    let result = context.FreshName (sprintf "%s_res" funName)
-
     args |> kgArgList context (fun args ->
-      KPrim (
-        KFnPrim funName,
-        args,
-        KParam (MutMode, result, KInferTy (result, ref None)),
-        exit result
-      ))
+      kPrim1 context (KFnPrim funName) args exit
+    )
 
   | ABinTerm (Some bin, Some first, Some second, _) ->
     let prim = kPrimFromBin bin
-    let name = prim |> kPrimToString
-    let resultName = context.FreshName (sprintf "%s_res" name)
-
-    let paramList, resultTy = kPrimToSig prim
+    let paramList, _ = kPrimToSig prim
 
     first |> kgTerm context (fun first ->
       second |> kgTerm context (fun second ->
         let args = List.zip paramList [first; second] |> List.map KArg
-        let result = KParam (MutMode, resultName, resultTy)
-
-        KPrim (prim, args, result, exit resultName)
+        kPrim1 context prim args exit
       ))
 
   | AIfTerm (Some cond, body, alt, _) ->
@@ -210,7 +194,7 @@ let kgTerm (context: KirGenContext) exit term =
     // その結果をもって if_next にジャンプする。
 
     let nextLabel = context.FreshName "if_next"
-    let next res = KJump (KLabel nextLabel, [KArg (ByMove, res)])
+    let next res = KPrim (KJumpPrim, [KArg (ByMove, res)], KLabel nextLabel)
 
     let res = context.FreshName "res"
 
@@ -272,7 +256,7 @@ let kgStmt context exit stmt =
         [param],
         KResult KNeverTy,
         exit noop,
-        KJump (KLabel nextLabel, args)
+        KPrim (KJumpPrim, args, KLabel nextLabel)
     ))
 
   | AExternFnStmt (Some (AName (Some funName, _)), paramList, resultOpt, _) ->
@@ -309,11 +293,8 @@ let kgStmt context exit stmt =
       KPrim (
         KExternFnPrim funName,
         primArgs,
-        primResult,
-        KJump (
-          KReturnLabel,
-          [KArg (ByMove, resultName)]
-        )),
+        KReturnLabel
+      ),
       exit noop
     )
 
@@ -337,7 +318,7 @@ let kgStmt context exit stmt =
       paramList,
       result,
       body |> kgTerm context (fun body ->
-        KJump (KReturnLabel, [KArg (ByMove, body)])
+        KPrim (KJumpPrim, [KArg (ByMove, body)], KReturnLabel)
       ),
       exit noop
     )

@@ -281,7 +281,7 @@ let kgStmt context exit stmt =
 
     let resultName = context.FreshName (sprintf "%s_res" funName)
 
-    let paramList = paramList |> List.map (kgParam context)
+    let passByList = paramList |> List.map (kgParam context)
 
     let fnResult =
       resultOpt
@@ -290,7 +290,7 @@ let kgStmt context exit stmt =
       |> KResult
 
     let primArgs =
-      paramList |> List.map (fun (KParam (mode, name, _)) ->
+      passByList |> List.map (fun (KParam (mode, name, _)) ->
         KArg (mode |> modeToPassBy, KName name)
       )
 
@@ -302,7 +302,7 @@ let kgStmt context exit stmt =
     KFix (
       funName,
       KFnFix,
-      paramList,
+      passByList,
       fnResult,
       KPrim (
         KExternFnPrim funName,

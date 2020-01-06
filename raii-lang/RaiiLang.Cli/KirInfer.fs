@@ -59,7 +59,7 @@ let kiUnify context first second =
 let kiArg context arg =
   match arg with
   | KArg (_, arg) ->
-    arg |> kiNode context
+    KName arg |> kiNode context
 
 let kiParam (context: KirInferContext) param =
   match param with
@@ -123,9 +123,6 @@ let kiPrim context prim args =
 
 let kiNode (context: KirInferContext) node =
   match node with
-  | KNoop ->
-    KNeverTy
-
   | KName name ->
     match context.TyMap.TryGetValue(name) with
     | true, ty ->
@@ -145,7 +142,7 @@ let kiNode (context: KirInferContext) node =
     next |> kiNode context
 
   | KIf (cond, body, alt) ->
-    cond |> kiNode context |> kiUnify context KBoolTy
+    KName cond |> kiNode context |> kiUnify context KBoolTy
 
     // 継続だからnever型？
     let bodyTy = kiNode context body

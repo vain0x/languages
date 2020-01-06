@@ -69,8 +69,8 @@ let cgParam _context (KParam (mode, name, ty)) =
   | RefMode ->
     CParam (name, CPtrTy ty)
 
-let cgArg context (KArg (passBy, arg)) =
-  let arg = cgTerm context arg
+let cgArg _context (KArg (passBy, arg)) =
+  let arg = CName arg
 
   match passBy with
   | ByMove
@@ -141,9 +141,6 @@ let cgPrimTerm context prim args result next =
 
 let cgTerm (context: CirGenContext) (node: KNode) =
   match node with
-  | KNoop ->
-    CName "// noop"
-
   | KName name ->
     CName name
 
@@ -210,7 +207,6 @@ let cgTerm (context: CirGenContext) (node: KNode) =
 
 let cgNode context (node: KNode) =
   match node with
-  | KNoop _
   | KName _ ->
     ()
 

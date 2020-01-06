@@ -57,11 +57,11 @@ let kdParamList paramList indent acc =
 
 let kdArg arg indent acc =
   match arg with
-  | KArg (passBy, node) ->
+  | KArg (passBy, name) ->
     acc
     |> cons (passByToString passBy)
     |> cons " "
-    |> kdNode node indent
+    |> cons name
 
 let kdArgList args indent acc =
   let acc = acc |> cons "("
@@ -92,9 +92,6 @@ let kdResult (KResult resultTy) indent acc =
 
 let kdNode node indent acc =
   match node with
-  | KNoop ->
-    acc |> cons "__noop"
-
   | KName name ->
     acc |> cons name
 
@@ -139,7 +136,7 @@ let kdNode node indent acc =
 
     acc
     |> cons "if "
-    |> kdNode cond deepIndent
+    |> cons cond
     |> cons " {"
     |> cons deepIndent
     |> kdNode body deepIndent

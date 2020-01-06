@@ -23,6 +23,8 @@ let kgContextNew (): KirGenContext =
     LoopStack = []
   }
 
+let noop = "__noop"
+
 let kgArgList context exit args =
   let rec go exit args =
     match args with
@@ -99,8 +101,8 @@ let kgLoop context exit bodyFun =
       ContinueLabel = KLabel continueLabel
     } :: loopStack
 
-  let onBreak = exit KNoop
-  let onContinue = bodyFun breakNode continueNode (fun (_: KNode) -> continueNode)
+  let onBreak = exit noop
+  let onContinue = bodyFun breakNode continueNode (fun _ -> continueNode)
 
   context.LoopStack <- loopStack
 
@@ -127,7 +129,7 @@ let kgTerm (context: KirGenContext) exit term =
       KBoolLiteralPrim value,
       [],
       KParam (MutMode, result, KBoolTy),
-      exit (KName result)
+      exit result
     )
 
   | AIntLiteral (Some intText, _) ->
@@ -136,7 +138,7 @@ let kgTerm (context: KirGenContext) exit term =
       KIntLiteralPrim intText,
       [],
       KParam (MutMode, result, KIntTy),
-      exit (KName result)
+      exit result
     )
 
   | AStrLiteral (segments, _) ->
@@ -145,11 +147,11 @@ let kgTerm (context: KirGenContext) exit term =
       KStrLiteralPrim segments,
       [],
       KParam (MutMode, result, KStrTy),
-      exit (KName result)
+      exit result
     )
 
   | ANameTerm (AName (Some name, _)) ->
-    KName name |> exit
+    name |> exit
 
   | AGroupTerm (Some term, _) ->
     kgTerm context exit term
@@ -184,7 +186,7 @@ let kgTerm (context: KirGenContext) exit term =
         KFnPrim funName,
         args,
         KParam (MutMode, result, KInferTy (result, ref None)),
-        exit (KName result)
+        exit result
       ))
 
   | ABinTerm (Some bin, Some first, Some second, _) ->
@@ -199,7 +201,7 @@ let kgTerm (context: KirGenContext) exit term =
         let args = List.zip paramList [first; second] |> List.map KArg
         let result = KParam (MutMode, resultName, resultTy)
 
-        KPrim (prim, args, result, exit (KName resultName))
+        KPrim (prim, args, result, exit resultName)
       ))
 
   | AIfTerm (Some cond, body, alt, _) ->
@@ -215,12 +217,12 @@ let kgTerm (context: KirGenContext) exit term =
     let bodyFun next =
       body
       |> Option.map (kgTerm context next)
-      |> Option.defaultWith (fun () -> next KNoop)
+      |> Option.defaultWith (fun () -> next noop)
 
     let altFun next =
       alt
       |> Option.map (kgTerm context next)
-      |> Option.defaultWith (fun () -> next KNoop)
+      |> Option.defaultWith (fun () -> next noop)
 
     cond |> kgTerm context (fun cond ->
       KFix (
@@ -228,7 +230,7 @@ let kgTerm (context: KirGenContext) exit term =
         KLabelFix,
         [KParam (MutMode, res, KIntTy)],
         KResult KNeverTy,
-        exit (KName res),
+        exit res,
         KIf (
           cond,
           bodyFun next,
@@ -269,7 +271,7 @@ let kgStmt context exit stmt =
         KLabelFix,
         [param],
         KResult KNeverTy,
-        exit KNoop,
+        exit noop,
         KJump (KLabel nextLabel, args)
     ))
 
@@ -291,7 +293,7 @@ let kgStmt context exit stmt =
 
     let primArgs =
       passByList |> List.map (fun (KParam (mode, name, _)) ->
-        KArg (mode |> modeToPassBy, KName name)
+        KArg (mode |> modeToPassBy, name)
       )
 
     let primResult =
@@ -310,9 +312,9 @@ let kgStmt context exit stmt =
         primResult,
         KJump (
           KReturnLabel,
-          [KArg (ByMove, KName resultName)]
+          [KArg (ByMove, resultName)]
         )),
-      exit KNoop
+      exit noop
     )
 
   | AFnStmt (Some (AName (Some funName, _)), paramList, resultOpt, Some body, _) ->
@@ -337,7 +339,7 @@ let kgStmt context exit stmt =
       body |> kgTerm context (fun body ->
         KJump (KReturnLabel, [KArg (ByMove, body)])
       ),
-      exit KNoop
+      exit noop
     )
 
   | ASemiStmt (stmts, _) ->
@@ -349,7 +351,7 @@ let kgStmt context exit stmt =
 let kgStmts context exit stmts =
   match stmts with
   | [] ->
-    exit KNoop
+    exit noop
 
   | [stmt] ->
     kgStmt context exit stmt
@@ -359,4 +361,4 @@ let kgStmts context exit stmts =
 
 let kirGen (stmt: AStmt) =
   let context = kgContextNew ()
-  kgStmt context id stmt
+  kgStmt context KName stmt

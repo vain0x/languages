@@ -45,7 +45,7 @@ type KPrim =
 [<Struct>]
 type KArg =
   | KArg
-    of PassBy * argNode:KNode
+    of PassBy * argNode:string
 
 [<Struct>]
 type KParam =
@@ -67,8 +67,6 @@ type KLabel =
   | KExitLabel
 
 type KNode =
-  | KNoop
-
   | KName
     of name:string
 
@@ -83,7 +81,7 @@ type KNode =
       * args:KArg list
 
   | KIf
-    of cond:KNode
+    of cond:string
       * body:KNode
       * alt:KNode
 

@@ -47,10 +47,10 @@ let kTyToCTy ty =
       paramList |> List.map (fun (KParam (mode, _, ty)) ->
         match mode with
         | ValMode
-        | MutMode ->
+        | MutMode
+        | InMode ->
           ty |> kTyToCTy
 
-        | InMode
         | RefMode ->
           ty |> kTyToCTy |> CPtrTy
       )
@@ -63,10 +63,10 @@ let cgParam _context (KParam (mode, name, ty)) =
 
   match mode with
   | ValMode
-  | MutMode ->
+  | MutMode
+  | InMode ->
     CParam (name, ty)
 
-  | InMode
   | RefMode ->
     CParam (name, CPtrTy ty)
 
@@ -74,10 +74,10 @@ let cgArg context (KArg (passBy, arg)) =
   let arg = cgTerm context arg
 
   match passBy with
-  | ByMove ->
+  | ByMove
+  | ByIn ->
     arg
 
-  | ByIn
   | ByRef ->
     CUni (CRefUni, arg)
 

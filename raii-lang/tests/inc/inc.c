@@ -1,5 +1,5 @@
-int fn_assert_eq(int* actual, int* expected) {
-    int assert_eq_res = assert_eq(&actual, &expected);
+int fn_assert_eq(int actual, int expected) {
+    int assert_eq_res = assert_eq(actual, expected);
     return assert_eq_res;
 }
 
@@ -17,12 +17,12 @@ int fn_main() {
 
 let_next:;
     int n_3 = 1;
-    void assert_eq_res_2 = fn_assert_eq(&a, &n_3);
+    void assert_eq_res_2 = fn_assert_eq(a, n_3);
     void inc_res = fn_inc(&a);
     int n_4 = 2;
-    void assert_eq_res_3 = fn_assert_eq(&a, &n_4);
+    void assert_eq_res_3 = fn_assert_eq(a, n_4);
     void inc_res_2 = fn_inc(&a);
     int n_5 = 3;
-    void assert_eq_res_4 = fn_assert_eq(&a, &n_5);
+    void assert_eq_res_4 = fn_assert_eq(a, n_5);
     return assert_eq_res_4;
 }

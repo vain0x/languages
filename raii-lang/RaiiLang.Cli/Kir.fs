@@ -28,7 +28,7 @@ type KParam =
 [<Struct>]
 type KArg =
   | KArg
-    of PassBy * argNode:string
+    of PassBy * argNode:string * Mode option ref
 
 [<Struct>]
 type KResult =

@@ -5,12 +5,12 @@ open RaiiLang.Kir
 
 type KirInferContext =
   {
-    mutable TyMap: Map<string, KTy>
+    mutable SymbolMap: Map<string, struct (Mode * KTy)>
   }
 
 let kiContextNew (): KirInferContext =
   {
-    TyMap = Map.empty
+    SymbolMap = Map.empty
   }
 
 let kiUnify context first second =
@@ -57,18 +57,19 @@ let kiUnify context first second =
     eprintfn "WARN: Type error %A" (first, second)
 
 let kiName context name =
-  match context.TyMap.TryGetValue(name) with
-  | true, ty ->
-    kTyDeref ty
+  match context.SymbolMap.TryGetValue(name) with
+  | true, (mode, ty) ->
+    mode, kTyDeref ty
 
   | false, _ ->
     // FIXME: 未定義の変数？
-    KNeverTy
+    ValMode, KNeverTy
 
 let kiArg context arg =
   match arg with
-  | KArg (passBy, arg) ->
-    let arg = kiName context arg
+  | KArg (passBy, arg, modeOpt) ->
+    let mode, arg = kiName context arg
+    modeOpt := Some mode
     passBy, arg
 
 let kiLabel _context label =
@@ -210,7 +211,7 @@ let kiPrim context prim args next =
 
   | KFnPrim (name, _) ->
     // FIXME: 名前解決
-    let funTy = kiName context name
+    let _, funTy = kiName context name
     unifyNext funTy
     kiCall context funTy args
 
@@ -222,13 +223,14 @@ let kiPrim context prim args next =
 let kiNode (context: KirInferContext) node =
   match node with
   | KName name ->
-    kiName context name
+    kiName context name |> snd
 
   | KPrim (prim, args, next) ->
     kiPrim context prim args next
 
   | KIf (cond, body, alt) ->
-    KName cond |> kiNode context |> kiUnify context KBoolTy
+    let _, condTy = cond |> kiName context
+    kiUnify context condTy KBoolTy
 
     kiNode context body |> ignore
     kiNode context alt |> ignore
@@ -243,16 +245,19 @@ let kiNode (context: KirInferContext) node =
       | KFnFix (KFn (name, paramList, result, body)) ->
         name, paramList, result, !body
 
-    context.TyMap <- context.TyMap |> Map.add name (KFunTy (paramList, result))
+    context.SymbolMap <- context.SymbolMap |> Map.add name (struct (MutMode, KFunTy (paramList, result)))
 
-    let tyMap = context.TyMap
+    let oldMap = context.SymbolMap
+    let mutable newMap = oldMap
 
-    for KParam (_, paramName, paramTy) in paramList do
-      context.TyMap <- context.TyMap |> Map.add paramName paramTy
+    for KParam (mode, paramName, paramTy) in paramList do
+      newMap <- newMap |> Map.add paramName (mode, paramTy)
+
+    context.SymbolMap <- newMap
 
     body |> kiNode context |> ignore
 
-    context.TyMap <- tyMap
+    context.SymbolMap <- oldMap
 
     next |> kiNode context
 

@@ -73,19 +73,22 @@ let cgParam _context (KParam (mode, name, ty)) =
   | RefMode ->
     CParam (name, CPtrTy ty)
 
-let cgArg _context lval (KArg (passBy, arg)) =
+let cgArg _context lval (KArg (passBy, arg, modeOpt)) =
   let arg = CName arg
+  let mode = !modeOpt |> Option.defaultValue ValMode
 
-  match passBy, lval with
-  | ByMove, _
-  | ByIn, _ ->
-    arg
-
-  | ByRef, LVal ->
+  match passBy, mode, lval with
+  | _, RefMode, LVal ->
     CUni (CDerefUni, arg)
 
-  | ByRef, RVal ->
+  | _, RefMode, RVal ->
+    arg
+
+  | ByRef, _, RVal ->
     CUni (CRefUni, arg)
+
+  | _ ->
+    arg
 
 let cgJump context cont args =
   match cont with

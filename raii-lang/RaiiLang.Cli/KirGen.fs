@@ -34,7 +34,7 @@ let kgArgList context exit args =
     | AArg (passBy, Some arg, _) :: args ->
       arg |> kgTerm context (fun arg ->
         args |> go (fun args ->
-          KArg (passBy, arg) :: args |> exit
+          KArg (passBy, arg, ref None) :: args |> exit
         ))
 
     | _ ->
@@ -194,11 +194,14 @@ let kgTerm (context: KirGenContext) exit term =
 
   | ABinTerm (Some bin, Some first, Some second, _) ->
     let prim = kPrimFromBin bin
-    let paramList, _ = kPrimToSig prim
+    let passByList, _ = kPrimToSig prim
 
     first |> kgTerm context (fun first ->
       second |> kgTerm context (fun second ->
-        let args = List.zip paramList [first; second] |> List.map KArg
+        let args =
+          List.zip passByList [first; second]
+          |> List.map (fun (passBy, arg) -> KArg (passBy, arg, ref (Some (passByToMode passBy))))
+
         kPrim1 context prim args exit
       ))
 
@@ -221,7 +224,7 @@ let kgTerm (context: KirGenContext) exit term =
       )
 
     // FIXME: モード
-    let next result = KPrim (KJumpPrim, [KArg (ByMove, result)], KLabelCont nextLabel)
+    let next result = KPrim (KJumpPrim, [KArg (ByMove, result, ref None)], KLabelCont nextLabel)
 
     let bodyFun next =
       body
@@ -297,7 +300,7 @@ let kgStmt context exit stmt =
 
     let primArgs =
       paramList |> List.map (fun (KParam (mode, name, _)) ->
-        KArg (mode |> modeToPassBy, name)
+        KArg (modeToPassBy mode, name, ref (Some mode))
       )
 
     let externFn = KExternFn (funName, paramList, fnResult)
@@ -337,7 +340,7 @@ let kgStmt context exit stmt =
 
     fnBody :=
       body |> kgTerm context (fun body ->
-        KPrim (KJumpPrim, [KArg (ByMove, body)], KReturnCont fn)
+        KPrim (KJumpPrim, [KArg (ByMove, body, ref None)], KReturnCont fn)
       )
 
     KFix (

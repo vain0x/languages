@@ -42,7 +42,7 @@ next_6:;
 
 next_7:;
     int result_8;
-    result_8 = *a = result_7;
+    result_8 = a = result_7;
     goto next_8;
 
 next_8:;
@@ -63,7 +63,7 @@ next_10:;
 
 next_11:;
     int result_12;
-    result_12 = *ok = result_11;
+    result_12 = ok = result_11;
     goto next_12;
 
 next_12:;

@@ -65,7 +65,7 @@ let kdParamList paramList indent acc =
 
 let kdArg arg _indent acc =
   match arg with
-  | KArg (passBy, name) ->
+  | KArg (passBy, name, _) ->
     acc
     |> cons (passByToString passBy)
     |> cons " "

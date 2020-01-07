@@ -3,27 +3,18 @@ int fn_assert_eq(int actual, int expected) {
 }
 
 int fn_main() {
-    int result;
-    result = 1;
-    goto next;
+    int result = 1;
 
 next:;
-    int ok;
-    ok = result;
-    goto let_next;
+    int ok = result;
 
 let_next:;
-    int result_2;
-    result_2 = 0;
-    goto next_2;
+    int result_2 = 0;
 
 next_2:;
-    int a;
-    a = result_2;
-    goto let_next_2;
+    int a = result_2;
 
 let_next_2:;
-    goto do_continue;
 
 do_continue:;
     if (ok) {
@@ -33,34 +24,22 @@ do_continue:;
     }
 
 body:;
-    int result_5;
-    result_5 = fn_assert_eq(a, a);
-    goto next_5;
+    int result_5 = fn_assert_eq(a, a);
 
 next_5:;
-    int result_6;
-    result_6 = 1;
-    goto next_6;
+    int result_6 = 1;
 
 next_6:;
-    int result_7;
-    result_7 = a + result_6;
-    goto next_7;
+    int result_7 = a + result_6;
 
 next_7:;
-    int result_8;
-    result_8 = a = result_7;
-    goto next_8;
+    int result_8 = a = result_7;
 
 next_8:;
-    int result_11;
-    result_11 = 5;
-    goto next_11;
+    int result_11 = 5;
 
 next_11:;
-    int result_12;
-    result_12 = a == result_11;
-    goto next_12;
+    int result_12 = a == result_11;
 
 next_12:;
     int res;
@@ -71,14 +50,10 @@ next_12:;
     }
 
 if_body:;
-    int result_9;
-    result_9 = 0;
-    goto next_9;
+    int result_9 = 0;
 
 next_9:;
-    int result_10;
-    result_10 = ok = result_9;
-    goto next_10;
+    int result_10 = ok = result_9;
 
 next_10:;
     res = result_10;
@@ -86,20 +61,15 @@ next_10:;
 
 if_alt:;
     res = 0;
-    goto if_next;
 
 if_next:;
     goto do_continue;
 
 do_break:;
-    int result_3;
-    result_3 = 5;
-    goto next_3;
+    int result_3 = 5;
 
 next_3:;
-    int result_4;
-    result_4 = fn_assert_eq(a, result_3);
-    goto next_4;
+    int result_4 = fn_assert_eq(a, result_3);
 
 next_4:;
     return result_4;

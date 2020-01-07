@@ -219,6 +219,27 @@ let cdStmt stmt indent acc =
     |> cons ":;"
 
 let cdStmtList stmts indent acc =
+  // FIXME: ここでやることではない？
+  let rec go stmts =
+    match stmts with
+    | [] ->
+      []
+
+    // T x; x = a; ==> T x = a;
+    | CLocalStmt (first, ty, None) :: CTermStmt (CBin (CAssignBin, CName second, init)) :: stmts
+      when first = second ->
+      CLocalStmt (first, ty, Some init) :: go stmts
+
+    // goto L; L:; ==> L:;
+    | CGotoStmt first :: CLabelStmt second :: stmts
+      when first = second ->
+      CLabelStmt second :: stmts |> go
+
+    | stmt :: stmts ->
+      stmt :: go stmts
+
+  let stmts = go stmts
+
   stmts |> List.fold (fun (sep, acc) stmt ->
     let acc =
       match stmt with

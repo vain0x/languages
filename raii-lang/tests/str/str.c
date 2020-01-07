@@ -7,24 +7,16 @@ char* fn_string_clone(char* s_2) {
 }
 
 int fn_main() {
-    char* result;
-    result = "hello";
-    goto next;
+    char* result = "hello";
 
 next:;
-    char* result_2;
-    result_2 = fn_string_clone(result);
-    goto next_2;
+    char* result_2 = fn_string_clone(result);
 
 next_2:;
-    char* s_3;
-    s_3 = result_2;
-    goto let_next;
+    char* s_3 = result_2;
 
 let_next:;
-    int result_3;
-    result_3 = fn_print(s);
-    goto next_3;
+    int result_3 = fn_print(s);
 
 next_3:;
     return result_3;

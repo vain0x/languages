@@ -62,8 +62,12 @@ let kiName context name =
     mode, kTyDeref ty
 
   | false, _ ->
-    // FIXME: 未定義の変数？
-    ValMode, KNeverTy
+    // FIXME: () の代わり
+    if name = "0" then
+      ValMode, KUnitTy
+    else
+      // FIXME: 未定義の変数？
+      ValMode, KNeverTy
 
 let kiArg context arg =
   match arg with
@@ -228,12 +232,9 @@ let kiNode (context: KirInferContext) node =
   | KPrim (prim, args, next) ->
     kiPrim context prim args next
 
-  | KIf (cond, body, alt) ->
+  | KIf (cond, _, _) ->
     let _, condTy = cond |> kiName context
     kiUnify context condTy KBoolTy
-
-    kiNode context body |> ignore
-    kiNode context alt |> ignore
     KNeverTy
 
   | KFix (fix, next) ->

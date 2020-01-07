@@ -26,6 +26,13 @@ let_next_2:;
     goto do_continue;
 
 do_continue:;
+    if (ok) {
+        goto body;
+    } else {
+        goto do_break;
+    }
+
+body:;
     int result_5;
     result_5 = fn_assert_eq(a, a);
     goto next_5;
@@ -46,28 +53,39 @@ next_7:;
     goto next_8;
 
 next_8:;
-    int result_9;
-    result_9 = 5;
-    goto next_9;
-
-next_9:;
-    int result_10;
-    result_10 = a == result_9;
-    goto next_10;
-
-next_10:;
-    int res;
     int result_11;
-    result_11 = 0;
+    result_11 = 5;
     goto next_11;
 
 next_11:;
     int result_12;
-    result_12 = ok = result_11;
+    result_12 = a == result_11;
     goto next_12;
 
 next_12:;
-    res = result_12;
+    int res;
+    if (result_12) {
+        goto if_body;
+    } else {
+        goto if_alt;
+    }
+
+if_body:;
+    int result_9;
+    result_9 = 0;
+    goto next_9;
+
+next_9:;
+    int result_10;
+    result_10 = ok = result_9;
+    goto next_10;
+
+next_10:;
+    res = result_10;
+    goto if_next;
+
+if_alt:;
+    res = 0;
     goto if_next;
 
 if_next:;

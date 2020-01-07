@@ -54,6 +54,9 @@ type CStmt =
   | CLocalStmt
     of string * CTy * CTerm option
 
+  | CIfStmt
+    of CTerm * CStmt list * CStmt list
+
   | CGotoStmt
     of string
 

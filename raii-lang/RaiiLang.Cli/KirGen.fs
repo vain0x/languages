@@ -105,7 +105,6 @@ let kgLoop context exit bodyFun =
       continueBody
     )
 
-  let breakNode = KPrim (KJumpPrim, [], KLabelCont breakLabel)
   let continueNode = KPrim (KJumpPrim, [], KLabelCont continueLabel)
 
   let loopStack = context.LoopStack
@@ -116,7 +115,7 @@ let kgLoop context exit bodyFun =
     } :: loopStack
 
   breakBody := exit noop
-  continueBody := bodyFun breakNode continueNode (fun _ -> continueNode)
+  continueBody := bodyFun breakLabel continueLabel (fun _ -> continueNode)
 
   context.LoopStack <- loopStack
 
@@ -207,7 +206,7 @@ let kgTerm (context: KirGenContext) exit term =
 
   | AIfTerm (Some cond, body, alt, _) ->
     // body または alt の結果を受け取って後続の計算を行う関数 if_next をおく。
-    // 条件式の結果に基づいて body または alt を計算して、
+    // 条件式の結果に基づいて body または alt のラベルにジャンプし、
     // その結果をもって if_next にジャンプする。
 
     let labelName = context.FreshName "if_next"
@@ -226,38 +225,61 @@ let kgTerm (context: KirGenContext) exit term =
     // FIXME: モード
     let next result = KPrim (KJumpPrim, [KArg (ByMove, result, ref None)], KLabelCont nextLabel)
 
-    let bodyFun next =
-      body
-      |> Option.map (kgTerm context next)
-      |> Option.defaultWith (fun () -> next noop)
+    let bodyLabel =
+      KLabel (
+        context.FreshName "if_body",
+        [],
+        body
+        |> Option.map (kgTerm context next)
+        |> Option.defaultWith (fun () -> next "0") // FIXME: unit
+        |> ref
+      )
 
-    let altFun next =
-      alt
-      |> Option.map (kgTerm context next)
-      |> Option.defaultWith (fun () -> next noop)
+    let altLabel =
+      KLabel (
+        context.FreshName "if_alt",
+        [],
+        alt
+        |> Option.map (kgTerm context next)
+        |> Option.defaultWith (fun () -> next "0") // FIXME: unit
+        |> ref
+      )
 
     cond |> kgTerm context (fun cond ->
       labelBody := exit resultName
 
       KFix (
         KLabelFix nextLabel,
-        KIf (
-          cond,
-          bodyFun next,
-          altFun next
-        )))
+        KFix (
+          KLabelFix altLabel,
+          KFix (
+            KLabelFix bodyLabel,
+            KIf (
+              cond,
+              KLabelCont bodyLabel,
+              KLabelCont altLabel
+            )))))
 
   | AWhileTerm (Some cond, Some body, _) ->
     // cond while { body }
     // ==> loop { cond then { body } else { break } }
 
-    kgLoop context exit (fun breakNode _ bodyExit ->
+    kgLoop context exit (fun breakLabel _ bodyExit ->
       cond |> kgTerm context (fun cond ->
-        KIf (
-          cond,
-          body |> kgTerm context bodyExit,
-          breakNode
-        )))
+        let bodyLabel =
+          KLabel (
+            context.FreshName "body",
+            [],
+            body |> kgTerm context bodyExit |> ref
+          )
+
+        KFix (
+          KLabelFix bodyLabel,
+          KIf (
+            cond,
+            KLabelCont bodyLabel,
+            KLabelCont breakLabel
+          ))))
 
   | _ ->
     failwithf "unimpl %A" term

@@ -164,7 +164,7 @@ let cdTermList terms sep acc =
   ) ("", acc)
   |> snd
 
-let cdStmt stmt acc =
+let cdStmt stmt indent acc =
   match stmt with
   | CTermStmt term ->
     acc
@@ -182,6 +182,22 @@ let cdStmt stmt acc =
     |> cons " = "
     |> cdTerm body CMinBp
     |> cons ";"
+
+  | CIfStmt (cond, body, alt) ->
+    let deepIndent = indent + "    "
+
+    acc
+    |> cons "if ("
+    |> cdTerm cond CMinBp
+    |> cons ") {"
+    |> cons deepIndent
+    |> cdStmtList body deepIndent
+    |> cons indent
+    |> cons "} else {"
+    |> cons deepIndent
+    |> cdStmtList alt deepIndent
+    |> cons indent
+    |> cons "}"
 
   | CGotoStmt labelName ->
     acc |> cons "goto " |> cons labelName |> cons ";"
@@ -207,10 +223,10 @@ let cdStmtList stmts indent acc =
     let acc =
       match stmt with
       | CLabelStmt _ ->
-        acc |> cdStmt stmt
+        acc |> cdStmt stmt indent
 
       | _ ->
-        acc |> cons sep |> cdStmt stmt
+        acc |> cons sep |> cdStmt stmt indent
 
     indent, acc
   ) ("", acc)

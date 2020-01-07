@@ -125,11 +125,15 @@ let kdNode node indent acc =
     |> cons cond
     |> cons " {"
     |> cons deepIndent
-    |> kdNode body deepIndent
+    |> cons "jump "
+    |> kdCont body
+    |> cons "()"
     |> cons indent
     |> cons "} else {"
     |> cons deepIndent
-    |> kdNode alt deepIndent
+    |> cons "jump "
+    |> kdCont alt
+    |> cons "()"
     |> cons indent
     |> cons "}"
 

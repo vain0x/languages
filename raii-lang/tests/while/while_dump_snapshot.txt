@@ -26,42 +26,50 @@ fix fn main() -> () {
           }
 
           fix label do_continue() -> never {
-            if ok {
+            fix label body() -> never {
               fix label next_5(mut result_5: ()) -> never {
                 fix label next_6(mut result_6: int) -> never {
                   fix label next_7(mut result_7: int) -> never {
                     fix label next_8(mut result_8: ()) -> never {
-                      fix label next_9(mut result_9: int) -> never {
-                        fix label next_10(mut result_10: bool) -> never {
+                      fix label next_11(mut result_11: int) -> never {
+                        fix label next_12(mut result_12: bool) -> never {
                           fix label if_next(mut res: ()) -> never {
                             jump do_continue(prim_jump())
                           }
 
-                          if result_10 {
-                            fix label next_11(mut result_11: bool) -> never {
-                              fix label next_12(mut result_12: ()) -> never {
-                                jump if_next(prim_jump(move result_12))
+                          fix label if_alt() -> never {
+                            jump if_next(prim_jump(move 0))
+                          }
+
+                          fix label if_body() -> never {
+                            fix label next_9(mut result_9: bool) -> never {
+                              fix label next_10(mut result_10: ()) -> never {
+                                jump if_next(prim_jump(move result_10))
                               }
 
-                              jump next_12(prim_assign(
+                              jump next_10(prim_assign(
                                 ref ok
-                                move result_11
+                                move result_9
                               ))
                             }
 
-                            jump next_11(false)
+                            jump next_9(false)
+                          }
+
+                          if result_12 {
+                            jump if_body()
                           } else {
-                            jump if_next(prim_jump(move __noop))
+                            jump if_alt()
                           }
                         }
 
-                        jump next_10(prim_eq(
+                        jump next_12(prim_eq(
                           in a
-                          in result_9
+                          in result_11
                         ))
                       }
 
-                      jump next_9(5)
+                      jump next_11(5)
                     }
 
                     jump next_8(prim_assign(
@@ -83,8 +91,12 @@ fix fn main() -> () {
                 in a
                 in a
               ))
+            }
+
+            if ok {
+              jump body()
             } else {
-              jump do_break(prim_jump())
+              jump do_break()
             }
           }
 

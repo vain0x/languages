@@ -45,21 +45,63 @@ next_7:;
     goto next_8;
 
 next_8:;
+    int res;
+    if (result_8) {
+        goto if_body;
+    } else {
+        goto if_alt;
+    }
+
+if_body:;
     goto do_break;
 
+if_alt:;
+    res = 0;
+    goto if_next;
+
 if_next:;
+    int result_12;
+    result_12 = 2;
+    goto next_12;
+
+next_12:;
+    int result_13;
+    result_13 = a == result_12;
+    goto next_13;
+
+next_13:;
+    int res_2;
+    if (result_13) {
+        goto if_body_2;
+    } else {
+        goto if_alt_2;
+    }
+
+if_body_2:;
     int result_9;
     result_9 = 2;
     goto next_9;
 
 next_9:;
     int result_10;
-    result_10 = a == result_9;
+    result_10 = a + result_9;
     goto next_10;
 
 next_10:;
+    int result_11;
+    result_11 = a = result_10;
+    goto next_11;
+
+next_11:;
+    goto do_continue;
+
+if_alt_2:;
+    res_2 = 0;
+    goto if_next_2;
+
+if_next_2:;
     int result_14;
-    result_14 = 2;
+    result_14 = 1;
     goto next_14;
 
 next_14:;
@@ -73,24 +115,6 @@ next_15:;
     goto next_16;
 
 next_16:;
-    goto do_continue;
-
-if_next_2:;
-    int result_11;
-    result_11 = 1;
-    goto next_11;
-
-next_11:;
-    int result_12;
-    result_12 = a + result_11;
-    goto next_12;
-
-next_12:;
-    int result_13;
-    result_13 = a = result_12;
-    goto next_13;
-
-next_13:;
     goto do_continue;
 
 do_break:;

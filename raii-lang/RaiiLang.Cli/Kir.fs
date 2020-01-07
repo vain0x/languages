@@ -109,8 +109,8 @@ type KNode =
 
   | KIf
     of cond:string
-      * body:KNode
-      * alt:KNode
+      * body:KCont
+      * alt:KCont
 
   | KFix
     of fix:KFix

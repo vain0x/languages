@@ -30,32 +30,10 @@ fix fn main() -> () {
             fix label next_6(mut result_6: ()) -> never {
               fix label next_7(mut result_7: int) -> never {
                 fix label next_8(mut result_8: bool) -> never {
-                  fix label if_next(mut res: 'res) -> never {
-                    fix label next_9(mut result_9: int) -> never {
-                      fix label next_10(mut result_10: bool) -> never {
-                        fix label if_next_2(mut res_2: 'res_2) -> never {
-                          fix label next_11(mut result_11: int) -> never {
-                            fix label next_12(mut result_12: int) -> never {
-                              fix label next_13(mut result_13: ()) -> never {
-                                jump do_continue(prim_jump())
-                              }
-
-                              jump next_13(prim_assign(
-                                ref a
-                                move result_12
-                              ))
-                            }
-
-                            jump next_12(prim_add(
-                              move a
-                              move result_11
-                            ))
-                          }
-
-                          jump next_11(1)
-                        }
-
-                        if result_10 {
+                  fix label if_next(mut res: ()) -> never {
+                    fix label next_12(mut result_12: int) -> never {
+                      fix label next_13(mut result_13: bool) -> never {
+                        fix label if_next_2(mut res_2: ()) -> never {
                           fix label next_14(mut result_14: int) -> never {
                             fix label next_15(mut result_15: int) -> never {
                               fix label next_16(mut result_16: ()) -> never {
@@ -74,25 +52,63 @@ fix fn main() -> () {
                             ))
                           }
 
-                          jump next_14(2)
+                          jump next_14(1)
+                        }
+
+                        fix label if_alt_2() -> never {
+                          jump if_next_2(prim_jump(move 0))
+                        }
+
+                        fix label if_body_2() -> never {
+                          fix label next_9(mut result_9: int) -> never {
+                            fix label next_10(mut result_10: int) -> never {
+                              fix label next_11(mut result_11: ()) -> never {
+                                jump do_continue(prim_jump())
+                              }
+
+                              jump next_11(prim_assign(
+                                ref a
+                                move result_10
+                              ))
+                            }
+
+                            jump next_10(prim_add(
+                              move a
+                              move result_9
+                            ))
+                          }
+
+                          jump next_9(2)
+                        }
+
+                        if result_13 {
+                          jump if_body_2()
                         } else {
-                          jump if_next_2(prim_jump(move __noop))
+                          jump if_alt_2()
                         }
                       }
 
-                      jump next_10(prim_eq(
+                      jump next_13(prim_eq(
                         in a
-                        in result_9
+                        in result_12
                       ))
                     }
 
-                    jump next_9(2)
+                    jump next_12(2)
+                  }
+
+                  fix label if_alt() -> never {
+                    jump if_next(prim_jump(move 0))
+                  }
+
+                  fix label if_body() -> never {
+                    jump do_break(prim_jump())
                   }
 
                   if result_8 {
-                    jump do_break(prim_jump())
+                    jump if_body()
                   } else {
-                    jump if_next(prim_jump(move __noop))
+                    jump if_alt()
                   }
                 }
 

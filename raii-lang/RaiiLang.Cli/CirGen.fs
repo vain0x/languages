@@ -27,6 +27,11 @@ let cgContextDerive (context: CirGenContext) =
       Stmts = ResizeArray()
   }
 
+let cgCaptureStmts (context: CirGenContext) body =
+  let newStmts = ResizeArray()
+  body { context with Stmts = newStmts }
+  newStmts
+
 let neverTerm = CName "__never__"
 
 let addPrefix name = sprintf "fn_%s" name
@@ -180,8 +185,12 @@ let cgTerm (context: CirGenContext) (node: KNode) =
     neverTerm
 
   | KIf (cond, body, alt) ->
-    // FIXME: 実装
-    body |> cgTerm context
+    let bodyStmts = cgCaptureStmts context (fun context -> cgJump context body [])
+    let altStmts = cgCaptureStmts context (fun context -> cgJump context alt [])
+
+    let ifStmt = CIfStmt (CName cond, bodyStmts |> Seq.toList, altStmts |> Seq.toList)
+    context.Stmts.Add(ifStmt)
+    neverTerm
 
   | KFix (KLabelFix (KLabel (funName, paramList, body)), next) ->
     for KParam (_mode, paramName, paramTy) in paramList do

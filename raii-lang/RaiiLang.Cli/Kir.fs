@@ -15,9 +15,63 @@ type KTy =
   | KInferTy
     of string * KTy option ref
 
-type KFixKind =
+[<Struct>]
+type KVar =
+  | KVar
+    of string * KTy
+
+[<Struct>]
+type KParam =
+  | KParam
+    of Mode * paramName:string * paramTy:KTy
+
+[<Struct>]
+type KArg =
+  | KArg
+    of PassBy * argNode:string
+
+[<Struct>]
+type KResult =
+  | KResult
+    of resultTy:KTy
+
+[<Struct>]
+type KLabel =
+  | KLabel
+    of labelName:string
+      * KParam list
+      * body:KNode ref
+
+[<Struct>]
+type KFn =
+  | KFn
+    of fnName:string
+      * KParam list
+      * KResult
+      * body:KNode ref
+
+[<Struct>]
+type KExternFn =
+  | KExternFn
+    of externFnName:string
+      * KParam list
+      * KResult
+
+[<Struct>]
+type KFix =
   | KLabelFix
+    of label:KLabel
+
   | KFnFix
+    of fn:KFn
+
+[<Struct>]
+type KCont =
+  | KLabelCont
+    of label:KLabel
+
+  | KReturnCont
+    of fn:KFn
 
 [<Struct>]
 type KPrim =
@@ -36,35 +90,13 @@ type KPrim =
 
   | KAssignPrim
 
-  | KFnPrim
-    of fnName:string
-
-  | KExternFnPrim
-    of externFnName:string
-
   | KJumpPrim
 
-[<Struct>]
-type KArg =
-  | KArg
-    of PassBy * argNode:string
+  | KFnPrim
+    of fnName:string * fn:KFn option ref
 
-[<Struct>]
-type KParam =
-  | KParam
-    of Mode * paramName:string * paramTy:KTy
-
-[<Struct>]
-type KResult =
-  | KResult
-    of resultTy:KTy
-
-[<Struct>]
-type KLabel =
-  | KLabel
-    of labelName:string
-
-  | KReturnLabel
+  | KExternFnPrim
+    of externFn:KExternFn
 
 type KNode =
   | KName
@@ -73,7 +105,7 @@ type KNode =
   | KPrim
     of prim:KPrim
       * args:KArg list
-      * next:KLabel
+      * next:KCont
 
   | KIf
     of cond:string
@@ -81,11 +113,7 @@ type KNode =
       * alt:KNode
 
   | KFix
-    of funName:string
-      * kind:KFixKind
-      * paramList:KParam list
-      * result:KResult
-      * funBody:KNode
+    of fix:KFix
       * next:KNode
 
 let kPrimFromBin bin =
@@ -134,7 +162,7 @@ let kPrimToSig prim =
 
   | KFnPrim _
   | KExternFnPrim _ ->
-    failwithf "kPrimToSig では関数のシグネチャを取得できません: %A" prim
+    failwithf "unimpl: %A" prim
 
 let kPrimToString prim =
   match prim with
@@ -162,11 +190,11 @@ let kPrimToString prim =
   | KJumpPrim ->
     "prim_jump"
 
-  | KFnPrim name ->
-    name
+  | KFnPrim (funName, _) ->
+    funName
 
-  | KExternFnPrim name ->
-    sprintf "extern_%s" name
+  | KExternFnPrim (KExternFn (funName, _, _)) ->
+    sprintf "extern_%s" funName
 
 let kTyDeref ty =
   match ty with

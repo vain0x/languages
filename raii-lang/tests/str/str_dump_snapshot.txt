@@ -9,7 +9,7 @@ fix fn string_clone(in s_2: string) -> string {
 fix fn main() -> () {
   fix label next(mut result: string) -> never {
     fix label next_2(mut result_2: string) -> never {
-      fix label let_next(val s_3: 's_3) -> never {
+      fix label let_next(val s_3: string) -> never {
         fix label next_3(mut result_3: ()) -> never {
           jump return(prim_jump(move result_3))
         }

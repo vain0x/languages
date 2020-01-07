@@ -33,7 +33,7 @@ fix fn main() -> () {
                     fix label next_8(mut result_8: ()) -> never {
                       fix label next_9(mut result_9: int) -> never {
                         fix label next_10(mut result_10: bool) -> never {
-                          fix label if_next(mut res: int) -> never {
+                          fix label if_next(mut res: ()) -> never {
                             jump do_continue(prim_jump())
                           }
 

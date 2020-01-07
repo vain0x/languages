@@ -3,12 +3,12 @@ module rec RaiiLang.KirDump
 open RaiiLang.Helpers
 open RaiiLang.Kir
 
-let kdLabel label acc =
-  match label with
-  | KLabel name ->
-    acc |> cons name
+let kdCont cont acc =
+  match cont with
+  | KLabelCont (KLabel (labelName, _, _)) ->
+    acc |> cons labelName
 
-  | KReturnLabel ->
+  | KReturnCont _ ->
     acc |> cons "return"
 
 let kdTy ty indent acc =
@@ -104,7 +104,7 @@ let kdNode node indent acc =
     acc |> cons name
 
   | KPrim (prim, args, next) ->
-    let acc = acc |> cons "jump " |> kdLabel next |> cons "("
+    let acc = acc |> cons "jump " |> kdCont next |> cons "("
 
     let acc = acc |> cons (kPrimToString prim)
 
@@ -133,22 +133,22 @@ let kdNode node indent acc =
     |> cons indent
     |> cons "}"
 
-  | KFix (funName, fixKind, paramList, result, body, next) ->
+  | KFix (fix, next) ->
     let deepIndent = indent + "  "
 
-    let kind =
-      match fixKind with
-      | KLabelFix ->
-        "label"
+    let kind, name, paramList, result, body =
+      match fix with
+      | KLabelFix (KLabel (name, paramList, body)) ->
+        "label", name, paramList, KResult KNeverTy, !body
 
-      | KFnFix ->
-        "fn"
+      | KFnFix (KFn (name, paramList, result, body)) ->
+        "fn", name, paramList, result, !body
 
     acc
     |> cons "fix "
     |> cons kind
     |> cons " "
-    |> cons funName
+    |> cons name
     |> kdParamList paramList indent
     |> cons " -> "
     |> kdResult result indent

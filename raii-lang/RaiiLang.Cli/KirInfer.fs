@@ -65,20 +65,43 @@ let kiName context name =
     // FIXME: 未定義の変数？
     KNeverTy
 
-let kiLabel context label =
-  match label with
-  | KLabel label ->
-    kiName context label
-
-  | KReturnLabel ->
-    // FIXME: 現在の関数の結果型を引数とする関数型
-    KNeverTy
-
 let kiArg context arg =
   match arg with
   | KArg (passBy, arg) ->
     let arg = kiName context arg
     passBy, arg
+
+let kiLabel _context label =
+  match label with
+  | KLabel (_, paramList, _) ->
+    KFunTy (paramList, KResult KNeverTy)
+
+let kiFn _context fn =
+  match fn with
+  | KFn (_, paramList, result, _) ->
+    KFunTy (paramList, result)
+
+let kiExternFn _context externFn =
+  match externFn with
+  | KExternFn (_, paramList, result) ->
+    KFunTy (paramList, result)
+
+let kiFix context fix =
+  match fix with
+  | KLabelFix label ->
+    kiLabel context label
+
+  | KFnFix fn ->
+    kiFn context fn
+
+let kiCont context cont =
+  match cont with
+  | KLabelCont label ->
+    kiLabel context label
+
+  | KReturnCont (KFn (_, _, KResult resultTy, _)) ->
+    // FIXME: モード
+    KFunTy ([KParam (MutMode, "result", resultTy)], KResult KNeverTy)
 
 let kiCall context funTy args =
   // 渡された引数から関数型を逆算する。
@@ -97,9 +120,9 @@ let kiCall context funTy args =
 
   expectedTy
 
-let kiJump context label args =
-  let labelTy = kiLabel context label
-  kiCall context labelTy args
+let kiJump context cont args =
+  let nextTy = kiCont context cont
+  kiCall context nextTy args
 
 let kiPrim context prim args next =
   let args = args |> List.map (kiArg context)
@@ -107,15 +130,16 @@ let kiPrim context prim args next =
   let unifyNext funTy =
     match funTy with
     | KFunTy (_, KResult resultTy) ->
-      let labelTy = kiLabel context next
-      kiUnify context labelTy (
+      // FIXME: モード
+      let nextTy = kiCont context next
+      kiUnify context nextTy (
         KFunTy (
           [KParam (MutMode, "result", resultTy)],
           KResult (KInferTy ("_", ref None))
         ))
 
     | _ ->
-      ()
+      failwithf "ERROR: 継続の型が一致しません %A" (prim, args, next)
 
   // 1個の結果と1個の継続を持つケース
   let onPrim1 paramList result =
@@ -182,15 +206,16 @@ let kiPrim context prim args next =
       ))
 
   | KJumpPrim ->
-    kiJump context next []
+    kiJump context next args
 
-  | KFnPrim name ->
+  | KFnPrim (name, _) ->
+    // FIXME: 名前解決
     let funTy = kiName context name
     unifyNext funTy
     kiCall context funTy args
 
-  | KExternFnPrim name ->
-    let funTy = KInferTy (name, ref None)
+  | KExternFnPrim externFn ->
+    let funTy = kiExternFn context externFn
     unifyNext funTy
     kiCall context funTy args
 
@@ -205,15 +230,20 @@ let kiNode (context: KirInferContext) node =
   | KIf (cond, body, alt) ->
     KName cond |> kiNode context |> kiUnify context KBoolTy
 
-    // 継続だからnever型？
-    let bodyTy = kiNode context body
-    let altTy = kiNode context alt
-    kiUnify context bodyTy altTy
+    kiNode context body |> ignore
+    kiNode context alt |> ignore
+    KNeverTy
 
-    bodyTy
+  | KFix (fix, next) ->
+    let name, paramList, result, body =
+      match fix with
+      | KLabelFix (KLabel (name, paramList, body)) ->
+        name, paramList, KResult KNeverTy, !body
 
-  | KFix (funName, _, paramList, result, body, next) ->
-    context.TyMap <- context.TyMap |> Map.add funName (KFunTy (paramList, result))
+      | KFnFix (KFn (name, paramList, result, body)) ->
+        name, paramList, result, !body
+
+    context.TyMap <- context.TyMap |> Map.add name (KFunTy (paramList, result))
 
     let tyMap = context.TyMap
 

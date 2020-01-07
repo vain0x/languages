@@ -13,16 +13,16 @@ fix fn main() -> () {
   fix label next(mut result: int) -> never {
     fix label next_2(mut result_2: int) -> never {
       fix label next_3(mut result_3: bool) -> never {
-        fix label if_next(mut res: int) -> never {
+        fix label if_next(mut res: ()) -> never {
           fix label next_4(mut result_4: int) -> never {
             fix label next_5(mut result_5: int) -> never {
               fix label next_6(mut result_6: bool) -> never {
-                fix label if_next_2(mut res_2: int) -> never {
+                fix label if_next_2(mut res_2: ()) -> never {
                   fix label next_7(mut result_7: int) -> never {
                     fix label let_next(val x: int) -> never {
                       fix label next_8(mut result_8: int) -> never {
                         fix label next_9(mut result_9: bool) -> never {
-                          fix label if_next_3(mut res_3: int) -> never {
+                          fix label if_next_3(mut res_3: ()) -> never {
                             jump return(prim_jump(move res_3))
                           }
 
@@ -39,7 +39,7 @@ fix fn main() -> () {
                           } else {
                             fix label next_12(mut result_12: int) -> never {
                               fix label next_13(mut result_13: bool) -> never {
-                                fix label if_next_4(mut res_4: int) -> never {
+                                fix label if_next_4(mut res_4: ()) -> never {
                                   jump if_next_3(prim_jump(move res_4))
                                 }
 

@@ -80,18 +80,18 @@ let cgArg _context (KArg (passBy, arg)) =
   | ByRef ->
     CUni (CRefUni, arg)
 
-let cgJump context label args =
-  match label with
-  | KLabel label ->
-    // FIXME: ジャンプ先のパラメータに args を代入する
-    for arg in args do
-      let assignStmt = CTermStmt (CBin (CAssignBin, CName "_", arg))
+let cgJump context cont args =
+  match cont with
+  | KLabelCont (KLabel (labelName, paramList, _)) ->
+    for param, arg in List.zip paramList args do
+      let (CParam (paramName, _)) = cgParam context param
+      let assignStmt = CTermStmt (CBin (CAssignBin, CName paramName, arg))
       context.Stmts.Add(assignStmt)
 
-    let gotoStmt = CGotoStmt label
+    let gotoStmt = CGotoStmt labelName
     context.Stmts.Add(gotoStmt)
 
-  | KReturnLabel ->
+  | KReturnCont _ ->
     assert (args |> List.length <= 1)
 
     let argOpt = args |> List.tryHead
@@ -139,10 +139,10 @@ let cgPrimTerm context prim args next =
     let args = args |> List.map (cgArg context)
     cgJump context next args
 
-  | KFnPrim fnName, _ ->
+  | KFnPrim (fnName, _), _ ->
     onCall (addPrefix fnName)
 
-  | KExternFnPrim fnName, _ ->
+  | KExternFnPrim (KExternFn (fnName, _, _)), _ ->
     onCall fnName
 
   | _ ->
@@ -161,7 +161,7 @@ let cgTerm (context: CirGenContext) (node: KNode) =
     // FIXME: 実装
     body |> cgTerm context
 
-  | KFix (funName, KLabelFix, paramList, _, body, next) ->
+  | KFix (KLabelFix (KLabel (funName, paramList, body)), next) ->
     for KParam (_mode, paramName, paramTy) in paramList do
       let paramTy = paramTy |> kTyToCTy
       let localStmt = CLocalStmt (paramName, paramTy, None)
@@ -171,16 +171,16 @@ let cgTerm (context: CirGenContext) (node: KNode) =
 
     let labelStmt = CLabelStmt funName
     context.Stmts.Add(labelStmt)
-    cgTerm context body |> ignore
+    cgTerm context !body |> ignore
 
     neverTerm
 
-  | KFix (funName, KFnFix, paramList, KResult resultTy, body, next) ->
+  | KFix (KFnFix (KFn (funName, paramList, KResult resultTy, body)), next) ->
     let paramList = paramList |> List.map (cgParam context)
     let resultTy = resultTy |> kTyToCTy
 
     let bodyContext = cgContextDerive context
-    cgNode bodyContext body
+    cgNode bodyContext !body
     let body = bodyContext.Stmts |> Seq.toList
 
     let fnDecl = CFnDecl (addPrefix funName, paramList, resultTy, body)

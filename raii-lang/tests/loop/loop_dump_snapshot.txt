@@ -30,10 +30,10 @@ fix fn main() -> () {
             fix label next_6(mut result_6: ()) -> never {
               fix label next_7(mut result_7: int) -> never {
                 fix label next_8(mut result_8: bool) -> never {
-                  fix label if_next(mut res: int) -> never {
+                  fix label if_next(mut res: 'res) -> never {
                     fix label next_9(mut result_9: int) -> never {
                       fix label next_10(mut result_10: bool) -> never {
-                        fix label if_next_2(mut res_2: int) -> never {
+                        fix label if_next_2(mut res_2: 'res_2) -> never {
                           fix label next_11(mut result_11: int) -> never {
                             fix label next_12(mut result_12: int) -> never {
                               fix label next_13(mut result_13: ()) -> never {

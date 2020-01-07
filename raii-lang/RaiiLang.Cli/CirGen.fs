@@ -5,6 +5,10 @@ open RaiiLang.Helpers
 open RaiiLang.Kir
 open RaiiLang.KirGen
 
+type LVal =
+  | LVal
+  | RVal
+
 type CirGenContext =
   {
     Stmts: ResizeArray<CStmt>
@@ -69,15 +73,18 @@ let cgParam _context (KParam (mode, name, ty)) =
   | RefMode ->
     CParam (name, CPtrTy ty)
 
-let cgArg _context (KArg (passBy, arg)) =
+let cgArg _context lval (KArg (passBy, arg)) =
   let arg = CName arg
 
-  match passBy with
-  | ByMove
-  | ByIn ->
+  match passBy, lval with
+  | ByMove, _
+  | ByIn, _ ->
     arg
 
-  | ByRef ->
+  | ByRef, LVal ->
+    CUni (CDerefUni, arg)
+
+  | ByRef, RVal ->
     CUni (CRefUni, arg)
 
 let cgJump context cont args =
@@ -109,13 +116,19 @@ let cgPrimTerm context prim args next =
     cgJump context next [body]
 
   let onBin bin first second =
-    let first = first |> cgArg context
-    let second = second |> cgArg context
+    let first = first |> cgArg context RVal
+    let second = second |> cgArg context RVal
+    let body = CBin (bin, first, second)
+    cgJump context next [body]
+
+  let onAssign bin first second =
+    let first = first |> cgArg context LVal
+    let second = second |> cgArg context RVal
     let body = CBin (bin, first, second)
     cgJump context next [body]
 
   let onCall fnName =
-    let args = args |> List.map (cgArg context)
+    let args = args |> List.map (cgArg context RVal)
     let body = CCall (CName fnName, args)
     cgJump context next [body]
 
@@ -139,10 +152,10 @@ let cgPrimTerm context prim args next =
     onBin CAddBin first second
 
   | KAssignPrim, [first; second] ->
-    onBin CAssignBin first second
+    onAssign CAssignBin first second
 
   | KJumpPrim, _ ->
-    let args = args |> List.map (cgArg context)
+    let args = args |> List.map (cgArg context RVal)
     cgJump context next args
 
   | KFnPrim (fnName, _), _ ->

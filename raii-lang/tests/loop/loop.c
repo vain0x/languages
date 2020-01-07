@@ -69,7 +69,7 @@ next_14:;
 
 next_15:;
     int result_16;
-    result_16 = &a = result_15;
+    result_16 = *a = result_15;
     goto next_16;
 
 next_16:;
@@ -87,7 +87,7 @@ next_11:;
 
 next_12:;
     int result_13;
-    result_13 = &a = result_12;
+    result_13 = *a = result_12;
     goto next_13;
 
 next_13:;

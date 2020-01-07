@@ -14,7 +14,7 @@ next:;
 
 next_2:;
     int result_3;
-    result_3 = &x = result_2;
+    result_3 = *x = result_2;
     goto next_3;
 
 next_3:;

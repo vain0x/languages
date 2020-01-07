@@ -98,12 +98,6 @@ let cgJump context label args =
     let returnStmt = CReturn argOpt
     context.Stmts.Add(returnStmt)
 
-  | KExitLabel ->
-    assert (args |> List.isEmpty)
-
-    let exitStmt = CTermStmt (CCall (CName "exit", [CInt "0"]))
-    context.Stmts.Add(exitStmt)
-
 let cgPrimTerm context prim args next =
   let onLiteral body =
     cgJump context next [body]

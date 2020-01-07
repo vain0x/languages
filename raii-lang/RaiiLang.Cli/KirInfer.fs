@@ -74,9 +74,6 @@ let kiLabel context label =
     // FIXME: 現在の関数の結果型を引数とする関数型
     KNeverTy
 
-  | KExitLabel ->
-    KFunTy ([], KResult KNeverTy)
-
 let kiArg context arg =
   match arg with
   | KArg (passBy, arg) ->

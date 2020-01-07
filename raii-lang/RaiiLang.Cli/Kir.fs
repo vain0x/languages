@@ -66,8 +66,6 @@ type KLabel =
 
   | KReturnLabel
 
-  | KExitLabel
-
 type KNode =
   | KName
     of name:string

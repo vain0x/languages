@@ -11,9 +11,6 @@ let kdLabel label acc =
   | KReturnLabel ->
     acc |> cons "return"
 
-  | KExitLabel ->
-    acc |> cons "exit"
-
 let kdTy ty indent acc =
   match ty |> kTyDeref with
   | KInferTy (name, _) ->

@@ -1,15 +1,15 @@
-fix fn print(in s: string) -> () {
-  jump return(extern_print(in s))
+fix fn print(in s1: string) -> () {
+  jump return(extern_print(in s1))
 }
 
-fix fn string_clone(in s_2: string) -> string {
-  jump return(extern_string_clone(in s_2))
+fix fn string_clone(in s2: string) -> string {
+  jump return(extern_string_clone(in s2))
 }
 
 fix fn main() -> () {
   fix label next(mut result: string) -> never {
     fix label next_2(mut result_2: string) -> never {
-      fix label let_next(val s_3: string) -> never {
+      fix label let_next(val s: string) -> never {
         fix label next_3(mut result_3: ()) -> never {
           jump return(prim_jump(move result_3))
         }

@@ -98,7 +98,7 @@ N(SemiNode) [
               N(ArgNode) [
                 N(StrLiteralNode) [
                   T(StrStartToken) `"`
-                  T(StrVerbatimToken) `before loop`
+                  T(StrVerbatimToken) `before loop\n`
                   T(StrEndToken) `"`
                 ]
               ]
@@ -329,7 +329,7 @@ N(SemiNode) [
               N(ArgNode) [
                 N(StrLiteralNode) [
                   T(StrStartToken) `"`
-                  T(StrVerbatimToken) `after loop`
+                  T(StrVerbatimToken) `after loop\n`
                   T(StrEndToken) `"`
                 ]
               ]

@@ -1,3 +1,5 @@
+extern int assert_eq(int actual, int expected);
+
 int fn_assert_eq(int actual, int expected) {
     return assert_eq(actual, expected);
 }

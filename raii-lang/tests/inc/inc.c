@@ -1,3 +1,5 @@
+extern int assert_eq(int actual, int expected);
+
 int fn_assert_eq(int actual, int expected) {
     return assert_eq(actual, expected);
 }
@@ -6,7 +8,7 @@ int fn_inc(int* x) {
     int result = 1;
 
 next:;
-    int result_2 = x + result;
+    int result_2 = *x + result;
 
 next_2:;
     int result_3 = *x = result_2;

@@ -42,7 +42,7 @@ fix fn main() -> () {
                                     jump next_21(print(in result_20))
                                   }
 
-                                  jump next_20("x != 1, x != 2")
+                                  jump next_20("x != 1, x != 2\n")
                                 }
 
                                 fix label if_body_4() -> never {
@@ -54,7 +54,7 @@ fix fn main() -> () {
                                     jump next_19(print(in result_18))
                                   }
 
-                                  jump next_18("x == 2")
+                                  jump next_18("x == 2\n")
                                 }
 
                                 if result_23 {
@@ -82,7 +82,7 @@ fix fn main() -> () {
                               jump next_17(print(in result_16))
                             }
 
-                            jump next_16("0 == 1")
+                            jump next_16("0 == 1\n")
                           }
 
                           if result_25 {
@@ -116,7 +116,7 @@ fix fn main() -> () {
                     jump next_11(print(in result_10))
                   }
 
-                  jump next_10("0 != 1")
+                  jump next_10("0 != 1\n")
                 }
 
                 fix label if_body_2() -> never {
@@ -128,7 +128,7 @@ fix fn main() -> () {
                     jump next_9(print(in result_8))
                   }
 
-                  jump next_8("0 == 1")
+                  jump next_8("0 == 1\n")
                 }
 
                 if result_14 {
@@ -159,7 +159,7 @@ fix fn main() -> () {
             jump next_4(print(in result_3))
           }
 
-          jump next_3("0 != 0")
+          jump next_3("0 != 0\n")
         }
 
         fix label if_body() -> never {
@@ -171,7 +171,7 @@ fix fn main() -> () {
             jump next_2(print(in result))
           }
 
-          jump next("0 == 0")
+          jump next("0 == 0\n")
         }
 
         if result_7 {

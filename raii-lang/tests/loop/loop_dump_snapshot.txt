@@ -23,7 +23,7 @@ fix fn main() -> () {
               jump next_5(print(in result_4))
             }
 
-            jump next_4("after loop")
+            jump next_4("after loop\n")
           }
 
           fix label do_continue() -> never {
@@ -139,7 +139,7 @@ fix fn main() -> () {
     jump next_2(print(in result))
   }
 
-  jump next("before loop")
+  jump next("before loop\n")
 }
 
 __noop

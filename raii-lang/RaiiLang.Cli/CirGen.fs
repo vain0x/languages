@@ -83,14 +83,12 @@ let cgArg _context lval (KArg (passBy, arg, modeOpt)) =
   let mode = !modeOpt |> Option.defaultValue ValMode
 
   match passBy, mode, lval with
-  | _, RefMode, LVal ->
-    CUni (CDerefUni, arg)
-
-  | _, RefMode, RVal ->
-    arg
-
   | ByRef, _, RVal ->
     CUni (CRefUni, arg)
+
+  | _, RefMode, LVal
+  | _, RefMode, RVal ->
+    CUni (CDerefUni, arg)
 
   | _ ->
     arg
@@ -169,7 +167,11 @@ let cgPrimTerm context prim args next =
   | KFnPrim (fnName, _), _ ->
     onCall (addPrefix fnName)
 
-  | KExternFnPrim (KExternFn (fnName, _, _)), _ ->
+  | KExternFnPrim (KExternFn (fnName, paramList, KResult resultTy)), _ ->
+    let paramList = paramList |> List.map (cgParam context)
+    let resultTy = resultTy |> kTyToCTy
+    context.Decls.Add(CExternFnDecl (fnName, paramList, resultTy))
+
     onCall fnName
 
   | _ ->

@@ -1,5 +1,5 @@
-extern fn print(in s: string);
-extern fn string_clone(in s: string) -> string;
+extern fn print(in s1: string);
+extern fn string_clone(in s2: string) -> string;
 
 fn main() {
     let s = move string_clone("hello");

@@ -2,7 +2,7 @@ extern fn assert_eq(in actual: int, in expected: int);
 extern fn print(in s: string);
 
 fn main() {
-    print("before loop");
+    print("before loop\n");
 
     let mut a = 0;
     loop {
@@ -20,5 +20,5 @@ fn main() {
         a = a + 1;
     };
 
-    print("after loop");
+    print("after loop\n");
 }

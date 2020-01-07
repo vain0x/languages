@@ -276,6 +276,14 @@ let cdDecl decl indent acc =
       |> cons indent
       |> cons "}"
 
+  | CExternFnDecl (name, paramList, resultTy) ->
+    acc
+    |> cons "extern "
+    |> cdVarDecl name resultTy
+    |> cons "("
+    |> cdParamList paramList
+    |> cons ");"
+
 let cdDeclList decls indent acc =
   let deepIndent = eol + indent
 

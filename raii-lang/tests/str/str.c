@@ -1,9 +1,13 @@
-int fn_print(char* s) {
-    return print(s);
+extern int print(char* s1);
+
+int fn_print(char* s1) {
+    return print(s1);
 }
 
-char* fn_string_clone(char* s_2) {
-    return string_clone(s_2);
+extern char* string_clone(char* s2);
+
+char* fn_string_clone(char* s2) {
+    return string_clone(s2);
 }
 
 int fn_main() {
@@ -13,7 +17,7 @@ next:;
     char* result_2 = fn_string_clone(result);
 
 next_2:;
-    char* s_3 = result_2;
+    char* s = result_2;
 
 let_next:;
     int result_3 = fn_print(s);

@@ -1,13 +1,17 @@
+extern int assert_eq(int actual, int expected);
+
 int fn_assert_eq(int actual, int expected) {
     return assert_eq(actual, expected);
 }
+
+extern int print(char* s);
 
 int fn_print(char* s) {
     return print(s);
 }
 
 int fn_main() {
-    char* result = "before loop";
+    char* result = "before loop\n";
 
 next:;
     int result_2 = fn_print(result);
@@ -85,7 +89,7 @@ next_16:;
     goto do_continue;
 
 do_break:;
-    char* result_4 = "after loop";
+    char* result_4 = "after loop\n";
 
 next_4:;
     int result_5 = fn_print(result_4);

@@ -1,6 +1,10 @@
+extern int assert_eq(int actual, int expected);
+
 int fn_assert_eq(int actual, int expected) {
     return assert_eq(actual, expected);
 }
+
+extern int print(char* s);
 
 int fn_print(char* s) {
     return print(s);
@@ -24,7 +28,7 @@ next_7:;
     }
 
 if_body:;
-    char* result = "0 == 0";
+    char* result = "0 == 0\n";
 
 next:;
     int result_2 = fn_print(result);
@@ -34,7 +38,7 @@ next_2:;
     goto if_next;
 
 if_alt:;
-    char* result_3 = "0 != 0";
+    char* result_3 = "0 != 0\n";
 
 next_3:;
     int result_4 = fn_print(result_3);
@@ -60,7 +64,7 @@ next_14:;
     }
 
 if_body_2:;
-    char* result_8 = "0 == 1";
+    char* result_8 = "0 == 1\n";
 
 next_8:;
     int result_9 = fn_print(result_8);
@@ -70,7 +74,7 @@ next_9:;
     goto if_next_2;
 
 if_alt_2:;
-    char* result_10 = "0 != 1";
+    char* result_10 = "0 != 1\n";
 
 next_10:;
     int result_11 = fn_print(result_10);
@@ -99,7 +103,7 @@ next_25:;
     }
 
 if_body_3:;
-    char* result_16 = "0 == 1";
+    char* result_16 = "0 == 1\n";
 
 next_16:;
     int result_17 = fn_print(result_16);
@@ -123,7 +127,7 @@ next_23:;
     }
 
 if_body_4:;
-    char* result_18 = "x == 2";
+    char* result_18 = "x == 2\n";
 
 next_18:;
     int result_19 = fn_print(result_18);
@@ -133,7 +137,7 @@ next_19:;
     goto if_next_4;
 
 if_alt_4:;
-    char* result_20 = "x != 1, x != 2";
+    char* result_20 = "x != 1, x != 2\n";
 
 next_20:;
     int result_21 = fn_print(result_20);

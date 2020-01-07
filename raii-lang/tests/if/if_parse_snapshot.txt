@@ -121,7 +121,7 @@ N(SemiNode) [
                         N(ArgNode) [
                           N(StrLiteralNode) [
                             T(StrStartToken) `"`
-                            T(StrVerbatimToken) `0 == 0`
+                            T(StrVerbatimToken) `0 == 0\n`
                             T(StrEndToken) `"`
                           ]
                         ]
@@ -155,7 +155,7 @@ N(SemiNode) [
                         N(ArgNode) [
                           N(StrLiteralNode) [
                             T(StrStartToken) `"`
-                            T(StrVerbatimToken) `0 != 0`
+                            T(StrVerbatimToken) `0 != 0\n`
                             T(StrEndToken) `"`
                           ]
                         ]
@@ -210,7 +210,7 @@ N(SemiNode) [
                         N(ArgNode) [
                           N(StrLiteralNode) [
                             T(StrStartToken) `"`
-                            T(StrVerbatimToken) `0 == 1`
+                            T(StrVerbatimToken) `0 == 1\n`
                             T(StrEndToken) `"`
                           ]
                         ]
@@ -244,7 +244,7 @@ N(SemiNode) [
                         N(ArgNode) [
                           N(StrLiteralNode) [
                             T(StrStartToken) `"`
-                            T(StrVerbatimToken) `0 != 1`
+                            T(StrVerbatimToken) `0 != 1\n`
                             T(StrEndToken) `"`
                           ]
                         ]
@@ -320,7 +320,7 @@ N(SemiNode) [
                         N(ArgNode) [
                           N(StrLiteralNode) [
                             T(StrStartToken) `"`
-                            T(StrVerbatimToken) `0 == 1`
+                            T(StrVerbatimToken) `0 == 1\n`
                             T(StrEndToken) `"`
                           ]
                         ]
@@ -372,7 +372,7 @@ N(SemiNode) [
                             N(ArgNode) [
                               N(StrLiteralNode) [
                                 T(StrStartToken) `"`
-                                T(StrVerbatimToken) `x == 2`
+                                T(StrVerbatimToken) `x == 2\n`
                                 T(StrEndToken) `"`
                               ]
                             ]
@@ -406,7 +406,7 @@ N(SemiNode) [
                             N(ArgNode) [
                               N(StrLiteralNode) [
                                 T(StrStartToken) `"`
-                                T(StrVerbatimToken) `x != 1, x != 2`
+                                T(StrVerbatimToken) `x != 1, x != 2\n`
                                 T(StrEndToken) `"`
                               ]
                             ]

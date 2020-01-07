@@ -72,3 +72,8 @@ type CDecl =
       * CParam list
       * CTy
       * CStmt list
+
+  | CExternFnDecl
+    of funName:string
+      * CParam list
+      * CTy

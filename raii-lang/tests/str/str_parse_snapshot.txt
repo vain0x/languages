@@ -13,7 +13,7 @@ N(SemiNode) [
         T(InToken) `in`
         T(SpaceToken) ` `
         N(NameNode) [
-          T(IdentToken) `s`
+          T(IdentToken) `s1`
         ]
         T(ColonToken) `:`
         T(SpaceToken) ` `
@@ -41,7 +41,7 @@ N(SemiNode) [
         T(InToken) `in`
         T(SpaceToken) ` `
         N(NameNode) [
-          T(IdentToken) `s`
+          T(IdentToken) `s2`
         ]
         T(ColonToken) `:`
         T(SpaceToken) ` `

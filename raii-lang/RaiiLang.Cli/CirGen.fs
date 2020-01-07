@@ -84,9 +84,15 @@ let cgJump context cont args =
   match cont with
   | KLabelCont (KLabel (labelName, paramList, _)) ->
     for param, arg in List.zip paramList args do
-      let (CParam (paramName, _)) = cgParam context param
-      let assignStmt = CTermStmt (CBin (CAssignBin, CName paramName, arg))
-      context.Stmts.Add(assignStmt)
+      let (CParam (paramName, paramTy)) = cgParam context param
+
+      match paramTy with
+      | CVoidTy ->
+        ()
+
+      | _ ->
+        let assignStmt = CTermStmt (CBin (CAssignBin, CName paramName, arg))
+        context.Stmts.Add(assignStmt)
 
     let gotoStmt = CGotoStmt labelName
     context.Stmts.Add(gotoStmt)
@@ -164,8 +170,14 @@ let cgTerm (context: CirGenContext) (node: KNode) =
   | KFix (KLabelFix (KLabel (funName, paramList, body)), next) ->
     for KParam (_mode, paramName, paramTy) in paramList do
       let paramTy = paramTy |> kTyToCTy
-      let localStmt = CLocalStmt (paramName, paramTy, None)
-      context.Stmts.Add(localStmt)
+
+      match paramTy with
+      | CVoidTy ->
+        ()
+
+      | _ ->
+        let localStmt = CLocalStmt (paramName, paramTy, None)
+        context.Stmts.Add(localStmt)
 
     cgTerm context next |> ignore
 

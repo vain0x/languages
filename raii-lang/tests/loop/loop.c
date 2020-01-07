@@ -45,7 +45,6 @@ next_7:;
     goto next_8;
 
 next_8:;
-    void res;
     goto do_break;
 
 if_next:;
@@ -59,7 +58,6 @@ next_9:;
     goto next_10;
 
 next_10:;
-    void res_2;
     int result_14;
     result_14 = 2;
     goto next_14;

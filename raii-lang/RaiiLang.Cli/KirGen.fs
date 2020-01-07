@@ -265,8 +265,6 @@ let kgStmt context exit stmt =
     // extern fn f(params)
     // ==> fix_fn f(params) { let res = extern_fn"f"(params); jump return(res) }
 
-    let resultName = context.FreshName (sprintf "%s_res" funName)
-
     let passByList = paramList |> List.map (kgParam context)
 
     let fnResult =
@@ -279,11 +277,6 @@ let kgStmt context exit stmt =
       passByList |> List.map (fun (KParam (mode, name, _)) ->
         KArg (mode |> modeToPassBy, name)
       )
-
-    let primResult =
-      match fnResult with
-      | KResult resultTy ->
-        KParam (MutMode, resultName, resultTy)
 
     KFix (
       funName,

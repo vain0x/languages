@@ -8,7 +8,7 @@ open RaiiLang.CirGen
 open RaiiLang.KirDump
 open RaiiLang.KirGen
 open RaiiLang.KirInfer
-open RaiiLang.SyntaxLower
+open RaiiLang.SyntaxAst
 open RaiiLang.SyntaxParse
 open RaiiLang.SyntaxTokenize
 open Xunit
@@ -51,7 +51,7 @@ let snapshotTest (name: string) =
   sourceCode
   |> parse
   |> tee "_parse_snapshot.txt" nodeToSnapshot
-  |> lower
+  |> astRoot
   |> kirGen
   |> kirInfer
   |> tee "_dump_snapshot.txt" kirDump

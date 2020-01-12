@@ -1,9 +1,9 @@
-module rec RaiiLang.SyntaxLower
+module rec RaiiLang.SyntaxAst
 
 open RaiiLang.Helpers
 open RaiiLang.Syntax
 
-let lowerArg (node: NodeData) =
+let astArg (node: NodeData) =
   assert (node.Node = ArgNode)
 
   let passBy =
@@ -15,11 +15,11 @@ let lowerArg (node: NodeData) =
   let term =
     node
     |> nodeToFirstNode nodeIsTerm
-    |> Option.map lowerTerm
+    |> Option.map astTerm
 
   AArg (passBy, term, node)
 
-let lowerParam (node: NodeData) =
+let astParam (node: NodeData) =
   assert (node.Node = ParamNode)
 
   let mode =
@@ -31,26 +31,26 @@ let lowerParam (node: NodeData) =
   let name =
     node
     |> nodeToFirstNode ((=) NameNode)
-    |> Option.map lowerName
+    |> Option.map astName
 
   let ty =
     node
     |> nodeToFirstNode ((=) TyNode)
-    |> Option.map lowerTy
+    |> Option.map astTy
 
   AParam (mode, name, ty, node)
 
-let lowerResult (node: NodeData) =
+let astResult (node: NodeData) =
   assert (node.Node = ResultNode)
 
   let ty =
     node
     |> nodeToFirstNode ((=) TyNode)
-    |> Option.map lowerTy
+    |> Option.map astTy
 
   AResult (ty, node)
 
-let lowerTy (node: NodeData) =
+let astTy (node: NodeData) =
   assert (node.Node = TyNode)
 
   let name =
@@ -61,7 +61,7 @@ let lowerTy (node: NodeData) =
 
   ATy (name, node)
 
-let lowerBoolLiteral (node: NodeData) =
+let astBoolLiteral (node: NodeData) =
   assert (node.Node = BoolLiteralNode)
 
   let value =
@@ -72,7 +72,7 @@ let lowerBoolLiteral (node: NodeData) =
 
   ABoolLiteral (value, node)
 
-let lowerIntLiteral (node: NodeData) =
+let astIntLiteral (node: NodeData) =
   assert (node.Node = IntLiteralNode)
 
   let intToken =
@@ -82,7 +82,7 @@ let lowerIntLiteral (node: NodeData) =
 
   AIntLiteral (intToken, node)
 
-let lowerStrLiteral (node: NodeData) =
+let astStrLiteral (node: NodeData) =
   assert (node.Node = StrLiteralNode)
 
   let segments =
@@ -92,7 +92,7 @@ let lowerStrLiteral (node: NodeData) =
 
   AStrLiteral (segments, node)
 
-let lowerName (node: NodeData) =
+let astName (node: NodeData) =
   assert (node.Node = NameNode)
 
   let ident =
@@ -102,90 +102,90 @@ let lowerName (node: NodeData) =
 
   AName (ident, node)
 
-let lowerGroup (node: NodeData) =
+let astGroup (node: NodeData) =
   assert (node.Node = GroupNode)
 
   let item =
     node
     |> nodeToFirstNode nodeIsTerm
-    |> Option.map lowerTerm
+    |> Option.map astTerm
 
   AGroupTerm (item, node)
 
-let lowerBlock (node: NodeData) =
+let astBlock (node: NodeData) =
   assert (node.Node = BlockNode)
 
   let item =
     node
     |> nodeToFilterNode nodeIsStmt
-    |> List.map lowerStmt
+    |> List.map astStmt
 
   ABlockTerm (item, node)
 
-let lowerBreak (node: NodeData) =
+let astBreak (node: NodeData) =
   assert (node.Node = BreakNode)
 
   ABreakTerm node
 
-let lowerContinue (node: NodeData) =
+let astContinue (node: NodeData) =
   assert (node.Node = ContinueNode)
 
   AContinueTerm node
 
-let lowerLoop (node: NodeData) =
+let astLoop (node: NodeData) =
   assert (node.Node = LoopNode)
 
   let body =
     node
     |> nodeToFirstNode nodeIsTerm
-    |> Option.map lowerTerm
+    |> Option.map astTerm
 
   ALoopTerm (body, node)
 
-let lowerCall (node: NodeData) =
+let astCall (node: NodeData) =
   assert (node.Node = CallNode)
 
   let cal =
     node
     |> nodeToFirstNode nodeIsTerm
-    |> Option.map lowerTerm
+    |> Option.map astTerm
 
   let args =
     node
     |> nodeToFilterNode ((=) ArgNode)
-    |> List.map lowerArg
+    |> List.map astArg
 
   ACallTerm (cal, args, node)
 
-let lowerIf (node: NodeData) =
+let astIf (node: NodeData) =
   assert (node.Node = IfNode)
 
   let cond =
     node
     |> nodeToFirstNode nodeIsTerm
-    |> Option.map lowerTerm
+    |> Option.map astTerm
 
   let body =
     node
     |> nodeToFirstNode ((=) ThenNode)
     |> Option.bind (nodeToFirstNode nodeIsTerm)
-    |> Option.map lowerTerm
+    |> Option.map astTerm
 
   let alt =
     node
     |> nodeToFirstNode ((=) ElseNode)
     |> Option.bind (nodeToFirstNode nodeIsTerm)
-    |> Option.map lowerTerm
+    |> Option.map astTerm
 
   AIfTerm (cond, body, alt, node)
 
-let lowerWhile (node: NodeData) =
+let astWhile (node: NodeData) =
   assert (node.Node = WhileNode)
 
   let terms =
     node
     |> nodeToFilterNode nodeIsTerm
-    |> List.map lowerTerm
+    |> List.map astTerm
 
   // while キーワードの左と右からそれぞれ探す方がいい。
   let cond = terms |> List.tryItem 0
@@ -193,7 +193,7 @@ let lowerWhile (node: NodeData) =
 
   AWhileTerm (cond, body, node)
 
-let lowerBin (node: NodeData) =
+let astBin (node: NodeData) =
   assert (node.Node = BinNode)
 
   let asBin (t: TokenData) = tokenAsBin t.Token
@@ -206,60 +206,60 @@ let lowerBin (node: NodeData) =
   let terms =
     node
     |> nodeToFilterNode nodeIsTerm
-    |> List.map lowerTerm
+    |> List.map astTerm
 
   let first = terms |> List.tryItem 0
   let second = terms |> List.tryItem 1
 
   ABinTerm (bin, first, second, node)
 
-let lowerTerm (node: NodeData) =
+let astTerm (node: NodeData) =
   assert (node.Node |> nodeIsTerm)
 
   match node.Node with
   | BoolLiteralNode ->
-    lowerBoolLiteral node
+    astBoolLiteral node
 
   | IntLiteralNode ->
-    lowerIntLiteral node
+    astIntLiteral node
 
   | StrLiteralNode ->
-    lowerStrLiteral node
+    astStrLiteral node
 
   | NameNode ->
-    lowerName node |> ANameTerm
+    astName node |> ANameTerm
 
   | GroupNode ->
-    lowerGroup node
+    astGroup node
 
   | BlockNode ->
-    lowerBlock node
+    astBlock node
 
   | BreakNode ->
-    lowerBreak node
+    astBreak node
 
   | ContinueNode ->
-    lowerContinue node
+    astContinue node
 
   | LoopNode ->
-    lowerLoop node
+    astLoop node
 
   | CallNode ->
-    lowerCall node
+    astCall node
 
   | BinNode ->
-    lowerBin node
+    astBin node
 
   | IfNode ->
-    lowerIf node
+    astIf node
 
   | WhileNode ->
-    lowerWhile node
+    astWhile node
 
   | _ ->
     failwith "NEVER: nodeIsTerm bug"
 
-let lowerStmt (node: NodeData) =
+let astStmt (node: NodeData) =
   assert (node.Node |> nodeIsStmt)
 
   match node.Node with
@@ -267,7 +267,7 @@ let lowerStmt (node: NodeData) =
     let term =
       node
       |> nodeToFirstNode nodeIsTerm
-      |> Option.map lowerTerm
+      |> Option.map astTerm
 
     ATermStmt (term, node)
 
@@ -275,12 +275,12 @@ let lowerStmt (node: NodeData) =
     let first =
       node
       |> nodeToFirstNode ((=) ParamNode)
-      |> Option.map lowerParam
+      |> Option.map astParam
 
     let second =
       node
       |> nodeToFirstNode ((=) ArgNode)
-      |> Option.map lowerArg
+      |> Option.map astArg
 
     ALetStmt (first, second, node)
 
@@ -288,17 +288,17 @@ let lowerStmt (node: NodeData) =
     let name =
       node
       |> nodeToFirstNode ((=) NameNode)
-      |> Option.map lowerName
+      |> Option.map astName
 
     let args =
       node
       |> nodeToFilterNode ((=) ParamNode)
-      |> List.map lowerParam
+      |> List.map astParam
 
     let result =
       node
       |> nodeToFirstNode ((=) ResultNode)
-      |> Option.map lowerResult
+      |> Option.map astResult
 
     AExternFnStmt (name, args, result, node)
 
@@ -306,22 +306,22 @@ let lowerStmt (node: NodeData) =
     let name =
       node
       |> nodeToFirstNode ((=) NameNode)
-      |> Option.map lowerName
+      |> Option.map astName
 
     let args =
       node
       |> nodeToFilterNode ((=) ParamNode)
-      |> List.map lowerParam
+      |> List.map astParam
 
     let result =
       node
       |> nodeToFirstNode ((=) ResultNode)
-      |> Option.map lowerResult
+      |> Option.map astResult
 
     let body =
       node
       |> nodeToFirstNode ((=) BlockNode)
-      |> Option.map lowerTerm
+      |> Option.map astTerm
 
     AFnStmt (name, args, result, body, node)
 
@@ -329,14 +329,14 @@ let lowerStmt (node: NodeData) =
     let stmts =
       node
       |> nodeToFilterNode nodeIsStmt
-      |> List.map lowerStmt
+      |> List.map astStmt
 
     ASemiStmt (stmts, node)
 
   | _ ->
     failwith "NEVER: nodeIsStmt bug"
 
-let lower (node: NodeData) =
+let astRoot (node: NodeData) =
   assert (node.Node = SemiNode)
 
-  lowerStmt node
+  astStmt node

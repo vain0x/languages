@@ -215,44 +215,62 @@ let cgPrimTerm context prim args conts =
 let cgTerm (context: CirGenContext) (node: KNode) =
   match node with
   | KNoop ->
-    CName "__noop"
+    ()
 
   | KPrim (prim, args, conts) ->
     cgPrimTerm context prim args conts
-    neverTerm
 
-  | KFix (KLabelFix (KLabel (funName, paramList, body)), next) ->
-    for KParam (_mode, paramName, paramTy) in paramList do
-      let paramTy = paramTy |> kTyToCTy
-
-      match paramTy with
-      | CVoidTy ->
+  | KFix (fixes, next) ->
+    // 関数とラベルで生成するコードが全く異なる。
+    // まず関数の定義を生成する。
+    for fix in fixes do
+      match fix with
+      | KLabelFix _ ->
         ()
 
-      | _ ->
-        let localStmt = CLocalStmt (paramName, paramTy, None)
-        context.Stmts.Add(localStmt)
+      | KFnFix (KFn (funName, paramList, KResult resultTy, body)) ->
+        let paramList = paramList |> List.map (cgParam context)
+        let resultTy = resultTy |> kTyToCTy
 
-    cgTerm context next |> ignore
+        let bodyContext = cgContextDerive context
+        cgNode bodyContext !body
+        let body = bodyContext.Stmts |> Seq.toList
 
-    let labelStmt = CLabelStmt funName
-    context.Stmts.Add(labelStmt)
-    cgTerm context !body |> ignore
+        let fnDecl = CFnDecl (addPrefix funName, paramList, resultTy, body)
+        context.Decls.Add(fnDecl)
 
-    neverTerm
+    // 各ラベルのパラメータを宣言する。
+    for fix in fixes do
+      match fix with
+      | KLabelFix (KLabel (funName, paramList, _)) ->
+        for KParam (_mode, paramName, paramTy) in paramList do
+          let paramTy = paramTy |> kTyToCTy
 
-  | KFix (KFnFix (KFn (funName, paramList, KResult resultTy, body)), next) ->
-    let paramList = paramList |> List.map (cgParam context)
-    let resultTy = resultTy |> kTyToCTy
+          // void 型の変数は生成しない。
+          match paramTy with
+          | CVoidTy ->
+            ()
 
-    let bodyContext = cgContextDerive context
-    cgNode bodyContext !body
-    let body = bodyContext.Stmts |> Seq.toList
+          | _ ->
+            let localStmt = CLocalStmt (paramName, paramTy, None)
+            context.Stmts.Add(localStmt)
 
-    let fnDecl = CFnDecl (addPrefix funName, paramList, resultTy, body)
-    context.Decls.Add(fnDecl)
+      | KFnFix _ ->
+        ()
 
-    cgTerm context next
+    // 次の処理を生成する。
+    next |> cgTerm context
+
+    // 各ラベルの実体を配置する。
+    for fix in fixes do
+      match fix with
+      | KLabelFix (KLabel (funName, _, body)) ->
+        let labelStmt = CLabelStmt funName
+        context.Stmts.Add(labelStmt)
+        cgNode context !body
+
+      | KFnFix _ ->
+        ()
 
 let cgNode context (node: KNode) =
   match node with
@@ -261,7 +279,7 @@ let cgNode context (node: KNode) =
 
   | KPrim _
   | KFix _ ->
-    cgTerm context node |> ignore
+    cgTerm context node
 
 let cirGen (node: KNode) =
   let context = cgContextNew ()

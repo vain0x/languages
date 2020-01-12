@@ -109,7 +109,7 @@ type KNode =
       * conts:KCont list
 
   | KFix
-    of fix:KFix
+    of fixes:KFix list
       * next:KNode
 
 let kPrimFromBin bin =

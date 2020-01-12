@@ -120,11 +120,12 @@ let kgLoop context exit bodyFun =
   context.LoopStack <- loopStack
 
   KFix (
-    KLabelFix breakLabel,
-    KFix (
-      KLabelFix continueLabel,
-      continueNode
-    ))
+    [
+      KLabelFix continueLabel
+      KLabelFix breakLabel
+    ],
+    continueNode
+  )
 
 /// 1つの結果と1つの継続を持つプリミティブノードを作る。
 let kPrim1 context prim args exit =
@@ -142,7 +143,7 @@ let kPrim1 context prim args exit =
     )
 
   KFix (
-    KLabelFix label,
+    [KLabelFix label],
     KPrim (prim, args, [KLabelCont label])
   )
 
@@ -249,18 +250,18 @@ let kgTerm (context: KirGenContext) exit term =
       labelBody := exit resultName
 
       KFix (
-        KLabelFix nextLabel,
-        KFix (
-          KLabelFix altLabel,
-          KFix (
-            KLabelFix bodyLabel,
-            KPrim (
-              KIfPrim,
-              [KArg (ByMove, cond, ref None)],
-              [
-                KLabelCont bodyLabel
-                KLabelCont altLabel
-              ])))))
+        [
+          KLabelFix bodyLabel
+          KLabelFix altLabel
+          KLabelFix nextLabel
+        ],
+        KPrim (
+          KIfPrim,
+          [KArg (ByMove, cond, ref None)],
+          [
+            KLabelCont bodyLabel
+            KLabelCont altLabel
+          ])))
 
   | AWhileTerm (Some cond, Some body, _) ->
     // cond while { body }
@@ -276,7 +277,7 @@ let kgTerm (context: KirGenContext) exit term =
           )
 
         KFix (
-          KLabelFix bodyLabel,
+          [KLabelFix bodyLabel],
           KPrim (
             KIfPrim,
             [KArg (ByMove, cond, ref None)],
@@ -306,7 +307,7 @@ let kgStmt context exit stmt =
       let nextLabel = KLabel (labelName, [param], ref labelBody)
 
       KFix (
-        KLabelFix nextLabel,
+        [KLabelFix nextLabel],
         KPrim (KJumpPrim, args, [KLabelCont nextLabel])
     ))
 
@@ -342,7 +343,7 @@ let kgStmt context exit stmt =
       )
 
     KFix (
-      KFnFix fn,
+      [KFnFix fn],
       exit noop
     )
 
@@ -370,7 +371,7 @@ let kgStmt context exit stmt =
       )
 
     KFix (
-      KFnFix fn,
+      [KFnFix fn],
       exit noop
     )
 

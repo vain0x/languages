@@ -261,29 +261,40 @@ let kiNode (context: KirInferContext) node =
   | KPrim (prim, args, conts) ->
     kiPrim context prim args conts
 
-  | KFix (fix, next) ->
-    let name, paramList, result, body =
-      match fix with
-      | KLabelFix (KLabel (name, paramList, body)) ->
-        name, paramList, KResult KNeverTy, !body
+  | KFix (fixes, next) ->
+    // 相互再帰のため、まず各関数を識別子として定義する。
+    for fix in fixes do
+      let name, paramList, result =
+        match fix with
+        | KLabelFix (KLabel (name, paramList, _)) ->
+          name, paramList, KResult KNeverTy
 
-      | KFnFix (KFn (name, paramList, result, body)) ->
-        name, paramList, result, !body
+        | KFnFix (KFn (name, paramList, result, _)) ->
+          name, paramList, result
 
-    context.SymbolMap <- context.SymbolMap |> Map.add name (struct (MutMode, KFunTy (paramList, result)))
+      context.SymbolMap <- context.SymbolMap |> Map.add name (struct (MutMode, KFunTy (paramList, result)))
 
     let oldMap = context.SymbolMap
-    let mutable newMap = oldMap
 
-    for KParam (mode, paramName, paramTy) in paramList do
-      newMap <- newMap |> Map.add paramName (mode, paramTy)
+    // 各関数の本体を処理する。
+    for fix in fixes do
+      let paramList, body =
+        match fix with
+        | KLabelFix (KLabel (_, paramList, body)) ->
+          paramList, !body
 
-    context.SymbolMap <- newMap
+        | KFnFix (KFn (_, paramList, _, body)) ->
+          paramList, !body
 
-    body |> kiNode context
+      // 外側の環境に引数を付加したもの。
+      let mutable newMap = oldMap
+      for KParam (mode, paramName, paramTy) in paramList do
+        newMap <- newMap |> Map.add paramName (mode, paramTy)
+
+      context.SymbolMap <- newMap
+      body |> kiNode context
 
     context.SymbolMap <- oldMap
-
     next |> kiNode context
 
 let kirInfer (node: KNode) =

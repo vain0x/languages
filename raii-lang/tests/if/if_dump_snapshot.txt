@@ -13,27 +13,91 @@ fix fn main() -> () {
   fix label next_5(mut result_5: int) -> never {
     fix label next_6(mut result_6: int) -> never {
       fix label next_7(mut result_7: bool) -> never {
-        fix label if_next(mut res: ()) -> never {
+        fix label if_body() -> never {
+          fix label next(mut result: string) -> never {
+            fix label next_2(mut result_2: ()) -> never {
+              jump if_next(prim_jump(move result_2))
+            }
+
+            jump next_2(print(in result))
+          }
+
+          jump next("0 == 0\n")
+        }
+
+        and label if_alt() -> never {
+          fix label next_3(mut result_3: string) -> never {
+            fix label next_4(mut result_4: ()) -> never {
+              jump if_next(prim_jump(move result_4))
+            }
+
+            jump next_4(print(in result_3))
+          }
+
+          jump next_3("0 != 0\n")
+        }
+
+        and label if_next(mut res: ()) -> never {
           fix label next_12(mut result_12: int) -> never {
             fix label next_13(mut result_13: int) -> never {
               fix label next_14(mut result_14: bool) -> never {
-                fix label if_next_2(mut res_2: ()) -> never {
+                fix label if_body_2() -> never {
+                  fix label next_8(mut result_8: string) -> never {
+                    fix label next_9(mut result_9: ()) -> never {
+                      jump if_next_2(prim_jump(move result_9))
+                    }
+
+                    jump next_9(print(in result_8))
+                  }
+
+                  jump next_8("0 == 1\n")
+                }
+
+                and label if_alt_2() -> never {
+                  fix label next_10(mut result_10: string) -> never {
+                    fix label next_11(mut result_11: ()) -> never {
+                      jump if_next_2(prim_jump(move result_11))
+                    }
+
+                    jump next_11(print(in result_10))
+                  }
+
+                  jump next_10("0 != 1\n")
+                }
+
+                and label if_next_2(mut res_2: ()) -> never {
                   fix label next_15(mut result_15: int) -> never {
                     fix label let_next(val x: int) -> never {
                       fix label next_24(mut result_24: int) -> never {
                         fix label next_25(mut result_25: bool) -> never {
-                          fix label if_next_3(mut res_3: ()) -> never {
-                            jump return(prim_jump(move res_3))
+                          fix label if_body_3() -> never {
+                            fix label next_16(mut result_16: string) -> never {
+                              fix label next_17(mut result_17: ()) -> never {
+                                jump if_next_3(prim_jump(move result_17))
+                              }
+
+                              jump next_17(print(in result_16))
+                            }
+
+                            jump next_16("0 == 1\n")
                           }
 
-                          fix label if_alt_3() -> never {
+                          and label if_alt_3() -> never {
                             fix label next_22(mut result_22: int) -> never {
                               fix label next_23(mut result_23: bool) -> never {
-                                fix label if_next_4(mut res_4: ()) -> never {
-                                  jump if_next_3(prim_jump(move res_4))
+                                fix label if_body_4() -> never {
+                                  fix label next_18(mut result_18: string) -> never {
+                                    fix label next_19(mut result_19: ()) -> never {
+                                      jump if_next_4(prim_jump(move result_19))
+                                    }
+
+                                    jump next_19(print(in result_18))
+                                  }
+
+                                  jump next_18("x == 2\n")
                                 }
 
-                                fix label if_alt_4() -> never {
+                                and label if_alt_4() -> never {
                                   fix label next_20(mut result_20: string) -> never {
                                     fix label next_21(mut result_21: ()) -> never {
                                       jump if_next_4(prim_jump(move result_21))
@@ -45,16 +109,8 @@ fix fn main() -> () {
                                   jump next_20("x != 1, x != 2\n")
                                 }
 
-                                fix label if_body_4() -> never {
-                                  fix label next_18(mut result_18: string) -> never {
-                                    fix label next_19(mut result_19: ()) -> never {
-                                      jump if_next_4(prim_jump(move result_19))
-                                    }
-
-                                    jump next_19(print(in result_18))
-                                  }
-
-                                  jump next_18("x == 2\n")
+                                and label if_next_4(mut res_4: ()) -> never {
+                                  jump if_next_3(prim_jump(move res_4))
                                 }
 
                                 if result_23 {
@@ -73,16 +129,8 @@ fix fn main() -> () {
                             jump next_22(2)
                           }
 
-                          fix label if_body_3() -> never {
-                            fix label next_16(mut result_16: string) -> never {
-                              fix label next_17(mut result_17: ()) -> never {
-                                jump if_next_3(prim_jump(move result_17))
-                              }
-
-                              jump next_17(print(in result_16))
-                            }
-
-                            jump next_16("0 == 1\n")
+                          and label if_next_3(mut res_3: ()) -> never {
+                            jump return(prim_jump(move res_3))
                           }
 
                           if result_25 {
@@ -107,30 +155,6 @@ fix fn main() -> () {
                   jump next_15(2)
                 }
 
-                fix label if_alt_2() -> never {
-                  fix label next_10(mut result_10: string) -> never {
-                    fix label next_11(mut result_11: ()) -> never {
-                      jump if_next_2(prim_jump(move result_11))
-                    }
-
-                    jump next_11(print(in result_10))
-                  }
-
-                  jump next_10("0 != 1\n")
-                }
-
-                fix label if_body_2() -> never {
-                  fix label next_8(mut result_8: string) -> never {
-                    fix label next_9(mut result_9: ()) -> never {
-                      jump if_next_2(prim_jump(move result_9))
-                    }
-
-                    jump next_9(print(in result_8))
-                  }
-
-                  jump next_8("0 == 1\n")
-                }
-
                 if result_14 {
                   jump if_body_2()
                 } else {
@@ -148,30 +172,6 @@ fix fn main() -> () {
           }
 
           jump next_12(0)
-        }
-
-        fix label if_alt() -> never {
-          fix label next_3(mut result_3: string) -> never {
-            fix label next_4(mut result_4: ()) -> never {
-              jump if_next(prim_jump(move result_4))
-            }
-
-            jump next_4(print(in result_3))
-          }
-
-          jump next_3("0 != 0\n")
-        }
-
-        fix label if_body() -> never {
-          fix label next(mut result: string) -> never {
-            fix label next_2(mut result_2: ()) -> never {
-              jump if_next(prim_jump(move result_2))
-            }
-
-            jump next_2(print(in result))
-          }
-
-          jump next("0 == 0\n")
         }
 
         if result_7 {

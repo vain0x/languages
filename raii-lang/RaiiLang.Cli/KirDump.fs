@@ -98,6 +98,30 @@ let kdArgList args indent acc =
 let kdResult (KResult resultTy) indent acc =
   acc |> kdTy resultTy indent
 
+let kdFix fix indent acc =
+  let deepIndent = indent + "  "
+
+  let kind, name, paramList, result, body =
+    match fix with
+    | KLabelFix (KLabel (name, paramList, body)) ->
+      "label", name, paramList, KResult KNeverTy, !body
+
+    | KFnFix (KFn (name, paramList, result, body)) ->
+      "fn", name, paramList, result, !body
+
+  acc
+  |> cons kind
+  |> cons " "
+  |> cons name
+  |> kdParamList paramList indent
+  |> cons " -> "
+  |> kdResult result indent
+  |> cons " {"
+  |> cons deepIndent
+  |> kdNode body deepIndent
+  |> cons indent
+  |> cons "}"
+
 let kdNode node indent acc =
   match node with
   | KNoop ->
@@ -154,30 +178,20 @@ let kdNode node indent acc =
     |> cons indent
     |> cons "]"
 
-  | KFix (fix, next) ->
-    let deepIndent = indent + "  "
+  | KFix (fixes, next) ->
+    let acc = acc |> cons "fix "
 
-    let kind, name, paramList, result, body =
-      match fix with
-      | KLabelFix (KLabel (name, paramList, body)) ->
-        "label", name, paramList, KResult KNeverTy, !body
+    let _, acc =
+      fixes |> List.fold (fun (sep, acc) fix ->
+        let acc =
+          acc
+          |> cons sep
+          |> kdFix fix indent
 
-      | KFnFix (KFn (name, paramList, result, body)) ->
-        "fn", name, paramList, result, !body
+        eol + indent + "and ", acc
+      ) ("", acc)
 
     acc
-    |> cons "fix "
-    |> cons kind
-    |> cons " "
-    |> cons name
-    |> kdParamList paramList indent
-    |> cons " -> "
-    |> kdResult result indent
-    |> cons " {"
-    |> cons deepIndent
-    |> kdNode body deepIndent
-    |> cons indent
-    |> cons "}"
     |> cons eol
     |> cons indent
     |> kdNode next indent

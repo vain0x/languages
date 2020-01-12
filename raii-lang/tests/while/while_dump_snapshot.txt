@@ -10,21 +10,6 @@ fix fn main() -> () {
     fix label let_next(mut ok: bool) -> never {
       fix label next_2(mut result_2: int) -> never {
         fix label let_next_2(mut a: int) -> never {
-          fix label do_break() -> never {
-            fix label next_3(mut result_3: int) -> never {
-              fix label next_4(mut result_4: ()) -> never {
-                jump return(prim_jump(move result_4))
-              }
-
-              jump next_4(assert_eq(
-                in a
-                in result_3
-              ))
-            }
-
-            jump next_3(5)
-          }
-
           fix label do_continue() -> never {
             fix label body() -> never {
               fix label next_5(mut result_5: ()) -> never {
@@ -33,14 +18,6 @@ fix fn main() -> () {
                     fix label next_8(mut result_8: ()) -> never {
                       fix label next_11(mut result_11: int) -> never {
                         fix label next_12(mut result_12: bool) -> never {
-                          fix label if_next(mut res: ()) -> never {
-                            jump do_continue(prim_jump())
-                          }
-
-                          fix label if_alt() -> never {
-                            jump if_next(prim_jump(move 0))
-                          }
-
                           fix label if_body() -> never {
                             fix label next_9(mut result_9: bool) -> never {
                               fix label next_10(mut result_10: ()) -> never {
@@ -54,6 +31,14 @@ fix fn main() -> () {
                             }
 
                             jump next_9(false)
+                          }
+
+                          and label if_alt() -> never {
+                            jump if_next(prim_jump(move 0))
+                          }
+
+                          and label if_next(mut res: ()) -> never {
+                            jump do_continue(prim_jump())
                           }
 
                           if result_12 {
@@ -98,6 +83,21 @@ fix fn main() -> () {
             } else {
               jump do_break()
             }
+          }
+
+          and label do_break() -> never {
+            fix label next_3(mut result_3: int) -> never {
+              fix label next_4(mut result_4: ()) -> never {
+                jump return(prim_jump(move result_4))
+              }
+
+              jump next_4(assert_eq(
+                in a
+                in result_3
+              ))
+            }
+
+            jump next_3(5)
           }
 
           jump do_continue(prim_jump())

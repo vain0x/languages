@@ -6,11 +6,9 @@ open RaiiLang.SyntaxAst
 open RaiiLang.SyntaxParse
 open RaiiLang.Kir
 open RaiiLang.KirGen
-open RaiiLang.KirInfer
-open RaiiLang.KirBorrowCheck
 
 [<EntryPoint>]
 let main _ =
-  let sourceCode = File.ReadAllText("tests/swap/swap.raii")
-  sourceCode |> parse |> astRoot |> kirGen |> kirInfer |> kirBorrowCheck |> ignore
+  let sourceCode = File.ReadAllText("tests/loop/loop.raii")
+  sourceCode |> parse |> astRoot |> kirGen |> ignore
   0

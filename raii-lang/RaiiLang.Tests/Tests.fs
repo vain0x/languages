@@ -5,7 +5,6 @@ open System.IO
 open RaiiLang.Cir
 open RaiiLang.CirDump
 open RaiiLang.CirGen
-open RaiiLang.KirBorrowCheck
 open RaiiLang.KirDump
 open RaiiLang.KirGen
 open RaiiLang.KirInfer
@@ -55,7 +54,6 @@ let snapshotTest (name: string) =
   |> astRoot
   |> kirGen
   |> kirInfer
-  |> kirBorrowCheck
   |> tee "_dump_snapshot.txt" kirDump
   |> cirGen
   |> tee ".c" cirDump

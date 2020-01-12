@@ -98,9 +98,7 @@ let kuArg context (KArg (passBy, arg, _)) =
 let kuCont context cont =
   match cont with
   | KLabelCont (KLabel (fnName, _, _)) ->
-    // これは推移閉包を取るときにだけ使うから passBy は何でもいい？
-    // FIXME: by move?
-    context |> kuContextAddUse fnName ByMove
+    context |> kuContextAddUse fnName ByMove // FIXME: by move?
 
   | KReturnCont _ ->
     ()
@@ -121,20 +119,19 @@ let kuNode context node =
     let oldUsage = context.Current
 
     for fix in fixes do
-      context.Current <- { oldUsage with Uses = Map.empty }
+      context.Current <- kUsageEmpty ()
 
-      let fnName, paramList, body =
+      let fnName, paramList =
         match fix with
-        | KLabelFix (KLabel (fnName, paramList, body)) ->
-          fnName, paramList, !body
+        | KLabelFix (KLabel (fnName, paramList, _)) ->
+          fnName, paramList
 
-        | KFnFix (KFn (fnName, paramList, _, body)) ->
-          fnName, paramList, !body
+        | KFnFix (KFn (fnName, paramList, _, _)) ->
+          fnName, paramList
 
       for KParam (mode, paramName, _) in paramList do
         context |> kuContextAddDef paramName mode
 
-      body |> kuNode context
       context |> kuContextSave fnName
 
     context.Current <- oldUsage
@@ -145,4 +142,3 @@ let kirUsage (node: KNode) =
 
   node |> kuNode context
   context |> kuContextMakeFixPoint
-  context

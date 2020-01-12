@@ -1,0 +1,158 @@
+N(SemiNode) [
+  N(SemiNode) [
+    N(FnNode) [
+      T(FnToken) `fn`
+      T(SpaceToken) ` `
+      N(NameNode) [
+        T(IdentToken) `drop`
+      ]
+      T(LeftParenToken) `(`
+      N(ParamNode) [
+        N(NameNode) [
+          T(IdentToken) `_d`
+        ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `string`
+          ]
+        ]
+      ]
+      T(RightParenToken) `)`
+      T(SpaceToken) ` `
+      N(BlockNode) [
+        T(LeftBraceToken) `{`
+        N(SemiNode) [
+        ]
+        T(RightBraceToken) `}`
+      ]
+    ]
+    N(FnNode) [
+      T(EolToken) `
+`
+      T(EolToken) `
+`
+      T(FnToken) `fn`
+      T(SpaceToken) ` `
+      N(NameNode) [
+        T(IdentToken) `borrow`
+      ]
+      T(LeftParenToken) `(`
+      N(ParamNode) [
+        T(RefToken) `ref`
+        T(SpaceToken) ` `
+        N(NameNode) [
+          T(IdentToken) `_b`
+        ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `string`
+          ]
+        ]
+      ]
+      T(RightParenToken) `)`
+      T(SpaceToken) ` `
+      N(BlockNode) [
+        T(LeftBraceToken) `{`
+        N(SemiNode) [
+        ]
+        T(EolToken) `
+`
+        T(RightBraceToken) `}`
+      ]
+    ]
+    N(FnNode) [
+      T(EolToken) `
+`
+      T(EolToken) `
+`
+      T(FnToken) `fn`
+      T(SpaceToken) ` `
+      N(NameNode) [
+        T(IdentToken) `main`
+      ]
+      T(LeftParenToken) `(`
+      T(RightParenToken) `)`
+      T(SpaceToken) ` `
+      N(BlockNode) [
+        T(LeftBraceToken) `{`
+        N(SemiNode) [
+          N(LetNode) [
+            T(EolToken) `
+`
+            T(SpaceToken) `    `
+            T(LetToken) `let`
+            T(SpaceToken) ` `
+            N(ParamNode) [
+              T(MutToken) `mut`
+              T(SpaceToken) ` `
+              N(NameNode) [
+                T(IdentToken) `a`
+                T(SpaceToken) ` `
+              ]
+            ]
+            T(EqualToken) `=`
+            T(SpaceToken) ` `
+            N(ArgNode) [
+              N(StrLiteralNode) [
+                T(StrStartToken) `"`
+                T(StrVerbatimToken) `hello`
+                T(StrEndToken) `"`
+              ]
+            ]
+            T(SemiToken) `;`
+          ]
+          N(ExprNode) [
+            N(CallNode) [
+              N(NameNode) [
+                T(EolToken) `
+`
+                T(SpaceToken) `    `
+                T(IdentToken) `drop`
+              ]
+              T(LeftParenToken) `(`
+              N(ArgNode) [
+                T(MoveToken) `move`
+                T(SpaceToken) ` `
+                N(NameNode) [
+                  T(IdentToken) `a`
+                ]
+              ]
+              T(RightParenToken) `)`
+            ]
+            T(SemiToken) `;`
+          ]
+          N(ExprNode) [
+            N(CallNode) [
+              N(NameNode) [
+                T(EolToken) `
+`
+                T(SpaceToken) `    `
+                T(IdentToken) `borrow`
+              ]
+              T(LeftParenToken) `(`
+              N(ArgNode) [
+                T(RefToken) `ref`
+                T(SpaceToken) ` `
+                N(NameNode) [
+                  T(IdentToken) `a`
+                ]
+              ]
+              T(RightParenToken) `)`
+            ]
+            T(SemiToken) `;`
+          ]
+        ]
+        T(EolToken) `
+`
+        T(RightBraceToken) `}`
+      ]
+    ]
+  ]
+  T(EolToken) `
+`
+  T(EofToken) ``
+]

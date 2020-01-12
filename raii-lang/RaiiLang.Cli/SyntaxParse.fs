@@ -130,7 +130,7 @@ let parseCallTerm (p: P) =
     p.StartNodeWithPrevious()
     p.Eat(LeftParenToken) |> is true
 
-    while p.Next |> tokenIsParamFirst
+    while p.Next |> tokenIsArgFirst
       || p.Next = CommaToken do
       parseArg p
       p.Eat(CommaToken) |> ignore

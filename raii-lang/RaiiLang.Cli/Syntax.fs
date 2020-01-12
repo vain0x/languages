@@ -263,6 +263,189 @@ let tokenIsLeadingTrivia token =
 let tokenIsTrailingTrivia token =
   tokenIsTrivia token && token <> EolToken
 
+let tokenIsStmtKeyword token =
+  match token with
+  | ExternToken
+  | LetToken
+  | FnToken ->
+    true
+
+  | _ ->
+    false
+
+let tokenIsAtomTermFirst token =
+  match token with
+  | FalseToken
+  | TrueToken
+  | IntToken
+  | StrStartToken
+  | IdentToken
+  | BreakToken
+  | ContinueToken
+  | LoopToken
+  | LeftParenToken
+  | LeftBraceToken ->
+    true
+
+  | _ ->
+    false
+
+let tokenIsTermFirst token =
+  tokenIsAtomTermFirst token
+
+let tokenIsArgFirst token =
+  match token with
+  | InToken
+  | MoveToken
+  | RefToken ->
+    true
+
+  | _ ->
+    tokenIsTermFirst token
+
+let tokenIsParamFirst token =
+  match token with
+  | InToken
+  | MutToken
+  | RefToken ->
+    true
+
+  | _ ->
+    tokenIsTermFirst token
+
+/// パイプラインのセグメントの先頭になるトークンか？
+let tokenIsSegmentFirst token =
+  match token with
+  | ThenToken
+  | WhileToken ->
+    true
+
+  | _ ->
+    false
+
+let tokenIsStmtFirst token =
+  tokenIsStmtKeyword token
+  || tokenIsTermFirst token
+
+let tokenToText (token: TokenData) =
+  token.Text
+
+let tokenAsBin (token: Token) =
+  match token with
+  | EqualEqualToken ->
+    Some AEqBin
+
+  | PlusToken ->
+    Some AAddBin
+
+  | EqualToken ->
+    Some AAssignBin
+
+  | _ ->
+    None
+
+let tokenAsMode (token: Token) =
+  match token with
+  | InToken ->
+    Some InMode
+
+  | MutToken ->
+    Some MutMode
+
+  | RefToken ->
+    Some RefMode
+
+  | _ ->
+    None
+
+let tokenAsPassBy (token: Token) =
+  match token with
+  | InToken ->
+    Some ByIn
+
+  | MoveToken ->
+    Some ByMove
+
+  | RefToken ->
+    Some ByRef
+
+  | _ ->
+    None
+
+let nodeIsTerm (node: Node) =
+  match node with
+  | BoolLiteralNode
+  | IntLiteralNode
+  | StrLiteralNode
+  | NameNode
+  | GroupNode
+  | BlockNode
+  | BreakNode
+  | ContinueNode
+  | LoopNode
+  | CallNode
+  | BinNode
+  | IfNode
+  | WhileNode ->
+    true
+
+  | _ ->
+    false
+
+let nodeIsStmt (node: Node) =
+  match node with
+  | ExprNode
+  | LetNode
+  | ExternFnNode
+  | FnNode
+  | SemiNode ->
+    true
+
+  | _ ->
+    false
+
+let nodeToFirstToken pred (node: NodeData) =
+  node.Children |> Seq.tryPick (fun element ->
+    match element with
+    | TokenElement t when pred t.Token ->
+      Some t
+
+    | _ ->
+      None
+  )
+
+let nodeToFilterToken pred (node: NodeData) =
+  node.Children |> Seq.choose (fun element ->
+    match element with
+    | TokenElement t when pred t.Token ->
+      Some t
+
+    | _ ->
+      None
+  )
+  |> Seq.toList
+
+let nodeToFirstNode pred (node: NodeData) =
+  node.Children |> Seq.tryPick (fun element ->
+    match element with
+    | NodeElement n when pred n.Node ->
+      Some n
+
+    | _ ->
+      None
+  )
+
+let nodeToFilterNode pred (node: NodeData) =
+  node.Children |> Seq.choose (fun element ->
+    match element with
+    | NodeElement n when pred n.Node ->
+      Some n
+
+    | _ ->
+      None
+  )
+  |> Seq.toList
+
 let nodeAddTokenFat (token: TokenFat) (node: NodeData) =
   for trivia in token.Leading do
     node.Children.Add(TokenElement trivia)

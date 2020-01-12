@@ -179,8 +179,8 @@ let cgPrimTerm context prim args next =
 
 let cgTerm (context: CirGenContext) (node: KNode) =
   match node with
-  | KName name ->
-    CName name
+  | KNoop ->
+    CName "__noop"
 
   | KPrim (prim, args, next) ->
     cgPrimTerm context prim args next
@@ -229,7 +229,7 @@ let cgTerm (context: CirGenContext) (node: KNode) =
 
 let cgNode context (node: KNode) =
   match node with
-  | KName _ ->
+  | KNoop _ ->
     ()
 
   | KPrim _

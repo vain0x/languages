@@ -88,8 +88,8 @@ let kgLoop context exit bodyFun =
   //     fix continue() { let _ = body; jump continue() }
   //     jump continue()
 
-  let breakBody = ref (KName noop)
-  let continueBody = ref (KName noop)
+  let breakBody = ref KNoop
+  let continueBody = ref KNoop
 
   let breakLabel =
     KLabel (
@@ -212,7 +212,7 @@ let kgTerm (context: KirGenContext) exit term =
     let labelName = context.FreshName "if_next"
     let resultName = context.FreshName "res"
 
-    let labelBody = ref (KName noop)
+    let labelBody = ref KNoop
 
     let nextLabel =
       KLabel (
@@ -327,7 +327,7 @@ let kgStmt context exit stmt =
 
     let externFn = KExternFn (funName, paramList, fnResult)
 
-    let fnBody = ref (KName noop)
+    let fnBody = ref KNoop
     let fn = KFn (funName, paramList, fnResult, fnBody)
 
     fnBody :=
@@ -357,7 +357,7 @@ let kgStmt context exit stmt =
       |> KResult
 
     // FIXME: モード
-    let fnBody = ref (KName noop)
+    let fnBody = ref KNoop
     let fn = KFn (funName, paramList, result, fnBody)
 
     fnBody :=
@@ -389,4 +389,4 @@ let kgStmts context exit stmts =
 
 let kirGen (stmt: AStmt) =
   let context = kgContextNew ()
-  kgStmt context KName stmt
+  kgStmt context (fun _ -> KNoop) stmt

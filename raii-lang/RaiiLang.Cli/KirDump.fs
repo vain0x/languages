@@ -100,8 +100,8 @@ let kdResult (KResult resultTy) indent acc =
 
 let kdNode node indent acc =
   match node with
-  | KName name ->
-    acc |> cons name
+  | KNoop ->
+    acc |> cons "__noop"
 
   | KPrim (prim, args, next) ->
     let acc = acc |> cons "jump " |> kdCont next |> cons "("

@@ -226,8 +226,8 @@ let kiPrim context prim args next =
 
 let kiNode (context: KirInferContext) node =
   match node with
-  | KName name ->
-    kiName context name |> snd
+  | KNoop ->
+    KNeverTy
 
   | KPrim (prim, args, next) ->
     kiPrim context prim args next

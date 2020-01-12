@@ -99,8 +99,7 @@ type KPrim =
     of externFn:KExternFn
 
 type KNode =
-  | KName
-    of name:string
+  | KNoop
 
   | KPrim
     of prim:KPrim

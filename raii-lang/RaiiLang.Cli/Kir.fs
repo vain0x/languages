@@ -10,10 +10,10 @@ type KIdent = string
 type KUsage =
   {
     /// 定義済みの識別子
-    DefSet: Set<KIdent>
+    Defs: Map<KIdent, Mode>
 
     /// 使用されている識別子
-    UseSet: Set<KIdent>
+    Uses: Map<KIdent, PassBy list>
   }
 
 type KTy =
@@ -131,23 +131,39 @@ type KNode =
 
 let kUsageEmpty (): KUsage =
   {
-    DefSet = Set.empty
-    UseSet = Set.empty
+    Defs = Map.empty
+    Uses = Map.empty
   }
 
-let kUsageAddDef ident usage =
+let kUsageAddDef ident mode usage =
   { usage with
-      DefSet = usage.DefSet |> Set.add ident
+      Defs = usage.Defs |> Map.add ident mode
   }
 
-let kUsageAddUse ident usage =
+let kUsageAddUse ident passBy usage =
   { usage with
-      UseSet = usage.UseSet |> Set.add ident
+      Uses =
+        match usage.Uses |> Map.tryFind ident with
+        | Some passByList ->
+          usage.Uses |> Map.add ident (passBy :: passByList)
+
+        | None ->
+          usage.Uses |> Map.add ident [passBy]
   }
 
-let kUsageToCaptureMap (knownSet: HashSet<_>) (usage: KUsage) =
-  Set.difference usage.UseSet usage.DefSet
-  |> Set.filter (knownSet.Contains >> not)
+let kUsageToFreeVars (knownSet: HashSet<_>) (usage: KUsage) =
+  usage.Uses
+  |> Seq.choose (fun (KeyValue (ident, passByList)) ->
+    match usage.Defs |> Map.tryFind ident with
+    | Some _ ->
+      None
+
+    | None ->
+      if knownSet.Contains(ident) then
+        None
+      else
+        Some (ident, passByList)
+  )
 
 // -----------------------------------------------
 // KPrim

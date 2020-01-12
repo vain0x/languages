@@ -3,6 +3,19 @@ module rec RaiiLang.Kir
 open RaiiLang.Helpers
 open RaiiLang.Syntax
 
+type KIdent = string
+
+/// 識別子の定義・使用の状況。
+[<Struct>]
+type KUsage =
+  {
+    /// 定義済みの識別子
+    DefSet: Set<KIdent>
+
+    /// 使用されている識別子
+    UseSet: Set<KIdent>
+  }
+
 type KTy =
   | KNeverTy
   | KUnitTy
@@ -112,6 +125,34 @@ type KNode =
     of fixes:KFix list
       * next:KNode
 
+// -----------------------------------------------
+// KUsage
+// -----------------------------------------------
+
+let kUsageEmpty (): KUsage =
+  {
+    DefSet = Set.empty
+    UseSet = Set.empty
+  }
+
+let kUsageAddDef ident usage =
+  { usage with
+      DefSet = usage.DefSet |> Set.add ident
+  }
+
+let kUsageAddUse ident usage =
+  { usage with
+      UseSet = usage.UseSet |> Set.add ident
+  }
+
+let kUsageToCaptureMap (knownSet: HashSet<_>) (usage: KUsage) =
+  Set.difference usage.UseSet usage.DefSet
+  |> Set.filter (knownSet.Contains >> not)
+
+// -----------------------------------------------
+// KPrim
+// -----------------------------------------------
+
 let kPrimFromBin bin =
   match bin with
   | AEqBin ->
@@ -197,6 +238,10 @@ let kPrimToString prim =
 
   | KExternFnPrim (KExternFn (funName, _, _)) ->
     sprintf "extern_%s" funName
+
+// -----------------------------------------------
+// KTy
+// -----------------------------------------------
 
 let kTyDeref ty =
   match ty with

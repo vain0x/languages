@@ -44,7 +44,7 @@ let kiUnify context first second =
     if List.length firstParams = List.length secondParams then
       for KParam (_, _, first), KParam (_, _, second) in firstParams |> List.zip secondParams do
         // FIXME: モードをチェックする。型によっては ref と in/mut/val が両立しない
-        kiUnify context first second |> ignore
+        kiUnify context first second
 
       match firstResult, secondResult with
       | KResult first,
@@ -123,8 +123,6 @@ let kiCall context funTy args =
   // 呼び出し先の関数の型と単一化する。
   kiUnify context funTy expectedTy
 
-  expectedTy
-
 let kiJump context cont args =
   let nextTy = kiCont context cont
   kiCall context nextTy args
@@ -153,12 +151,10 @@ let kiPrim context prim args conts =
       let funTy = KFunTy (paramList, result)
 
       // 引数の型の推論
-      kiCall context funTy args |> ignore
+      kiCall context funTy args
 
       // 継続の型の推論
       unifyNext funTy cont
-
-      funTy
 
     | _ ->
       failwithf "ERROR: 継続は1個 %A" (conts)
@@ -247,7 +243,7 @@ let kiPrim context prim args conts =
 let kiNode (context: KirInferContext) node =
   match node with
   | KNoop ->
-    KNeverTy
+    ()
 
   | KPrim (prim, args, conts) ->
     kiPrim context prim args conts
@@ -255,7 +251,6 @@ let kiNode (context: KirInferContext) node =
   | KIf (cond, _, _) ->
     let _, condTy = cond |> kiName context
     kiUnify context condTy KBoolTy
-    KNeverTy
 
   | KFix (fix, next) ->
     let name, paramList, result, body =
@@ -276,7 +271,7 @@ let kiNode (context: KirInferContext) node =
 
     context.SymbolMap <- newMap
 
-    body |> kiNode context |> ignore
+    body |> kiNode context
 
     context.SymbolMap <- oldMap
 
@@ -284,5 +279,5 @@ let kiNode (context: KirInferContext) node =
 
 let kirInfer (node: KNode) =
   let context = kiContextNew ()
-  node |> kiNode context |> ignore
+  node |> kiNode context
   node

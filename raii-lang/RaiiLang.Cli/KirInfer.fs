@@ -129,14 +129,14 @@ let kiJump context cont args =
   let nextTy = kiCont context cont
   kiCall context nextTy args
 
-let kiPrim context prim args next =
+let kiPrim context prim args conts =
   let args = args |> List.map (kiArg context)
 
-  let unifyNext funTy =
+  let unifyNext funTy cont =
     match funTy with
     | KFunTy (_, KResult resultTy) ->
       // FIXME: モード
-      let nextTy = kiCont context next
+      let nextTy = kiCont context cont
       kiUnify context nextTy (
         KFunTy (
           [KParam (MutMode, "result", resultTy)],
@@ -144,19 +144,24 @@ let kiPrim context prim args next =
         ))
 
     | _ ->
-      failwithf "ERROR: 継続の型が一致しません %A" (prim, args, next)
+      failwithf "ERROR: 継続の型が一致しません %A" (prim, args, cont)
 
   // 1個の結果と1個の継続を持つケース
   let onPrim1 paramList result =
-    let funTy = KFunTy (paramList, result)
+    match conts with
+    | [cont] ->
+      let funTy = KFunTy (paramList, result)
 
-    // 引数の型の推論
-    kiCall context funTy args |> ignore
+      // 引数の型の推論
+      kiCall context funTy args |> ignore
 
-    // 継続の型の推論
-    unifyNext funTy
+      // 継続の型の推論
+      unifyNext funTy cont
 
-    funTy
+      funTy
+
+    | _ ->
+      failwithf "ERROR: 継続は1個 %A" (conts)
 
   let onBin funTyFun =
     match args with
@@ -165,7 +170,7 @@ let kiPrim context prim args next =
       onPrim1 paramList result
 
     | _ ->
-      failwithf "NEVER: 二項演算の引数は2個"
+      failwithf "NEVER: 二項演算の引数は2個 %A" args
 
   match prim with
   | KBoolLiteralPrim _ ->
@@ -211,26 +216,41 @@ let kiPrim context prim args next =
       ))
 
   | KJumpPrim ->
-    kiJump context next args
+    match conts with
+    | [cont] ->
+      kiJump context cont args
+
+    | _ ->
+      failwithf "ERROR: 継続は1個 %A" conts
 
   | KFnPrim (name, _) ->
-    // FIXME: 名前解決
-    let _, funTy = kiName context name
-    unifyNext funTy
-    kiCall context funTy args
+    match conts with
+    | [cont] ->
+      // FIXME: 名前解決
+      let _, funTy = kiName context name
+      unifyNext funTy cont
+      kiCall context funTy args
+
+    | _ ->
+      failwithf "ERROR: 継続は1個 %A" conts
 
   | KExternFnPrim externFn ->
-    let funTy = kiExternFn context externFn
-    unifyNext funTy
-    kiCall context funTy args
+    match conts with
+    | [cont] ->
+      let funTy = kiExternFn context externFn
+      unifyNext funTy cont
+      kiCall context funTy args
+
+    | _ ->
+      failwithf "ERROR: 継続は1個 %A" conts
 
 let kiNode (context: KirInferContext) node =
   match node with
   | KNoop ->
     KNeverTy
 
-  | KPrim (prim, args, next) ->
-    kiPrim context prim args next
+  | KPrim (prim, args, conts) ->
+    kiPrim context prim args conts
 
   | KIf (cond, _, _) ->
     let _, condTy = cond |> kiName context

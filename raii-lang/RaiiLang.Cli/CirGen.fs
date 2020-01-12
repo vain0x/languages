@@ -117,73 +117,95 @@ let cgJump context cont args =
     let returnStmt = CReturn argOpt
     context.Stmts.Add(returnStmt)
 
-let cgPrimTerm context prim args next =
+let cgPrimTerm context prim args conts =
   let onLiteral body =
-    cgJump context next [body]
+    match args, conts with
+    | [], [cont] ->
+      cgJump context cont [body]
 
-  let onBin bin first second =
-    let first = first |> cgArg context RVal
-    let second = second |> cgArg context RVal
-    let body = CBin (bin, first, second)
-    cgJump context next [body]
+    | _ ->
+      failwithf "ERROR: リテラルは0個の引数と1個の継続を持つ %A" (args, conts)
 
-  let onAssign bin first second =
-    let first = first |> cgArg context LVal
-    let second = second |> cgArg context RVal
-    let body = CBin (bin, first, second)
-    cgJump context next [body]
+  let onBin bin =
+    match args, conts with
+    | [first; second], [cont] ->
+      let first = first |> cgArg context RVal
+      let second = second |> cgArg context RVal
+      let body = CBin (bin, first, second)
+      cgJump context cont [body]
+
+    | _ ->
+      failwithf "ERROR: 二項演算は2つの引数と1個の継続を持つ %A" (args, conts)
+
+  let onAssign bin =
+    match args, conts with
+    | [first; second], [cont] ->
+      let first = first |> cgArg context LVal
+      let second = second |> cgArg context RVal
+      let body = CBin (bin, first, second)
+      cgJump context cont [body]
+
+    | _ ->
+      failwithf "ERROR: 代入演算は2つの引数と1個の継続を持つ %A" (args, conts)
 
   let onCall fnName =
-    let args = args |> List.map (cgArg context RVal)
-    let body = CCall (CName fnName, args)
-    cgJump context next [body]
+    match conts with
+    | [cont] ->
+      let args = args |> List.map (cgArg context RVal)
+      let body = CCall (CName fnName, args)
+      cgJump context cont [body]
 
-  match prim, args with
-  | KBoolLiteralPrim false, [] ->
+    | _ ->
+      failwithf "ERROR: 関数呼び出しは1個の継続を持つ %A" (fnName, conts)
+
+  match prim with
+  | KBoolLiteralPrim false ->
     onLiteral (CInt "0")
 
-  | KBoolLiteralPrim true, [] ->
+  | KBoolLiteralPrim true ->
     onLiteral (CInt "1")
 
-  | KIntLiteralPrim intText, [] ->
+  | KIntLiteralPrim intText ->
     onLiteral (CInt intText)
 
-  | KStrLiteralPrim segments, [] ->
+  | KStrLiteralPrim segments ->
     onLiteral (CStr segments)
 
-  | KEqPrim, [first; second] ->
-    onBin CEqBin first second
+  | KEqPrim ->
+    onBin CEqBin
 
-  | KAddPrim, [first; second] ->
-    onBin CAddBin first second
+  | KAddPrim ->
+    onBin CAddBin
 
-  | KAssignPrim, [first; second] ->
-    onAssign CAssignBin first second
+  | KAssignPrim ->
+    onAssign CAssignBin
 
-  | KJumpPrim, _ ->
-    let args = args |> List.map (cgArg context RVal)
-    cgJump context next args
+  | KJumpPrim ->
+    match conts with
+    | [cont] ->
+      let args = args |> List.map (cgArg context RVal)
+      cgJump context cont args
 
-  | KFnPrim (fnName, _), _ ->
+    | _ ->
+      failwithf "ERROR: jump は1個の継続を持つ %A" (conts)
+
+  | KFnPrim (fnName, _) ->
     onCall (addPrefix fnName)
 
-  | KExternFnPrim (KExternFn (fnName, paramList, KResult resultTy)), _ ->
+  | KExternFnPrim (KExternFn (fnName, paramList, KResult resultTy)) ->
     let paramList = paramList |> List.map (cgParam context)
     let resultTy = resultTy |> kTyToCTy
     context.Decls.Add(CExternFnDecl (fnName, paramList, resultTy))
 
     onCall fnName
 
-  | _ ->
-    failwithf "unimpl %A" (prim, args)
-
 let cgTerm (context: CirGenContext) (node: KNode) =
   match node with
   | KNoop ->
     CName "__noop"
 
-  | KPrim (prim, args, next) ->
-    cgPrimTerm context prim args next
+  | KPrim (prim, args, conts) ->
+    cgPrimTerm context prim args conts
     neverTerm
 
   | KIf (cond, body, alt) ->

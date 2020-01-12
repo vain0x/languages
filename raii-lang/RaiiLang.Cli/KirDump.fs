@@ -103,7 +103,7 @@ let kdNode node indent acc =
   | KNoop ->
     acc |> cons "__noop"
 
-  | KPrim (prim, args, next) ->
+  | KPrim (prim, args, [next]) ->
     let acc = acc |> cons "jump " |> kdCont next |> cons "("
 
     let acc = acc |> cons (kPrimToString prim)
@@ -116,6 +116,23 @@ let kdNode node indent acc =
         acc |> kdArgList args indent
 
     acc |> cons ")"
+
+  | KPrim (prim, args, conts) ->
+    let acc =
+      acc
+      |> cons "branch "
+      |> cons (kPrimToString prim)
+      |> kdArgList args indent
+      |> cons ") to ["
+
+    let acc =
+      conts |> List.fold (fun acc cont ->
+        acc |> cons indent |> kdCont cont
+      ) acc
+
+    acc
+    |> cons indent
+    |> cons "]"
 
   | KIf (cond, body, alt) ->
     let deepIndent = indent + "  "

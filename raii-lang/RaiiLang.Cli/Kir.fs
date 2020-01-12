@@ -104,7 +104,7 @@ type KNode =
   | KPrim
     of prim:KPrim
       * args:KArg list
-      * next:KCont
+      * conts:KCont list
 
   | KIf
     of cond:string

@@ -105,7 +105,7 @@ let kgLoop context exit bodyFun =
       continueBody
     )
 
-  let continueNode = KPrim (KJumpPrim, [], KLabelCont continueLabel)
+  let continueNode = KPrim (KJumpPrim, [], [KLabelCont continueLabel])
 
   let loopStack = context.LoopStack
   context.LoopStack <-
@@ -143,7 +143,7 @@ let kPrim1 context prim args exit =
 
   KFix (
     KLabelFix label,
-    KPrim (prim, args, KLabelCont label)
+    KPrim (prim, args, [KLabelCont label])
   )
 
 let kgTerm (context: KirGenContext) exit term =
@@ -172,7 +172,7 @@ let kgTerm (context: KirGenContext) exit term =
       failwith "break out of loop"
 
     | { BreakLabel = breakLabel } :: _ ->
-      KPrim (KJumpPrim, [], KLabelCont breakLabel)
+      KPrim (KJumpPrim, [], [KLabelCont breakLabel])
 
   | AContinueTerm _ ->
     match context.LoopStack with
@@ -180,7 +180,7 @@ let kgTerm (context: KirGenContext) exit term =
       failwith "continue out of loop"
 
     | { ContinueLabel = continueLabel } :: _ ->
-      KPrim (KJumpPrim, [], KLabelCont continueLabel)
+      KPrim (KJumpPrim, [], [KLabelCont continueLabel])
 
   | ALoopTerm (Some body, _) ->
     kgLoop context exit (fun _ _ k -> body |> kgTerm context k)
@@ -223,7 +223,7 @@ let kgTerm (context: KirGenContext) exit term =
       )
 
     // FIXME: モード
-    let next result = KPrim (KJumpPrim, [KArg (ByMove, result, ref None)], KLabelCont nextLabel)
+    let next result = KPrim (KJumpPrim, [KArg (ByMove, result, ref None)], [KLabelCont nextLabel])
 
     let bodyLabel =
       KLabel (
@@ -303,7 +303,7 @@ let kgStmt context exit stmt =
 
       KFix (
         KLabelFix nextLabel,
-        KPrim (KJumpPrim, args, KLabelCont nextLabel)
+        KPrim (KJumpPrim, args, [KLabelCont nextLabel])
     ))
 
   | AExternFnStmt (Some (AName (Some funName, _)), paramList, resultOpt, _) ->
@@ -334,7 +334,7 @@ let kgStmt context exit stmt =
       KPrim (
         KExternFnPrim externFn,
         primArgs,
-        KReturnCont fn
+        [KReturnCont fn]
       )
 
     KFix (
@@ -362,7 +362,7 @@ let kgStmt context exit stmt =
 
     fnBody :=
       body |> kgTerm context (fun body ->
-        KPrim (KJumpPrim, [KArg (ByMove, body, ref None)], KReturnCont fn)
+        KPrim (KJumpPrim, [KArg (ByMove, body, ref None)], [KReturnCont fn])
       )
 
     KFix (

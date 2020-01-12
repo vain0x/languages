@@ -219,6 +219,19 @@ let kiPrim context prim args conts =
     | _ ->
       failwithf "ERROR: 継続は1個 %A" conts
 
+  | KIfPrim ->
+    match args, conts with
+    | [(_, condTy)], [body; alt] ->
+      kiUnify context condTy KBoolTy
+
+      let resultTy = KInferTy ("result", ref None)
+      let contTy = KFunTy ([KParam (MutMode, "result", resultTy)], KResult KNeverTy)
+      unifyNext contTy body
+      unifyNext contTy alt
+
+    | _ ->
+      failwithf "ERROR: 引数は1個、継続は2個 %A" (args, conts)
+
   | KFnPrim (name, _) ->
     match conts with
     | [cont] ->
@@ -247,10 +260,6 @@ let kiNode (context: KirInferContext) node =
 
   | KPrim (prim, args, conts) ->
     kiPrim context prim args conts
-
-  | KIf (cond, _, _) ->
-    let _, condTy = cond |> kiName context
-    kiUnify context condTy KBoolTy
 
   | KFix (fix, next) ->
     let name, paramList, result, body =

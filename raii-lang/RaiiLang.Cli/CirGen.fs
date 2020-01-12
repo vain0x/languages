@@ -189,6 +189,19 @@ let cgPrimTerm context prim args conts =
     | _ ->
       failwithf "ERROR: jump は1個の継続を持つ %A" (conts)
 
+  | KIfPrim ->
+    match args, conts with
+    | [cond], [body; alt] ->
+      let cond = cond |> cgArg context RVal
+      let bodyStmts = cgCaptureStmts context (fun context -> cgJump context body [])
+      let altStmts = cgCaptureStmts context (fun context -> cgJump context alt [])
+
+      let ifStmt = CIfStmt (cond, bodyStmts |> Seq.toList, altStmts |> Seq.toList)
+      context.Stmts.Add(ifStmt)
+
+    | _ ->
+      failwithf "ERROR: if は1個の引数と2個の継続を持つ %A" (args, conts)
+
   | KFnPrim (fnName, _) ->
     onCall (addPrefix fnName)
 
@@ -206,14 +219,6 @@ let cgTerm (context: CirGenContext) (node: KNode) =
 
   | KPrim (prim, args, conts) ->
     cgPrimTerm context prim args conts
-    neverTerm
-
-  | KIf (cond, body, alt) ->
-    let bodyStmts = cgCaptureStmts context (fun context -> cgJump context body [])
-    let altStmts = cgCaptureStmts context (fun context -> cgJump context alt [])
-
-    let ifStmt = CIfStmt (CName cond, bodyStmts |> Seq.toList, altStmts |> Seq.toList)
-    context.Stmts.Add(ifStmt)
     neverTerm
 
   | KFix (KLabelFix (KLabel (funName, paramList, body)), next) ->
@@ -255,7 +260,6 @@ let cgNode context (node: KNode) =
     ()
 
   | KPrim _
-  | KIf _
   | KFix _ ->
     cgTerm context node |> ignore
 

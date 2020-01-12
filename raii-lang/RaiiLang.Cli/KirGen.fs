@@ -254,11 +254,13 @@ let kgTerm (context: KirGenContext) exit term =
           KLabelFix altLabel,
           KFix (
             KLabelFix bodyLabel,
-            KIf (
-              cond,
-              KLabelCont bodyLabel,
-              KLabelCont altLabel
-            )))))
+            KPrim (
+              KIfPrim,
+              [KArg (ByMove, cond, ref None)],
+              [
+                KLabelCont bodyLabel
+                KLabelCont altLabel
+              ])))))
 
   | AWhileTerm (Some cond, Some body, _) ->
     // cond while { body }
@@ -275,11 +277,13 @@ let kgTerm (context: KirGenContext) exit term =
 
         KFix (
           KLabelFix bodyLabel,
-          KIf (
-            cond,
-            KLabelCont bodyLabel,
-            KLabelCont breakLabel
-          ))))
+          KPrim (
+            KIfPrim,
+            [KArg (ByMove, cond, ref None)],
+            [
+              KLabelCont bodyLabel
+              KLabelCont breakLabel
+            ]))))
 
   | _ ->
     failwithf "unimpl %A" term

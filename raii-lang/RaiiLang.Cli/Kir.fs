@@ -92,6 +92,8 @@ type KPrim =
 
   | KJumpPrim
 
+  | KIfPrim
+
   | KFnPrim
     of fnName:string * fn:KFn option ref
 
@@ -105,11 +107,6 @@ type KNode =
     of prim:KPrim
       * args:KArg list
       * conts:KCont list
-
-  | KIf
-    of cond:string
-      * body:KCont
-      * alt:KCont
 
   | KFix
     of fix:KFix
@@ -159,6 +156,9 @@ let kPrimToSig prim =
   | KJumpPrim ->
     [], KNeverTy
 
+  | KIfPrim ->
+    [ByMove], KNeverTy
+
   | KFnPrim _
   | KExternFnPrim _ ->
     failwithf "unimpl: %A" prim
@@ -188,6 +188,9 @@ let kPrimToString prim =
 
   | KJumpPrim ->
     "prim_jump"
+
+  | KIfPrim ->
+    "prim_if"
 
   | KFnPrim (funName, _) ->
     funName

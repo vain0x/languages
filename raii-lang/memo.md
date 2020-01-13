@@ -4,13 +4,11 @@
 
 ## コンセプト
 
-目標:
+C言語 with RAII + ジェネリクス + 安全
 
-- 静的検査による安全性の確保と、効率的な手続き的プログラミングのバランスをとる。
-
-要点:
-
-- Rust から借用検査を取り除き、代わりに契約の仕組みを入れる。
+- データをリソースとみなす
+- アルゴリズムを明示する
+- 安全性を保つ
 
 やらないこと:
 
@@ -20,46 +18,197 @@
 - 関数型プログラミング
 - マルチスレッド
 
-## 中心機能
+参考にする言語:
 
-- 代数的データ型・パターンマッチ
-- RAII
-    - 参照をスコープの外側に出さないことでライフタイムを自明に保つ
-- 変数のモード
-    - 参照性: オブジェクトを参照(ポインタ)越しに持つかどうか明確にすることで、変数が共有されうるか分かりやすくする
-    - 可変性: 不変な変数を通しての変更操作はエラーにすることで、変数が変更の対象であるか分かりやすくする
-- 契約
-    - 生存変数は他の変数の性質を主張するルール
-    - 事前条件を満たさない関数呼び出しはコンパイルエラー
-- アスペクト
-    - 型の動的な状態を表現するもの
-    - 主に事前条件・事後条件で、パラメータに条件を課すのに使う
+- C
+- C++ (デストラクタなど)
+- C# (ref パラメータなど)
+- Rust (構文や型システムなど)
+- TypeScript (データ型と型システムの分離など)
+
+## 機能
+
+### 変数のモード
+
+変数はモードを持つ。
+
+- 参照性: オブジェクトを参照(ポインタ)越しに持つかどうか指定する。
+    - 利点: 変数が共有されうるか分かりやすくする
+- 可変性: 不変な変数を通しての変更操作はエラーにする。
+    - 利点: 変数が変更の対象であるか分かりやすくする
+
+```rust
+// 文字列が空か判定する。
+// in を指定された引数は読み取り専用の参照で渡される。
+fn is_empty(in s: String) -> bool {
+    // 変更操作はコンパイルエラーになる。
+    // s = "";
+
+    s.len() == 0
+}
+
+// 文字列の末尾に '!' を付加する。
+// ref を指定された引数は参照で渡される。
+// mut を指定された引数・変数には変更操作ができる。
+fn bang(ref mut s: String) -> bool {
+    s.push('!');
+}
+
+{
+    let s = "hello";
+
+    // s を読み取り専用の参照 (in) で渡す。
+    is_empty(s);
+
+    // 変数を変更可能な参照で渡すときはキーワードが必須。
+    bang(ref mut s);
+}
+```
+
+### インターフェイス
+
+メモリ上での表現を決定する型 (データ型) と、静的検査としての型 (インターフェイス) を分離する。
+
+```rust
+// 構文解析の結果を持つデータ型。
+struct ParseResult {
+    success: bool
+    union {
+        tokens: Vec[Token]
+        errors: Vec[String]
+    }
+} as {
+    // 構文解析に成功したときのインターフェイス
+    Success {
+        // success が true であることを示す。
+        success @ true
+
+        // tokens が少なくとも1つの要素を持つベクタであることを示す。
+        tokens @ [_, ..]
+    }
+
+    // 失敗したとき
+    Failure {
+        success @ false
+        errors @ [_, ..]
+    }
+}
+
+fn parse(in text: String) -> ParseResult {
+    // 構文解析した結果を tokens, errors に入れる。
+    let (tokens, errors) = ...;
+
+    match errors {
+        // エラーがなければ成功。
+        [] => {
+            // 動的検査
+            assert(tokens @ [_, ..]);
+
+            return ParseResult::Success {
+                success: true
+
+                // 上の assert のおかげで Success インターフェイスが要求する
+                // tokens は空でないという条件に合致することが分かる。
+                // (そうでなければコンパイルエラーになる。)
+                tokens: move tokens
+            }
+        }
+        [_, ..] => {
+            return ParseResult::Failure {
+                success: false
+                errors: move errors
+            }
+        }
+    }
+}
+
+{
+    let text = "...";
+
+    let result = parse(text);
+    if result.success {
+        // ここで result.success = true なので
+        // result は Success インターフェイスを満たすことが分かり、
+        // tokens にアクセスできる。
+        println!("OK: {} token(s)\n", result.tokens.len());
+    } else {
+        println!("ERROR: {} syntax error(s)\n", result.errors.len());
+    }
+}
+```
+
+マーカーインターフェイスと事後条件
+
+```rust
+impl String {
+    marker interface IsNonEmpty
+
+    fn is_non_empty(in self)
+    ensures {
+        true => self @ IsNonEmpty
+    }
+    {
+        //
+    }
+}
+
+struct User {
+    name: String
+    age: i64
+}
+
+interface User::Validated {
+    name @ String::IsNonEmpty
+    age @ i64::IsNonNegative
+}
+
+fn user_validate(in user: User) -> bool
+ensures {
+    // 結果が true なら user は User::Validated インターフェイスに合致する。
+    // (これが成立しないような return があったらコンパイルエラー。)
+    true => {
+        user @ User::Validated
+    }
+}
+{
+    user.name.is_non_empty() && user.age.is_non_negative()
+}
+```
 
 ## 諸機能
 
 ### 型
 
-基本型:
+数値型:
 
-- byte (u8)
-- int (i64)
+- u8, i64, f64, etc.
 
-代数的データ型:
+複合データ型:
 
+- タプル
 - struct
 - enum
+- union
 
 ```rust
 struct Position {
-    line: int
-    character: int
+    line: i64
+    character: i64
 }
 
-enum Document {
-    PlainText(str)
-    Markdown {
-        blocks: Vec[str]
+// タグ付きユニオン (直和のケース)
+enum Value {
+    Int {
+        as_int: i64
     }
+    Float {
+        as_float: f64
+    }
+}
+
+// タグ付きユニオン (特殊なケース)
+struct ParseResult {
+    // 上記参照
 }
 ```
 
@@ -69,23 +218,16 @@ enum Document {
 type str = Vec[byte];
 ```
 
-外部型
-
-```rust
-// uint64_t in C
-extern type u64;
-```
-
 関数ポインタ型
 
 ```rust
-fn(x: int, y: int) -> u64;
+fn(x: i64, y: i64) -> u64
 ```
 
 関数型(?)
 
 ```rust
-Fn(x: int, ref y: int) -> int;
+Fn(x: i64, ref y: i64) -> i64
 ```
 
 ジェネリクス
@@ -101,8 +243,7 @@ enum Option[T] {
 その他 (標準ライブラリ)
 
 ```rust
-generic[T]
-extern type Ptr[T];
+type String = Vec[u8];
 ```
 
 ### トレイト
@@ -184,8 +325,8 @@ struct Pair {
 }
 
 generic[T, M: bool]
-fn pair_first(ref mut[M] self) -> ref mut[M] T {
-    ref self.first
+fn pair_first(ref mut[M] pair: Pair[T]) -> ref mut[M] T {
+    ref pair.first
 }
 
 // pair を可変参照 (ref mut) で渡したので、可変参照が返される。
@@ -241,89 +382,6 @@ let pair = Pair { first: 0, second: 0 };
 generic[T]
 fn vec_is_empty(ref vec: Vec[T]) -> bool {
     vec.len() != 0
-}
-```
-
-### 契約
-
-生存変数は変数に関する性質を主張できる。
-
-関数は事後条件として、引数や結果が何らかの性質を持つことを、結果値に主張させることができる。(assert)
-
-```rust
-generic[T]
-fn is_some(ref option: Option[T]) -> bool
-assert {
-    // 結果が true なら、option は Some(_) にマッチする、と主張する。
-    true => option match Some(_)
-}
-{
-    match option {
-        Some(_) => {
-            // ここで assert の主張がコンパイル時に検証される。
-            true
-        }
-        None => {
-            false
-        }
-    }
-}
-```
-
-関数は事前条件として、引数が一定の性質を持つことを要求できる。(require)
-
-```rust
-generic[T]
-fn get(ref option: Option[T]) -> ref T
-require
-    option match Some(_)
-assert
-    option is move[false]
-{
-    match option {
-        Some(ref value) => {
-            value
-        }
-
-        // 事前条件から None => ... は不要と分かる。
-    }
-}
-```
-
-```rust
-{
-    let option: Option[T] = ...;
-
-    // ここで option match Some(_) の事前条件を満たさないので
-    // get(ref option) はコンパイルエラーになる。
-    // print(get(ref option));
-
-    let ok = is_some(ref option);
-    if ok {
-        // ここで is_some の事後条件より
-        //      ok match true => option match Some(_)
-        // であり、また if の判定より
-        //      ok match true
-        // だから option match Some(_) がいえて、
-        // 事前条件を満たすので get が呼べる。
-        print(get(ref option));
-    }
-}
-```
-
-```rust
-{
-    let mut option = Some(1);
-
-    let ref r = get(ref option);
-    // get の結果である変数 r のスコープにおいて、
-    // get の事後条件 option is move[false] から、
-    // option は move 可能でない。
-
-    // コンパイルエラーになる。(これを許すと r が不正な参照になる。)
-    // let other = move option;
-
-    foo(r); // r はここまで生存する。
 }
 ```
 

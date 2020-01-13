@@ -4,7 +4,7 @@
 
 ## コンセプト
 
-C言語 with RAII + ジェネリクス + 安全
+C言語 with リソース管理 + ジェネリクス + 安全
 
 - データをリソースとみなす
 - アルゴリズムを明示する
@@ -13,8 +13,6 @@ C言語 with RAII + ジェネリクス + 安全
 やらないこと:
 
 - ゼロコスト抽象化
-- aliasable XOR mutable (参考: [Notes on a smaller Rust](https://boats.gitlab.io/blog/post/notes-on-a-smaller-rust/))
-- 参照型 (`&T`/`&mut T`)
 - 関数型プログラミング
 - マルチスレッド
 
@@ -24,50 +22,123 @@ C言語 with RAII + ジェネリクス + 安全
 - C++ (デストラクタなど)
 - C# (ref パラメータなど)
 - Rust (構文や型システムなど)
-- TypeScript (データ型と型システムの分離など)
+- TypeScript (データ型と型検査の分離など)
 
-## 機能
+参考にする記事:
 
-### 変数のモード
+- [Notes on a smaller Rust](https://boats.gitlab.io/blog/post/notes-on-a-smaller-rust/)
+- [［翻訳］なぜそんなに確信が持てるのか？](https://onihusube.hatenablog.com/entry/2019/12/13/211603)
 
-変数はモードを持つ。
+## メモリ管理
 
-- 参照性: オブジェクトを参照(ポインタ)越しに持つかどうか指定する。
-    - 利点: 変数が共有されうるか分かりやすくする
-- 可変性: 不変な変数を通しての変更操作はエラーにする。
-    - 利点: 変数が変更の対象であるか分かりやすくする
+C++/Rust に類似した RAII を備える。メモリ安全性は動的検査等により保証される。
+
+所有権:
+
+- 数値などの一部の型を除いて、オブジェクトは変数に所有される。
+- 変数がスコープを外れる際に、それが所有しているオブジェクトは drop される。
+
+参照:
+
+- オブジェクトへのポインタをとれる。ポインタの操作は安全ではない。
+- 変数への参照を取れる。
+    - 参照される変数は、参照カウントという整数を持つ。
+    - 参照 (`&T`) はオブジェクトへのポインタと参照カウントへのポインタのペア。
+    - 参照が生成されるとき、参照カウントを1増やし、参照が破棄される際に1減らす。
+    - オブジェクトが move または drop する際に、参照カウントがゼロでなければランタイムエラー。
+- ベクタの要素の参照を取れる。
+    - ベクタの要素など、オブジェクトが間接的に所有するものへの参照は、オブジェクトが持つ参照カウントを使う。
+    - 例えば `&v[i]` は `Vec::ref_count` を参照カウントとして使う。(そのようにライブラリ側で実装する。)
+
+備考:
+
+- ランタイムエラーを避けるため、オブジェクトの move はなるべく避ける。
+    - 関数からオブジェクトを受け取るより、関数にオブジェクトを参照で渡してフィールドに値を代入してもらう方が安全。
+
+無効参照の問題が生じるよくあるケース:
 
 ```rust
-// 文字列が空か判定する。
-// in を指定された引数は読み取り専用の参照で渡される。
-fn is_empty(in s: String) -> bool {
-    // 変更操作はコンパイルエラーになる。
-    // s = "";
+fn leak_to_outer_block() {
+    let r: &String;
+    {
+        let a = "hello".clone();
+        r = &a;
 
-    s.len() == 0
-}
+        // ここで drop(a) が起こり、参照 r が無効になる。
+        // OK: a の参照カウントは 1 (r) なのでランタイムエラー
+    }
 
-// 文字列の末尾に '!' を付加する。
-// ref を指定された引数は参照で渡される。
-// mut を指定された引数・変数には変更操作ができる。
-fn bang(ref mut s: String) -> bool {
-    s.push('!');
-}
-
-{
-    let s = "hello";
-
-    // s を読み取り専用の参照 (in) で渡す。
-    is_empty(s);
-
-    // 変数を変更可能な参照で渡すときはキーワードが必須。
-    bang(ref mut s);
+    f(r);
 }
 ```
 
-### インターフェイス
+```rust
+fn leak_to_callee() -> &String {
+    let a = "hello".clone();
+    let r = &a;
+    // OK: a の drop 時に参照カウントが 1 (関数の結果) なのでランタイムエラー
+    r
+}
+```
 
-メモリ上での表現を決定する型 (データ型) と、静的検査としての型 (インターフェイス) を分離する。
+```rust
+fn invalidate_ref() {
+    let a = "hello".clone();
+    let r = &a;
+    {
+        // a を move すると参照 r は無効になる。
+        // OK: 参照カウントが 1 なのでランタイムエラー
+        let b = move a;
+
+        // ここで drop(b) が起こる。
+    }
+    f(r);
+}
+```
+
+```rust
+generic[T]
+impl Vec[T] {
+    fn get(v: &Vec[T], i: i64) -> &T {
+        // v と借用カウンタを共有する参照を作る。
+        Ref::with_data(v, Ptr::add(v.data, i))
+    }
+
+    fn push(v: &mut Vec[T], item: T) {
+        if v.capacity() == v.len() {
+            // 新しいバッファを確保して各要素を移動する。
+            let new_buffer: Ptr[T] = ...;
+            let k = address_of(v.ref_count);
+
+            for i in 0..n {
+                let s = Ref::with_data(Ptr::add(old_buffer, i), k);
+                let t = Ref::with_data(Ptr::add(new_buffer, i), k);
+
+                // OK: 要素への参照があるとここでパニック
+                *t = move *s;
+            }
+        }
+        // ...
+    }
+}
+
+fn vec_push() {
+    let mut v = ["hello".clone()];
+    let r = &v[0];
+
+    // v のバッファが移動すると参照 r は無効になる。
+    // OK: バッファの移動のために move する際にランタイムエラー
+    v.push("world".clone());
+
+    f(r);
+}
+```
+
+## フェイズ
+
+- struct/union は型のメモリレイアウトを決定する。
+- phase はデータ型が満たす条件を付加する。
+    - (補足: phase は state の類義語で、state より使用頻度の低い単語として選びました。[State Synonyms](https://www.thesaurus.com/browse/state?s=t))
 
 ```rust
 // 構文解析の結果を持つデータ型。
@@ -77,78 +148,87 @@ struct ParseResult {
         tokens: Vec[Token]
         errors: Vec[String]
     }
-} as {
-    // 構文解析に成功したときのインターフェイス
-    Success {
-        // success が true であることを示す。
-        success @ true
-
-        // tokens が少なくとも1つの要素を持つベクタであることを示す。
-        tokens @ [_, ..]
-    }
-
-    // 失敗したとき
-    Failure {
-        success @ false
-        errors @ [_, ..]
-    }
 }
 
-fn parse(in text: String) -> ParseResult {
-    // 構文解析した結果を tokens, errors に入れる。
-    let (tokens, errors) = ...;
+impl ParseResult {
+    // default phase は ParseResult が常に持つべきフェイズを示す。
+    // ParseResult は Success または Failure フェイズのどちらか。
+    // (union を含む型は、デストラクタで利用するために既定フェイズが必須。)
+    default phase {
+        // 構文解析に成功したときのフェイズ
+        Success {
+            // success が true であることを示す。
+            success @ true
 
-    match errors {
-        // エラーがなければ成功。
-        [] => {
-            // 動的検査
-            assert(tokens @ [_, ..]);
-
-            return ParseResult::Success {
-                success: true
-
-                // 上の assert のおかげで Success インターフェイスが要求する
-                // tokens は空でないという条件に合致することが分かる。
-                // (そうでなければコンパイルエラーになる。)
-                tokens: move tokens
-            }
+            // tokens が少なくとも1つの要素を持つベクタであることを示す。
+            tokens @ [_, ..]
         }
-        [_, ..] => {
-            return ParseResult::Failure {
-                success: false
-                errors: move errors
-            }
+        // 失敗したとき
+        Failure {
+            success @ false
+            errors @ [_, ..]
         }
     }
 }
 
-{
+fn parse(in text: String, out mut r: ParseResult) {
+    Vec::new(out r.tokens);
+    Vec::new(out r.errors);
+
+    // 略
+
+    // エラーがなければ成功。
+    Vec::is_empty(r.errors, out r.success);
+
+    if !r.success {
+        // ここで r が Failure フェイズを満たしていることは、
+        // is_empty の事後条件から、コンパイル時に分かる。
+        // (そうでなければコンパイルエラー。)
+        return;
+    }
+
+    // 動的検査。
+    assert(r.tokens @ [_, ..]);
+
+    // 上の assert のおかげで r @ Success が分かる。
+    return;
+}
+
+fn main() {
     let text = "...";
 
-    let result = parse(text);
-    if result.success {
-        // ここで result.success = true なので
-        // result は Success インターフェイスを満たすことが分かり、
-        // tokens にアクセスできる。
-        println!("OK: {} token(s)\n", result.tokens.len());
+    parse(text, let r);
+    if r.success {
+        // ここで r.success = true なので、
+        // r は Success フェイズを満たすことがコンパイル時に分かる。
+        // そのため r.tokens にアクセスできる。
+        println!("OK: {} token(s)\n", r.tokens.len());
     } else {
-        println!("ERROR: {} syntax error(s)\n", result.errors.len());
+        println!("ERROR: {} syntax error(s)\n", r.errors.len());
     }
 }
 ```
 
-マーカーインターフェイスと事後条件
+### 事後条件
 
 ```rust
 impl String {
-    marker interface IsNonEmpty
+    phase {
+        // 特に条件のないフェイズ
+        IsNonEmpty
 
-    fn is_non_empty(in self)
+        // String が IsNonEmpty フェイズを満たさないかもしれないことを示す。
+        ..
+    }
+
+    fn is_non_empty(in self, out result)
     ensures {
-        true => self @ IsNonEmpty
+        // result = true で return したら、
+        // self は IsNonEmpty フェイズを満たす、という事後条件。
+        result @ true => self @ IsNonEmpty
     }
     {
-        //
+        result = self.len() != 0;
     }
 }
 
@@ -157,21 +237,26 @@ struct User {
     age: i64
 }
 
-interface User::Validated {
-    name @ String::IsNonEmpty
-    age @ i64::IsNonNegative
-}
-
-fn user_validate(in user: User) -> bool
-ensures {
-    // 結果が true なら user は User::Validated インターフェイスに合致する。
-    // (これが成立しないような return があったらコンパイルエラー。)
-    true => {
-        user @ User::Validated
+impl User {
+    phase {
+        ValidatedUser {
+            name @ String::IsNonEmpty
+            age @ i64::IsNonNegative
+        }
+        ..
     }
-}
-{
-    user.name.is_non_empty() && user.age.is_non_negative()
+
+    fn validate(in self, out valid: bool)
+    ensures {
+        // 結果が true なら user は ValidatedUser フェイズを満たす。
+        // (これが成立しないような return はコンパイルエラー。)
+        valid @ true => user @ ValidatedUser
+    };
+    {
+        user.name.is_non_empty(let name_ok);
+        user.age.is_non_negative(let age_ok);
+        valid = name_ok && age_ok;
+    }
 }
 ```
 
@@ -305,17 +390,7 @@ type String = Vec[u8];
 
 ### モード
 
-- 間接性
-    - ポインタで持つかどうか
-- 可変性
-    - 変更操作を許可するかどうか
-
-キーワード
-
-- ref: 間接参照
-- mut: 変更可能
-- mut[A]: 変更可能か否かは定数式 A: bool による
-- mut?: 変更可能か否かは文脈による
+変数や参照の可変性をコンパイル時に検査する。
 
 ```rust
 generic[T]
@@ -325,8 +400,8 @@ struct Pair {
 }
 
 generic[T, M: bool]
-fn pair_first(ref mut[M] pair: Pair[T]) -> ref mut[M] T {
-    ref pair.first
+fn pair_first(pair: &mut[M] Pair[T]) -> &mut[M] T {
+    &mut[M] pair.first
 }
 
 // pair を可変参照 (ref mut) で渡したので、可変参照が返される。
@@ -338,49 +413,11 @@ let pair = Pair { first: 0, second: 0 };
 // pair_first(ref pair) += 1;
 ```
 
-参照のルール:
-
-- スコープがより広い変数に参照をもたせることはできない
-- スコープがより狭い変数に move することはできない
-- move された変数は借用できない
-- move された変数は move できない
-
-```rust
-    let ref r;
-    {
-        let a = "hello".clone();
-        r = ref a; // NG: a より r の方がスコープが広い
-
-        // ここで drop(a)
-    }
-    // r は不正
-```
-
-```rust
-    let a = "hello".clone();
-    let r = ref a;
-    {
-        // NG: a より b の方がスコープが狭い
-        let b = move a;
-
-        // ここで drop(b)
-    }
-    // r は不正
-```
-
-```rust
-    let a = "hello".clone();
-    let b = move a;
-
-    //
-    print(ref a);
-```
-
 ### 関数
 
 ```rust
 generic[T]
-fn vec_is_empty(ref vec: Vec[T]) -> bool {
+fn vec_is_empty(vec: &Vec[T]) -> bool {
     vec.len() != 0
 }
 ```

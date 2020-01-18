@@ -12,7 +12,8 @@
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParseContext.fs" />
     <Compile Include="SyntaxParse.fs" />
-    <Compile Include="SyntaxAst.fs" />
+    <Compile Include="Ast.fs" />
+    <Compile Include="AstGen.fs" />
     <Compile Include="Kir.fs" />
     <Compile Include="KirDump.fs" />
     <Compile Include="KirGen.fs" />

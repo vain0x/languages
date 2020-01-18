@@ -2,13 +2,13 @@ module Tests
 
 open System
 open System.IO
+open PhancieLang.AstGen
 open PhancieLang.Cir
 open PhancieLang.CirDump
 open PhancieLang.CirGen
 open PhancieLang.KirDump
 open PhancieLang.KirGen
 open PhancieLang.KirInfer
-open PhancieLang.SyntaxAst
 open PhancieLang.SyntaxParse
 open PhancieLang.SyntaxTokenize
 open Xunit

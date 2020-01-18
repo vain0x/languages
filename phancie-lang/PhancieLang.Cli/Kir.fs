@@ -1,5 +1,6 @@
 module rec PhancieLang.Kir
 
+open PhancieLang.Ast
 open PhancieLang.Helpers
 open PhancieLang.Syntax
 

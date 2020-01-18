@@ -1,5 +1,6 @@
-module rec PhancieLang.SyntaxAst
+module rec PhancieLang.AstGen
 
+open PhancieLang.Ast
 open PhancieLang.Helpers
 open PhancieLang.Syntax
 

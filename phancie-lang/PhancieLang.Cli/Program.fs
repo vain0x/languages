@@ -2,7 +2,7 @@
 
 open System
 open System.IO
-open PhancieLang.SyntaxAst
+open PhancieLang.AstGen
 open PhancieLang.SyntaxParse
 open PhancieLang.Kir
 open PhancieLang.KirGen

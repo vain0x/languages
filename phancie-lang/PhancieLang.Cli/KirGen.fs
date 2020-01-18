@@ -45,7 +45,7 @@ let kgArgList context exit args =
 
 let kgParam context param =
   match param with
-  | AParam (mode, Some (AName (Some name, _)), tyOpt, _) ->
+  | AParam (mode, Some (AName (Some name, _, _)), tyOpt, _) ->
     let name =
       context.FreshName name
 
@@ -69,17 +69,17 @@ let kgResult context result =
 
 let kgTy _context ty =
   match ty with
-  | ATy (Some "int", _) ->
+  | ATy (Some (AName (Some "int", _, _)), _) ->
     KIntTy
 
-  | ATy (Some "string", _) ->
+  | ATy (Some (AName (Some "string", _, _)), _) ->
     KStrTy
 
-  | ATy (Some name, _) ->
+  | ATy (Some (AName (Some name, _, _)), _) ->
     // FIXME: 後で名前解決する
     KInferTy (name, ref None)
 
-  | ATy (None, _) ->
+  | _ ->
     failwithf "ERROR: 型名がありません %A" ty
 
 /// bodyFun: ループの残りの部分を生成する関数を受け取って、ループの本体を返す関数
@@ -159,7 +159,7 @@ let kgTerm (context: KirGenContext) exit term =
   | AStrLiteral (segments, _) ->
     kPrim1 context (KStrLiteralPrim segments) [] exit
 
-  | ANameTerm (AName (Some name, _)) ->
+  | ANameTerm (AName (Some name, _, _)) ->
     exit name
 
   | AGroupTerm (Some term, _) ->
@@ -184,10 +184,10 @@ let kgTerm (context: KirGenContext) exit term =
     | { ContinueLabel = continueLabel } :: _ ->
       KPrim (KJumpPrim, [], [KLabelCont continueLabel])
 
-  | ALoopTerm (Some body, _) ->
+  | ALoopTerm (Some body, _, _) ->
     kgLoop context exit (fun _ _ k -> body |> kgTerm context k)
 
-  | ACallTerm (Some (ANameTerm (AName (Some funName, _))), args, _) ->
+  | ACallTerm (Some (ANameTerm (AName (Some funName, _, _))), args, _) ->
     args |> kgArgList context (fun args ->
       let prim = KFnPrim (funName, ref None)
       kPrim1 context prim args exit
@@ -206,7 +206,7 @@ let kgTerm (context: KirGenContext) exit term =
         kPrim1 context prim args exit
       ))
 
-  | AIfTerm (Some cond, body, alt, _) ->
+  | AIfTerm (Some cond, body, alt, _, _) ->
     // body または alt の結果を受け取って後続の計算を行う関数 if_next をおく。
     // 条件式の結果に基づいて body または alt のラベルにジャンプし、
     // その結果をもって if_next にジャンプする。
@@ -264,7 +264,7 @@ let kgTerm (context: KirGenContext) exit term =
             KLabelCont altLabel
           ])))
 
-  | AWhileTerm (Some cond, Some body, _) ->
+  | AWhileTerm (Some cond, Some body, _, _) ->
     // cond while { body }
     // ==> loop { cond then { body } else { break } }
 
@@ -312,7 +312,7 @@ let kgStmt context exit stmt =
         KPrim (KJumpPrim, args, [KLabelCont nextLabel])
     ))
 
-  | AExternFnStmt (Some (AName (Some funName, _)), paramList, resultOpt, _) ->
+  | AExternFnStmt (Some (AName (Some funName, _, _)), paramList, resultOpt, _) ->
     // 外部関数を呼び出すラッパー関数を定義する。
 
     // extern fn f(params)
@@ -348,7 +348,7 @@ let kgStmt context exit stmt =
       exit noop
     )
 
-  | AFnStmt (Some (AName (Some funName, _)), paramList, resultOpt, Some body, _) ->
+  | AFnStmt (Some (AName (Some funName, _, _)), paramList, resultOpt, Some body, _) ->
     // 関数を fix で定義して、後続の計算を行う。
 
     // fn f(params) { return body }; exit

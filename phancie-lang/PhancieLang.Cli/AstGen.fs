@@ -12,7 +12,7 @@ let astName (node: NodeData) =
     |> nodeToFirstToken ((=) IdentToken)
     |> Option.map tokenToText
 
-  AName (ident, node)
+  AName (ident, ref None, node)
 
 let astTy (node: NodeData) =
   assert (node.Node = TyNode)
@@ -20,8 +20,7 @@ let astTy (node: NodeData) =
   let name =
     node
     |> nodeToFirstNode ((=) NameNode)
-    |> Option.bind (nodeToFirstToken ((=) IdentToken))
-    |> Option.map tokenToText
+    |> Option.map astName
 
   ATy (name, node)
 
@@ -126,12 +125,12 @@ let astBlock (node: NodeData) =
 let astBreak (node: NodeData) =
   assert (node.Node = BreakNode)
 
-  ABreakTerm node
+  ABreakTerm (ref None, node)
 
 let astContinue (node: NodeData) =
   assert (node.Node = ContinueNode)
 
-  AContinueTerm node
+  AContinueTerm (ref None, node)
 
 let astLoop (node: NodeData) =
   assert (node.Node = LoopNode)
@@ -141,7 +140,7 @@ let astLoop (node: NodeData) =
     |> nodeToFirstNode nodeIsTerm
     |> Option.map astTerm
 
-  ALoopTerm (body, node)
+  ALoopTerm (body, ref None, node)
 
 let astCall (node: NodeData) =
   assert (node.Node = CallNode)
@@ -178,7 +177,7 @@ let astIf (node: NodeData) =
     |> Option.bind (nodeToFirstNode nodeIsTerm)
     |> Option.map astTerm
 
-  AIfTerm (cond, body, alt, node)
+  AIfTerm (cond, body, alt, ref None, node)
 
 let astWhile (node: NodeData) =
   assert (node.Node = WhileNode)
@@ -192,7 +191,7 @@ let astWhile (node: NodeData) =
   let cond = terms |> List.tryItem 0
   let body = terms |> List.tryItem 1
 
-  AWhileTerm (cond, body, node)
+  AWhileTerm (cond, body, ref None, node)
 
 let astBin (node: NodeData) =
   assert (node.Node = BinNode)

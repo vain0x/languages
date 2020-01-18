@@ -8,15 +8,36 @@ type ABin =
   | AAddBin
   | AAssignBin
 
+[<ReferenceEquality>]
+[<NoComparison>]
+type ASymbol =
+  | ATySymbol
+    of tyName:string
+
+  | ALocalSymbol
+    of localName:string * localTy:ATy option
+
+  | AFnSymbol
+    of fnName:string * fnParams:AParam list * fnResult:AResult
+
+[<ReferenceEquality>]
+[<NoComparison>]
+type ALoop =
+  {
+    LoopOpt: ATerm option
+    BreakOpt: ATerm option
+    ContinueOpt: ATerm option
+  }
+
 [<Struct>]
 type AName =
   | AName
-    of string option * NodeData
+    of string option * ASymbol option ref * NodeData
 
 [<Struct>]
 type ATy =
   | ATy
-    of string option * NodeData
+    of AName option * NodeData
 
 [<Struct>]
 type AParam =
@@ -53,13 +74,13 @@ type ATerm =
     of AStmt list * NodeData
 
   | ABreakTerm
-    of NodeData
+    of ALoop option ref * NodeData
 
   | AContinueTerm
-    of NodeData
+    of ALoop option ref * NodeData
 
   | ALoopTerm
-    of ATerm option * NodeData
+    of ATerm option * ALoop option ref * NodeData
 
   | ACallTerm
     of ATerm option * AArg list * NodeData
@@ -68,10 +89,17 @@ type ATerm =
     of ABin option * ATerm option * ATerm option * NodeData
 
   | AIfTerm
-    of cond:ATerm option * body:ATerm option * alt:ATerm option * NodeData
+    of cond:ATerm option
+      * body:ATerm option
+      * alt:ATerm option
+      * ty:ATy option ref
+      * NodeData
 
   | AWhileTerm
-    of cond:ATerm option * body:ATerm option * NodeData
+    of cond:ATerm option
+      * body:ATerm option
+      * loop:ALoop option ref
+      * NodeData
 
 type AStmt =
   | ATermStmt

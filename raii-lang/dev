@@ -1,0 +1,4 @@
+#!/bin/bash
+
+dotnet test && \
+    find tests -type d -exec ./test {} \;

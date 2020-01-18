@@ -13,7 +13,14 @@ N(SemiNode) [
         T(InToken) `in`
         T(SpaceToken) ` `
         N(NameNode) [
-          T(IdentToken) `s`
+          T(IdentToken) `s1`
+        ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `string`
+          ]
         ]
       ]
       T(RightParenToken) `)`
@@ -34,10 +41,27 @@ N(SemiNode) [
         T(InToken) `in`
         T(SpaceToken) ` `
         N(NameNode) [
-          T(IdentToken) `s`
+          T(IdentToken) `s2`
+        ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `string`
+          ]
         ]
       ]
       T(RightParenToken) `)`
+      T(SpaceToken) ` `
+      T(SlimArrowToken) `->`
+      T(SpaceToken) ` `
+      N(ResultNode) [
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `string`
+          ]
+        ]
+      ]
       T(SemiToken) `;`
     ]
     N(FnNode) [

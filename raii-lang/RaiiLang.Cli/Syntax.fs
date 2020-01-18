@@ -44,6 +44,7 @@ type Token =
   | WhileToken
 
   // 記号類
+  | ColonToken
   | CommaToken
   | EqualEqualToken
   | EqualToken
@@ -53,6 +54,8 @@ type Token =
   | RightBraceToken
   | RightParenToken
   | SemiToken
+  /// `->`
+  | SlimArrowToken
 
 [<Struct>]
 type TokenData =
@@ -74,10 +77,10 @@ type TokenFat =
 
 type Node =
   // 項
-  | NameNode
   | BoolLiteralNode
   | IntLiteralNode
   | StrLiteralNode
+  | NameNode
   | GroupNode
   | BlockNode
   | BreakNode
@@ -90,9 +93,13 @@ type Node =
   | ElseNode
   | BinNode
 
-  // 引数
+  // その他
   | ParamNode
   | ArgNode
+  | ResultNode
+
+  // 型
+  | TyNode
 
   // 文
   | ExprNode
@@ -129,6 +136,11 @@ type AName =
     of string option * NodeData
 
 [<Struct>]
+type ATy =
+  | ATy
+    of string option * NodeData
+
+[<Struct>]
 type AArg =
   | AArg
     of PassBy * ATerm option * NodeData
@@ -136,7 +148,12 @@ type AArg =
 [<Struct>]
 type AParam =
   | AParam
-    of Mode * AName option * NodeData
+    of Mode * AName option * ATy option * NodeData
+
+[<Struct>]
+type AResult =
+  | AResult
+    of ATy option * NodeData
 
 type ATerm =
   | ABoolLiteral
@@ -186,10 +203,10 @@ type AStmt =
     of AParam option * AArg option * NodeData
 
   | AExternFnStmt
-    of AName option * AParam list * NodeData
+    of AName option * AParam list * AResult option * NodeData
 
   | AFnStmt
-    of AName option * AParam list * ATerm option * NodeData
+    of AName option * AParam list * AResult option * ATerm option * NodeData
 
   | ASemiStmt
     of AStmt list * NodeData
@@ -216,6 +233,7 @@ let keywords =
 
 let punctuations =
   [
+    ColonToken, ":"
     CommaToken, ","
     EqualEqualToken, "=="
     EqualToken, "="
@@ -225,6 +243,7 @@ let punctuations =
     RightBraceToken, "}"
     RightParenToken, ")"
     SemiToken, ";"
+    SlimArrowToken, "->"
   ]
 
 let tokenIsTrivia token =
@@ -243,6 +262,189 @@ let tokenIsLeadingTrivia token =
 
 let tokenIsTrailingTrivia token =
   tokenIsTrivia token && token <> EolToken
+
+let tokenIsStmtKeyword token =
+  match token with
+  | ExternToken
+  | LetToken
+  | FnToken ->
+    true
+
+  | _ ->
+    false
+
+let tokenIsAtomTermFirst token =
+  match token with
+  | FalseToken
+  | TrueToken
+  | IntToken
+  | StrStartToken
+  | IdentToken
+  | BreakToken
+  | ContinueToken
+  | LoopToken
+  | LeftParenToken
+  | LeftBraceToken ->
+    true
+
+  | _ ->
+    false
+
+let tokenIsTermFirst token =
+  tokenIsAtomTermFirst token
+
+let tokenIsArgFirst token =
+  match token with
+  | InToken
+  | MoveToken
+  | RefToken ->
+    true
+
+  | _ ->
+    tokenIsTermFirst token
+
+let tokenIsParamFirst token =
+  match token with
+  | InToken
+  | MutToken
+  | RefToken ->
+    true
+
+  | _ ->
+    tokenIsTermFirst token
+
+/// パイプラインのセグメントの先頭になるトークンか？
+let tokenIsSegmentFirst token =
+  match token with
+  | ThenToken
+  | WhileToken ->
+    true
+
+  | _ ->
+    false
+
+let tokenIsStmtFirst token =
+  tokenIsStmtKeyword token
+  || tokenIsTermFirst token
+
+let tokenToText (token: TokenData) =
+  token.Text
+
+let tokenAsBin (token: Token) =
+  match token with
+  | EqualEqualToken ->
+    Some AEqBin
+
+  | PlusToken ->
+    Some AAddBin
+
+  | EqualToken ->
+    Some AAssignBin
+
+  | _ ->
+    None
+
+let tokenAsMode (token: Token) =
+  match token with
+  | InToken ->
+    Some InMode
+
+  | MutToken ->
+    Some MutMode
+
+  | RefToken ->
+    Some RefMode
+
+  | _ ->
+    None
+
+let tokenAsPassBy (token: Token) =
+  match token with
+  | InToken ->
+    Some ByIn
+
+  | MoveToken ->
+    Some ByMove
+
+  | RefToken ->
+    Some ByRef
+
+  | _ ->
+    None
+
+let nodeIsTerm (node: Node) =
+  match node with
+  | BoolLiteralNode
+  | IntLiteralNode
+  | StrLiteralNode
+  | NameNode
+  | GroupNode
+  | BlockNode
+  | BreakNode
+  | ContinueNode
+  | LoopNode
+  | CallNode
+  | BinNode
+  | IfNode
+  | WhileNode ->
+    true
+
+  | _ ->
+    false
+
+let nodeIsStmt (node: Node) =
+  match node with
+  | ExprNode
+  | LetNode
+  | ExternFnNode
+  | FnNode
+  | SemiNode ->
+    true
+
+  | _ ->
+    false
+
+let nodeToFirstToken pred (node: NodeData) =
+  node.Children |> Seq.tryPick (fun element ->
+    match element with
+    | TokenElement t when pred t.Token ->
+      Some t
+
+    | _ ->
+      None
+  )
+
+let nodeToFilterToken pred (node: NodeData) =
+  node.Children |> Seq.choose (fun element ->
+    match element with
+    | TokenElement t when pred t.Token ->
+      Some t
+
+    | _ ->
+      None
+  )
+  |> Seq.toList
+
+let nodeToFirstNode pred (node: NodeData) =
+  node.Children |> Seq.tryPick (fun element ->
+    match element with
+    | NodeElement n when pred n.Node ->
+      Some n
+
+    | _ ->
+      None
+  )
+
+let nodeToFilterNode pred (node: NodeData) =
+  node.Children |> Seq.choose (fun element ->
+    match element with
+    | NodeElement n when pred n.Node ->
+      Some n
+
+    | _ ->
+      None
+  )
+  |> Seq.toList
 
 let nodeAddTokenFat (token: TokenFat) (node: NodeData) =
   for trivia in token.Leading do

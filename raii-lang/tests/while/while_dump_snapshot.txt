@@ -1,73 +1,118 @@
-fix assert_eq(mut assert_eq_ret, in actual, in expected) {
-  let assert_eq_res = extern_assert_eq(
+fix fn assert_eq(in actual: int, in expected: int) -> () {
+  jump return(extern_assert_eq(
     in actual
     in expected
-  )
-  assert_eq_ret(move assert_eq_res)
+  ))
 }
 
-fix main(mut main_ret) {
-  fix ok_next(mut ok) {
-    fix a_next(mut a) {
-      fix break() {
-        fix assert_eq_ret_2(mut assert_eq_res_2) {
-          main_ret(move assert_eq_res_2)
-        }
+fix fn main() -> () {
+  fix label next(mut result: bool) -> never {
+    fix label let_next(mut ok: bool) -> never {
+      fix label next_2(mut result_2: int) -> never {
+        fix label let_next_2(mut a: int) -> never {
+          fix label do_continue() -> never {
+            fix label body() -> never {
+              fix label next_5(mut result_5: ()) -> never {
+                fix label next_6(mut result_6: int) -> never {
+                  fix label next_7(mut result_7: int) -> never {
+                    fix label next_8(mut result_8: ()) -> never {
+                      fix label next_11(mut result_11: int) -> never {
+                        fix label next_12(mut result_12: bool) -> never {
+                          fix label if_body() -> never {
+                            fix label next_9(mut result_9: bool) -> never {
+                              fix label next_10(mut result_10: ()) -> never {
+                                jump if_next(prim_jump(move result_10))
+                              }
 
-        assert_eq(
-          move assert_eq_ret_2
-          in a
-          in 5
-        )
-      }
+                              jump next_10(prim_assign(
+                                ref ok
+                                move result_9
+                              ))
+                            }
 
-      fix continue() {
-        if ok {
-          fix assert_eq_ret_3(mut assert_eq_res_3) {
-            let prim_add_res = prim_add(
-              move a
-              move 1
-            )
-            let prim_assign_res = prim_assign(
-              ref a
-              move prim_add_res
-            )
-            let prim_eq_res = prim_eq(
-              in a
-              in 5
-            )
-            fix if_next(mut res) {
-              continue()
+                            jump next_9(false)
+                          }
+
+                          and label if_alt() -> never {
+                            jump if_next(prim_jump(move 0))
+                          }
+
+                          and label if_next(mut res: ()) -> never {
+                            jump do_continue(prim_jump())
+                          }
+
+                          if result_12 {
+                            jump if_body()
+                          } else {
+                            jump if_alt()
+                          }
+                        }
+
+                        jump next_12(prim_eq(
+                          in a
+                          in result_11
+                        ))
+                      }
+
+                      jump next_11(5)
+                    }
+
+                    jump next_8(prim_assign(
+                      ref a
+                      move result_7
+                    ))
+                  }
+
+                  jump next_7(prim_add(
+                    move a
+                    move result_6
+                  ))
+                }
+
+                jump next_6(1)
+              }
+
+              jump next_5(assert_eq(
+                in a
+                in a
+              ))
             }
 
-            if prim_eq_res {
-              let prim_assign_res_2 = prim_assign(
-                ref ok
-                move false
-              )
-              if_next(move prim_assign_res_2)
+            if ok {
+              jump body()
             } else {
-              if_next(move 0)
+              jump do_break()
             }
           }
 
-          assert_eq(
-            move assert_eq_ret_3
-            in a
-            in a
-          )
-        } else {
-          break()
+          and label do_break() -> never {
+            fix label next_3(mut result_3: int) -> never {
+              fix label next_4(mut result_4: ()) -> never {
+                jump return(prim_jump(move result_4))
+              }
+
+              jump next_4(assert_eq(
+                in a
+                in result_3
+              ))
+            }
+
+            jump next_3(5)
+          }
+
+          jump do_continue(prim_jump())
         }
+
+        jump let_next_2(prim_jump(in result_2))
       }
 
-      continue()
+      jump next_2(0)
     }
 
-    a_next(in 0)
+    jump let_next(prim_jump(in result))
   }
 
-  ok_next(in true)
+  jump next(true)
 }
 
-0
+__noop

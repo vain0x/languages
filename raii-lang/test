@@ -1,0 +1,20 @@
+#!/bin/bash
+# 生成されたコードをコンパイル・実行する。
+
+set -eu
+
+NAME=$(basename $1)
+SRC=tests/$NAME/$NAME.c
+EXE=tests/$NAME/$NAME.exe
+STDOUT="tests/$NAME/$NAME"_stdout_snapshot.txt
+
+if [[ ! -f $SRC || $NAME = "empty" ]]
+then
+    echo "Skip $SRC"
+    exit 0
+fi
+
+set -eux
+
+gcc -g lib/tests.c $SRC -o $EXE \
+    && $EXE >$STDOUT

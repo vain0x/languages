@@ -77,10 +77,11 @@ let tokenizeIdent (t: T) =
       |> Option.defaultValue IdentToken
     t.Commit(token)
 
-let tokenizePun (t: T) =
+let rec tokenizePun (t: T) =
   for token, word in punctuations do
     if t.Eat(word) then
       t.Commit(token)
+      tokenizePun t
 
 let tokenizeOther (t: T) =
   if not t.AtEof && t.Next |> charIsOther then

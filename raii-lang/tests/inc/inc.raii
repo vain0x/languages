@@ -1,6 +1,6 @@
-extern fn assert_eq(in actual, in expected);
+extern fn assert_eq(in actual: int, in expected: int);
 
-fn inc(ref x) {
+fn inc(ref x: int) {
     x = x + 1;
 }
 

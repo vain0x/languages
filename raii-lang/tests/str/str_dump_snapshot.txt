@@ -1,33 +1,29 @@
-fix print(mut print_ret, in s) {
-  let print_res = extern_print(in s)
-  print_ret(move print_res)
+fix fn print(in s1: string) -> () {
+  jump return(extern_print(in s1))
 }
 
-fix string_clone(mut string_clone_ret, in s_2) {
-  let string_clone_res = extern_string_clone(in s_2)
-  string_clone_ret(move string_clone_res)
+fix fn string_clone(in s2: string) -> string {
+  jump return(extern_string_clone(in s2))
 }
 
-fix main(mut main_ret) {
-  fix string_clone_ret_2(mut string_clone_res_2) {
-    fix s_next(val s) {
-      fix print_ret_2(mut print_res_2) {
-        main_ret(move print_res_2)
+fix fn main() -> () {
+  fix label next(mut result: string) -> never {
+    fix label next_2(mut result_2: string) -> never {
+      fix label let_next(val s: string) -> never {
+        fix label next_3(mut result_3: ()) -> never {
+          jump return(prim_jump(move result_3))
+        }
+
+        jump next_3(print(in s))
       }
 
-      print(
-        move print_ret_2
-        in s
-      )
+      jump let_next(prim_jump(move result_2))
     }
 
-    s_next(move string_clone_res_2)
+    jump next_2(string_clone(in result))
   }
 
-  string_clone(
-    move string_clone_ret_2
-    in "hello"
-  )
+  jump next("hello")
 }
 
-0
+__noop

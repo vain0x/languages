@@ -12,11 +12,15 @@
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParseContext.fs" />
     <Compile Include="SyntaxParse.fs" />
-    <Compile Include="SyntaxLower.fs" />
+    <Compile Include="SyntaxAst.fs" />
     <Compile Include="Kir.fs" />
     <Compile Include="KirDump.fs" />
-    <Compile Include="KirEval.fs" />
     <Compile Include="KirGen.fs" />
+    <Compile Include="KirInfer.fs" />
+    <Compile Include="KirUsage.fs" />
+    <Compile Include="Cir.fs" />
+    <Compile Include="CirDump.fs" />
+    <Compile Include="CirGen.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

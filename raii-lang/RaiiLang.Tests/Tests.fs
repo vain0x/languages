@@ -2,10 +2,13 @@ module Tests
 
 open System
 open System.IO
+open RaiiLang.Cir
+open RaiiLang.CirDump
+open RaiiLang.CirGen
 open RaiiLang.KirDump
-open RaiiLang.KirEval
 open RaiiLang.KirGen
-open RaiiLang.SyntaxLower
+open RaiiLang.KirInfer
+open RaiiLang.SyntaxAst
 open RaiiLang.SyntaxParse
 open RaiiLang.SyntaxTokenize
 open Xunit
@@ -17,7 +20,7 @@ let findTestsDirectory () =
   let cwd = Environment.CurrentDirectory
   Seq.unfold (fun (dir: string) -> let p = Path.GetDirectoryName(dir) in Some (p, p)) cwd
   |> Seq.take 10
-  |> Seq.find (fun (dir: string) -> Path.GetFileName(dir) = "2020-01-01-raii-lang")
+  |> Seq.find (fun (dir: string) -> Path.GetFileName(dir) = "raii-lang")
   |> fun dir -> Path.Combine(dir, "tests")
 
 let snapshotTest (name: string) =
@@ -28,9 +31,9 @@ let snapshotTest (name: string) =
     false
   else
 
-  let writeLog title ext x =
+  let writeLog suffix x =
     let fileName =
-      sprintf "%s/%s/%s_%s_snapshot%s" testsDir name name title ext
+      sprintf "%s/%s/%s%s" testsDir name name suffix
     let content =
       match box x with
       | :? string as x ->
@@ -39,19 +42,21 @@ let snapshotTest (name: string) =
         sprintf "%A" x
     File.WriteAllText(fileName, content.TrimEnd() + "\n")
 
-  let tee title ext f x =
-    writeLog title ext (f x)
+  let tee suffix f x =
+    writeLog suffix (f x)
     x
 
   let sourceCode = File.ReadAllText(sourceName)
 
   sourceCode
   |> parse
-  |> tee "parse" ".txt" nodeToSnapshot
-  |> lower
+  |> tee "_parse_snapshot.txt" nodeToSnapshot
+  |> astRoot
   |> kirGen
-  |> tee "dump" ".txt" kirDump
-  |> tee "eval" ".txt" kirEval
+  |> kirInfer
+  |> tee "_dump_snapshot.txt" kirDump
+  |> cirGen
+  |> tee ".c" cirDump
   |> ignore
 
   true

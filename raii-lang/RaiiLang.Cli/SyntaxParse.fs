@@ -6,70 +6,6 @@ open RaiiLang.SyntaxParseContext
 
 type P = ParseContext
 
-let tokenIsStmtKeyword token =
-  match token with
-  | ExternToken
-  | LetToken
-  | FnToken ->
-    true
-
-  | _ ->
-    false
-
-let tokenIsAtomFirst token =
-  match token with
-  | FalseToken
-  | TrueToken
-  | IntToken
-  | StrStartToken
-  | IdentToken
-  | BreakToken
-  | ContinueToken
-  | LoopToken
-  | LeftParenToken
-  | LeftBraceToken ->
-    true
-
-  | _ ->
-    false
-
-let tokenIsTermFirst token =
-  tokenIsAtomFirst token
-
-let tokenIsArgFirst token =
-  match token with
-  | InToken
-  | MoveToken
-  | RefToken ->
-    true
-
-  | _ ->
-    tokenIsTermFirst token
-
-let tokenIsParamFirst token =
-  match token with
-  | InToken
-  | MutToken
-  | RefToken ->
-    true
-
-  | _ ->
-    tokenIsTermFirst token
-
-/// パイプラインのセグメントの先頭になるトークンか？
-let tokenIsSegmentFirst token =
-  match token with
-  | ThenToken
-  | WhileToken ->
-    true
-
-  | _ ->
-    false
-
-let tokenIsStmtFirst token =
-  tokenIsStmtKeyword token
-  || tokenIsTermFirst token
-
 let parseBoolLiteralTerm (p: P) =
   assert (p.Next = FalseToken || p.Next = TrueToken)
 
@@ -185,7 +121,7 @@ let parseAtomTerm (p: P) =
     parseLoopTerm p
 
   | _ ->
-    p.Next |> tokenIsAtomFirst |> is false
+    p.Next |> tokenIsAtomTermFirst |> is false
 
 let parseCallTerm (p: P) =
   parseAtomTerm p
@@ -309,7 +245,24 @@ let parseParam (p: P) =
   (p.Eat(InToken) || p.Eat(MutToken) || p.Eat(RefToken)) |> ignore
   parseCallTerm p
 
+  if p.Eat(ColonToken) then
+    parseTy p
+
   p.EndNode(ParamNode)
+
+let parseResult (p: P) =
+  p.StartNode()
+
+  parseTy p
+
+  p.EndNode(ResultNode)
+
+let parseTy (p: P) =
+  p.StartNode()
+
+  parseCallTerm p
+
+  p.EndNode(TyNode)
 
 // `fn name(param*)`
 let parseFnHead (p: P) =
@@ -360,6 +313,10 @@ let parseStmt (p: P) =
 
     p.Eat(ExternToken) |> is true
     parseFnHead p
+
+    if p.Eat(SlimArrowToken) then
+      parseResult p
+
     p.Eat(SemiToken) |> ignore
 
     p.EndNode(ExternFnNode)
@@ -373,6 +330,9 @@ let parseStmt (p: P) =
       parseBlockTerm p
     else
       p.AddError(ExpectedError "ブロック")
+
+    if p.Eat(SlimArrowToken) then
+      parseResult p
 
     p.EndNode(FnNode)
 

@@ -4,13 +4,11 @@ open RaiiLang.Helpers
 open RaiiLang.Kir
 open RaiiLang.Syntax
 
-let unitNode = KInt "0"
-
 [<Struct>]
 type KirGenLoop =
   {
-    BreakFun: string
-    ContinueFun: string
+    BreakLabel: KLabel
+    ContinueLabel: KLabel
   }
 
 type KirGenContext =
@@ -25,55 +23,143 @@ let kgContextNew (): KirGenContext =
     LoopStack = []
   }
 
+let noop = "__noop"
+
+let kgArgList context exit args =
+  let rec go exit args =
+    match args with
+    | [] ->
+      exit []
+
+    | AArg (passBy, Some arg, _) :: args ->
+      arg |> kgTerm context (fun arg ->
+        args |> go (fun args ->
+          KArg (passBy, arg, ref None) :: args |> exit
+        ))
+
+    | _ ->
+      failwithf "ERROR: 引数がありません %A" args
+
+  go exit args
+
+let kgParam context param =
+  match param with
+  | AParam (mode, Some (AName (Some name, _)), tyOpt, _) ->
+    let name =
+      context.FreshName name
+
+    let ty =
+      tyOpt
+      |> Option.map (kgTy context)
+      |> Option.defaultWith (fun () -> KInferTy (name, ref None))
+
+    KParam (mode, name, ty)
+
+  | _ ->
+    failwithf "ERROR: パラメータ名がありません %A" param
+
+let kgResult context result =
+  match result with
+  | AResult (Some ty, _) ->
+    ty |> kgTy context
+
+  | AResult (None, _) ->
+    failwithf "ERROR: 結果型がありません %A" result
+
+let kgTy _context ty =
+  match ty with
+  | ATy (Some "int", _) ->
+    KIntTy
+
+  | ATy (Some "string", _) ->
+    KStrTy
+
+  | ATy (Some name, _) ->
+    // FIXME: 後で名前解決する
+    KInferTy (name, ref None)
+
+  | ATy (None, _) ->
+    failwithf "ERROR: 型名がありません %A" ty
+
 /// bodyFun: ループの残りの部分を生成する関数を受け取って、ループの本体を返す関数
 let kgLoop context exit bodyFun =
   // loop { body }; k
   // ==> fix break() { k }
-  //     fix continue() { let _ = body; continue() }
-  //     continue()
+  //     fix continue() { let _ = body; jump continue() }
+  //     jump continue()
 
-  let breakFun = context.FreshName "break"
-  let continueFun = context.FreshName "continue"
+  let breakBody = ref KNoop
+  let continueBody = ref KNoop
 
-  let breakNode = KApp (breakFun, [])
-  let continueNode = KApp (continueFun, [])
+  let breakLabel =
+    KLabel (
+      context.FreshName "do_break",
+      [],
+      breakBody
+    )
+
+  let continueLabel =
+    KLabel (
+      context.FreshName "do_continue",
+      [],
+      continueBody
+    )
+
+  let continueNode = KPrim (KJumpPrim, [], [KLabelCont continueLabel])
 
   let loopStack = context.LoopStack
   context.LoopStack <-
     {
-      BreakFun = breakFun
-      ContinueFun = continueFun
+      BreakLabel = breakLabel
+      ContinueLabel = continueLabel
     } :: loopStack
 
-  let onBreak = exit unitNode
-  let onContinue = bodyFun breakNode continueNode (fun (_: KNode) -> continueNode)
+  breakBody := exit noop
+  continueBody := bodyFun breakLabel continueLabel (fun _ -> continueNode)
 
   context.LoopStack <- loopStack
 
   KFix (
-    breakFun,
-    [],
-    onBreak,
-    KFix (
-      continueFun,
-      [],
-      onContinue,
-      continueNode
-    ))
+    [
+      KLabelFix continueLabel
+      KLabelFix breakLabel
+    ],
+    continueNode
+  )
+
+/// 1つの結果と1つの継続を持つプリミティブノードを作る。
+let kPrim1 context prim args exit =
+  let labelName = context.FreshName "next"
+  let resultName = context.FreshName "result"
+
+  let body = exit resultName
+
+  let label =
+    KLabel (
+      labelName,
+      // FIXME: モード
+      [KParam (MutMode, resultName, KInferTy (resultName, ref None))],
+      ref body
+    )
+
+  KFix (
+    [KLabelFix label],
+    KPrim (prim, args, [KLabelCont label])
+  )
 
 let kgTerm (context: KirGenContext) exit term =
   match term with
   | ABoolLiteral (value, _) ->
-    KBool value |> exit
+    kPrim1 context (KBoolLiteralPrim value) [] exit
 
   | AIntLiteral (Some intText, _) ->
-    KInt intText |> exit
+    kPrim1 context (KIntLiteralPrim intText) [] exit
 
   | AStrLiteral (segments, _) ->
-    KStr segments |> exit
+    kPrim1 context (KStrLiteralPrim segments) [] exit
 
   | ANameTerm (AName (Some name, _)) ->
-    KName name |> exit
+    exit name
 
   | AGroupTerm (Some term, _) ->
     kgTerm context exit term
@@ -86,106 +172,119 @@ let kgTerm (context: KirGenContext) exit term =
     | [] ->
       failwith "break out of loop"
 
-    | { BreakFun = breakFun } :: _ ->
-      KApp (breakFun, [])
+    | { BreakLabel = breakLabel } :: _ ->
+      KPrim (KJumpPrim, [], [KLabelCont breakLabel])
 
   | AContinueTerm _ ->
     match context.LoopStack with
     | [] ->
       failwith "continue out of loop"
 
-    | { ContinueFun = continueFun } :: _ ->
-      KApp (continueFun, [])
+    | { ContinueLabel = continueLabel } :: _ ->
+      KPrim (KJumpPrim, [], [KLabelCont continueLabel])
 
   | ALoopTerm (Some body, _) ->
     kgLoop context exit (fun _ _ k -> body |> kgTerm context k)
 
   | ACallTerm (Some (ANameTerm (AName (Some funName, _))), args, _) ->
-    // 関数から戻ってきた後の計算を中間関数 ret と定める。
-    // ret を追加の引数として渡して、関数にジャンプする。
-
-    let res = context.FreshName (sprintf "%s_res" funName)
-    let ret = context.FreshName (sprintf "%s_ret" funName)
-
-    let rec go exit args =
-      match args with
-      | [] ->
-        exit []
-
-      | AArg (passBy, Some arg, _) :: args ->
-        arg |> kgTerm context (fun arg ->
-          args |> go (fun args ->
-            KArg (passBy, arg) :: args |> exit
-          ))
-
-      | _ :: args ->
-        go exit args
-
-    args |> go (fun args ->
-      let args = KArg (ByMove, KName ret) :: args
-      KFix (
-        ret,
-        [KParam (MutMode, res)],
-        exit (KName res),
-        KApp (funName, args)
-      ))
+    args |> kgArgList context (fun args ->
+      let prim = KFnPrim (funName, ref None)
+      kPrim1 context prim args exit
+    )
 
   | ABinTerm (Some bin, Some first, Some second, _) ->
     let prim = kPrimFromBin bin
-    let name = prim |> kPrimToString
-    let res = context.FreshName (sprintf "%s_res" name)
+    let passByList, _ = kPrimToSig prim
 
     first |> kgTerm context (fun first ->
       second |> kgTerm context (fun second ->
         let args =
-          List.zip (kPrimToSig prim) [first; second]
-          |> List.map KArg
+          List.zip passByList [first; second]
+          |> List.map (fun (passBy, arg) -> KArg (passBy, arg, ref (Some (passByToMode passBy))))
 
-        KPrim (prim, args, res, exit (KName res))
+        kPrim1 context prim args exit
       ))
 
   | AIfTerm (Some cond, body, alt, _) ->
     // body または alt の結果を受け取って後続の計算を行う関数 if_next をおく。
-    // 条件式の結果に基づいて body または alt を計算して、
-    // その結果をもって if_next を呼ぶ。
+    // 条件式の結果に基づいて body または alt のラベルにジャンプし、
+    // その結果をもって if_next にジャンプする。
 
-    let funName = context.FreshName "if_next"
-    let next res = KApp (funName, [KArg (ByMove, res)])
+    let labelName = context.FreshName "if_next"
+    let resultName = context.FreshName "res"
 
-    let res = context.FreshName "res"
+    let labelBody = ref KNoop
 
-    let bodyFun next =
-      body
-      |> Option.map (kgTerm context next)
-      |> Option.defaultWith (fun () -> next unitNode)
+    let nextLabel =
+      KLabel (
+        labelName,
+        // FIXME: モード
+        [KParam (MutMode, resultName, KInferTy (resultName, ref None))],
+        labelBody
+      )
 
-    let altFun next =
-      alt
-      |> Option.map (kgTerm context next)
-      |> Option.defaultWith (fun () -> next unitNode)
+    // FIXME: モード
+    let next result = KPrim (KJumpPrim, [KArg (ByMove, result, ref None)], [KLabelCont nextLabel])
+
+    let bodyLabel =
+      KLabel (
+        context.FreshName "if_body",
+        [],
+        body
+        |> Option.map (kgTerm context next)
+        |> Option.defaultWith (fun () -> next "0") // FIXME: unit
+        |> ref
+      )
+
+    let altLabel =
+      KLabel (
+        context.FreshName "if_alt",
+        [],
+        alt
+        |> Option.map (kgTerm context next)
+        |> Option.defaultWith (fun () -> next "0") // FIXME: unit
+        |> ref
+      )
 
     cond |> kgTerm context (fun cond ->
+      labelBody := exit resultName
+
       KFix (
-        funName,
-        [KParam (MutMode, res)],
-        exit (KName res),
-        KIf (
-          cond,
-          bodyFun next,
-          altFun next
-        )))
+        [
+          KLabelFix bodyLabel
+          KLabelFix altLabel
+          KLabelFix nextLabel
+        ],
+        KPrim (
+          KIfPrim,
+          [KArg (ByMove, cond, ref None)],
+          [
+            KLabelCont bodyLabel
+            KLabelCont altLabel
+          ])))
 
   | AWhileTerm (Some cond, Some body, _) ->
     // cond while { body }
     // ==> loop { cond then { body } else { break } }
 
-    kgLoop context exit (fun breakNode _ bodyExit ->
+    kgLoop context exit (fun breakLabel _ bodyExit ->
       cond |> kgTerm context (fun cond ->
-        KIf (
-          cond,
-          body |> kgTerm context bodyExit,
-          breakNode
-        )))
+        let bodyLabel =
+          KLabel (
+            context.FreshName "body",
+            [],
+            body |> kgTerm context bodyExit |> ref
+          )
+
+        KFix (
+          [KLabelFix bodyLabel],
+          KPrim (
+            KIfPrim,
+            [KArg (ByMove, cond, ref None)],
+            [
+              KLabelCont bodyLabel
+              KLabelCont breakLabel
+            ]))))
 
   | _ ->
     failwithf "unimpl %A" term
@@ -195,89 +294,85 @@ let kgStmt context exit stmt =
   | ATermStmt (Some term, _) ->
     kgTerm context exit term
 
-  | ALetStmt
-      (
-        Some (AParam (mode, Some (AName (Some varName, _)), _)),
-        Some (AArg (passBy, Some body, _)),
-        _
-      ) ->
-    // 右辺を計算する。
-    // 後続の計算を行う中間関数 next を定義する。
-    // 計算結果を引数に渡して next にジャンプする。
+  | ALetStmt (Some param, Some arg, _) ->
+    // let x = body; y
+    // ==> fix next(x) { y }; jump next(body)
 
-    let funName = context.FreshName (sprintf "%s_next" varName)
+    let labelName = context.FreshName "let_next"
 
-    body |> kgTerm context (fun body ->
+    let param = kgParam context param
+
+    [arg] |> kgArgList context (fun args ->
+      let labelBody = exit noop
+      let nextLabel = KLabel (labelName, [param], ref labelBody)
+
       KFix (
-        funName,
-        [KParam (mode, varName)],
-        (exit (KName varName)),
-        KApp (funName, [KArg (passBy, body)])
+        [KLabelFix nextLabel],
+        KPrim (KJumpPrim, args, [KLabelCont nextLabel])
     ))
 
-  | AExternFnStmt (Some (AName (Some funName, _)), args, _) ->
-    // extern fn f(params);
-    // ==> fn f(params) { extern_fn"f"(params) }
-    // ==> fix f(ret, params) { let res = extern_fn"f"(params); ret(res) }
+  | AExternFnStmt (Some (AName (Some funName, _)), paramList, resultOpt, _) ->
+    // 外部関数を呼び出すラッパー関数を定義する。
 
-    let res = context.FreshName (sprintf "%s_res" funName)
-    let ret = context.FreshName (sprintf "%s_ret" funName)
+    // extern fn f(params)
+    // ==> fix_fn f(params) { let res = extern_fn"f"(params); jump return(res) }
 
-    let paramList =
-      args |> List.choose (fun arg ->
-        match arg with
-        | AParam (mode, Some (AName (Some name, _)), _) ->
-          KParam (mode, context.FreshName name) |> Some
+    let paramList = paramList |> List.map (kgParam context)
 
-        | _ ->
-          None
+    let fnResult =
+      resultOpt
+      |> Option.map (kgResult context)
+      |> Option.defaultValue KUnitTy
+      |> KResult
+
+    let primArgs =
+      paramList |> List.map (fun (KParam (mode, name, _)) ->
+        KArg (modeToPassBy mode, name, ref (Some mode))
       )
 
-    let args =
-      paramList |> List.map (fun (KParam (mode, name)) ->
-        KArg (mode |> modeToPassBy, KName name)
+    let externFn = KExternFn (funName, paramList, fnResult)
+
+    let fnBody = ref KNoop
+    let fn = KFn (funName, paramList, fnResult, fnBody)
+
+    fnBody :=
+      KPrim (
+        KExternFnPrim externFn,
+        primArgs,
+        [KReturnCont fn]
       )
 
     KFix (
-      funName,
-      (KParam (MutMode, ret)) :: paramList,
-      KPrim (
-        KExternFnPrim funName,
-        args,
-        res,
-        KApp (
-          ret,
-          [KArg (ByMove, KName res)]
-        )),
-      exit unitNode
+      [KFnFix fn],
+      exit noop
     )
 
-  | AFnStmt (Some (AName (Some funName, _)), args, Some body, _) ->
+  | AFnStmt (Some (AName (Some funName, _)), paramList, resultOpt, Some body, _) ->
     // 関数を fix で定義して、後続の計算を行う。
 
-    // fn f(x) { return y; }; k
-    // => fix f(ret, x) { ret(y); }; k
+    // fn f(params) { return body }; exit
+    // ==> fix fn f(params) { jump return(body) }; exit
 
-    let ret = context.FreshName (sprintf "%s_ret" funName)
+    let paramList = paramList |> List.map (kgParam context)
 
-    let args =
-      args |> List.choose (fun arg ->
-        match arg with
-        | AParam (callBy, Some (AName (Some name, _)), _) ->
-          KParam (callBy, context.FreshName name) |> Some
+    let result =
+      resultOpt
+      |> Option.map (kgResult context)
+      |> Option.defaultValue KUnitTy
+      |> KResult
 
-        | _ ->
-          None
+    // FIXME: モード
+    let fnBody = ref KNoop
+    let fn = KFn (funName, paramList, result, fnBody)
+
+    fnBody :=
+      body |> kgTerm context (fun body ->
+        KPrim (KJumpPrim, [KArg (ByMove, body, ref None)], [KReturnCont fn])
       )
 
     KFix (
-      funName,
-      (KParam (MutMode, ret)) :: args,
-      kgTerm
-        context
-        (fun res -> KApp (ret, [KArg (ByMove, res)]))
-        body,
-      exit unitNode
+      [KFnFix fn],
+      exit noop
     )
 
   | ASemiStmt (stmts, _) ->
@@ -289,7 +384,7 @@ let kgStmt context exit stmt =
 let kgStmts context exit stmts =
   match stmts with
   | [] ->
-    exit unitNode
+    exit noop
 
   | [stmt] ->
     kgStmt context exit stmt
@@ -299,4 +394,4 @@ let kgStmts context exit stmts =
 
 let kirGen (stmt: AStmt) =
   let context = kgContextNew ()
-  kgStmt context id stmt
+  kgStmt context (fun _ -> KNoop) stmt

@@ -15,6 +15,13 @@ N(SemiNode) [
         N(NameNode) [
           T(IdentToken) `actual`
         ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `int`
+          ]
+        ]
       ]
       T(CommaToken) `,`
       T(SpaceToken) ` `
@@ -23,6 +30,13 @@ N(SemiNode) [
         T(SpaceToken) ` `
         N(NameNode) [
           T(IdentToken) `expected`
+        ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `int`
+          ]
         ]
       ]
       T(RightParenToken) `)`
@@ -44,6 +58,13 @@ N(SemiNode) [
         T(SpaceToken) ` `
         N(NameNode) [
           T(IdentToken) `x`
+        ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `int`
+          ]
         ]
       ]
       T(RightParenToken) `)`

@@ -19,11 +19,6 @@ type ATy =
     of string option * NodeData
 
 [<Struct>]
-type AArg =
-  | AArg
-    of PassBy * ATerm option * NodeData
-
-[<Struct>]
 type AParam =
   | AParam
     of Mode * AName option * ATy option * NodeData
@@ -32,6 +27,11 @@ type AParam =
 type AResult =
   | AResult
     of ATy option * NodeData
+
+[<Struct>]
+type AArg =
+  | AArg
+    of PassBy * ATerm option * NodeData
 
 type ATerm =
   | ABoolLiteral

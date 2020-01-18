@@ -4,21 +4,26 @@ open PhancieLang.Ast
 open PhancieLang.Helpers
 open PhancieLang.Syntax
 
-let astArg (node: NodeData) =
-  assert (node.Node = ArgNode)
+let astName (node: NodeData) =
+  assert (node.Node = NameNode)
 
-  let passBy =
+  let ident =
     node
-    |> nodeToFirstToken (tokenAsPassBy >> Option.isSome)
-    |> Option.bind (fun token -> tokenAsPassBy token.Token)
-    |> Option.defaultValue ByIn
+    |> nodeToFirstToken ((=) IdentToken)
+    |> Option.map tokenToText
 
-  let term =
+  AName (ident, node)
+
+let astTy (node: NodeData) =
+  assert (node.Node = TyNode)
+
+  let name =
     node
-    |> nodeToFirstNode nodeIsTerm
-    |> Option.map astTerm
+    |> nodeToFirstNode ((=) NameNode)
+    |> Option.bind (nodeToFirstToken ((=) IdentToken))
+    |> Option.map tokenToText
 
-  AArg (passBy, term, node)
+  ATy (name, node)
 
 let astParam (node: NodeData) =
   assert (node.Node = ParamNode)
@@ -51,16 +56,21 @@ let astResult (node: NodeData) =
 
   AResult (ty, node)
 
-let astTy (node: NodeData) =
-  assert (node.Node = TyNode)
+let astArg (node: NodeData) =
+  assert (node.Node = ArgNode)
 
-  let name =
+  let passBy =
     node
-    |> nodeToFirstNode ((=) NameNode)
-    |> Option.bind (nodeToFirstToken ((=) IdentToken))
-    |> Option.map tokenToText
+    |> nodeToFirstToken (tokenAsPassBy >> Option.isSome)
+    |> Option.bind (fun token -> tokenAsPassBy token.Token)
+    |> Option.defaultValue ByIn
 
-  ATy (name, node)
+  let term =
+    node
+    |> nodeToFirstNode nodeIsTerm
+    |> Option.map astTerm
+
+  AArg (passBy, term, node)
 
 let astBoolLiteral (node: NodeData) =
   assert (node.Node = BoolLiteralNode)
@@ -92,16 +102,6 @@ let astStrLiteral (node: NodeData) =
     |> List.map (tokenToText >> StrVerbatim)
 
   AStrLiteral (segments, node)
-
-let astName (node: NodeData) =
-  assert (node.Node = NameNode)
-
-  let ident =
-    node
-    |> nodeToFirstToken ((=) IdentToken)
-    |> Option.map tokenToText
-
-  AName (ident, node)
 
 let astGroup (node: NodeData) =
   assert (node.Node = GroupNode)

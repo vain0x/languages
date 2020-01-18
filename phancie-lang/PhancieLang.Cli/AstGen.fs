@@ -197,11 +197,11 @@ let astWhile (node: NodeData) =
 let astBin (node: NodeData) =
   assert (node.Node = BinNode)
 
-  let asBin (t: TokenData) = tokenAsBin t.Token
+  let asBin (t: TokenData) = aBinFromToken t.Token
 
   let bin =
     node
-    |> nodeToFirstToken (tokenAsBin >> Option.isSome)
+    |> nodeToFirstToken (aBinFromToken >> Option.isSome)
     |> Option.bind asBin
 
   let terms =

@@ -89,7 +89,7 @@ type AStmt =
   | ASemiStmt
     of AStmt list * NodeData
 
-let tokenAsBin (token: Token) =
+let aBinFromToken (token: Token) =
   match token with
   | EqualEqualToken ->
     Some AEqBin

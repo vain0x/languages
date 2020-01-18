@@ -1,0 +1,203 @@
+module rec PhancieLang.KirDump
+
+open PhancieLang.Helpers
+open PhancieLang.Kir
+
+let kdCont cont acc =
+  match cont with
+  | KLabelCont (KLabel (labelName, _, _)) ->
+    acc |> cons labelName
+
+  | KReturnCont _ ->
+    acc |> cons "return"
+
+let kdTy ty indent acc =
+  match ty |> kTyDeref with
+  | KInferTy (name, _) ->
+    acc |> cons "'" |> cons name
+
+  | KNeverTy ->
+    acc |> cons "never"
+
+  | KUnitTy ->
+    acc |> cons "()"
+
+  | KBoolTy ->
+    acc |> cons "bool"
+
+  | KIntTy ->
+    acc |> cons "int"
+
+  | KStrTy ->
+    acc |> cons "string"
+
+  | KFunTy (paramList, result) ->
+    acc
+    |> cons "Fn"
+    |> kdParamList paramList indent
+    |> cons " -> "
+    |> kdResult result indent
+
+let kdParam param indent acc =
+  match param with
+  | KParam (mode, name, ty) ->
+    acc
+    |> cons (modeToString mode)
+    |> cons " "
+    |> cons name
+    |> cons ": "
+    |> kdTy ty indent
+
+let kdParamList paramList indent acc =
+  let acc = acc |> cons "("
+
+  let _, acc =
+    paramList
+    |> List.fold (fun (sep, acc) param ->
+      let acc =
+        acc
+        |> cons sep
+        |> kdParam param indent
+      ", ", acc
+    ) ("", acc)
+
+  acc |> cons ")"
+
+let kdArg arg _indent acc =
+  match arg with
+  | KArg (passBy, name, _) ->
+    acc
+    |> cons (passByToString passBy)
+    |> cons " "
+    |> cons name
+
+let kdArgList args indent acc =
+  let acc = acc |> cons "("
+
+  let acc =
+    match args with
+    | [] ->
+      acc
+
+    | [arg] ->
+      acc |> kdArg arg indent
+
+    | _ ->
+      let deepIndent = indent + "  "
+
+      args
+      |> List.fold (fun acc arg ->
+        acc
+        |> cons deepIndent
+        |> kdArg arg indent
+      ) acc
+      |> cons indent
+
+  acc |> cons ")"
+
+let kdResult (KResult resultTy) indent acc =
+  acc |> kdTy resultTy indent
+
+let kdFix fix indent acc =
+  let deepIndent = indent + "  "
+
+  let kind, name, paramList, result, body =
+    match fix with
+    | KLabelFix (KLabel (name, paramList, body)) ->
+      "label", name, paramList, KResult KNeverTy, !body
+
+    | KFnFix (KFn (name, paramList, result, body)) ->
+      "fn", name, paramList, result, !body
+
+  acc
+  |> cons kind
+  |> cons " "
+  |> cons name
+  |> kdParamList paramList indent
+  |> cons " -> "
+  |> kdResult result indent
+  |> cons " {"
+  |> cons deepIndent
+  |> kdNode body deepIndent
+  |> cons indent
+  |> cons "}"
+
+let kdNode node indent acc =
+  match node with
+  | KNoop ->
+    acc |> cons "__noop"
+
+  | KPrim (prim, args, [next]) ->
+    let acc = acc |> cons "jump " |> kdCont next |> cons "("
+
+    let acc = acc |> cons (kPrimToString prim)
+
+    let acc =
+      if prim |> kPrimIsLiteral then
+        assert (args |> List.isEmpty)
+        acc
+      else
+        acc |> kdArgList args indent
+
+    acc |> cons ")"
+
+  | KPrim (KIfPrim, [KArg (_, cond, _)], [body; alt]) ->
+    let deepIndent = indent + "  "
+
+    acc
+    |> cons "if "
+    |> cons cond
+    |> cons " {"
+    |> cons deepIndent
+    |> cons "jump "
+    |> kdCont body
+    |> cons "()"
+    |> cons indent
+    |> cons "} else {"
+    |> cons deepIndent
+    |> cons "jump "
+    |> kdCont alt
+    |> cons "()"
+    |> cons indent
+    |> cons "}"
+
+  | KPrim (prim, args, conts) ->
+    let acc =
+      acc
+      |> cons "branch "
+      |> cons (kPrimToString prim)
+      |> kdArgList args indent
+      |> cons ") to ["
+
+    let acc =
+      conts |> List.fold (fun acc cont ->
+        acc |> cons indent |> kdCont cont
+      ) acc
+
+    acc
+    |> cons indent
+    |> cons "]"
+
+  | KFix (fixes, next) ->
+    let acc = acc |> cons "fix "
+
+    let _, acc =
+      fixes |> List.fold (fun (sep, acc) fix ->
+        let acc =
+          acc
+          |> cons sep
+          |> kdFix fix indent
+
+        eol + indent + "and ", acc
+      ) ("", acc)
+
+    acc
+    |> cons eol
+    |> cons indent
+    |> kdNode next indent
+
+let kirDump (node: KNode) =
+  []
+  |> kdNode node eol
+  |> List.rev
+  |> String.concat ""

@@ -325,6 +325,19 @@ let astStmt (node: NodeData) =
 
     AFnStmt (name, args, result, body, ref None, node)
 
+  | StructNode ->
+    let name =
+      node
+      |> nodeToFirstNode ((=) NameNode)
+      |> Option.map astName
+
+    let fields =
+      node
+      |> nodeToFilterNode ((=) ParamNode)
+      |> List.map astParam
+
+    AStructStmt (name, fields, node)
+
   | SemiNode ->
     let stmts =
       node

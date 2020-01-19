@@ -1,0 +1,51 @@
+N(SemiNode) [
+  N(SemiNode) [
+    N(StructNode) [
+      T(StructToken) `struct`
+      T(SpaceToken) ` `
+      N(NameNode) [
+        T(IdentToken) `User`
+        T(SpaceToken) ` `
+      ]
+      T(LeftBraceToken) `{`
+      N(ParamNode) [
+        N(NameNode) [
+          T(EolToken) `
+`
+          T(SpaceToken) `    `
+          T(IdentToken) `name`
+        ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `string`
+          ]
+        ]
+      ]
+      T(CommaToken) `,`
+      N(ParamNode) [
+        N(NameNode) [
+          T(EolToken) `
+`
+          T(SpaceToken) `    `
+          T(IdentToken) `age`
+        ]
+        T(ColonToken) `:`
+        T(SpaceToken) ` `
+        N(TyNode) [
+          N(NameNode) [
+            T(IdentToken) `int`
+          ]
+        ]
+      ]
+      T(CommaToken) `,`
+      T(EolToken) `
+`
+      T(RightBraceToken) `}`
+    ]
+  ]
+  T(EolToken) `
+`
+  T(EofToken) ``
+]

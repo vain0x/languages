@@ -39,6 +39,7 @@ type Token =
   | MoveToken
   | MutToken
   | RefToken
+  | StructToken
   | ThenToken
   | TrueToken
   | WhileToken
@@ -106,6 +107,7 @@ type Node =
   | LetNode
   | ExternFnNode
   | FnNode
+  | StructNode
   | SemiNode
 
 [<Struct>]
@@ -140,6 +142,7 @@ let keywords =
     MoveToken, "move"
     MutToken, "mut"
     RefToken, "ref"
+    StructToken, "struct"
     ThenToken, "then"
     TrueToken, "true"
     WhileToken, "while"
@@ -181,7 +184,8 @@ let tokenIsStmtKeyword token =
   match token with
   | ExternToken
   | LetToken
-  | FnToken ->
+  | FnToken
+  | StructToken ->
     true
 
   | _ ->
@@ -298,6 +302,7 @@ let nodeIsStmt (node: Node) =
   | LetNode
   | ExternFnNode
   | FnNode
+  | StructNode
   | SemiNode ->
     true
 

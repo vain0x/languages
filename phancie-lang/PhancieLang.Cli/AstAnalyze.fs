@@ -496,6 +496,9 @@ let aaStmt context stmt =
     let kind = AFnKind bodyOpt
     aaFnStmt context kind name paramList resultOpt bodyOpt fnSlot syn
 
+  | AStructStmt (name, paramList, syn) ->
+    aUnitTy syn
+
   | ASemiStmt (stmts, syn) ->
     aaStmts context stmts syn
 

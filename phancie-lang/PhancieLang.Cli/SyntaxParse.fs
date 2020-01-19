@@ -336,6 +336,28 @@ let parseStmt (p: P) =
 
     p.EndNode(FnNode)
 
+  | StructToken ->
+    p.StartNode()
+    p.Bump()
+
+    if p.Next = IdentToken then
+      parseNameTerm p
+    else
+      p.AddError(ExpectedError "名前")
+
+    if p.Eat(LeftBraceToken) |> not then
+      p.AddError(ExpectedError "ブロック")
+    else
+      while p.Next = IdentToken
+        || p.Next = CommaToken do
+        parseParam p
+        p.Eat(CommaToken) |> ignore
+
+      if p.Eat(RightBraceToken) |> not then
+        p.AddError(ExpectedError "}")
+
+    p.EndNode(StructNode)
+
   | _ ->
     p.Next |> tokenIsTermFirst |> is true
 

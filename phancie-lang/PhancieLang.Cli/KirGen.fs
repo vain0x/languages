@@ -376,6 +376,9 @@ let kgStmt context exit stmt =
       exit noop
     )
 
+  | AStructStmt _ ->
+    exit noop
+
   | ASemiStmt (stmts, _) ->
     kgStmts context exit stmts
 

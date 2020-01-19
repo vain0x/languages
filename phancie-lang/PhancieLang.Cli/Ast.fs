@@ -169,6 +169,9 @@ type AStmt =
   | AFnStmt
     of AName option * AParam list * AResult option * ATerm option * AFn option ref * NodeData
 
+  | AStructStmt
+    of AName option * AParam list * NodeData
+
   | ASemiStmt
     of AStmt list * NodeData
 

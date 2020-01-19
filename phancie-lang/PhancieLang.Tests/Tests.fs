@@ -2,6 +2,7 @@ module Tests
 
 open System
 open System.IO
+open PhancieLang.AstAnalyze
 open PhancieLang.AstGen
 open PhancieLang.Cir
 open PhancieLang.CirDump
@@ -52,6 +53,7 @@ let snapshotTest (name: string) =
   |> parse
   |> tee "_parse_snapshot.txt" nodeToSnapshot
   |> astRoot
+  |> fun ast -> astAnalyze ast; ast
   |> kirGen
   |> kirInfer
   |> tee "_dump_snapshot.txt" kirDump

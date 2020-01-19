@@ -73,6 +73,9 @@ let freshNameFun () =
       map.[name] <- lastId
       name
 
+let vecPush item (a: ResizeArray<_>) =
+  a.Add(item)
+
 let vecPop (a: ResizeArray<_>) =
   let i = a.Count - 1
   let item = a.[i]
@@ -135,6 +138,16 @@ let strUnescape segments acc =
 // Mode
 // -----------------------------------------------
 
+let modeIsDerivedFrom first second =
+  match first, second with
+  | MutMode, ValMode
+  | RefMode, InMode ->
+    // 可変性を失うアップキャストは許可。
+    true
+
+  | _ ->
+    first = second
+
 let modeToString mode =
   match mode with
   | InMode ->
@@ -166,6 +179,19 @@ let modeToPassBy mode =
 // -----------------------------------------------
 // PassBy
 // -----------------------------------------------
+
+/// 指定したモードのパラメータへの引数の渡し方として OK か？
+let passByIsFor mode passBy =
+  match passBy, mode with
+  | ByMove, ValMode
+  | ByMove, MutMode
+  | ByIn, InMode
+  | ByRef, InMode
+  | ByRef, RefMode ->
+    true
+
+  | _ ->
+    false
 
 let passByToString passBy =
   match passBy with

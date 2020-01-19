@@ -312,7 +312,7 @@ let kgStmt context exit stmt =
         KPrim (KJumpPrim, args, [KLabelCont nextLabel])
     ))
 
-  | AExternFnStmt (Some (AName (Some funName, _, _)), paramList, resultOpt, _) ->
+  | AExternFnStmt (Some (AName (Some funName, _, _)), paramList, resultOpt, _, _) ->
     // 外部関数を呼び出すラッパー関数を定義する。
 
     // extern fn f(params)
@@ -348,7 +348,7 @@ let kgStmt context exit stmt =
       exit noop
     )
 
-  | AFnStmt (Some (AName (Some funName, _, _)), paramList, resultOpt, Some body, _) ->
+  | AFnStmt (Some (AName (Some funName, _, _)), paramList, resultOpt, Some body, _, _) ->
     // 関数を fix で定義して、後続の計算を行う。
 
     // fn f(params) { return body }; exit

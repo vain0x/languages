@@ -300,7 +300,7 @@ let astStmt (node: NodeData) =
       |> nodeToFirstNode ((=) ResultNode)
       |> Option.map astResult
 
-    AExternFnStmt (name, args, result, node)
+    AExternFnStmt (name, args, result, ref None, node)
 
   | FnNode ->
     let name =
@@ -323,7 +323,7 @@ let astStmt (node: NodeData) =
       |> nodeToFirstNode ((=) BlockNode)
       |> Option.map astTerm
 
-    AFnStmt (name, args, result, body, node)
+    AFnStmt (name, args, result, body, ref None, node)
 
   | SemiNode ->
     let stmts =

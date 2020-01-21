@@ -21,12 +21,12 @@ type ABin =
 [<Struct>]
 type AParamTy =
   | AParamTy
-    of Mode * ATyInfo
+    of Mode * ATyInfo * NodeData
 
 [<Struct>]
 type AArgTy =
   | AArgTy
-    of PassBy * ATyInfo
+    of PassBy * ATyInfo * NodeData
 
 type ATyInfo =
   | ANameTy
@@ -62,6 +62,7 @@ type ALoop =
   {
     LoopOpt: ATerm option
     FnOpt: AFn option
+    Syn: NodeData
   }
 
 [<Struct>]
@@ -141,7 +142,7 @@ type ATerm =
     of ATerm option * AArg list * NodeData
 
   | ABinTerm
-    of ABin option * ATerm option * ATerm option * NodeData
+    of ABin option * ATerm option * ATerm option * (AArgTy * AArgTy * ATyInfo) option ref * NodeData
 
   | AIfTerm
     of cond:ATerm option
@@ -193,21 +194,21 @@ let aBinFromToken (token: Token) =
   | _ ->
     None
 
-let aBinToSig bin firstTy secondTy syn =
+let aBinToSig bin firstTy _secondTy syn =
   match bin with
   | AEqBin ->
-    AParamTy (InMode, firstTy),
-    AParamTy (InMode, firstTy),
+    AParamTy (InMode, firstTy, syn),
+    AParamTy (InMode, firstTy, syn),
     ABoolTy syn
 
   | AAddBin ->
-    AParamTy (ValMode, firstTy),
-    AParamTy (ValMode, firstTy),
+    AParamTy (ValMode, firstTy, syn),
+    AParamTy (ValMode, firstTy, syn),
     firstTy
 
   | AAssignBin ->
-    AParamTy (MutMode, firstTy),
-    AParamTy (MutMode, firstTy),
+    AParamTy (MutMode, firstTy, syn),
+    AParamTy (MutMode, firstTy, syn),
     firstTy
 
 // -----------------------------------------------

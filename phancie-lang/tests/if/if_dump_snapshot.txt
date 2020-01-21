@@ -1,196 +1,106 @@
-fix fn assert_eq(in actual: int, in expected: int) -> () {
-  jump return(extern_assert_eq(
-    in actual
-    in expected
+fix fn assert_eq(in actual: int, in expected: int) -> int {
+  let mut result: int = extern_assert_eq(
+    move actual
+    move expected
   ))
+  return(move result)
 }
 
-fix fn print(in s: string) -> () {
-  jump return(extern_print(in s))
+fix fn print(in s: string) -> int {
+  let mut result_2: int = extern_print(move s))
+  return(move result_2)
 }
 
-fix fn main() -> () {
-  fix label next_5(mut result_5: int) -> never {
-    fix label next_6(mut result_6: int) -> never {
-      fix label next_7(mut result_7: bool) -> never {
-        fix label if_body() -> never {
-          fix label next(mut result: string) -> never {
-            fix label next_2(mut result_2: ()) -> never {
-              jump if_next(prim_jump(move result_2))
-            }
+fix fn main() -> int {
+  let mut result_6: bool = prim_eq(
+    in 0
+    in 0
+  ))
+  fix label if_body() -> never {
+    let mut result_4: int = extern_print(in "0 == 0\n"))
+    if_next(move result_4)
+  }
 
-            jump next_2(print(in result))
-          }
+  and label if_alt() -> never {
+    let mut result_5: int = extern_print(in "0 != 0\n"))
+    if_next(move result_5)
+  }
 
-          jump next("0 == 0\n")
+  and label if_next(mut result_3: int) -> never {
+    let mut result_10: bool = prim_eq(
+      in 0
+      in 1
+    ))
+    fix label if_body_2() -> never {
+      let mut result_8: int = extern_print(in "0 == 1\n"))
+      if_next_2(move result_8)
+    }
+
+    and label if_alt_2() -> never {
+      let mut result_9: int = extern_print(in "0 != 1\n"))
+      if_next_2(move result_9)
+    }
+
+    and label if_next_2(mut result_7: int) -> never {
+      let val x: int = prim_id(in 2))
+      let mut result_17: bool = prim_eq(
+        in x
+        in 1
+      ))
+      fix label if_body_3() -> never {
+        let mut result_12: int = extern_print(in "0 == 1\n"))
+        if_next_3(move result_12)
+      }
+
+      and label if_alt_3() -> never {
+        let mut result_16: bool = prim_eq(
+          in x
+          in 2
+        ))
+        fix label if_body_4() -> never {
+          let mut result_14: int = extern_print(in "x == 2\n"))
+          if_next_4(move result_14)
         }
 
-        and label if_alt() -> never {
-          fix label next_3(mut result_3: string) -> never {
-            fix label next_4(mut result_4: ()) -> never {
-              jump if_next(prim_jump(move result_4))
-            }
-
-            jump next_4(print(in result_3))
-          }
-
-          jump next_3("0 != 0\n")
+        and label if_alt_4() -> never {
+          let mut result_15: int = extern_print(in "x != 1, x != 2\n"))
+          if_next_4(move result_15)
         }
 
-        and label if_next(mut res: ()) -> never {
-          fix label next_12(mut result_12: int) -> never {
-            fix label next_13(mut result_13: int) -> never {
-              fix label next_14(mut result_14: bool) -> never {
-                fix label if_body_2() -> never {
-                  fix label next_8(mut result_8: string) -> never {
-                    fix label next_9(mut result_9: ()) -> never {
-                      jump if_next_2(prim_jump(move result_9))
-                    }
-
-                    jump next_9(print(in result_8))
-                  }
-
-                  jump next_8("0 == 1\n")
-                }
-
-                and label if_alt_2() -> never {
-                  fix label next_10(mut result_10: string) -> never {
-                    fix label next_11(mut result_11: ()) -> never {
-                      jump if_next_2(prim_jump(move result_11))
-                    }
-
-                    jump next_11(print(in result_10))
-                  }
-
-                  jump next_10("0 != 1\n")
-                }
-
-                and label if_next_2(mut res_2: ()) -> never {
-                  fix label next_15(mut result_15: int) -> never {
-                    fix label let_next(val x: int) -> never {
-                      fix label next_24(mut result_24: int) -> never {
-                        fix label next_25(mut result_25: bool) -> never {
-                          fix label if_body_3() -> never {
-                            fix label next_16(mut result_16: string) -> never {
-                              fix label next_17(mut result_17: ()) -> never {
-                                jump if_next_3(prim_jump(move result_17))
-                              }
-
-                              jump next_17(print(in result_16))
-                            }
-
-                            jump next_16("0 == 1\n")
-                          }
-
-                          and label if_alt_3() -> never {
-                            fix label next_22(mut result_22: int) -> never {
-                              fix label next_23(mut result_23: bool) -> never {
-                                fix label if_body_4() -> never {
-                                  fix label next_18(mut result_18: string) -> never {
-                                    fix label next_19(mut result_19: ()) -> never {
-                                      jump if_next_4(prim_jump(move result_19))
-                                    }
-
-                                    jump next_19(print(in result_18))
-                                  }
-
-                                  jump next_18("x == 2\n")
-                                }
-
-                                and label if_alt_4() -> never {
-                                  fix label next_20(mut result_20: string) -> never {
-                                    fix label next_21(mut result_21: ()) -> never {
-                                      jump if_next_4(prim_jump(move result_21))
-                                    }
-
-                                    jump next_21(print(in result_20))
-                                  }
-
-                                  jump next_20("x != 1, x != 2\n")
-                                }
-
-                                and label if_next_4(mut res_4: ()) -> never {
-                                  jump if_next_3(prim_jump(move res_4))
-                                }
-
-                                if result_23 {
-                                  jump if_body_4()
-                                } else {
-                                  jump if_alt_4()
-                                }
-                              }
-
-                              jump next_23(prim_eq(
-                                in x
-                                in result_22
-                              ))
-                            }
-
-                            jump next_22(2)
-                          }
-
-                          and label if_next_3(mut res_3: ()) -> never {
-                            jump return(prim_jump(move res_3))
-                          }
-
-                          if result_25 {
-                            jump if_body_3()
-                          } else {
-                            jump if_alt_3()
-                          }
-                        }
-
-                        jump next_25(prim_eq(
-                          in x
-                          in result_24
-                        ))
-                      }
-
-                      jump next_24(1)
-                    }
-
-                    jump let_next(prim_jump(in result_15))
-                  }
-
-                  jump next_15(2)
-                }
-
-                if result_14 {
-                  jump if_body_2()
-                } else {
-                  jump if_alt_2()
-                }
-              }
-
-              jump next_14(prim_eq(
-                in result_12
-                in result_13
-              ))
-            }
-
-            jump next_13(1)
-          }
-
-          jump next_12(0)
+        and label if_next_4(mut result_13: int) -> never {
+          if_next_3(move result_13)
         }
 
-        if result_7 {
-          jump if_body()
+        if result_16 {
+          if_body_4()
         } else {
-          jump if_alt()
+          if_alt_4()
         }
       }
 
-      jump next_7(prim_eq(
-        in result_5
-        in result_6
-      ))
+      and label if_next_3(mut result_11: int) -> never {
+        return(move result_11)
+      }
+
+      if result_17 {
+        if_body_3()
+      } else {
+        if_alt_3()
+      }
     }
 
-    jump next_6(0)
+    if result_10 {
+      if_body_2()
+    } else {
+      if_alt_2()
+    }
   }
 
-  jump next_5(0)
+  if result_6 {
+    if_body()
+  } else {
+    if_alt()
+  }
 }
 
 __noop

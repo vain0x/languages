@@ -36,23 +36,22 @@ let neverTerm = CName "__never__"
 
 let addPrefix name = sprintf "fn_%s" name
 
-let kTyToCTy ty =
-  match ty |> kTyDeref with
-  | KInferTy _
-  | KNeverTy ->
+let kTyToCTy (ty: KTyData) =
+  match ty with
+  | KNeverTy, _ ->
     CVoidTy
 
-  | KUnitTy
-  | KBoolTy
-  | KIntTy ->
+  | KUnitTy, _
+  | KBoolTy, _
+  | KIntTy, _ ->
     CIntTy
 
-  | KStrTy ->
+  | KStrTy, _ ->
     CPtrTy CCharTy
 
-  | KFunTy (paramList, KResult resultTy) ->
-    let paramList =
-      paramList |> List.map (fun (KParam (mode, _, ty)) ->
+  | KFnTy (paramTys, resultTy), _ ->
+    let paramTys =
+      paramTys |> List.map (fun (KParamTy (mode, ty, _)) ->
         match mode with
         | ValMode
         | MutMode
@@ -62,11 +61,13 @@ let kTyToCTy ty =
         | RefMode ->
           ty |> kTyToCTy |> CPtrTy
       )
+
     let resultTy =
       resultTy |> kTyToCTy
-    CFunTy (paramList, resultTy)
 
-let cgParam _context (KParam (mode, name, ty)) =
+    CFunTy (paramTys, resultTy)
+
+let cgParam _context (KParam (mode, name, ty, _)) =
   let ty = kTyToCTy ty
 
   match mode with
@@ -78,9 +79,10 @@ let cgParam _context (KParam (mode, name, ty)) =
   | RefMode ->
     CParam (name, CPtrTy ty)
 
-let cgArg _context lval (KArg (passBy, arg, modeOpt)) =
-  let arg = CName arg
-  let mode = !modeOpt |> Option.defaultValue ValMode
+let cgArg context lval (KArg (passBy, arg, _)) =
+  let arg = arg |> cgTerm context
+  // FIXME: mode
+  let mode = ValMode
 
   match passBy, mode, lval with
   | ByRef, _, RVal ->
@@ -93,19 +95,37 @@ let cgArg _context lval (KArg (passBy, arg, modeOpt)) =
   | _ ->
     arg
 
+let cgLocal (context: CirGenContext) param =
+  match param with
+  | KParam (_, paramName, paramTy, _) ->
+    let paramTy = paramTy |> kTyToCTy
+
+    // void 型の変数は生成しない。
+    match paramTy with
+    | CVoidTy ->
+      ()
+
+    | _ ->
+      let localStmt = CLocalStmt (paramName, paramTy, None)
+      context.Stmts.Add(localStmt)
+
+let cgLocalAssign (context: CirGenContext) arg param =
+  let (CParam (paramName, paramTy)) = cgParam context param
+
+  // void 型の変数には代入しない。
+  match paramTy with
+  | CVoidTy ->
+    ()
+
+  | _ ->
+    let assignStmt = CTermStmt (CBin (CAssignBin, CName paramName, arg))
+    context.Stmts.Add(assignStmt)
+
 let cgJump context cont args =
   match cont with
-  | KLabelCont (KLabel (labelName, paramList, _)) ->
+  | KLabelCont (KLabel (labelName, paramList, _, _)) ->
     for param, arg in List.zip paramList args do
-      let (CParam (paramName, paramTy)) = cgParam context param
-
-      match paramTy with
-      | CVoidTy ->
-        ()
-
-      | _ ->
-        let assignStmt = CTermStmt (CBin (CAssignBin, CName paramName, arg))
-        context.Stmts.Add(assignStmt)
+      param |> cgLocalAssign context arg
 
     let gotoStmt = CGotoStmt labelName
     context.Stmts.Add(gotoStmt)
@@ -117,59 +137,56 @@ let cgJump context cont args =
     let returnStmt = CReturn argOpt
     context.Stmts.Add(returnStmt)
 
-let cgPrimTerm context prim args conts =
-  let onLiteral body =
-    match args, conts with
-    | [], [cont] ->
-      cgJump context cont [body]
-
-    | _ ->
-      failwithf "ERROR: リテラルは0個の引数と1個の継続を持つ %A" (args, conts)
-
+let cgPrimTerm context prim args results nexts =
   let onBin bin =
-    match args, conts with
-    | [first; second], [cont] ->
+    match args, results, nexts with
+    | [first; second], [result], [next] ->
       let first = first |> cgArg context RVal
       let second = second |> cgArg context RVal
       let body = CBin (bin, first, second)
-      cgJump context cont [body]
+      result |> cgLocal context
+      result |> cgLocalAssign context body
+      next |> cgNode context
 
     | _ ->
-      failwithf "ERROR: 二項演算は2つの引数と1個の継続を持つ %A" (args, conts)
+      failwithf "ERROR: 二項演算は2つの引数と1個の継続を持つ %A" (args, results, nexts)
 
   let onAssign bin =
-    match args, conts with
-    | [first; second], [cont] ->
+    match args, results, nexts with
+    | [first; second], [result], [next] ->
       let first = first |> cgArg context LVal
       let second = second |> cgArg context RVal
       let body = CBin (bin, first, second)
-      cgJump context cont [body]
+      result |> cgLocal context
+      result |> cgLocalAssign context body
+      next |> cgNode context
 
     | _ ->
-      failwithf "ERROR: 代入演算は2つの引数と1個の継続を持つ %A" (args, conts)
+      failwithf "ERROR: 代入演算は2つの引数と1個の継続を持つ %A" (args, results, nexts)
 
   let onCall fnName =
-    match conts with
-    | [cont] ->
+    match results, nexts with
+    | [result], [next] ->
       let args = args |> List.map (cgArg context RVal)
       let body = CCall (CName fnName, args)
-      cgJump context cont [body]
+      result |> cgLocal context
+      result |> cgLocalAssign context body
+      next |> cgNode context
 
     | _ ->
-      failwithf "ERROR: 関数呼び出しは1個の継続を持つ %A" (fnName, conts)
+      failwithf "ERROR: 関数呼び出しは1個の継続を持つ %A" (fnName, results, nexts)
 
   match prim with
-  | KBoolLiteralPrim false ->
-    onLiteral (CInt "0")
+  | KIdPrim ->
+    match args, results, nexts with
+    | [arg], [result], [next] ->
+      let arg = arg |> cgArg context RVal
+      result |> cgLocal context
+      result |> cgLocalAssign context arg
+      next |> cgNode context
 
-  | KBoolLiteralPrim true ->
-    onLiteral (CInt "1")
-
-  | KIntLiteralPrim intText ->
-    onLiteral (CInt intText)
-
-  | KStrLiteralPrim segments ->
-    onLiteral (CStr segments)
+    | _ ->
+      failwithf "ERROR: 束縛は1つの引数と1つの継続を持つ %A" (args, results, nexts)
 
   | KEqPrim ->
     onBin CEqBin
@@ -180,47 +197,59 @@ let cgPrimTerm context prim args conts =
   | KAssignPrim ->
     onAssign CAssignBin
 
-  | KJumpPrim ->
-    match conts with
-    | [cont] ->
-      let args = args |> List.map (cgArg context RVal)
-      cgJump context cont args
-
-    | _ ->
-      failwithf "ERROR: jump は1個の継続を持つ %A" (conts)
-
   | KIfPrim ->
-    match args, conts with
-    | [cond], [body; alt] ->
+    match args, results, nexts with
+    | [cond], [], [body; alt] ->
       let cond = cond |> cgArg context RVal
-      let bodyStmts = cgCaptureStmts context (fun context -> cgJump context body [])
-      let altStmts = cgCaptureStmts context (fun context -> cgJump context alt [])
+      let bodyStmts = cgCaptureStmts context (fun context -> cgNode context body)
+      let altStmts = cgCaptureStmts context (fun context -> cgNode context alt)
 
       let ifStmt = CIfStmt (cond, bodyStmts |> Seq.toList, altStmts |> Seq.toList)
       context.Stmts.Add(ifStmt)
 
     | _ ->
-      failwithf "ERROR: if は1個の引数と2個の継続を持つ %A" (args, conts)
+      failwithf "ERROR: if は1個の引数と2個の継続を持つ %A" (args, nexts)
 
-  | KFnPrim (fnName, _) ->
+  | KFnPrim (KFn (fnName, _, _, _, _)) ->
     onCall (addPrefix fnName)
 
-  | KExternFnPrim (KExternFn (fnName, paramList, KResult resultTy)) ->
+  | KExternFnPrim (KExternFn (fnName, paramList, resultTy, _)) ->
     let paramList = paramList |> List.map (cgParam context)
     let resultTy = resultTy |> kTyToCTy
     context.Decls.Add(CExternFnDecl (fnName, paramList, resultTy))
 
     onCall fnName
 
-let cgTerm (context: CirGenContext) (node: KNode) =
+let cgTerm _context (term: KTermData) =
+  match term with
+  | KBoolLiteral false, _ ->
+    CInt "0"
+
+  | KBoolLiteral true, _ ->
+    CInt "1"
+
+  | KIntLiteral intText, _ ->
+    CInt intText
+
+  | KStrLiteral segments, _ ->
+    CStr segments
+
+  | KLocalTerm (KParam (_, name, _, _)), _ ->
+    CName name
+
+let cgNode (context: CirGenContext) (node: KNodeData) =
   match node with
-  | KNoop ->
+  | KNoop, _ ->
     ()
 
-  | KPrim (prim, args, conts) ->
-    cgPrimTerm context prim args conts
+  | KPrim (prim, args, results, nexts), _ ->
+    cgPrimTerm context prim args results nexts
 
-  | KFix (fixes, next) ->
+  | KJump (cont, args), _ ->
+    let args = args |> List.map (cgArg context RVal)
+    cgJump context cont args
+
+  | KFix (fixes, next), _ ->
     // 関数とラベルで生成するコードが全く異なる。
     // まず関数の定義を生成する。
     for fix in fixes do
@@ -228,60 +257,50 @@ let cgTerm (context: CirGenContext) (node: KNode) =
       | KLabelFix _ ->
         ()
 
-      | KFnFix (KFn (funName, paramList, KResult resultTy, body)) ->
+      | KFnFix (KFn (fnName, paramList, resultTy, bodySlot, _)) ->
         let paramList = paramList |> List.map (cgParam context)
         let resultTy = resultTy |> kTyToCTy
 
         let bodyContext = cgContextDerive context
-        cgNode bodyContext !body
+        cgNodeOpt bodyContext !bodySlot
         let body = bodyContext.Stmts |> Seq.toList
 
-        let fnDecl = CFnDecl (addPrefix funName, paramList, resultTy, body)
+        let fnDecl = CFnDecl (addPrefix fnName, paramList, resultTy, body)
         context.Decls.Add(fnDecl)
 
     // 各ラベルのパラメータを宣言する。
     for fix in fixes do
       match fix with
-      | KLabelFix (KLabel (funName, paramList, _)) ->
-        for KParam (_mode, paramName, paramTy) in paramList do
-          let paramTy = paramTy |> kTyToCTy
-
-          // void 型の変数は生成しない。
-          match paramTy with
-          | CVoidTy ->
-            ()
-
-          | _ ->
-            let localStmt = CLocalStmt (paramName, paramTy, None)
-            context.Stmts.Add(localStmt)
+      | KLabelFix (KLabel (_, paramList, _, _)) ->
+        for param in paramList do
+          param |> cgLocal context
 
       | KFnFix _ ->
         ()
 
     // 次の処理を生成する。
-    next |> cgTerm context
+    next |> cgNode context
 
     // 各ラベルの実体を配置する。
     for fix in fixes do
       match fix with
-      | KLabelFix (KLabel (funName, _, body)) ->
-        let labelStmt = CLabelStmt funName
+      | KLabelFix (KLabel (fnName, _, bodySlot, _)) ->
+        let labelStmt = CLabelStmt fnName
         context.Stmts.Add(labelStmt)
-        cgNode context !body
+        cgNodeOpt context !bodySlot
 
       | KFnFix _ ->
         ()
 
-let cgNode context (node: KNode) =
-  match node with
-  | KNoop _ ->
+let cgNodeOpt context nodeOpt =
+  match nodeOpt with
+  | Some node ->
+    node |> cgNode context
+
+  | None ->
     ()
 
-  | KPrim _
-  | KFix _ ->
-    cgTerm context node
-
-let cirGen (node: KNode) =
+let cirGen (node: KNodeData) =
   let context = cgContextNew ()
   cgNode context node
   context.Decls |> Seq.toList

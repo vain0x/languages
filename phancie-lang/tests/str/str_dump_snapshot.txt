@@ -1,29 +1,18 @@
-fix fn print(in s1: string) -> () {
-  jump return(extern_print(in s1))
+fix fn print(in s1: string) -> int {
+  let mut result: int = extern_print(move s1))
+  return(move result)
 }
 
 fix fn string_clone(in s2: string) -> string {
-  jump return(extern_string_clone(in s2))
+  let mut result_2: string = extern_string_clone(move s2))
+  return(move result_2)
 }
 
-fix fn main() -> () {
-  fix label next(mut result: string) -> never {
-    fix label next_2(mut result_2: string) -> never {
-      fix label let_next(val s: string) -> never {
-        fix label next_3(mut result_3: ()) -> never {
-          jump return(prim_jump(move result_3))
-        }
-
-        jump next_3(print(in s))
-      }
-
-      jump let_next(prim_jump(move result_2))
-    }
-
-    jump next_2(string_clone(in result))
-  }
-
-  jump next("hello")
+fix fn main() -> int {
+  let mut result_3: string = extern_string_clone(in "hello"))
+  let val s: string = prim_id(move result_3))
+  let mut result_4: int = extern_print(in s))
+  return(move result_4)
 }
 
 __noop

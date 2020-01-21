@@ -211,7 +211,7 @@ let astBin (node: NodeData) =
   let first = terms |> List.tryItem 0
   let second = terms |> List.tryItem 1
 
-  ABinTerm (bin, first, second, node)
+  ABinTerm (bin, first, second, ref None, node)
 
 let astTerm (node: NodeData) =
   assert (node.Node |> nodeIsTerm)

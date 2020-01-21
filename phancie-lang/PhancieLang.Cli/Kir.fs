@@ -17,59 +17,81 @@ type KUsage =
     Uses: Map<KIdent, PassBy list>
   }
 
-type KTy =
-  | KNeverTy
-  | KUnitTy
-  | KBoolTy
-  | KIntTy
-  | KStrTy
-  | KFunTy
-    of KParam list * KResult
-
-  | KInferTy
-    of string * KTy option ref
+[<Struct>]
+type KParamTy =
+  | KParamTy
+    of Mode * KTyData * NodeData
 
 [<Struct>]
-type KVar =
-  | KVar
-    of string * KTy
+type KArgTy =
+  | KArgTy
+    of PassBy * KTyData * NodeData
+
+type KTy =
+  | KNeverTy
+
+  | KUnitTy
+
+  | KBoolTy
+
+  | KIntTy
+
+  | KStrTy
+
+  | KFnTy
+    of KParamTy list * KTyData
+
+type KTyData =
+  (struct (KTy * NodeData))
 
 [<Struct>]
 type KParam =
   | KParam
-    of Mode * paramName:string * paramTy:KTy
+    of Mode * KIdent * KTyData * NodeData
 
 [<Struct>]
 type KArg =
   | KArg
-    of PassBy * argNode:string * Mode option ref
+    of PassBy * KTermData * NodeData
 
 [<Struct>]
-type KResult =
-  | KResult
-    of resultTy:KTy
+type KLoop =
+  | KLoop
+    of breakLabel:KLabel
+      * continueLabel:KLabel
 
 [<Struct>]
 type KLabel =
   | KLabel
     of labelName:string
       * KParam list
-      * body:KNode ref
+      * body:KNodeData option ref
+      * NodeData
 
 [<Struct>]
 type KFn =
   | KFn
     of fnName:string
       * KParam list
-      * KResult
-      * body:KNode ref
+      * KTyData
+      * body:KNodeData option ref
+      * NodeData
 
 [<Struct>]
 type KExternFn =
   | KExternFn
     of externFnName:string
       * KParam list
-      * KResult
+      * KTyData
+      * NodeData
+
+[<Struct>]
+type KFnKind =
+  | KFnKind
+    of fn:KFn
+
+  | KExternFnKind
+    of externFn:KExternFn
 
 [<Struct>]
 type KFix =
@@ -89,14 +111,7 @@ type KCont =
 
 [<Struct>]
 type KPrim =
-  | KBoolLiteralPrim
-    of boolValue:bool
-
-  | KIntLiteralPrim
-    of intText:string
-
-  | KStrLiteralPrim
-    of strSegments:StrSegment list
+  | KIdPrim
 
   | KEqPrim
 
@@ -104,15 +119,30 @@ type KPrim =
 
   | KAssignPrim
 
-  | KJumpPrim
-
   | KIfPrim
 
   | KFnPrim
-    of fnName:string * fn:KFn option ref
+    of fn:KFn
 
   | KExternFnPrim
     of externFn:KExternFn
+
+[<Struct>]
+type KTerm =
+  | KBoolLiteral
+    of boolValue:bool
+
+  | KIntLiteral
+    of intText:string
+
+  | KStrLiteral
+    of strSegments:StrSegment list
+
+  | KLocalTerm
+    of KParam
+
+type KTermData =
+  (struct (KTerm * NodeData))
 
 type KNode =
   | KNoop
@@ -120,11 +150,19 @@ type KNode =
   | KPrim
     of prim:KPrim
       * args:KArg list
-      * conts:KCont list
+      * results:KParam list
+      * nexts:KNodeData list
+
+  | KJump
+    of cont:KCont
+      * args:KArg list
 
   | KFix
     of fixes:KFix list
-      * next:KNode
+      * next:KNodeData
+
+type KNodeData =
+  (struct (KNode * NodeData))
 
 // -----------------------------------------------
 // KUsage
@@ -181,59 +219,10 @@ let kPrimFromBin bin =
   | AAssignBin ->
     KAssignPrim
 
-let kPrimIsLiteral prim =
-  match prim with
-  | KBoolLiteralPrim _
-  | KIntLiteralPrim _
-  | KStrLiteralPrim _ ->
-    true
-
-  | _ ->
-    false
-
-let kPrimToSig prim =
-  match prim with
-  | KBoolLiteralPrim _ ->
-    [], KBoolTy
-
-  | KIntLiteralPrim _ ->
-    [], KIntTy
-
-  | KStrLiteralPrim _ ->
-    [], KStrTy
-
-  | KEqPrim ->
-    [ByIn; ByIn], KBoolTy
-
-  | KAddPrim ->
-    [ByMove; ByMove], KIntTy
-
-  | KAssignPrim ->
-    [ByRef; ByMove], KUnitTy
-
-  | KJumpPrim ->
-    [], KNeverTy
-
-  | KIfPrim ->
-    [ByMove], KNeverTy
-
-  | KFnPrim _
-  | KExternFnPrim _ ->
-    failwithf "unimpl: %A" prim
-
 let kPrimToString prim =
   match prim with
-  | KBoolLiteralPrim false ->
-    "false"
-
-  | KBoolLiteralPrim true ->
-    "true"
-
-  | KIntLiteralPrim intText ->
-    intText
-
-  | KStrLiteralPrim segments ->
-    [] |> strUnescape segments |> List.rev |> String.concat ""
+  | KIdPrim ->
+    "prim_id"
 
   | KEqPrim ->
     "prim_eq"
@@ -244,31 +233,11 @@ let kPrimToString prim =
   | KAssignPrim ->
     "prim_assign"
 
-  | KJumpPrim ->
-    "prim_jump"
-
   | KIfPrim ->
     "prim_if"
 
-  | KFnPrim (funName, _) ->
-    funName
+  | KFnPrim (KFn (fnName, _, _, _, _)) ->
+    fnName
 
-  | KExternFnPrim (KExternFn (funName, _, _)) ->
-    sprintf "extern_%s" funName
-
-// -----------------------------------------------
-// KTy
-// -----------------------------------------------
-
-let kTyDeref ty =
-  match ty with
-  | KInferTy (_, tyOpt) ->
-    match !tyOpt with
-    | Some ty ->
-      ty |> kTyDeref
-
-    | None ->
-      ty
-
-  | _ ->
-    ty
+  | KExternFnPrim (KExternFn (fnName, _, _, _)) ->
+    sprintf "extern_%s" fnName

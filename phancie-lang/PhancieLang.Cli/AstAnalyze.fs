@@ -79,14 +79,14 @@ let aaContextCheckTy (first: ATyInfo) (second: ATyInfo) (context: AstAnalyzeCont
       else
         for param, secondParam in List.zip paramList secondParamList do
           match param, secondParam with
-          | AParamTy (mode, paramTy),
-            AParamTy (secondMode, _)
+          | AParamTy (mode, paramTy, _),
+            AParamTy (secondMode, _, _)
             when modeIsDerivedFrom mode secondMode |> not ->
             let syn = paramTy |> aTyToSyn
             context |> aaContextAddError (AError ("モードが適合しません", syn))
 
-          | AParamTy (_, paramTy),
-            AParamTy (_, secondParamTy) ->
+          | AParamTy (_, paramTy, _),
+            AParamTy (_, secondParamTy, _) ->
             go paramTy secondParamTy
 
     | ABoolTy _, _
@@ -100,10 +100,9 @@ let aaContextCheckTy (first: ATyInfo) (second: ATyInfo) (context: AstAnalyzeCont
 /// 引数渡しのモード・型検査。
 let aaContextCheckPass argTy paramTy context =
   match argTy, paramTy with
-  | AArgTy (passBy, argTy),
-    AParamTy (mode, paramTy) ->
+  | AArgTy (passBy, argTy, syn),
+    AParamTy (mode, paramTy, _) ->
     if passByIsFor mode passBy |> not then
-      let syn = argTy |> aTyToSyn
       context |> aaContextAddError (APassByMismatchError (mode, passBy, syn))
 
     context |> aaContextCheckTy paramTy argTy
@@ -184,7 +183,7 @@ let aaParam context param argTyOpt =
       match tyOpt with
       | Some ty ->
         let ty = aaTy context ty
-        Some (AParamTy (mode, ty))
+        Some (AParamTy (mode, ty, syn))
 
       | None ->
         None
@@ -198,15 +197,15 @@ let aaParam context param argTyOpt =
       | Some paramTy, None ->
         paramTy
 
-      | None, Some (AArgTy (_, argTy)) ->
-        AParamTy (mode, argTy)
+      | None, Some (AArgTy (_, argTy, syn)) ->
+        AParamTy (mode, argTy, syn)
 
       | None, None ->
-        AParamTy (mode, aErrorTy syn)
+        AParamTy (mode, aErrorTy syn, syn)
 
     let ty =
       match paramTy with
-      | AParamTy (_, ty) ->
+      | AParamTy (_, ty, _) ->
         ty
 
     match nameOpt with
@@ -227,12 +226,16 @@ let aaParamList context paramList =
 
 let aaArg context arg =
   match arg with
-  | AArg (passBy, Some arg, _) ->
-    let argTy = aaTerm context arg
-    AArgTy (passBy, argTy)
+  | AArg (passBy, argOpt, syn) ->
+    let argTy =
+      match argOpt with
+      | Some arg ->
+        aaTerm context arg
 
-  | AArg (passBy, None, syn) ->
-    AArgTy (passBy, aErrorTy syn)
+      | None ->
+        aErrorTy syn
+
+    AArgTy (passBy, argTy, syn)
 
 let aaArgList context args =
   args |> List.map (aaArg context)
@@ -337,6 +340,7 @@ let aaTerm context term =
       {
         LoopOpt = Some term
         FnOpt = context |> aaContextToCurrentFn
+        Syn = syn
       }
     loopSlot := Some loop
     context.Loops |> vecPush loop
@@ -377,23 +381,26 @@ let aaTerm context term =
     | None ->
       aErrorTy syn
 
-  | ABinTerm (binOpt, firstOpt, secondOpt, syn) ->
+  | ABinTerm (binOpt, firstOpt, secondOpt, slot, syn) ->
     match binOpt, firstOpt, secondOpt with
     | Some bin, Some first, Some second ->
+      let toArgTy argTy paramTy =
+        match paramTy with
+        | AParamTy (mode, _, syn) ->
+          AArgTy (modeToPassBy mode, argTy, syn)
+
       let firstTy = aaTerm context first
       let secondTy = aaTerm context second
 
       let firstParam, secondParam, resultTy =
         aBinToSig bin firstTy secondTy syn
 
-      let check argTy paramTy =
-        match paramTy with
-        | AParamTy (mode, _) ->
-          let argTy = AArgTy (modeToPassBy mode, argTy)
-          context |> aaContextCheckPass argTy paramTy
+      let first = toArgTy firstTy firstParam
+      let second = toArgTy secondTy secondParam
+      slot := Some (first, second, resultTy)
 
-      check firstTy firstParam
-      check secondTy secondParam
+      context |> aaContextCheckPass first firstParam
+      context |> aaContextCheckPass second secondParam
       resultTy
 
     | _ ->
@@ -442,6 +449,7 @@ let aaTerm context term =
       {
         LoopOpt = Some term
         FnOpt = context |> aaContextToCurrentFn
+        Syn = syn
       }
     loopSlot := Some loop
     context.Loops |> vecPush loop
@@ -474,7 +482,7 @@ let aaStmt context stmt =
         aaArg context arg
 
       | None ->
-        AArgTy (ByMove, aErrorTy syn)
+        AArgTy (ByMove, aErrorTy syn, syn)
 
     let paramTy =
       match paramOpt with
@@ -482,7 +490,7 @@ let aaStmt context stmt =
         aaParam context param (Some argTy)
 
       | None ->
-        AParamTy (ValMode, aErrorTy syn)
+        AParamTy (ValMode, aErrorTy syn, syn)
 
     context |> aaContextCheckPass argTy paramTy
 

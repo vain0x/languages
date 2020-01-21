@@ -1,83 +1,40 @@
-fix fn assert_eq(in actual: int, in expected: int) -> () {
-  jump return(extern_assert_eq(
-    in actual
-    in expected
+fix fn assert_eq(in actual: int, in expected: int) -> int {
+  let mut result: int = extern_assert_eq(
+    move actual
+    move expected
   ))
+  return(move result)
 }
 
-fix fn inc(ref x: int) -> () {
-  fix label next(mut result: int) -> never {
-    fix label next_2(mut result_2: int) -> never {
-      fix label next_3(mut result_3: ()) -> never {
-        jump return(prim_jump(move result_3))
-      }
-
-      jump next_3(prim_assign(
-        ref x
-        move result_2
-      ))
-    }
-
-    jump next_2(prim_add(
-      move x
-      move result
-    ))
-  }
-
-  jump next(1)
+fix fn inc(ref x: int) -> int {
+  let mut result_2: int = prim_add(
+    move x
+    move 1
+  ))
+  let mut result_3: int = prim_assign(
+    move x
+    move result_2
+  ))
+  return(move result_3)
 }
 
-fix fn main() -> () {
-  fix label next_4(mut result_4: int) -> never {
-    fix label let_next(mut a: int) -> never {
-      fix label next_5(mut result_5: int) -> never {
-        fix label next_6(mut result_6: ()) -> never {
-          fix label next_7(mut result_7: ()) -> never {
-            fix label next_8(mut result_8: int) -> never {
-              fix label next_9(mut result_9: ()) -> never {
-                fix label next_10(mut result_10: ()) -> never {
-                  fix label next_11(mut result_11: int) -> never {
-                    fix label next_12(mut result_12: ()) -> never {
-                      jump return(prim_jump(move result_12))
-                    }
-
-                    jump next_12(assert_eq(
-                      in a
-                      in result_11
-                    ))
-                  }
-
-                  jump next_11(3)
-                }
-
-                jump next_10(inc(ref a))
-              }
-
-              jump next_9(assert_eq(
-                in a
-                in result_8
-              ))
-            }
-
-            jump next_8(2)
-          }
-
-          jump next_7(inc(ref a))
-        }
-
-        jump next_6(assert_eq(
-          in a
-          in result_5
-        ))
-      }
-
-      jump next_5(1)
-    }
-
-    jump let_next(prim_jump(in result_4))
-  }
-
-  jump next_4(1)
+fix fn main() -> int {
+  let mut a: int = prim_id(in 1))
+  let mut result_4: int = extern_assert_eq(
+    in a
+    in 1
+  ))
+  let mut result_5: int = inc(ref a))
+  let mut result_6: int = extern_assert_eq(
+    in a
+    in 2
+  ))
+  let mut result_7: int = inc(ref a))
+  let mut result_8: int = extern_assert_eq(
+    in a
+    in 3
+  ))
+  return(move result_8)
 }
 
 __noop

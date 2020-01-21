@@ -5,42 +5,62 @@ open PhancieLang.Kir
 
 let kdCont cont acc =
   match cont with
-  | KLabelCont (KLabel (labelName, _, _)) ->
+  | KLabelCont (KLabel (labelName, _, _, _)) ->
     acc |> cons labelName
 
   | KReturnCont _ ->
     acc |> cons "return"
 
-let kdTy ty indent acc =
-  match ty |> kTyDeref with
-  | KInferTy (name, _) ->
-    acc |> cons "'" |> cons name
+let kdParamTy paramTy indent acc =
+  match paramTy with
+  | KParamTy (mode, ty, _) ->
+    acc
+    |> cons (modeToString mode)
+    |> cons " "
+    |> kdTy ty indent
 
-  | KNeverTy ->
+let kdParamTys paramTys indent acc =
+  let acc = acc |> cons "("
+
+  let _, acc =
+    paramTys
+    |> List.fold (fun (sep, acc) paramTy ->
+      let acc =
+        acc
+        |> cons sep
+        |> kdParamTy paramTy indent
+      ", ", acc
+    ) ("", acc)
+
+  acc
+
+let kdTy ty indent acc =
+  match ty with
+  | KNeverTy, _ ->
     acc |> cons "never"
 
-  | KUnitTy ->
+  | KUnitTy, _ ->
     acc |> cons "()"
 
-  | KBoolTy ->
+  | KBoolTy, _ ->
     acc |> cons "bool"
 
-  | KIntTy ->
+  | KIntTy, _ ->
     acc |> cons "int"
 
-  | KStrTy ->
+  | KStrTy, _ ->
     acc |> cons "string"
 
-  | KFunTy (paramList, result) ->
+  | KFnTy (paramTys, resultTy), _ ->
     acc
-    |> cons "Fn"
-    |> kdParamList paramList indent
+    |> cons "fn"
+    |> kdParamTys paramTys indent
     |> cons " -> "
-    |> kdResult result indent
+    |> kdTy resultTy indent
 
 let kdParam param indent acc =
   match param with
-  | KParam (mode, name, ty) ->
+  | KParam (mode, name, ty, _) ->
     acc
     |> cons (modeToString mode)
     |> cons " "
@@ -63,13 +83,13 @@ let kdParamList paramList indent acc =
 
   acc |> cons ")"
 
-let kdArg arg _indent acc =
+let kdArg arg indent acc =
   match arg with
-  | KArg (passBy, name, _) ->
+  | KArg (passBy, term, _) ->
     acc
     |> cons (passByToString passBy)
     |> cons " "
-    |> cons name
+    |> kdTerm term indent
 
 let kdArgList args indent acc =
   let acc = acc |> cons "("
@@ -95,19 +115,16 @@ let kdArgList args indent acc =
 
   acc |> cons ")"
 
-let kdResult (KResult resultTy) indent acc =
-  acc |> kdTy resultTy indent
-
 let kdFix fix indent acc =
   let deepIndent = indent + "  "
 
-  let kind, name, paramList, result, body =
+  let kind, name, paramList, resultTy, bodyOpt =
     match fix with
-    | KLabelFix (KLabel (name, paramList, body)) ->
-      "label", name, paramList, KResult KNeverTy, !body
+    | KLabelFix (KLabel (name, paramList, bodySlot, syn)) ->
+      "label", name, paramList, struct (KNeverTy, syn), !bodySlot
 
-    | KFnFix (KFn (name, paramList, result, body)) ->
-      "fn", name, paramList, result, !body
+    | KFnFix (KFn (name, paramList, resultTy, bodySlot, _)) ->
+      "fn", name, paramList, resultTy, !bodySlot
 
   acc
   |> cons kind
@@ -115,70 +132,101 @@ let kdFix fix indent acc =
   |> cons name
   |> kdParamList paramList indent
   |> cons " -> "
-  |> kdResult result indent
+  |> kdTy resultTy indent
   |> cons " {"
   |> cons deepIndent
-  |> kdNode body deepIndent
+  |> kdNodeOpt bodyOpt deepIndent
   |> cons indent
   |> cons "}"
 
-let kdNode node indent acc =
+let kdTerm term _indent acc =
+  match term with
+  | KBoolLiteral false, _ ->
+    acc |> cons "false"
+
+  | KBoolLiteral true, _ ->
+    acc |> cons "true"
+
+  | KIntLiteral intText, _ ->
+    acc |> cons intText
+
+  | KStrLiteral segments, _ ->
+    acc |> strUnescape segments
+
+  | KLocalTerm (KParam (_, name, _, _)), _ ->
+    acc |> cons name
+
+let kdNode (node: KNodeData) indent acc =
   match node with
-  | KNoop ->
+  | KNoop, _ ->
     acc |> cons "__noop"
 
-  | KPrim (prim, args, [next]) ->
-    let acc = acc |> cons "jump " |> kdCont next |> cons "("
+  | KPrim (prim, args, [result], [next]), _ ->
+    acc
+    |> cons "let "
+    |> kdParam result indent
+    |> cons " = "
+    |> cons (kPrimToString prim)
+    |> kdArgList args indent
+    |> cons ")"
+    |> cons indent
+    |> kdNode next indent
 
-    let acc = acc |> cons (kPrimToString prim)
-
-    let acc =
-      if prim |> kPrimIsLiteral then
-        assert (args |> List.isEmpty)
-        acc
-      else
-        acc |> kdArgList args indent
-
-    acc |> cons ")"
-
-  | KPrim (KIfPrim, [KArg (_, cond, _)], [body; alt]) ->
+  | KPrim (KIfPrim, [KArg (_, cond, _)], [], [body; alt]), _ ->
     let deepIndent = indent + "  "
 
     acc
     |> cons "if "
-    |> cons cond
+    |> kdTerm cond indent
     |> cons " {"
     |> cons deepIndent
-    |> cons "jump "
-    |> kdCont body
-    |> cons "()"
+    |> kdNode body indent
     |> cons indent
     |> cons "} else {"
     |> cons deepIndent
-    |> cons "jump "
-    |> kdCont alt
-    |> cons "()"
+    |> kdNode alt indent
     |> cons indent
     |> cons "}"
 
-  | KPrim (prim, args, conts) ->
+  | KPrim (prim, args, results, nexts), _ ->
+    let deepIndent = indent + "  "
+
     let acc =
       acc
       |> cons "branch "
       |> cons (kPrimToString prim)
       |> kdArgList args indent
-      |> cons ") to ["
+      |> cons indent
+      |> cons "into ["
 
     let acc =
-      conts |> List.fold (fun acc cont ->
-        acc |> cons indent |> kdCont cont
+      results |> List.fold (fun acc result ->
+        acc
+        |> cons indent
+        |> kdParam result indent
+      ) acc
+
+    let acc =
+      acc |> cons "] with "
+
+    let acc =
+      nexts |> List.fold (fun acc next ->
+        acc
+        |> cons "{"
+        |> cons deepIndent
+        |> kdNode next indent
+        |> cons indent
+        |> cons "}"
       ) acc
 
     acc
-    |> cons indent
-    |> cons "]"
 
-  | KFix (fixes, next) ->
+  | KJump (cont, args), _ ->
+    acc
+    |> kdCont cont
+    |> kdArgList args indent
+
+  | KFix (fixes, next), _ ->
     let acc = acc |> cons "fix "
 
     let _, acc =
@@ -196,7 +244,15 @@ let kdNode node indent acc =
     |> cons indent
     |> kdNode next indent
 
-let kirDump (node: KNode) =
+let kdNodeOpt nodeOpt indent acc =
+  match nodeOpt with
+  | Some node ->
+    acc |> kdNode node indent
+
+  | None ->
+    acc |> cons "???"
+
+let kirDump (node: KNodeData) =
   []
   |> kdNode node eol
   |> List.rev

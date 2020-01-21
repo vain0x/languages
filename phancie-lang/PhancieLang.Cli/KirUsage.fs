@@ -92,30 +92,55 @@ let kuContextMakeFixPoint (context: KirUsageContext) =
 // Analyze
 // -----------------------------------------------
 
+let kuParamDef context (KParam (mode, name, _, _)) =
+  context |> kuContextAddDef name mode
+
+let kuParamUse context passBy (KParam (_, name, ty, _)) =
+  context |> kuContextAddUse name passBy
+
 let kuArg context (KArg (passBy, arg, _)) =
-  context |> kuContextAddUse arg passBy
+  arg |> kuTerm context passBy
 
 let kuCont context cont =
   match cont with
-  | KLabelCont (KLabel (fnName, _, _)) ->
+  | KLabelCont (KLabel (fnName, _, _, _)) ->
     context |> kuContextAddUse fnName ByMove // FIXME: by move?
 
   | KReturnCont _ ->
     ()
 
-let kuNode context node =
-  match node with
-  | KNoop ->
+let kuTerm context passBy term =
+  match term with
+  | KBoolLiteral _, _
+  | KIntLiteral _, _
+  | KStrLiteral _, _ ->
     ()
 
-  | KPrim (_, args, conts) ->
+  | KLocalTerm param, _ ->
+    param |> kuParamUse context passBy
+
+let kuNode context (node: KNodeData) =
+  match node with
+  | KNoop, _ ->
+    ()
+
+  | KPrim (_, args, results, nexts), _ ->
     for arg in args do
       arg |> kuArg context
 
-    for cont in conts do
-      cont |> kuCont context
+    for param in results do
+      param |> kuParamDef context
 
-  | KFix (fixes, next) ->
+    for next in nexts do
+      next |> kuNode context
+
+  | KJump (cont, args), _ ->
+    for arg in args do
+      arg |> kuArg context
+
+    cont |> kuCont context
+
+  | KFix (fixes, next), _ ->
     let oldUsage = context.Current
 
     for fix in fixes do
@@ -123,13 +148,13 @@ let kuNode context node =
 
       let fnName, paramList =
         match fix with
-        | KLabelFix (KLabel (fnName, paramList, _)) ->
+        | KLabelFix (KLabel (fnName, paramList, _, _)) ->
           fnName, paramList
 
-        | KFnFix (KFn (fnName, paramList, _, _)) ->
+        | KFnFix (KFn (fnName, paramList, _, _, _)) ->
           fnName, paramList
 
-      for KParam (mode, paramName, _) in paramList do
+      for KParam (mode, paramName, _, _) in paramList do
         context |> kuContextAddDef paramName mode
 
       context |> kuContextSave fnName
@@ -137,7 +162,7 @@ let kuNode context node =
     context.Current <- oldUsage
     next |> kuNode context
 
-let kirUsage (node: KNode) =
+let kirUsage (node: KNodeData) =
   let context = kuContextNew ()
 
   node |> kuNode context

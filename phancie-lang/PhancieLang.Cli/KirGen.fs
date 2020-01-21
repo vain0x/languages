@@ -5,26 +5,139 @@ open PhancieLang.Helpers
 open PhancieLang.Kir
 open PhancieLang.Syntax
 
-[<Struct>]
-type KirGenLoop =
-  {
-    BreakLabel: KLabel
-    ContinueLabel: KLabel
-  }
-
 type KirGenContext =
   {
     FreshName: string -> string
-    mutable LoopStack: KirGenLoop list
+    LoopMap: HashMap<ALoop, KLoop>
+    FnMap: HashMap<AFn, KFnKind>
   }
 
 let kgContextNew (): KirGenContext =
   {
     FreshName = freshNameFun ()
-    LoopStack = []
+    LoopMap = HashMap()
+    FnMap = HashMap()
   }
 
-let noop = "__noop"
+let noop syn: KTermData =
+  KIntLiteral "/* noop */ 0", syn
+
+let kUnit syn: KTermData =
+  KIntLiteral "/* unit */ 0", syn
+
+let kgError syn: KTermData =
+  KIntLiteral "/* error */", syn
+
+let kgContextTouchLoop aLoop (context: KirGenContext) =
+  match context.LoopMap.TryGetValue(aLoop) with
+  | true, kLoop ->
+    kLoop
+
+  | false, _ ->
+    let syn = aLoop.Syn
+
+    let breakLabel =
+      KLabel ("do_break", [], ref None, syn)
+
+    let continueLabel =
+      KLabel ("do_continue", [], ref None, syn)
+
+    let kLoop = KLoop (breakLabel, continueLabel)
+    context.LoopMap.Add(aLoop, kLoop)
+    kLoop
+
+let kgContextTouchFn aFn (context: KirGenContext) =
+  match context.FnMap.TryGetValue(aFn) with
+  | true, kFnKind ->
+    kFnKind
+
+  | false, _ ->
+    let syn = aFn.Node
+
+    let kFnKind =
+      match aFn.Kind with
+      | AFnKind _ ->
+        let paramList =
+          aFn.Params |> List.map (kgParam context)
+
+        let result =
+          aFn.ResultTy |> kgTyInfo
+
+        KFn (aFn.Name, paramList, result, ref None, syn) |> KFnKind
+
+      | AExternFnKind ->
+        let paramList =
+          aFn.Params |> List.map (kgParam context)
+
+        let result =
+          aFn.ResultTy |> kgTyInfo
+
+        KExternFn (aFn.Name, paramList, result, syn) |> KExternFnKind
+
+    context.FnMap.Add(aFn, kFnKind)
+    kFnKind
+
+let kgParamTy paramTy: KParamTy =
+  match paramTy with
+  | AParamTy (mode, ty, syn) ->
+    let ty = kgTyInfo ty
+    KParamTy (mode, ty, syn)
+
+let kgArgTy argTy: KArgTy =
+  match argTy with
+  | AArgTy (passBy, ty, syn) ->
+    let ty = kgTyInfo ty
+    KArgTy (passBy, ty, syn)
+
+let kgTyInfo ty: KTyData =
+  match ty with
+  | ANameTy (_, symbolSlot, syn) ->
+    match !symbolSlot with
+    | Some (ATySymbol (_, ty)) ->
+      kgTyInfo ty
+
+    | _ ->
+      KNeverTy, syn
+
+  | ABoolTy syn ->
+    KBoolTy, syn
+
+  | AIntTy syn ->
+    KIntTy, syn
+
+  | AStringTy syn ->
+    KStrTy, syn
+
+  | AFnTy (paramTys, resultTy, syn) ->
+    let paramTys =
+      paramTys |> List.map kgParamTy
+
+    let resultTy =
+      resultTy |> kgTyInfo
+
+    KFnTy (paramTys, resultTy), syn
+
+let kgParam _context param =
+  match param with
+  | AParam (mode, nameOpt, _, syn) ->
+    let paramOpt =
+      match nameOpt with
+      | Some (AName (_, symbolSlot, _)) ->
+        match !symbolSlot with
+        | Some (ALocalSymbol (name, mode, ty)) ->
+          let ty =
+            kgTyInfo ty
+          KParam (mode, name, ty, syn) |> Some
+
+        | _ ->
+          None
+
+      | None ->
+        None
+
+    paramOpt |> Option.defaultWith (fun () ->
+      KParam (mode, "__param", (KNeverTy, syn), syn)
+    )
 
 let kgArgList context exit args =
   let rec go exit args =
@@ -32,370 +145,451 @@ let kgArgList context exit args =
     | [] ->
       exit []
 
-    | AArg (passBy, Some arg, _) :: args ->
-      arg |> kgTerm context (fun arg ->
+    | AArg (passBy, argOpt, syn) :: args ->
+      let exit arg =
         args |> go (fun args ->
-          KArg (passBy, arg, ref None) :: args |> exit
-        ))
+          KArg (passBy, arg, syn) :: args |> exit
+        )
 
-    | _ ->
-      failwithf "ERROR: 引数がありません %A" args
+      match argOpt with
+      | Some arg ->
+        arg |> kgTerm context exit
+
+      | None ->
+        exit (noop syn)
 
   go exit args
 
-let kgParam context param =
-  match param with
-  | AParam (mode, Some (AName (Some name, _, _)), tyOpt, _) ->
-    let name =
-      context.FreshName name
+let kLabelSetBody body label =
+  match label with
+  | KLabel (_, _, bodySlot, _) ->
+    bodySlot := Some body
 
-    let ty =
-      tyOpt
-      |> Option.map (kgTy context)
-      |> Option.defaultWith (fun () -> KInferTy (name, ref None))
-
-    KParam (mode, name, ty)
-
-  | _ ->
-    failwithf "ERROR: パラメータ名がありません %A" param
-
-let kgResult context result =
-  match result with
-  | AResult (Some ty, _) ->
-    ty |> kgTy context
-
-  | AResult (None, _) ->
-    failwithf "ERROR: 結果型がありません %A" result
-
-let kgTy _context ty =
-  match ty with
-  | ATy (Some (AName (Some "int", _, _)), _) ->
-    KIntTy
-
-  | ATy (Some (AName (Some "string", _, _)), _) ->
-    KStrTy
-
-  | ATy (Some (AName (Some name, _, _)), _) ->
-    // FIXME: 後で名前解決する
-    KInferTy (name, ref None)
-
-  | _ ->
-    failwithf "ERROR: 型名がありません %A" ty
-
-/// bodyFun: ループの残りの部分を生成する関数を受け取って、ループの本体を返す関数
-let kgLoop context exit bodyFun =
+/// bodyFn: ループの残りの部分を生成する関数を受け取って、ループの本体を返す関数
+let kgLoop context exit aLoop syn bodyFn: KNodeData =
   // loop { body }; k
-  // ==> fix break() { k }
-  //     fix continue() { let _ = body; jump continue() }
+  // ==> fix label break() { k }
+  //     and label continue() { let _ = body; jump continue() }
   //     jump continue()
 
-  let breakBody = ref KNoop
-  let continueBody = ref KNoop
+  let kLoop = context |> kgContextTouchLoop aLoop
 
-  let breakLabel =
-    KLabel (
-      context.FreshName "do_break",
-      [],
-      breakBody
+  match kLoop with
+  | KLoop (breakLabel, continueLabel) ->
+    let continueJump: KNodeData =
+      KJump (KLabelCont continueLabel, []), syn
+
+    breakLabel |> kLabelSetBody (
+      exit (noop syn)
     )
 
-  let continueLabel =
-    KLabel (
-      context.FreshName "do_continue",
-      [],
-      continueBody
+    continueLabel |> kLabelSetBody (
+      bodyFn breakLabel continueLabel (fun _ -> continueJump)
     )
 
-  let continueNode = KPrim (KJumpPrim, [], [KLabelCont continueLabel])
-
-  let loopStack = context.LoopStack
-  context.LoopStack <-
-    {
-      BreakLabel = breakLabel
-      ContinueLabel = continueLabel
-    } :: loopStack
-
-  breakBody := exit noop
-  continueBody := bodyFun breakLabel continueLabel (fun _ -> continueNode)
-
-  context.LoopStack <- loopStack
-
-  KFix (
-    [
-      KLabelFix continueLabel
-      KLabelFix breakLabel
-    ],
-    continueNode
-  )
+    KFix (
+      [
+        KLabelFix continueLabel
+        KLabelFix breakLabel
+      ],
+      continueJump
+    ), syn
 
 /// 1つの結果と1つの継続を持つプリミティブノードを作る。
-let kPrim1 context prim args exit =
-  let labelName = context.FreshName "next"
+let kPrim1 context prim args resultTy syn (exit: KTermData -> KNodeData): KNodeData =
+  // FIXME: モード？
   let resultName = context.FreshName "result"
+  let result = KParam (MutMode, resultName, resultTy, syn)
 
-  let body = exit resultName
+  let body =
+    let result: KTermData = KLocalTerm result, syn
+    exit result
 
-  let label =
-    KLabel (
-      labelName,
-      // FIXME: モード
-      [KParam (MutMode, resultName, KInferTy (resultName, ref None))],
-      ref body
-    )
+  KPrim (
+    prim,
+    args,
+    [result],
+    [body]),
+  syn
 
-  KFix (
-    [KLabelFix label],
-    KPrim (prim, args, [KLabelCont label])
-  )
-
-let kgTerm (context: KirGenContext) exit term =
+let kgTerm (context: KirGenContext) (exit: KTermData -> KNodeData) (term: ATerm): KNodeData =
   match term with
-  | ABoolLiteral (value, _) ->
-    kPrim1 context (KBoolLiteralPrim value) [] exit
+  | ABoolLiteral (value, syn) ->
+    exit (KBoolLiteral value, syn)
 
-  | AIntLiteral (Some intText, _) ->
-    kPrim1 context (KIntLiteralPrim intText) [] exit
+  | AIntLiteral (textOpt, syn) ->
+    let text = textOpt |> Option.defaultValue "0"
+    exit (KIntLiteral text, syn)
 
-  | AStrLiteral (segments, _) ->
-    kPrim1 context (KStrLiteralPrim segments) [] exit
+  | AStrLiteral (segments, syn) ->
+    exit (KStrLiteral segments, syn)
 
-  | ANameTerm (AName (Some name, _, _)) ->
-    exit name
+  | ANameTerm (AName (_, symbolSlot, syn)) ->
+    let name, mode, ty =
+      match !symbolSlot with
+      | Some (ALocalSymbol (name, mode, ty)) ->
+        let ty = kgTyInfo ty
+        name, mode, ty
 
-  | AGroupTerm (Some term, _) ->
-    kgTerm context exit term
+      | _ ->
+        "__local", MutMode, (KNeverTy, syn)
 
-  | ABlockTerm (stmts, _) ->
-    kgStmts context exit stmts
+    exit (KLocalTerm (KParam (mode, name, ty, syn)), syn)
 
-  | ABreakTerm _ ->
-    match context.LoopStack with
-    | [] ->
-      failwith "break out of loop"
+  | AGroupTerm (bodyOpt, syn) ->
+    match bodyOpt with
+    | Some body ->
+      kgTerm context exit body
 
-    | { BreakLabel = breakLabel } :: _ ->
-      KPrim (KJumpPrim, [], [KLabelCont breakLabel])
+    | None ->
+      exit (kgError syn)
 
-  | AContinueTerm _ ->
-    match context.LoopStack with
-    | [] ->
-      failwith "continue out of loop"
+  | ABlockTerm (stmts, syn) ->
+    kgStmts context exit stmts syn
 
-    | { ContinueLabel = continueLabel } :: _ ->
-      KPrim (KJumpPrim, [], [KLabelCont continueLabel])
+  | ABreakTerm (loopSlot, syn) ->
+    match !loopSlot with
+    | Some aLoop ->
+      match context |> kgContextTouchLoop aLoop with
+      | KLoop (breakLabel, _) ->
+        KJump (KLabelCont breakLabel, []), syn
 
-  | ALoopTerm (Some body, _, _) ->
-    kgLoop context exit (fun _ _ k -> body |> kgTerm context k)
+    | None ->
+      exit (kgError syn)
 
-  | ACallTerm (Some (ANameTerm (AName (Some funName, _, _))), args, _) ->
-    args |> kgArgList context (fun args ->
-      let prim = KFnPrim (funName, ref None)
-      kPrim1 context prim args exit
-    )
+  | AContinueTerm (loopSlot, syn) ->
+    match !loopSlot with
+    | Some aLoop ->
+      match context |> kgContextTouchLoop aLoop with
+      | KLoop (breakLabel, _) ->
+        KJump (KLabelCont breakLabel, []), syn
 
-  | ABinTerm (Some bin, Some first, Some second, _) ->
-    let prim = kPrimFromBin bin
-    let passByList, _ = kPrimToSig prim
+    | None ->
+      exit (kgError syn)
 
-    first |> kgTerm context (fun first ->
-      second |> kgTerm context (fun second ->
-        let args =
-          List.zip passByList [first; second]
-          |> List.map (fun (passBy, arg) -> KArg (passBy, arg, ref (Some (passByToMode passBy))))
+  | ALoopTerm (bodyOpt, loopSlot, syn) ->
+    match bodyOpt, !loopSlot with
+    | Some body, Some aLoop ->
+      kgLoop context exit aLoop syn (fun _ _ k -> body |> kgTerm context k)
 
-        kPrim1 context prim args exit
-      ))
+    | _ ->
+      exit (kgError syn)
 
-  | AIfTerm (Some cond, body, alt, _, _) ->
+  | ACallTerm (nameOpt, args, syn) ->
+    match nameOpt with
+    | Some (ANameTerm (AName (_, symbolSlot, _))) ->
+      match !symbolSlot with
+      | Some (AFnSymbol fn) ->
+        let fnKind = context |> kgContextTouchFn fn
+
+        let kFnToResultTy fn =
+          match fn with
+          | KFn (_, _, resultTy, _, _) ->
+            resultTy
+
+        let kExternFnToResultTy externFn =
+          match externFn with
+          | KExternFn (_, _, resultTy, _) ->
+            resultTy
+
+        args |> kgArgList context (fun args ->
+          match fnKind with
+          | KFnKind fn ->
+            let prim = KFnPrim fn
+            let resultTy = fn |> kFnToResultTy
+            kPrim1 context prim args resultTy syn exit
+
+          | KExternFnKind externFn ->
+            let prim = KExternFnPrim externFn
+            let resultTy = externFn |> kExternFnToResultTy
+            kPrim1 context prim args resultTy syn exit
+        )
+
+      | _ ->
+        exit (kgError syn)
+
+    | _ ->
+      exit (kgError syn)
+
+  | ABinTerm (binOpt, firstOpt, secondOpt, slot, syn) ->
+    match binOpt, firstOpt, secondOpt, !slot with
+    | Some bin, Some first, Some second, Some (firstTy, secondTy, resultTy) ->
+      let prim = kPrimFromBin bin
+
+      first |> kgTerm context (fun first ->
+        second |> kgTerm context (fun second ->
+          let toArg arg argTy =
+            match kgArgTy argTy with
+            | KArgTy (passBy, _, _) ->
+              KArg (passBy, arg, syn)
+
+          let first = toArg first firstTy
+          let second = toArg second secondTy
+          let resultTy = kgTyInfo resultTy
+
+          kPrim1 context prim [first; second] resultTy syn exit
+        ))
+
+    | _ ->
+      exit (kgError syn)
+
+  | AIfTerm (condOpt, bodyOpt, altOpt, tySlot, syn) ->
     // body または alt の結果を受け取って後続の計算を行う関数 if_next をおく。
     // 条件式の結果に基づいて body または alt のラベルにジャンプし、
-    // その結果をもって if_next にジャンプする。
+    // その結果を継続に渡す。
 
-    let labelName = context.FreshName "if_next"
-    let resultName = context.FreshName "res"
+    match condOpt, !tySlot with
+    | Some cond, Some resultTy ->
+      // FIXME: モード
+      let passBy = ByMove
+      let mode = MutMode
 
-    let labelBody = ref KNoop
+      let resultTy = kgTyInfo resultTy
 
-    let nextLabel =
-      KLabel (
-        labelName,
-        // FIXME: モード
-        [KParam (MutMode, resultName, KInferTy (resultName, ref None))],
-        labelBody
-      )
+      let labelName = context.FreshName "if_next"
 
-    // FIXME: モード
-    let next result = KPrim (KJumpPrim, [KArg (ByMove, result, ref None)], [KLabelCont nextLabel])
+      let resultName = context.FreshName "result"
+      let resultTerm: KTermData =
+        KLocalTerm (KParam (mode, resultName, resultTy, syn)), syn
 
-    let bodyLabel =
-      KLabel (
-        context.FreshName "if_body",
-        [],
-        body
-        |> Option.map (kgTerm context next)
-        |> Option.defaultWith (fun () -> next "0") // FIXME: unit
-        |> ref
-      )
+      let nextLabel =
+        KLabel (
+          labelName,
+          [KParam (mode, resultName, resultTy, syn)],
+          ref None,
+          syn
+        )
 
-    let altLabel =
-      KLabel (
-        context.FreshName "if_alt",
-        [],
-        alt
-        |> Option.map (kgTerm context next)
-        |> Option.defaultWith (fun () -> next "0") // FIXME: unit
-        |> ref
-      )
+      // FIXME: モード
+      let next result: KNodeData =
+        KJump (
+          KLabelCont nextLabel,
+          [KArg (ByMove, result, syn)]
+        ), syn
 
-    cond |> kgTerm context (fun cond ->
-      labelBody := exit resultName
+      let bodyLabel =
+        KLabel (
+          context.FreshName "if_body",
+          [],
+          bodyOpt
+          |> Option.map (kgTerm context next)
+          |> Option.defaultWith (fun () -> next (kUnit syn))
+          |> Some
+          |> ref,
+          syn
+        )
 
-      KFix (
-        [
-          KLabelFix bodyLabel
-          KLabelFix altLabel
-          KLabelFix nextLabel
-        ],
-        KPrim (
-          KIfPrim,
-          [KArg (ByMove, cond, ref None)],
+      let altLabel =
+        KLabel (
+          context.FreshName "if_alt",
+          [],
+          altOpt
+          |> Option.map (kgTerm context next)
+          |> Option.defaultWith (fun () -> next (kUnit syn))
+          |> Some
+          |> ref,
+          syn
+        )
+
+      cond |> kgTerm context (fun cond ->
+        nextLabel |> kLabelSetBody (exit resultTerm)
+
+        KFix (
           [
-            KLabelCont bodyLabel
-            KLabelCont altLabel
-          ])))
+            KLabelFix bodyLabel
+            KLabelFix altLabel
+            KLabelFix nextLabel
+          ],
+          (KPrim (
+            KIfPrim,
+            [KArg (passBy, cond, syn)],
+            [],
+            [
+              KJump (KLabelCont bodyLabel, []), syn
+              KJump (KLabelCont altLabel, []), syn
+            ]), syn
+          )), syn
+      )
 
-  | AWhileTerm (Some cond, Some body, _, _) ->
+    | _ ->
+      exit (kgError syn)
+
+  | AWhileTerm (condOpt, bodyOpt, loopSlot, syn) ->
     // cond while { body }
     // ==> loop { cond then { body } else { break } }
 
-    kgLoop context exit (fun breakLabel _ bodyExit ->
-      cond |> kgTerm context (fun cond ->
-        let bodyLabel =
-          KLabel (
-            context.FreshName "body",
-            [],
-            body |> kgTerm context bodyExit |> ref
-          )
+    match condOpt, bodyOpt, !loopSlot with
+    | Some cond, Some body, Some loop ->
+      // FIXME: モード
+      let passBy = ByMove
 
-        KFix (
-          [KLabelFix bodyLabel],
-          KPrim (
-            KIfPrim,
-            [KArg (ByMove, cond, ref None)],
-            [
-              KLabelCont bodyLabel
-              KLabelCont breakLabel
-            ]))))
+      kgLoop context exit loop syn (fun breakLabel _ bodyExit ->
+        cond |> kgTerm context (fun cond ->
+          let bodyLabel =
+            KLabel (
+              context.FreshName "body",
+              [],
+              body
+              |> kgTerm context bodyExit
+              |> Some
+              |> ref,
+              syn
+            )
 
-  | _ ->
-    failwithf "unimpl %A" term
+          KFix (
+            [KLabelFix bodyLabel],
+            (KPrim (
+              KIfPrim,
+              [KArg (passBy, cond, syn)],
+              [],
+              [
+                KJump (KLabelCont bodyLabel, []), syn
+                KJump (KLabelCont breakLabel, []), syn
+              ]), syn)
+          ), syn
+        ))
+
+    | _ ->
+      exit (kgError syn)
 
 let kgStmt context exit stmt =
   match stmt with
-  | ATermStmt (Some term, _) ->
-    kgTerm context exit term
+  | ATermStmt (bodyOpt, syn) ->
+    match bodyOpt with
+    | Some body ->
+      kgTerm context exit body
 
-  | ALetStmt (Some param, Some arg, _) ->
+    | None ->
+      exit (kgError syn)
+
+  | ALetStmt (paramOpt, argOpt, syn) ->
     // let x = body; y
     // ==> fix next(x) { y }; jump next(body)
 
-    let labelName = context.FreshName "let_next"
+    match paramOpt, argOpt with
+    | Some param, Some arg ->
+      let param = kgParam context param
 
-    let param = kgParam context param
+      let result: KTermData =
+        match param with
+        | KParam (mode, name, ty, syn) ->
+          KLocalTerm (KParam (mode, name, ty, syn)), syn
 
-    [arg] |> kgArgList context (fun args ->
-      let labelBody = exit noop
-      let nextLabel = KLabel (labelName, [param], ref labelBody)
+      [arg] |> kgArgList context (fun args ->
+        KPrim (
+          KIdPrim,
+          args,
+          [param],
+          [exit result]
+        ), syn
+      )
 
-      KFix (
-        [KLabelFix nextLabel],
-        KPrim (KJumpPrim, args, [KLabelCont nextLabel])
-    ))
+    | _ ->
+      exit (kgError syn)
 
-  | AExternFnStmt (Some (AName (Some funName, _, _)), paramList, resultOpt, _, _) ->
+  | AExternFnStmt (_, _, _, fnSlot, syn) ->
     // 外部関数を呼び出すラッパー関数を定義する。
 
     // extern fn f(params)
     // ==> fix_fn f(params) { let res = extern_fn"f"(params); jump return(res) }
 
-    let paramList = paramList |> List.map (kgParam context)
+    match !fnSlot with
+    | Some fn ->
+      let paramList = fn.Params |> List.map (kgParam context)
+      let resultTy = fn.ResultTy |> kgTyInfo
 
-    let fnResult =
-      resultOpt
-      |> Option.map (kgResult context)
-      |> Option.defaultValue KUnitTy
-      |> KResult
+      let resultName = context.FreshName "result"
+      let mode = MutMode // FIXME: mode
+      let passBy = ByMove
+      let result = KParam (mode, resultName, resultTy, syn)
 
-    let primArgs =
-      paramList |> List.map (fun (KParam (mode, name, _)) ->
-        KArg (modeToPassBy mode, name, ref (Some mode))
-      )
+      let args =
+        fn.Params |> List.map (fun param ->
+          let param = param |> kgParam context
+          KArg (passBy, (KLocalTerm param, syn), syn)
+        )
 
-    let externFn = KExternFn (funName, paramList, fnResult)
+      let externFn = KExternFn (fn.Name, paramList, resultTy, syn)
+      let bodySlot = ref None
+      let fn = KFn (fn.Name, paramList, resultTy, bodySlot, syn)
 
-    let fnBody = ref KNoop
-    let fn = KFn (funName, paramList, fnResult, fnBody)
+      bodySlot := struct
+        (KPrim (
+          KExternFnPrim externFn,
+          args,
+          [result],
+          [
+            KJump (
+              KReturnCont fn,
+              [KArg (passBy, (KLocalTerm result, syn), syn)]
+            ), syn
+          ]), syn)
+        |> Some
 
-    fnBody :=
-      KPrim (
-        KExternFnPrim externFn,
-        primArgs,
-        [KReturnCont fn]
-      )
+      KFix (
+        [KFnFix fn],
+        exit (noop syn)
+      ), syn
 
-    KFix (
-      [KFnFix fn],
-      exit noop
-    )
+    | _ ->
+      exit (kgError syn)
 
-  | AFnStmt (Some (AName (Some funName, _, _)), paramList, resultOpt, Some body, _, _) ->
+  | AFnStmt (_, _, _, bodyOpt, fnSlot, syn) ->
     // 関数を fix で定義して、後続の計算を行う。
 
     // fn f(params) { return body }; exit
     // ==> fix fn f(params) { jump return(body) }; exit
 
-    let paramList = paramList |> List.map (kgParam context)
+    match bodyOpt, !fnSlot with
+    | Some body, Some fn ->
+      // FIXME: mode
+      let passBy = ByMove
 
-    let result =
-      resultOpt
-      |> Option.map (kgResult context)
-      |> Option.defaultValue KUnitTy
-      |> KResult
+      let paramList = fn.Params |> List.map (kgParam context)
+      let resultTy = fn.ResultTy |> kgTyInfo
 
-    // FIXME: モード
-    let fnBody = ref KNoop
-    let fn = KFn (funName, paramList, result, fnBody)
+      let bodySlot = ref None
+      let fn = KFn (fn.Name, paramList, resultTy, bodySlot, syn)
 
-    fnBody :=
-      body |> kgTerm context (fun body ->
-        KPrim (KJumpPrim, [KArg (ByMove, body, ref None)], [KReturnCont fn])
-      )
+      bodySlot :=
+        body
+        |> kgTerm context (fun result ->
+          KJump (
+            KReturnCont fn,
+            [KArg (passBy, result, syn)]
+          ), syn
+        )
+        |> Some
 
-    KFix (
-      [KFnFix fn],
-      exit noop
-    )
+      KFix (
+        [KFnFix fn],
+        exit (noop syn)
+      ), syn
 
-  | AStructStmt _ ->
-    exit noop
+    | _ ->
+      exit (kgError syn)
 
-  | ASemiStmt (stmts, _) ->
-    kgStmts context exit stmts
+  | AStructStmt (_, _, syn) ->
+    exit (noop syn)
 
-  | _ ->
-    failwithf "unimpl %A" stmt
+  | ASemiStmt (stmts, syn) ->
+    kgStmts context exit stmts syn
 
-let kgStmts context exit stmts =
+let kgStmts context exit stmts syn =
   match stmts with
   | [] ->
-    exit noop
+    exit (noop syn)
 
   | [stmt] ->
     kgStmt context exit stmt
 
   | stmt :: stmts ->
-    stmt |> kgStmt context (fun _ -> kgStmts context exit stmts)
+    stmt |> kgStmt context (fun _ -> kgStmts context exit stmts syn)
 
 let kirGen (stmt: AStmt) =
   let context = kgContextNew ()
-  kgStmt context (fun _ -> KNoop) stmt
+
+  let exit ((_, syn): KTermData): KNodeData =
+    KNoop, syn
+
+  kgStmt context exit stmt

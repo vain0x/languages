@@ -18,7 +18,6 @@
     <Compile Include="Kir.fs" />
     <Compile Include="KirDump.fs" />
     <Compile Include="KirGen.fs" />
-    <Compile Include="KirInfer.fs" />
     <Compile Include="KirUsage.fs" />
     <Compile Include="Cir.fs" />
     <Compile Include="CirDump.fs" />

@@ -9,7 +9,6 @@ open PhancieLang.CirDump
 open PhancieLang.CirGen
 open PhancieLang.KirDump
 open PhancieLang.KirGen
-open PhancieLang.KirInfer
 open PhancieLang.SyntaxParse
 open PhancieLang.SyntaxTokenize
 open Xunit
@@ -55,7 +54,6 @@ let snapshotTest (name: string) =
   |> astRoot
   |> fun ast -> astAnalyze ast; ast
   |> kirGen
-  |> kirInfer
   |> tee "_dump_snapshot.txt" kirDump
   |> cirGen
   |> tee ".c" cirDump

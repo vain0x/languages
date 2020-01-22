@@ -1,3 +1,6 @@
+/// 参考:
+/// - [Modern Parser Generator](https://matklad.github.io/2018/06/06/modern-parser-generator.html)
+/// - [Syntax in rust-analyzer](https://github.com/rust-analyzer/rust-analyzer/blob/fd69f629768ca0486be9b00f42cf7c42045f570b/docs/dev/syntax.md)
 module rec PhancieLang.Syntax
 
 open PhancieLang.Helpers

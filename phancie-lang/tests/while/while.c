@@ -5,10 +5,6 @@ int fn_assert_eq(int actual, int expected) {
     return result;
 }
 
-extern int assert_eq(int actual, int expected);
-
-extern int assert_eq(int actual, int expected);
-
 int fn_main() {
     int ok = 1;
     int a = 0;
@@ -21,7 +17,7 @@ do_continue:;
     }
 
 body:;
-    int result_3 = assert_eq(a, a);
+    int result_3 = fn_assert_eq(a, a);
     int result_4 = a + 1;
     int result_5 = a = result_4;
     int result_8 = a == 5;
@@ -44,6 +40,6 @@ if_next:;
     goto do_continue;
 
 do_break:;
-    int result_2 = assert_eq(a, 5);
+    int result_2 = fn_assert_eq(a, 5);
     return result_2;
 }

@@ -12,10 +12,10 @@ fix fn print(in s: string) -> int {
 }
 
 fix fn main() -> int {
-  let mut result_3: int = extern_print(in "before loop\n"))
+  let mut result_3: int = print(in "before loop\n"))
   let mut a: int = prim_id(in 0))
   fix label do_continue() -> never {
-    let mut result_5: int = extern_assert_eq(
+    let mut result_5: int = assert_eq(
       in a
       in a
     ))
@@ -79,7 +79,7 @@ fix fn main() -> int {
   }
 
   and label do_break() -> never {
-    let mut result_4: int = extern_print(in "after loop\n"))
+    let mut result_4: int = print(in "after loop\n"))
     return(move result_4)
   }
 

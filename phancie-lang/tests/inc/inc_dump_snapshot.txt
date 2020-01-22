@@ -20,17 +20,17 @@ fix fn inc(ref x: int) -> int {
 
 fix fn main() -> int {
   let mut a: int = prim_id(in 1))
-  let mut result_4: int = extern_assert_eq(
+  let mut result_4: int = assert_eq(
     in a
     in 1
   ))
   let mut result_5: int = inc(ref a))
-  let mut result_6: int = extern_assert_eq(
+  let mut result_6: int = assert_eq(
     in a
     in 2
   ))
   let mut result_7: int = inc(ref a))
-  let mut result_8: int = extern_assert_eq(
+  let mut result_8: int = assert_eq(
     in a
     in 3
   ))

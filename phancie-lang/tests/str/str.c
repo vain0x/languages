@@ -12,13 +12,9 @@ char* fn_string_clone(char* s2) {
     return result_2;
 }
 
-extern char* string_clone(char* s2);
-
-extern int print(char* s1);
-
 int fn_main() {
-    char* result_3 = string_clone("hello");
+    char* result_3 = fn_string_clone("hello");
     char* s = result_3;
-    int result_4 = print(s);
+    int result_4 = fn_print(s);
     return result_4;
 }

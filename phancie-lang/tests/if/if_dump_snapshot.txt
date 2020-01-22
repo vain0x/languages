@@ -17,12 +17,12 @@ fix fn main() -> int {
     in 0
   ))
   fix label if_body() -> never {
-    let mut result_4: int = extern_print(in "0 == 0\n"))
+    let mut result_4: int = print(in "0 == 0\n"))
     if_next(move result_4)
   }
 
   and label if_alt() -> never {
-    let mut result_5: int = extern_print(in "0 != 0\n"))
+    let mut result_5: int = print(in "0 != 0\n"))
     if_next(move result_5)
   }
 
@@ -32,12 +32,12 @@ fix fn main() -> int {
       in 1
     ))
     fix label if_body_2() -> never {
-      let mut result_8: int = extern_print(in "0 == 1\n"))
+      let mut result_8: int = print(in "0 == 1\n"))
       if_next_2(move result_8)
     }
 
     and label if_alt_2() -> never {
-      let mut result_9: int = extern_print(in "0 != 1\n"))
+      let mut result_9: int = print(in "0 != 1\n"))
       if_next_2(move result_9)
     }
 
@@ -48,7 +48,7 @@ fix fn main() -> int {
         in 1
       ))
       fix label if_body_3() -> never {
-        let mut result_12: int = extern_print(in "0 == 1\n"))
+        let mut result_12: int = print(in "0 == 1\n"))
         if_next_3(move result_12)
       }
 
@@ -58,12 +58,12 @@ fix fn main() -> int {
           in 2
         ))
         fix label if_body_4() -> never {
-          let mut result_14: int = extern_print(in "x == 2\n"))
+          let mut result_14: int = print(in "x == 2\n"))
           if_next_4(move result_14)
         }
 
         and label if_alt_4() -> never {
-          let mut result_15: int = extern_print(in "x != 1, x != 2\n"))
+          let mut result_15: int = print(in "x != 1, x != 2\n"))
           if_next_4(move result_15)
         }
 

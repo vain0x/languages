@@ -9,7 +9,7 @@ type KirGenContext =
   {
     FreshName: string -> string
     LoopMap: HashMap<ALoop, KLoop>
-    FnMap: HashMap<AFn, KFnKind>
+    FnMap: HashMap<AFn, KFn>
   }
 
 let kgContextNew (): KirGenContext =
@@ -48,13 +48,13 @@ let kgContextTouchLoop aLoop (context: KirGenContext) =
 
 let kgContextTouchFn aFn (context: KirGenContext) =
   match context.FnMap.TryGetValue(aFn) with
-  | true, kFnKind ->
-    kFnKind
+  | true, kFn ->
+    kFn
 
   | false, _ ->
     let syn = aFn.Node
 
-    let kFnKind =
+    let kFn =
       match aFn.Kind with
       | AFnKind _ ->
         let paramList =
@@ -63,7 +63,7 @@ let kgContextTouchFn aFn (context: KirGenContext) =
         let result =
           aFn.ResultTy |> kgTyInfo
 
-        KFn (aFn.Name, paramList, result, ref None, syn) |> KFnKind
+        KFn (aFn.Name, paramList, result, ref None, syn)
 
       | AExternFnKind ->
         let paramList =
@@ -72,10 +72,10 @@ let kgContextTouchFn aFn (context: KirGenContext) =
         let result =
           aFn.ResultTy |> kgTyInfo
 
-        KExternFn (aFn.Name, paramList, result, syn) |> KExternFnKind
+        KFn (aFn.Name, paramList, result, ref None, syn)
 
-    context.FnMap.Add(aFn, kFnKind)
-    kFnKind
+    context.FnMap.Add(aFn, kFn)
+    kFn
 
 let kgParamTy paramTy: KParamTy =
   match paramTy with
@@ -279,8 +279,8 @@ let kgTerm (context: KirGenContext) (exit: KTermData -> KNodeData) (term: ATerm)
     match nameOpt with
     | Some (ANameTerm (AName (_, symbolSlot, _))) ->
       match !symbolSlot with
-      | Some (AFnSymbol fn) ->
-        let fnKind = context |> kgContextTouchFn fn
+      | Some (AFnSymbol aFn) ->
+        let kFn = context |> kgContextTouchFn aFn
 
         let kFnToResultTy fn =
           match fn with
@@ -293,16 +293,9 @@ let kgTerm (context: KirGenContext) (exit: KTermData -> KNodeData) (term: ATerm)
             resultTy
 
         args |> kgArgList context (fun args ->
-          match fnKind with
-          | KFnKind fn ->
-            let prim = KFnPrim fn
-            let resultTy = fn |> kFnToResultTy
-            kPrim1 context prim args resultTy syn exit
-
-          | KExternFnKind externFn ->
-            let prim = KExternFnPrim externFn
-            let resultTy = externFn |> kExternFnToResultTy
-            kPrim1 context prim args resultTy syn exit
+          let prim = KFnPrim kFn
+          let resultTy = kFn |> kFnToResultTy
+          kPrim1 context prim args resultTy syn exit
         )
 
       | _ ->

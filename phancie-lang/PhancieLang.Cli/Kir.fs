@@ -86,14 +86,6 @@ type KExternFn =
       * SyntaxNode
 
 [<Struct>]
-type KFnKind =
-  | KFnKind
-    of fn:KFn
-
-  | KExternFnKind
-    of externFn:KExternFn
-
-[<Struct>]
 type KFix =
   | KLabelFix
     of label:KLabel

@@ -12,18 +12,12 @@ int fn_print(char* s) {
     return result_2;
 }
 
-extern int print(char* s);
-
-extern int assert_eq(int actual, int expected);
-
-extern int print(char* s);
-
 int fn_main() {
-    int result_3 = print("before loop\n");
+    int result_3 = fn_print("before loop\n");
     int a = 0;
 
 do_continue:;
-    int result_5 = assert_eq(a, a);
+    int result_5 = fn_assert_eq(a, a);
     int result_7 = a == 5;
     if (result_7) {
         goto if_body;
@@ -57,6 +51,6 @@ if_next_2:;
     goto do_continue;
 
 do_break:;
-    int result_4 = print("after loop\n");
+    int result_4 = fn_print("after loop\n");
     return result_4;
 }

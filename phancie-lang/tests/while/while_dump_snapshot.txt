@@ -11,7 +11,7 @@ fix fn main() -> int {
   let mut a: int = prim_id(in 0))
   fix label do_continue() -> never {
     fix label body() -> never {
-      let mut result_3: int = extern_assert_eq(
+      let mut result_3: int = assert_eq(
         in a
         in a
       ))
@@ -58,7 +58,7 @@ fix fn main() -> int {
   }
 
   and label do_break() -> never {
-    let mut result_2: int = extern_assert_eq(
+    let mut result_2: int = assert_eq(
       in a
       in 5
     ))

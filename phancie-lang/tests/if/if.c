@@ -12,20 +12,6 @@ int fn_print(char* s) {
     return result_2;
 }
 
-extern int print(char* s);
-
-extern int print(char* s);
-
-extern int print(char* s);
-
-extern int print(char* s);
-
-extern int print(char* s);
-
-extern int print(char* s);
-
-extern int print(char* s);
-
 int fn_main() {
     int result_6 = 0 == 0;
     int result_3;
@@ -36,12 +22,12 @@ int fn_main() {
     }
 
 if_body:;
-    int result_4 = print("0 == 0\n");
+    int result_4 = fn_print("0 == 0\n");
     result_3 = result_4;
     goto if_next;
 
 if_alt:;
-    int result_5 = print("0 != 0\n");
+    int result_5 = fn_print("0 != 0\n");
     result_3 = result_5;
 
 if_next:;
@@ -54,12 +40,12 @@ if_next:;
     }
 
 if_body_2:;
-    int result_8 = print("0 == 1\n");
+    int result_8 = fn_print("0 == 1\n");
     result_7 = result_8;
     goto if_next_2;
 
 if_alt_2:;
-    int result_9 = print("0 != 1\n");
+    int result_9 = fn_print("0 != 1\n");
     result_7 = result_9;
 
 if_next_2:;
@@ -73,7 +59,7 @@ if_next_2:;
     }
 
 if_body_3:;
-    int result_12 = print("0 == 1\n");
+    int result_12 = fn_print("0 == 1\n");
     result_11 = result_12;
     goto if_next_3;
 
@@ -87,12 +73,12 @@ if_alt_3:;
     }
 
 if_body_4:;
-    int result_14 = print("x == 2\n");
+    int result_14 = fn_print("x == 2\n");
     result_13 = result_14;
     goto if_next_4;
 
 if_alt_4:;
-    int result_15 = print("x != 1, x != 2\n");
+    int result_15 = fn_print("x != 1, x != 2\n");
     result_13 = result_15;
 
 if_next_4:;

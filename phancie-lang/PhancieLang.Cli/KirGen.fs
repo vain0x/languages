@@ -261,8 +261,8 @@ let kgTerm (context: KirGenContext) (exit: KTermData -> KNodeData) (term: ATerm)
     match !loopSlot with
     | Some aLoop ->
       match context |> kgContextTouchLoop aLoop with
-      | KLoop (breakLabel, _) ->
-        KJump (KLabelCont breakLabel, []), syn
+      | KLoop (_, continueLabel) ->
+        KJump (KLabelCont continueLabel, []), syn
 
     | None ->
       exit (kgError syn)

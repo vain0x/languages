@@ -131,6 +131,8 @@ type Element =
   | ErrorElement
     of error:SyntaxError
 
+[<CustomEquality>]
+[<CustomComparison>]
 type SyntaxNode =
   {
     Parent: Option<SyntaxNode>
@@ -138,6 +140,35 @@ type SyntaxNode =
     ChildIndex: int
     Green: NodeData
   }
+with
+  member this.Equals(other: SyntaxNode) =
+    this.ChildIndex = other.ChildIndex
+    && this.Parent = other.Parent
+
+  member this.CompareTo(other: SyntaxNode) =
+    if this.ChildIndex <> other.ChildIndex then
+      this.ChildIndex.CompareTo(other.ChildIndex)
+    else
+      System.Collections.Generic.Comparer.Default.Compare(this.Parent, other.Parent)
+
+  override this.Equals(obj) =
+    match obj with
+    | :? SyntaxNode as other ->
+      this.Equals(other)
+
+    | _ ->
+      false
+
+  override this.GetHashCode() =
+    (struct (this.ChildIndex, this.Parent)).GetHashCode()
+
+  interface System.IEquatable<SyntaxNode> with
+    override this.Equals(other) =
+      this.Equals(other)
+
+  interface System.IComparable<SyntaxNode> with
+    override this.CompareTo(other) =
+      this.CompareTo(other)
 
 // -----------------------------------------------
 // Token

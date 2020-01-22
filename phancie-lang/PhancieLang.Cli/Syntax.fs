@@ -131,6 +131,14 @@ type Element =
   | ErrorElement
     of error:SyntaxError
 
+type SyntaxNode =
+  {
+    Parent: Option<SyntaxNode>
+    /// 親の何番目の子ノードか？
+    ChildIndex: int
+    Green: NodeData
+  }
+
 let keywords =
   [
     BreakToken, "break"

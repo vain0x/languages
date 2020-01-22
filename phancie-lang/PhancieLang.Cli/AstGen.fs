@@ -350,6 +350,6 @@ let astStmt (syn: SyntaxNode) =
     failwith "NEVER: nodeIsStmt bug"
 
 let astRoot (node: NodeData) =
-  assert (node.Node = SemiNode)
+  assert (node.Node |> nodeIsRoot)
 
   node |> synFromNode |> astStmt

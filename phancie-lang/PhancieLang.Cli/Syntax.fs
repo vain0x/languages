@@ -166,6 +166,15 @@ with
     override this.Equals(other) =
       this.Equals(other)
 
+  interface System.IComparable with
+    override this.CompareTo(obj) =
+      match obj with
+      | :? SyntaxNode as other ->
+        this.CompareTo(other)
+
+      | _ ->
+        failwith "Type mismatch"
+
   interface System.IComparable<SyntaxNode> with
     override this.CompareTo(other) =
       this.CompareTo(other)

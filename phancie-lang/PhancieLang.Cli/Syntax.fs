@@ -120,7 +120,8 @@ type NodeData =
     Children: ResizeArray<Element>
   }
 
-and [<Struct>] Element =
+[<Struct>]
+type Element =
   | TokenElement
     of token:TokenData
 

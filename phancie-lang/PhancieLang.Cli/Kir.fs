@@ -20,12 +20,12 @@ type KUsage =
 [<Struct>]
 type KParamTy =
   | KParamTy
-    of Mode * KTyData * NodeData
+    of Mode * KTyData * SyntaxNode
 
 [<Struct>]
 type KArgTy =
   | KArgTy
-    of PassBy * KTyData * NodeData
+    of PassBy * KTyData * SyntaxNode
 
 type KTy =
   | KNeverTy
@@ -42,17 +42,17 @@ type KTy =
     of KParamTy list * KTyData
 
 type KTyData =
-  (struct (KTy * NodeData))
+  (struct (KTy * SyntaxNode))
 
 [<Struct>]
 type KParam =
   | KParam
-    of Mode * KIdent * KTyData * NodeData
+    of Mode * KIdent * KTyData * SyntaxNode
 
 [<Struct>]
 type KArg =
   | KArg
-    of PassBy * KTermData * NodeData
+    of PassBy * KTermData * SyntaxNode
 
 [<Struct>]
 type KLoop =
@@ -66,7 +66,7 @@ type KLabel =
     of labelName:string
       * KParam list
       * body:KNodeData option ref
-      * NodeData
+      * SyntaxNode
 
 [<Struct>]
 type KFn =
@@ -75,7 +75,7 @@ type KFn =
       * KParam list
       * KTyData
       * body:KNodeData option ref
-      * NodeData
+      * SyntaxNode
 
 [<Struct>]
 type KExternFn =
@@ -83,7 +83,7 @@ type KExternFn =
     of externFnName:string
       * KParam list
       * KTyData
-      * NodeData
+      * SyntaxNode
 
 [<Struct>]
 type KFnKind =
@@ -142,7 +142,7 @@ type KTerm =
     of KParam
 
 type KTermData =
-  (struct (KTerm * NodeData))
+  (struct (KTerm * SyntaxNode))
 
 type KNode =
   | KNoop
@@ -162,7 +162,7 @@ type KNode =
       * next:KNodeData
 
 type KNodeData =
-  (struct (KNode * NodeData))
+  (struct (KNode * SyntaxNode))
 
 // -----------------------------------------------
 // KUsage

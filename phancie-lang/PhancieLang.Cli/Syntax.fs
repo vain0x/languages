@@ -139,6 +139,10 @@ type SyntaxNode =
     Green: NodeData
   }
 
+// -----------------------------------------------
+// Token
+// -----------------------------------------------
+
 let keywords =
   [
     BreakToken, "break"
@@ -288,6 +292,10 @@ let tokenAsPassBy (token: Token) =
   | _ ->
     None
 
+// -----------------------------------------------
+// Node
+// -----------------------------------------------
+
 let nodeIsTerm (node: Node) =
   match node with
   | BoolLiteralNode
@@ -320,6 +328,13 @@ let nodeIsStmt (node: Node) =
 
   | _ ->
     false
+
+let nodeIsRoot (node: Node) =
+  node = SemiNode
+
+// -----------------------------------------------
+// NodeData
+// -----------------------------------------------
 
 let nodeToFirstToken pred (node: NodeData) =
   node.Children |> Seq.tryPick (fun element ->
@@ -371,3 +386,46 @@ let nodeAddTokenFat (token: TokenFat) (node: NodeData) =
 
   for trivia in token.Trailing do
     node.Children.Add(TokenElement trivia)
+
+// -----------------------------------------------
+// SyntaxNode
+// -----------------------------------------------
+
+let synFromNode (node: NodeData): SyntaxNode =
+  assert (node.Node |> nodeIsRoot)
+  {
+    Parent = None
+    ChildIndex = 0
+    Green = node
+  }
+
+let synToKind (syn: SyntaxNode) =
+  syn.Green.Node
+
+let synToFirstToken pred (syn: SyntaxNode) =
+  syn.Green |> nodeToFirstToken pred
+
+let synToFilterToken pred (syn: SyntaxNode) =
+  syn.Green |> nodeToFilterToken pred
+
+let synFilterNodes pred (syn: SyntaxNode) =
+  syn.Green.Children
+  |> Seq.mapi (fun i node -> struct (i, node))
+  |> Seq.choose (fun struct (i, element) ->
+    match element with
+    | NodeElement n when pred n.Node ->
+      Some {
+        Parent = Some syn
+        ChildIndex = i
+        Green = n
+      }
+
+    | _ ->
+      None
+  )
+
+let synToFirstNode pred (syn: SyntaxNode) =
+  syn |> synFilterNodes pred |> Seq.tryHead
+
+let synToFilterNode pred (syn: SyntaxNode) =
+  syn |> synFilterNodes pred |> Seq.toList

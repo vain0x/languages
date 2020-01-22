@@ -5,10 +5,10 @@ open PhancieLang.Syntax
 
 type AError =
   | AError
-    of string * NodeData
+    of string * SyntaxNode
 
   | APassByMismatchError
-    of Mode * PassBy * NodeData
+    of Mode * PassBy * SyntaxNode
 
   | ATyMismatchError
     of actual:ATyInfo * expected:ATyInfo
@@ -21,28 +21,28 @@ type ABin =
 [<Struct>]
 type AParamTy =
   | AParamTy
-    of Mode * ATyInfo * NodeData
+    of Mode * ATyInfo * SyntaxNode
 
 [<Struct>]
 type AArgTy =
   | AArgTy
-    of PassBy * ATyInfo * NodeData
+    of PassBy * ATyInfo * SyntaxNode
 
 type ATyInfo =
   | ANameTy
-    of string * ASymbol option ref * NodeData
+    of string * ASymbol option ref * SyntaxNode
 
   | ABoolTy
-    of NodeData
+    of SyntaxNode
 
   | AIntTy
-    of NodeData
+    of SyntaxNode
 
   | AStringTy
-    of NodeData
+    of SyntaxNode
 
   | AFnTy
-    of AParamTy list * ATyInfo * NodeData
+    of AParamTy list * ATyInfo * SyntaxNode
 
 [<ReferenceEquality>]
 [<NoComparison>]
@@ -62,7 +62,7 @@ type ALoop =
   {
     LoopOpt: ATerm option
     FnOpt: AFn option
-    Syn: NodeData
+    Syn: SyntaxNode
   }
 
 [<Struct>]
@@ -82,99 +82,99 @@ type AFn =
     ResultOpt: AResult option
     ParamTys: AParamTy list
     ResultTy: ATyInfo
-    Node: NodeData
+    Node: SyntaxNode
   }
 
 [<Struct>]
 type AName =
   | AName
-    of string option * ASymbol option ref * NodeData
+    of string option * ASymbol option ref * SyntaxNode
 
 [<Struct>]
 type ATy =
   | ATy
-    of AName option * NodeData
+    of AName option * SyntaxNode
 
 [<Struct>]
 type AParam =
   | AParam
-    of Mode * AName option * ATy option * NodeData
+    of Mode * AName option * ATy option * SyntaxNode
 
 [<Struct>]
 type AResult =
   | AResult
-    of ATy option * NodeData
+    of ATy option * SyntaxNode
 
 [<Struct>]
 type AArg =
   | AArg
-    of PassBy * ATerm option * NodeData
+    of PassBy * ATerm option * SyntaxNode
 
 type ATerm =
   | ABoolLiteral
-    of bool * NodeData
+    of bool * SyntaxNode
 
   | AIntLiteral
-    of text:string option * NodeData
+    of text:string option * SyntaxNode
 
   | AStrLiteral
-    of StrSegment list * NodeData
+    of StrSegment list * SyntaxNode
 
   | ANameTerm
     of AName
 
   | AGroupTerm
-    of ATerm option * NodeData
+    of ATerm option * SyntaxNode
 
   | ABlockTerm
-    of AStmt list * NodeData
+    of AStmt list * SyntaxNode
 
   | ABreakTerm
-    of ALoop option ref * NodeData
+    of ALoop option ref * SyntaxNode
 
   | AContinueTerm
-    of ALoop option ref * NodeData
+    of ALoop option ref * SyntaxNode
 
   | ALoopTerm
-    of ATerm option * ALoop option ref * NodeData
+    of ATerm option * ALoop option ref * SyntaxNode
 
   | ACallTerm
-    of ATerm option * AArg list * NodeData
+    of ATerm option * AArg list * SyntaxNode
 
   | ABinTerm
-    of ABin option * ATerm option * ATerm option * (AArgTy * AArgTy * ATyInfo) option ref * NodeData
+    of ABin option * ATerm option * ATerm option * (AArgTy * AArgTy * ATyInfo) option ref * SyntaxNode
 
   | AIfTerm
     of cond:ATerm option
       * body:ATerm option
       * alt:ATerm option
       * ty:ATyInfo option ref
-      * NodeData
+      * SyntaxNode
 
   | AWhileTerm
     of cond:ATerm option
       * body:ATerm option
       * loop:ALoop option ref
-      * NodeData
+      * SyntaxNode
 
 type AStmt =
   | ATermStmt
-    of ATerm option * NodeData
+    of ATerm option * SyntaxNode
 
   | ALetStmt
-    of AParam option * AArg option * NodeData
+    of AParam option * AArg option * SyntaxNode
 
   | AExternFnStmt
-    of AName option * AParam list * AResult option * AFn option ref * NodeData
+    of AName option * AParam list * AResult option * AFn option ref * SyntaxNode
 
   | AFnStmt
-    of AName option * AParam list * AResult option * ATerm option * AFn option ref * NodeData
+    of AName option * AParam list * AResult option * ATerm option * AFn option ref * SyntaxNode
 
   | AStructStmt
-    of AName option * AParam list * NodeData
+    of AName option * AParam list * SyntaxNode
 
   | ASemiStmt
-    of AStmt list * NodeData
+    of AStmt list * SyntaxNode
 
 // -----------------------------------------------
 // 二項演算子

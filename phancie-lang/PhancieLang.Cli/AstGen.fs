@@ -4,347 +4,347 @@ open PhancieLang.Ast
 open PhancieLang.Helpers
 open PhancieLang.Syntax
 
-let astName (node: NodeData) =
-  assert (node.Node = NameNode)
+let astName (syn: SyntaxNode) =
+  assert (synToKind syn = NameNode)
 
   let ident =
-    node
-    |> nodeToFirstToken ((=) IdentToken)
+    syn
+    |> synToFirstToken ((=) IdentToken)
     |> Option.map tokenToText
 
-  AName (ident, ref None, node)
+  AName (ident, ref None, syn)
 
-let astTy (node: NodeData) =
-  assert (node.Node = TyNode)
+let astTy (syn: SyntaxNode) =
+  assert (synToKind syn = TyNode)
 
   let name =
-    node
-    |> nodeToFirstNode ((=) NameNode)
+    syn
+    |> synToFirstNode ((=) NameNode)
     |> Option.map astName
 
-  ATy (name, node)
+  ATy (name, syn)
 
-let astParam (node: NodeData) =
-  assert (node.Node = ParamNode)
+let astParam (syn: SyntaxNode) =
+  assert (synToKind syn = ParamNode)
 
   let mode =
-    node
-    |> nodeToFirstToken (tokenAsMode >> Option.isSome)
+    syn
+    |> synToFirstToken (tokenAsMode >> Option.isSome)
     |> Option.bind (fun token -> tokenAsMode token.Token)
     |> Option.defaultValue ValMode
 
   let name =
-    node
-    |> nodeToFirstNode ((=) NameNode)
+    syn
+    |> synToFirstNode ((=) NameNode)
     |> Option.map astName
 
   let ty =
-    node
-    |> nodeToFirstNode ((=) TyNode)
+    syn
+    |> synToFirstNode ((=) TyNode)
     |> Option.map astTy
 
-  AParam (mode, name, ty, node)
+  AParam (mode, name, ty, syn)
 
-let astResult (node: NodeData) =
-  assert (node.Node = ResultNode)
+let astResult (syn: SyntaxNode) =
+  assert (synToKind syn = ResultNode)
 
   let ty =
-    node
-    |> nodeToFirstNode ((=) TyNode)
+    syn
+    |> synToFirstNode ((=) TyNode)
     |> Option.map astTy
 
-  AResult (ty, node)
+  AResult (ty, syn)
 
-let astArg (node: NodeData) =
-  assert (node.Node = ArgNode)
+let astArg (syn: SyntaxNode) =
+  assert (synToKind syn = ArgNode)
 
   let passBy =
-    node
-    |> nodeToFirstToken (tokenAsPassBy >> Option.isSome)
+    syn
+    |> synToFirstToken (tokenAsPassBy >> Option.isSome)
     |> Option.bind (fun token -> tokenAsPassBy token.Token)
     |> Option.defaultValue ByIn
 
   let term =
-    node
-    |> nodeToFirstNode nodeIsTerm
+    syn
+    |> synToFirstNode nodeIsTerm
     |> Option.map astTerm
 
-  AArg (passBy, term, node)
+  AArg (passBy, term, syn)
 
-let astBoolLiteral (node: NodeData) =
-  assert (node.Node = BoolLiteralNode)
+let astBoolLiteral (syn: SyntaxNode) =
+  assert (synToKind syn = BoolLiteralNode)
 
   let value =
-    node
-    |> nodeToFirstToken (fun token -> token = FalseToken || token = TrueToken)
+    syn
+    |> synToFirstToken (fun token -> token = FalseToken || token = TrueToken)
     |> Option.map (fun token -> token.Token = TrueToken)
     |> Option.defaultValue false
 
-  ABoolLiteral (value, node)
+  ABoolLiteral (value, syn)
 
-let astIntLiteral (node: NodeData) =
-  assert (node.Node = IntLiteralNode)
+let astIntLiteral (syn: SyntaxNode) =
+  assert (synToKind syn = IntLiteralNode)
 
   let intToken =
-    node
-    |> nodeToFirstToken ((=) IntToken)
+    syn
+    |> synToFirstToken ((=) IntToken)
     |> Option.map tokenToText
 
-  AIntLiteral (intToken, node)
+  AIntLiteral (intToken, syn)
 
-let astStrLiteral (node: NodeData) =
-  assert (node.Node = StrLiteralNode)
+let astStrLiteral (syn: SyntaxNode) =
+  assert (synToKind syn = StrLiteralNode)
 
   let segments =
-    node
-    |> nodeToFilterToken ((=) StrVerbatimToken)
+    syn
+    |> synToFilterToken ((=) StrVerbatimToken)
     |> List.map (tokenToText >> StrVerbatim)
 
-  AStrLiteral (segments, node)
+  AStrLiteral (segments, syn)
 
-let astGroup (node: NodeData) =
-  assert (node.Node = GroupNode)
+let astGroup (syn: SyntaxNode) =
+  assert (synToKind syn = GroupNode)
 
   let item =
-    node
-    |> nodeToFirstNode nodeIsTerm
+    syn
+    |> synToFirstNode nodeIsTerm
     |> Option.map astTerm
 
-  AGroupTerm (item, node)
+  AGroupTerm (item, syn)
 
-let astBlock (node: NodeData) =
-  assert (node.Node = BlockNode)
+let astBlock (syn: SyntaxNode) =
+  assert (synToKind syn = BlockNode)
 
   let item =
-    node
-    |> nodeToFilterNode nodeIsStmt
+    syn
+    |> synToFilterNode nodeIsStmt
     |> List.map astStmt
 
-  ABlockTerm (item, node)
+  ABlockTerm (item, syn)
 
-let astBreak (node: NodeData) =
-  assert (node.Node = BreakNode)
+let astBreak (syn: SyntaxNode) =
+  assert (synToKind syn = BreakNode)
 
-  ABreakTerm (ref None, node)
+  ABreakTerm (ref None, syn)
 
-let astContinue (node: NodeData) =
-  assert (node.Node = ContinueNode)
+let astContinue (syn: SyntaxNode) =
+  assert (synToKind syn = ContinueNode)
 
-  AContinueTerm (ref None, node)
+  AContinueTerm (ref None, syn)
 
-let astLoop (node: NodeData) =
-  assert (node.Node = LoopNode)
+let astLoop (syn: SyntaxNode) =
+  assert (synToKind syn = LoopNode)
 
   let body =
-    node
-    |> nodeToFirstNode nodeIsTerm
+    syn
+    |> synToFirstNode nodeIsTerm
     |> Option.map astTerm
 
-  ALoopTerm (body, ref None, node)
+  ALoopTerm (body, ref None, syn)
 
-let astCall (node: NodeData) =
-  assert (node.Node = CallNode)
+let astCall (syn: SyntaxNode) =
+  assert (synToKind syn = CallNode)
 
   let cal =
-    node
-    |> nodeToFirstNode nodeIsTerm
+    syn
+    |> synToFirstNode nodeIsTerm
     |> Option.map astTerm
 
   let args =
-    node
-    |> nodeToFilterNode ((=) ArgNode)
+    syn
+    |> synToFilterNode ((=) ArgNode)
     |> List.map astArg
 
-  ACallTerm (cal, args, node)
+  ACallTerm (cal, args, syn)
 
-let astIf (node: NodeData) =
-  assert (node.Node = IfNode)
+let astIf (syn: SyntaxNode) =
+  assert (synToKind syn = IfNode)
 
   let cond =
-    node
-    |> nodeToFirstNode nodeIsTerm
+    syn
+    |> synToFirstNode nodeIsTerm
     |> Option.map astTerm
 
   let body =
-    node
-    |> nodeToFirstNode ((=) ThenNode)
-    |> Option.bind (nodeToFirstNode nodeIsTerm)
+    syn
+    |> synToFirstNode ((=) ThenNode)
+    |> Option.bind (synToFirstNode nodeIsTerm)
     |> Option.map astTerm
 
   let alt =
-    node
-    |> nodeToFirstNode ((=) ElseNode)
-    |> Option.bind (nodeToFirstNode nodeIsTerm)
+    syn
+    |> synToFirstNode ((=) ElseNode)
+    |> Option.bind (synToFirstNode nodeIsTerm)
     |> Option.map astTerm
 
-  AIfTerm (cond, body, alt, ref None, node)
+  AIfTerm (cond, body, alt, ref None, syn)
 
-let astWhile (node: NodeData) =
-  assert (node.Node = WhileNode)
+let astWhile (syn: SyntaxNode) =
+  assert (synToKind syn = WhileNode)
 
   let terms =
-    node
-    |> nodeToFilterNode nodeIsTerm
+    syn
+    |> synToFilterNode nodeIsTerm
     |> List.map astTerm
 
   // while キーワードの左と右からそれぞれ探す方がいい。
   let cond = terms |> List.tryItem 0
   let body = terms |> List.tryItem 1
 
-  AWhileTerm (cond, body, ref None, node)
+  AWhileTerm (cond, body, ref None, syn)
 
-let astBin (node: NodeData) =
-  assert (node.Node = BinNode)
+let astBin (syn: SyntaxNode) =
+  assert (synToKind syn = BinNode)
 
   let asBin (t: TokenData) = aBinFromToken t.Token
 
   let bin =
-    node
-    |> nodeToFirstToken (aBinFromToken >> Option.isSome)
+    syn
+    |> synToFirstToken (aBinFromToken >> Option.isSome)
     |> Option.bind asBin
 
   let terms =
-    node
-    |> nodeToFilterNode nodeIsTerm
+    syn
+    |> synToFilterNode nodeIsTerm
     |> List.map astTerm
 
   let first = terms |> List.tryItem 0
   let second = terms |> List.tryItem 1
 
-  ABinTerm (bin, first, second, ref None, node)
+  ABinTerm (bin, first, second, ref None, syn)
 
-let astTerm (node: NodeData) =
-  assert (node.Node |> nodeIsTerm)
+let astTerm (syn: SyntaxNode) =
+  assert (syn |> synToKind |> nodeIsTerm)
 
-  match node.Node with
+  match synToKind syn with
   | BoolLiteralNode ->
-    astBoolLiteral node
+    astBoolLiteral syn
 
   | IntLiteralNode ->
-    astIntLiteral node
+    astIntLiteral syn
 
   | StrLiteralNode ->
-    astStrLiteral node
+    astStrLiteral syn
 
   | NameNode ->
-    astName node |> ANameTerm
+    astName syn |> ANameTerm
 
   | GroupNode ->
-    astGroup node
+    astGroup syn
 
   | BlockNode ->
-    astBlock node
+    astBlock syn
 
   | BreakNode ->
-    astBreak node
+    astBreak syn
 
   | ContinueNode ->
-    astContinue node
+    astContinue syn
 
   | LoopNode ->
-    astLoop node
+    astLoop syn
 
   | CallNode ->
-    astCall node
+    astCall syn
 
   | BinNode ->
-    astBin node
+    astBin syn
 
   | IfNode ->
-    astIf node
+    astIf syn
 
   | WhileNode ->
-    astWhile node
+    astWhile syn
 
   | _ ->
     failwith "NEVER: nodeIsTerm bug"
 
-let astStmt (node: NodeData) =
-  assert (node.Node |> nodeIsStmt)
+let astStmt (syn: SyntaxNode) =
+  assert (syn |> synToKind |> nodeIsStmt)
 
-  match node.Node with
+  match synToKind syn with
   | ExprNode ->
     let term =
-      node
-      |> nodeToFirstNode nodeIsTerm
+      syn
+      |> synToFirstNode nodeIsTerm
       |> Option.map astTerm
 
-    ATermStmt (term, node)
+    ATermStmt (term, syn)
 
   | LetNode ->
     let first =
-      node
-      |> nodeToFirstNode ((=) ParamNode)
+      syn
+      |> synToFirstNode ((=) ParamNode)
       |> Option.map astParam
 
     let second =
-      node
-      |> nodeToFirstNode ((=) ArgNode)
+      syn
+      |> synToFirstNode ((=) ArgNode)
       |> Option.map astArg
 
-    ALetStmt (first, second, node)
+    ALetStmt (first, second, syn)
 
   | ExternFnNode ->
     let name =
-      node
-      |> nodeToFirstNode ((=) NameNode)
+      syn
+      |> synToFirstNode ((=) NameNode)
       |> Option.map astName
 
     let args =
-      node
-      |> nodeToFilterNode ((=) ParamNode)
+      syn
+      |> synToFilterNode ((=) ParamNode)
       |> List.map astParam
 
     let result =
-      node
-      |> nodeToFirstNode ((=) ResultNode)
+      syn
+      |> synToFirstNode ((=) ResultNode)
       |> Option.map astResult
 
-    AExternFnStmt (name, args, result, ref None, node)
+    AExternFnStmt (name, args, result, ref None, syn)
 
   | FnNode ->
     let name =
-      node
-      |> nodeToFirstNode ((=) NameNode)
+      syn
+      |> synToFirstNode ((=) NameNode)
       |> Option.map astName
 
     let args =
-      node
-      |> nodeToFilterNode ((=) ParamNode)
+      syn
+      |> synToFilterNode ((=) ParamNode)
       |> List.map astParam
 
     let result =
-      node
-      |> nodeToFirstNode ((=) ResultNode)
+      syn
+      |> synToFirstNode ((=) ResultNode)
       |> Option.map astResult
 
     let body =
-      node
-      |> nodeToFirstNode ((=) BlockNode)
+      syn
+      |> synToFirstNode ((=) BlockNode)
       |> Option.map astTerm
 
-    AFnStmt (name, args, result, body, ref None, node)
+    AFnStmt (name, args, result, body, ref None, syn)
 
   | StructNode ->
     let name =
-      node
-      |> nodeToFirstNode ((=) NameNode)
+      syn
+      |> synToFirstNode ((=) NameNode)
       |> Option.map astName
 
     let fields =
-      node
-      |> nodeToFilterNode ((=) ParamNode)
+      syn
+      |> synToFilterNode ((=) ParamNode)
       |> List.map astParam
 
-    AStructStmt (name, fields, node)
+    AStructStmt (name, fields, syn)
 
   | SemiNode ->
     let stmts =
-      node
-      |> nodeToFilterNode nodeIsStmt
+      syn
+      |> synToFilterNode nodeIsStmt
       |> List.map astStmt
 
-    ASemiStmt (stmts, node)
+    ASemiStmt (stmts, syn)
 
   | _ ->
     failwith "NEVER: nodeIsStmt bug"
@@ -352,4 +352,4 @@ let astStmt (node: NodeData) =
 let astRoot (node: NodeData) =
   assert (node.Node = SemiNode)
 
-  astStmt node
+  node |> synFromNode |> astStmt

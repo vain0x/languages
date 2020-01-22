@@ -80,9 +80,7 @@ let cgParam _context (KParam (mode, name, ty, _)) =
     CParam (name, CPtrTy ty)
 
 let cgArg context lval (KArg (passBy, arg, _)) =
-  let arg = arg |> cgTerm context
-  // FIXME: mode
-  let mode = ValMode
+  let mode, arg = arg |> cgTerm context
 
   match passBy, mode, lval with
   | ByRef, _, RVal ->
@@ -223,19 +221,19 @@ let cgPrimTerm context prim args results nexts =
 let cgTerm _context (term: KTermData) =
   match term with
   | KBoolLiteral false, _ ->
-    CInt "0"
+    ValMode, CInt "0"
 
   | KBoolLiteral true, _ ->
-    CInt "1"
+    ValMode, CInt "1"
 
   | KIntLiteral intText, _ ->
-    CInt intText
+    ValMode, CInt intText
 
   | KStrLiteral segments, _ ->
-    CStr segments
+    InMode, CStr segments
 
-  | KLocalTerm (KParam (_, name, _, _)), _ ->
-    CName name
+  | KLocalTerm (KParam (mode, name, _, _)), _ ->
+    mode, CName name
 
 let cgNode (context: CirGenContext) (node: KNodeData) =
   match node with

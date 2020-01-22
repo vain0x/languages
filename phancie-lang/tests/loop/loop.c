@@ -41,7 +41,7 @@ if_next:;
 if_body_2:;
     int result_9 = a + 2;
     int result_10 = a = result_9;
-    goto do_break;
+    goto do_continue;
 
 if_alt_2:;
 

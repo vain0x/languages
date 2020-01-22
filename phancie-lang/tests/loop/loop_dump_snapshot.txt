@@ -45,7 +45,7 @@ fix fn main() -> int {
           move a
           move result_9
         ))
-        do_break()
+        do_continue()
       }
 
       and label if_alt_2() -> never {

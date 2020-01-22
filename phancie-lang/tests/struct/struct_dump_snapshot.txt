@@ -1,1 +1,5 @@
+fix fn main() -> int {
+  return(move /* noop */ 0)
+}
+
 __noop

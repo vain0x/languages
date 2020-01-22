@@ -6,8 +6,8 @@ int fn_assert_eq(int actual, int expected) {
 }
 
 int fn_inc(int* x) {
-    int result_2 = x + 1;
-    int result_3 = x = result_2;
+    int result_2 = *x + 1;
+    int result_3 = *x = result_2;
     return result_3;
 }
 

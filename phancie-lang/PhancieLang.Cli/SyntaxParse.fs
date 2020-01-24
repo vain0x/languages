@@ -214,7 +214,7 @@ let parseSegmentContent (p: P) =
     WhileNode
 
   | _ ->
-    failwith "tokenIsSegmentFirst bug"
+    failwith "NEVER: tokenIsSegmentFirst bug"
 
 let parseTerm (p: P) =
   parseHeadTerm p

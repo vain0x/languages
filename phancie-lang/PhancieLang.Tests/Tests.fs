@@ -2,6 +2,7 @@ module Tests
 
 open System
 open System.IO
+open PhancieLang.Ast
 open PhancieLang.AstAnalyze
 open PhancieLang.AstGen
 open PhancieLang.Cir
@@ -47,17 +48,20 @@ let snapshotTest (name: string) =
     x
 
   let sourceCode = File.ReadAllText(sourceName)
+  let aErrors = ResizeArray()
 
   sourceCode
   |> parse
   |> tee "_parse_snapshot.txt" nodeToSnapshot
   |> astRoot
-  |> fun ast -> astAnalyze ast; ast
+  |> fun ast -> astAnalyze aErrors ast; ast
   |> kirGen
   |> tee "_dump_snapshot.txt" kirDump
   |> cirGen
   |> tee ".c" cirDump
   |> ignore
+
+  writeLog "_error_snapshot.txt" (aErrors |> Seq.map aErrorToString |> String.concat "\n\n")
 
   true
 

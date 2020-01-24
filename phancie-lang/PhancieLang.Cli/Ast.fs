@@ -177,6 +177,31 @@ type AStmt =
     of AStmt list * SyntaxNode
 
 // -----------------------------------------------
+// エラー
+// -----------------------------------------------
+
+let aErrorToString e =
+  let near (first, second) =
+    sprintf "    %s\n    %s" first second
+
+  match e with
+  | AError (msg, syn) ->
+    sprintf "ERROR: %s\n%s"
+      msg (syn |> synToFeatureText |> near)
+
+  | APassByMismatchError (mode, passBy, syn) ->
+    sprintf "ERROR: Can't pass %A argument to a param with %A\n%s"
+      passBy mode (syn |> synToFeatureText |> near)
+
+  | ATyMismatchError (actual, expected) ->
+    let expectedTy = expected |> aTyToString
+    let expectedNear = expected |> aTyToSyn |> synToFeatureText |> near
+    let actualTy = actual |> aTyToString
+    let actualNear = actual |> aTyToSyn |> synToFeatureText |> near
+    sprintf "ERROR: Type mismatch.\nExpected: %s\nActual: %s\nNear1:\n%s\nNear2:\n%s"
+      expectedTy actualTy expectedNear actualNear
+
+// -----------------------------------------------
 // 二項演算子
 // -----------------------------------------------
 
@@ -259,6 +284,24 @@ let aTyToResultTy ty =
 
   | _ ->
     None
+
+let aTyToString ty =
+  match ty with
+  | ANameTy (name, _, _) ->
+    name
+
+  | ABoolTy _ ->
+    "bool"
+
+  | AIntTy _ ->
+    "int"
+
+  | AStringTy _ ->
+    "string"
+
+  | AFnTy (paramTys, resultTy, _) ->
+    // FIXME: params and result
+    "fn"
 
 // -----------------------------------------------
 // シンボル

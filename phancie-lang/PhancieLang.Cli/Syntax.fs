@@ -3,6 +3,7 @@
 /// - [Syntax in rust-analyzer](https://github.com/rust-analyzer/rust-analyzer/blob/fd69f629768ca0486be9b00f42cf7c42045f570b/docs/dev/syntax.md)
 module rec PhancieLang.Syntax
 
+open System.Text
 open PhancieLang.Helpers
 
 type TextLength = int
@@ -372,6 +373,22 @@ let nodeIsStmt (node: Node) =
 let nodeIsRoot (node: Node) =
   node = SemiNode
 
+let nodeToString (node: NodeData) =
+  let rec go (node: NodeData) acc =
+    node.Children |> Seq.fold (fun acc element ->
+      match element with
+      | TokenElement token ->
+        acc |> cons token.Text
+
+      | NodeElement node ->
+        acc |> go node
+
+      | ErrorElement _ ->
+        acc
+    ) acc
+
+  [] |> go node |> List.rev |> String.concat ""
+
 // -----------------------------------------------
 // NodeData
 // -----------------------------------------------
@@ -469,3 +486,79 @@ let synToFirstNode pred (syn: SyntaxNode) =
 
 let synToFilterNode pred (syn: SyntaxNode) =
   syn |> synFilterNodes pred |> Seq.toList
+
+// -----------------------------------------------
+// NearText
+// -----------------------------------------------
+
+/// node の childIndex 番目の要素の周辺を表示する文字列と、
+/// 対象のノードの範囲を ^^^ で強調する文字列を取得する。
+let nodeToFeatureText (childIndex: int) (node: NodeData) =
+  let elementToString element =
+    match element with
+    | TokenElement token ->
+      token.Text
+
+    | NodeElement node ->
+      node |> nodeToString
+
+    | ErrorElement _ ->
+      ""
+
+  let left = StringBuilder()
+  let middle = StringBuilder()
+  let right = StringBuilder()
+
+  for i in 0..node.Children.Count - 1 do
+    let text = node.Children.[i] |> elementToString
+    if i < childIndex then
+      left.Append(text) |> ignore
+    else if i = childIndex then
+      middle.Append(text) |> ignore
+    else
+      right.Append(text) |> ignore
+
+  let left =
+    left.ToString().Split([|'\r'; '\n'|])
+    |> Seq.tryLast
+    |> Option.defaultValue ""
+
+  let middle =
+    middle.ToString().Trim().Split([|'\r'; '\n'|])
+    |> Seq.tryHead
+    |> Option.defaultValue ""
+
+  let right =
+    right.ToString().Split([|'\r'; '\n'|])
+    |> Seq.tryHead
+    |> Option.defaultValue ""
+
+  let indent =
+    let placeholder (c: char) =
+      if (int c) <= 0x7f then
+        // half width
+        " "
+      else
+        // full with (roughly)
+        "　"
+
+    left |> Seq.map placeholder |> String.concat ""
+
+  let carets =
+    let caret (c: char) =
+      if int c <= 0x7f then
+        "^"
+      else
+        "^^"
+
+    middle |> Seq.map caret |> String.concat ""
+
+  sprintf "%s%s%s" left middle right, sprintf "%s%s" indent carets
+
+let synToFeatureText (syn: SyntaxNode) =
+  match syn.Parent with
+  | None ->
+    syn.Green |> nodeToFeatureText (-1)
+
+  | Some parent ->
+    parent.Green |> nodeToFeatureText syn.ChildIndex

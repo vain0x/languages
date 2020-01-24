@@ -14,13 +14,13 @@ type AstAnalyzeContext =
     Errors: ResizeArray<AError>
   }
 
-let aaContextNew (): AstAnalyzeContext =
+let aaContextNew (errors: ResizeArray<_>): AstAnalyzeContext =
   {
     FreshName = freshNameFun ()
     Symbols = ref Map.empty
     Loops = ResizeArray()
     Fns = ResizeArray()
-    Errors = ResizeArray()
+    Errors = errors
   }
 
 let aaContextResolveLocal name (context: AstAnalyzeContext) =
@@ -522,6 +522,6 @@ let aaStmts context stmts syn =
     aaStmt context stmt |> ignore
     aaStmts context stmts syn
 
-let astAnalyze (stmt: AStmt) =
-  let context = aaContextNew ()
+let astAnalyze (errors: ResizeArray<AError>) (stmt: AStmt) =
+  let context = aaContextNew errors
   aaStmt context stmt |> ignore

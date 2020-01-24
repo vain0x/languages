@@ -1,0 +1,3 @@
+ERROR: Can't pass ByIn argument to a param with MutMode
+        let mut a = 1;
+                    ^

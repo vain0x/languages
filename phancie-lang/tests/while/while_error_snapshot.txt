@@ -1,0 +1,17 @@
+ERROR: Can't pass ByIn argument to a param with MutMode
+        let mut ok = true;
+                     ^^^^
+
+ERROR: Can't pass ByIn argument to a param with MutMode
+        let mut a = 0;
+                    ^
+
+ERROR: Type mismatch.
+Expected: bool
+Actual: int
+Near1:
+    true
+    ^^^^
+Near2:
+    a == 5 then {;
+    ^^^^^^^^^^^^^

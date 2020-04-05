@@ -9,9 +9,7 @@ C言語に安全性・抽象性を高めるための仕組みをつける
 根本機能
 
 - C言語の機能
-- スコープに基づくリソース管理
-- スコープに基づく暗黙引数
-- 契約
+- 型レベル計算による契約
 
 設計思想
 
@@ -51,74 +49,175 @@ C言語に安全性・抽象性を高めるための仕組みをつける
 - 浮動小数点数型 f32, f64
 - 複合型 struct, union
 
+## 参照型
+
+- ref T :> ref ?mut T :> ref mut T
+
+## 可変性
+
+- 式は可変性を持つ
+- オブジェクトの状態変化を追跡しやすくするため
+- 可変性自体は型ではない
+- 関数型はパラメータや結果の可変性を含む
+
+可変性の記号
+
+- !mut (読み取り専用)
+- ?mut (可変性の伝播)
+- mut (読み書き可能)
+
+可変性の既定値
+
+- 変数の可変性は既定で !mut
+- 関数の結果の可変性は既定で mut
+
+式の可変性
+
+- mut な変数の式は mut
+- mut な式の参照、フィールドは mut
+- mut な ref mut 型の式の脱参照は mut
+- move 式は mut
+- 結果が mut な操作は mut
+
+可変性の伝播
+
+- mut でない変数の式は ?mut
+- ?mut な式の参照、脱参照、フィールドは ?mut
+- 結果が ?mut である操作は、次の条件を満たせば ?mut
+    - 条件: ?mut/mut なパラメータに渡す引数がすべて ?mut/mut であること
+
+参照の可変性
+
+- x: ?mut, x: T → ref ?mut x: ref ?mut T
+- x: mut, x: T → ref mut x: ref mut T
+
+例
+
+```rust
+// 可変性の制約
+
+let x = 1;
+let mut y = 2;
+
+// NG
+// x += 1;
+
+// OK
+y += 1;
+```
+
+```rust
+// 可変性の伝播
+
+struct Count {
+    inner: i64
+}
+
+fn get(?mut count: ref ?mut Count) -> ref ?mut T {
+    ref ?mut count.inner
+}
+
+let x = Count { inner: 1 };
+get(x); //=> 1
+
+let mut y = Count { inner: 2 };
+get(y) += 1;
+```
+
+## 依存解析
+
+- 参照の無効化を追跡する
+
+別名集合
+
+- 同じオブジェクトを指している可能性を追跡するためのもの
+- 依存集合の構築に使う
+- 変数やフィールドは別名集合を持つ
+- 別名集合には自身も含む
+- x ~ y : x, y が互いの別名である可能性がある
+
+依存集合
+
+- 他のオブジェクトに依存している可能性を追跡するためのもの
+- オブジェクトが変更されたら、それに依存している参照は無効化しなければいけない
+- x ~> y : y は x に依存している
+- 初め、依存集合は空
+- 依存先の別名集合・依存集合に含まれるすべての要素に依存するとみなす
+- s ~> s.t
+- v ~> v(i)
+
+## 契約
+
+ensures 句 (事後条件)
+
+- 関数の結果は ensures 句を持つ
+- パラメータや結果の名前を使って条件を指定する
+- すべてのコントロールパスにおいて、ensures に書かれたすべての条件が成り立つことが静的検査される
+- 関数の呼び出しの後、その関数の ensures 句に書かれたすべての条件が成立するとみなし、後続の静的検査で利用される
+- バージョン番号が変化した変数やフィールドを含む条件は無効となる
+
+述語
+
+```rust
+// 式 x はパターン p にマッチする
+x @ p
+
+// 式 x に型 t がつく
+x: t
+
+// 条件 p が成立する場合は必ず、条件 q も成立する
+p => q
+
+// 式 y は式 x に依存している
+x ~> y
+```
+
 ## ファントム
 
-ファントムは型の一種。型レベルの代数的データ型。
+ファントムは型の一種。
 
 - ファントムはいくつかのフェイズからなる
     - フェイズは互いに排他的
-- フェイズはファントムの部分型である
-    - 「ファントム」にフェイズ型を含むことがある
+- フェイズはファントムの部分型
+    - フェイズ型を含めて「ファントム」と呼ぶことがある
 - フェイズは条件式を持つ
-    - 条件が静的検査を通る式にのみフェイズ型がつく
-    - フェイズではなくファントムの型をつける際は、いずれかのフェイズの条件を満たせばよい
-- 以下の式はファントムを得る
+    - 式がフェイズの条件を満たすときのみ、式にフェイズが型としてつく
+    - 式がいずれかのフェイズの条件を満たすときのみ、式にファントムが型としてつく
+- 以下の式にはファントムが型としてつく
     - ファントムにキャストされる式
-    - ファントムの引数に渡される式
-    - ファントムの結果を持つ関数の呼び出し
-    - ensures 句を持つ関数呼び出し
+    - ファントムを持つパラメータに渡される式
+    - 結果がファントムを持つ関数の呼び出し
+
+糖衣構文
 
 ```rust
-// 式 x はパターン p にマッチする (束縛はしない)
-x @ p
+// すべてのフェイズが条件 self: T を持つ
+phantom P: T { ... }
 
-// 式 x は型 t を持ち、型 t のフェイズ条件を静的に満たす
-x: t
+phantom P {
+    // Q { self @ p }
+    Q @ p
+}
+
+// 無条件のフェイズを1つ持つ
+phantom P;
 ```
 
-事前条件
+### 例: ensures
 
 ```rust
-phantom SignedI64: i64 {
-    Zero {
-        self @ 0
-    }
-    Positive {
-        self @ 1..
-    }
-    Negative {
-        self @ ..0
-    }
+phantom Signed {
+    Zero
+    Positive
+    Negative
 }
 
-fn log2(x: SignedI64::Positive) -> f64 {
-    // 略
-}
-
-{
-    // 静的検査が通る。
-    log2(8); //=> 3
-}
-
-{
-    let x: i64 = f();
-
-    // 動的検査で条件を通す。
-    if (x @ 1..) {
-        log2(x);
-    }
-}
-```
-
-事後条件
-
-```rust
 fn is_positive(x: i64) -> bool
 ensures(result) {
-    result @ true => x: SignedI64::Positive
+    result @ true => x: Signed::Positive
 }
 {
-    x @ 1..
+    x > 0
 }
 
 {
@@ -130,85 +229,20 @@ ensures(result) {
 }
 ```
 
-## 暗黙引数
-
-```rust
-generic[T]
-phantom Default: T;
-
-// Default[i64] 型の変数 を impl 変数として定義する。
-impl Default[i64] = {
-    0
-};
-
-fn default() use(d: Default[i64]) -> i64 {
-    d
-}
-
-default(); //=> 0
-```
-
-- impl 変数はローカルからレキシカルスコープを遡って検索される。use も辿る。
-
-### 機能: シンボル型
-
-ローカル変数 `x` は通常の型に加えて固有の型を持つ。`%x` と書く。
-
-- 束縛・代入・変更されるたびに異なるシンボル型を得る。(リフレッシュ)
-- move されるとシンボル型を失う。
-
-```rust
-    let x = "1";
-    // x: String + %x (A)
-
-    x = "2";
-    // x: String + %x (B)
-    // A と B に互換性はない
-```
-
-### 機能: 関数ファントム
-
-関数ポインタの型 `fn(T1, T2, ...) -> U` はファントム。
-
-```rust
-fn add(x: i64, y: i64) -> i64 {
-    x + y
-}
-
-{
-    let mut p = address_of(add);
-    p(2, 3); //=> 5
-
-    p = address_of(fn(x, y) { x - y });
-    p(2, 3); //=> -1
-}
-```
-
-クロージャの型 `Fn[S](T1, T2, ...) -> U` はファントム。
-
-```rust
-fn foo() {
-    let n = 2;
-
-    // struct S { n: i64 }
-    // f: S + Fn[S](i64) -> i64
-    let f = fn(x: i64) { x + n };
-
-    f(3); //=> 5
-}
-```
-
 ### 例: ポインタ
 
 ```rust
 generic[T]
-phantom Ptr: usize;
+phantom Ptr: usize {
+    Null @ 0
+    NonNull
+}
 ```
 
 ```rust
 generic[T]
 fn ptr_add(p: Ptr[T], i: i64) -> Ptr[T] {
-    (p as usize) + i * size_of[T]
+    p + i * size_of[T]
 }
 
 let p: Ptr[i32];
@@ -222,10 +256,9 @@ ptr_add(q, 1); //=> q + 8
 
 ```rust
 phantom Color: i64 {
-    // Red { self @ 1 } の略
-    Red = 1
-    Green = 2
-    Blue = 3
+    Red @ 1
+    Green @ 2
+    Blue @ 3
 }
 
 fn color_to_hex(color: Color) -> String {
@@ -248,7 +281,7 @@ color_to_hex(Color::Red); //=> #FF0000
 ### 例: 代数的データ型
 
 ```rust
-struct ParseResultState {
+struct ParseResult: ParseResultInvariant {
     ok: bool
     union {
         tokens: Vec[Token]
@@ -256,7 +289,7 @@ struct ParseResultState {
     }
 }
 
-phantom ParseResult: ParseResultState {
+phantom ParseResultInvariant: ParseResult {
     Ok {
         self.ok @ true
         self.tokens @ [_, ..]
@@ -269,22 +302,21 @@ phantom ParseResult: ParseResultState {
 ```
 
 ```rust
-generic[]
-fn parse(text: Ref[_, String]) -> ParseResult {
+fn parse(text: ref String) -> ParseResult {
     let mut tokens = [];
     let mut errors = [];
 
     // 略
 
     if !Vec::is_empty(errors) {
-        return ParseResult::Err {
+        return ParseResult {
             ok: false
             errors: move errors
-        };
+        }
     }
 
     if tokens @ [_, ..] {
-        ParseResult::Ok {
+        ParseResult {
             ok: true
             tokens: move tokens
         }
@@ -308,63 +340,133 @@ fn parse(text: Ref[_, String]) -> ParseResult {
 ### 例: データ検証
 
 ```rust
-phantom NonEmptyString: String;
+phantom NonEmpty;
 
-generic[S]
-fn is_empty(s: Ref[S, String]) -> bool
+fn is_empty(s: ref String) -> bool
 ensures(result) {
-    result @ false => s: NonEmptyString
+    result @ false => s: NonEmpty
 } {
     s.len() == 0
 }
 
-generic[S]
-fn first(s: Ref[S, NonEmptyString]) -> char {
+fn first(s: ref ?mut String + NonEmpty) -> ref ?mut char {
     s[0]
 }
 
 {
-    let s = "hello";
+    let mut s = "hello";
     if !is_empty(&s) {
         first(&s);
     }
 
-    String::clear(s);
+    String::clear(ref s);
     // first(&s);
+}
+```
+
+## 関数のファントム
+
+関数ポインタを表す特殊なファントム
+
+`fn(T1, T2, ...) -> U`
+
+```rust
+fn add(x: i64, y: i64) -> i64 {
+    x + y
+}
+
+{
+    let mut p = &add;
+    p(2, 3); //=> 5
+
+    p = &fn(x, y) { x - y };
+    p(2, 3); //=> -1
+}
+```
+
+クロージャの型が持つ特殊なファントム
+
+`Fn[S](T1, T2, ...) -> U`
+
+```rust
+{
+    let n = 2;
+
+    // struct S { n: i64 }
+    // f: S + Fn[S](i64) -> i64
+    let f = fn(x: i64) { x + n };
+
+    f(3); //=> 5
+}
+```
+
+## 所有権
+
+- リソース管理のための機能
+
+所有権
+
+- Drop ファントムを持つ変数やフィールドはオブジェクトへの所有権を持つ
+
+ルール
+
+- 所有権を持つ変数は move されない限りコピーできない
+- move された変数やフィールドは未初期化になる
+- すべてのコントロールパスにおいて、スコープから外れる変数が所有権を持たないことが静的検査される
+
+```rust
+generic[T]
+phantom Box[T]: Ptr[T] + Drop;
+
+generic[T]
+fn box_new(content: T) -> Box[T] {
+    malloc(size_of[T]) as Box[T]
+}
+
+generic[T]
+fn box_drop(p: Box[T]) {
+    free(move p);
+}
+
+{
+    let p = box_new("hello");
+    box_drop(move p);
 }
 ```
 
 ## メモリ管理
 
-C++/Rust のような RAII を備える。
+ポインタ
 
-所有権:
+- オブジェクトへのポインタをとれる
+- ポインタの操作は安全ではない
 
-- 数値などの一部の型を除いて、オブジェクトは変数に所有される。
-- 変数がスコープを外れる際に、それが所有しているオブジェクトは drop される。
+変数への参照
 
-参照:
+- S にシンボル型が入る
+- `s: T + %s[v]` → `&s: Ref[%s[v], T]`, `s ~ &s`
 
-- オブジェクトへのポインタをとれる。ポインタの操作は安全ではない。
-- 参照型 `generic[S, T] phantom Ref for Ptr[T]`
-    - S は参照の有効性を検査するための幽霊型
-    - T は参照先の型
-    - 実体はポインタ
-- ローカル変数への参照
-    - S にシンボル型が入る
-    - `s: T` → `&s: Ref[%s, T]`
-- フィールドへの参照
-    - ローカル変数と同様。
-    - `&s: S`, `&s.t: T` → `&s.t: Ref[S, T]`
-- オブジェクトが所有するデータへの参照
-    - `&v: Ref[%v, Vec[T]]` → `&v(0): Ref[S, T]`
-- 参照の無効化
-    - 可変なパラメータに型 S の式を渡すとき、型 S を変更状態にする
-    - `Ref[S, T]` を変更状態にするには、S, T を変更状態にする
-    - `%x` を変更状態にするには、`%x` を変更状態にマークし、x のシンボル型をリフレッシュする
-    - 型 S の式を move するときは S を同様に無効状態にする
-- 参照の検査
-    - `Ref[S, T]` 型の式をパラメータに渡すには、S が変更状態でなく、T が無効状態でないことを検査する
+フィールドへの参照
+
+- ローカル変数と同様。
+- `&s: S`, `&s.t: T` → `&s.t: Ref[S, T]`, `&s ~> &s.t`
+
+オブジェクトが所有するデータへの参照
+
+- `&v: Ref[%v, Vec[T]]` → `&v(0): Ref[S, T]`
+
+参照を持つオブジェクト
+
+```rust
+generic[S, T]
+struct Borrow {
+    r: Ref[S, T]
+}
+```
+
+参照の検査
+
+- S が有効なときのみ、参照をコピーしたり脱参照したりできる
 
 無効参照の問題が生じるよくあるケース:
 
@@ -372,12 +474,14 @@ C++/Rust のような RAII を備える。
 fn leak_to_outer_block() {
     let r = {
         let a = clone("hello");
-        &a
+        defer {
+            String::drop(move a);
+        }
 
-        // drop(a) が起こり、参照 &a が無効になる。
+        &a
     };
 
-    // OK: %a が無効なので Ref[%a, String] 型の r を渡せない
+    // OK: a は無効
     print(r);
 }
 ```
@@ -385,10 +489,12 @@ fn leak_to_outer_block() {
 ```rust
 fn leak_to_callee() -> &String {
     let a = clone("hello");
+    defer {
+        String::drop(move a);
+    }
     let r = &a;
 
-    // drop(a) が起こり、参照 r が無効になる。
-    // OK: %a が無効なので結果に渡せない。
+    // OK: a は無効
     r
 }
 ```
@@ -398,13 +504,12 @@ fn invalidate_ref() {
     let a = clone("hello");
     let r = &a;
     {
-        // a を move すると参照 r は無効になる。
         let b = move a;
 
-        // ここで drop(b) が起こる。
+        String::drop(move b);
     }
 
-    // OK: %a は無効なので r を渡せない。
+    // OK: a は無効
     print(r);
 }
 ```
@@ -414,104 +519,17 @@ fn invalidate_vec_item() {
     let mut v = [clone("hello")];
     let r = &v(0);
 
-    v.push("world".clone());
+    Vec::push(ref v, "world".clone());
 
-    // OK: %v が変更状態なので Ref[%v, _] 型の r は渡せない
+    // OK: r は無効
     print(r);
-}
-```
-
-## その他
-
-関数を含むトレイト。
-
-```rust
-generic[T]
-struct Monoid {
-    empty: T
-    append: fn(T, T) -> T
-}
-
-impl Monoid[i64] {
-    empty: 0
-    append: fn(x: i64, y: i64) {
-        x + y
-    }
-}
-
-generic[S]
-fn sum(xs: Ref[S, Vec[T]]) use(monoid: Monoid[T]) -> T {
-    let mut sum = monoid.empty;
-    for x in xs {
-        sum = (monoid.append)(sum, x);
-    }
-    sum
-}
-```
-
-参照引数の略記
-
-```rust
-fn borrow(ref s: String) {}
-// generic[S] fn borrow(s_1: Ref[S, String]) { let alias s = *s1; }
-```
-
-## ライブラリ
-
-```rust
-generic[T]
-phantom Ptr: usize {
-    Null = 0
-    NonNull {
-        !(self @ 0)
-    }
-}
-
-generic[S, T]
-phantom Ref: Ptr[T];
-
-generic[R, T]
-struct Deref {
-    deref: fn(R) -> Ptr[T]
-}
-
-generic[S, T]
-impl Deref[Ref[S, T], T] {
-    deref: fn(s: Ref[S, T]) -> Ptr[T] {
-        s as Ptr[T]
-    }
-}
-
-generic[T]
-struct Vec {
-    data: Ptr[T]
-    size: usize
-    capacity: usize
-}
-
-generic[T]
-phantom AddAssign {
-    add_assign: generic[S] fn(Ref[S, T], T)
-}
-
-generic[S, T]
-fn add_assign(first: Ref[S, T], second: T)
-use(
-    deref: Deref[S, T]
-    adder: AddAssign[T]
-) {
-    adder.add_assign[S](deref.deref(first), second);
-}
-
-impl AddAssign[i32] {
-    value: generic[S] fn(first: Ref[S, i32], second: i32) use(deref: Deref[S]) {
-        let p = deref.deref(first);
-        let value = ptr_read[i32](p);
-        ptr_write[i32](p, value + second);
-    }
 }
 ```
 
 ## CPS
 
 - [コンパイラの作り方 (詳解)](https://www.is.s.u-tokyo.ac.jp/vu/96/cad/compilerresume/)
+
+## Similar projects
+
+- [ZetZ](https://github.com/zetzit/zz)

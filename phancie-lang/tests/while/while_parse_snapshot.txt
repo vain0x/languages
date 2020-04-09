@@ -106,15 +106,15 @@ N(SemiNode) [
           ]
           N(ExprNode) [
             N(WhileNode) [
-              N(NameNode) [
-                T(EolToken) `
+              T(EolToken) `
 `
-                T(SpaceToken) `    `
+              T(SpaceToken) `    `
+              T(WhileToken) `while`
+              T(SpaceToken) ` `
+              N(NameNode) [
                 T(IdentToken) `ok`
                 T(SpaceToken) ` `
               ]
-              T(WhileToken) `while`
-              T(SpaceToken) ` `
               N(BlockNode) [
                 T(LeftBraceToken) `{`
                 N(SemiNode) [
@@ -222,7 +222,6 @@ N(SemiNode) [
                 T(RightBraceToken) `}`
               ]
             ]
-            T(SemiToken) `;`
           ]
           N(ExprNode) [
             N(CallNode) [

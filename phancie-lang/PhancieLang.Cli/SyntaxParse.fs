@@ -100,6 +100,23 @@ let parseLoopTerm (p: P) =
     p.AddError(ExpectedError "ブロック")
   p.EndNode(LoopNode)
 
+let parseWhileTerm (p: P) =
+  assert (p.Next = WhileToken)
+
+  p.StartNode()
+  p.Bump()
+
+  // cond
+  parseHeadTerm p
+
+  // body
+  if p.Next = LeftBraceToken then
+    parseBlockTerm p
+  else
+    p.AddError(ExpectedError "ブロック")
+
+  p.EndNode(WhileNode)
+
 let parseGroupTerm (p: P) =
   p.StartNode()
 
@@ -157,6 +174,9 @@ let parseAtomTerm (p: P) =
   | LoopToken ->
     parseLoopTerm p
 
+  | WhileToken ->
+    parseWhileTerm p
+
   | _ ->
     p.Next |> tokenIsAtomTermFirst |> is false
 
@@ -198,37 +218,10 @@ let parseEqTerm (p: P) =
 let parseHeadTerm (p: P) =
   parseEqTerm p
 
-let parseWhileSegmentContent (p: P) =
-  assert (p.Next = WhileToken)
-
-  p.Eat(WhileToken) |> is true
-
-  if p.Next = LeftBraceToken then
-    parseBlockTerm p
-  else
-    p.AddError(ExpectedError "ブロック")
-
-let parseSegmentContent (p: P) =
-  assert (p.Next |> tokenIsSegmentFirst)
-
-  match p.Next with
-  | WhileToken ->
-    parseWhileSegmentContent p
-    WhileNode
-
-  | _ ->
-    failwith "NEVER: tokenIsSegmentFirst bug"
-
 let parseTerm (p: P) =
   parseHeadTerm p
 
-  if p.Next |> tokenIsSegmentFirst then
-    while p.Next |> tokenIsSegmentFirst do
-      p.StartNodeWithPrevious()
-      let node = parseSegmentContent p
-      p.EndNode(node)
-
-  else if p.Next = EqualToken then
+  if p.Next = EqualToken then
     p.StartNodeWithPrevious()
     p.Eat(EqualToken) |> is true
     parseTerm p

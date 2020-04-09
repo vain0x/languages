@@ -181,14 +181,15 @@ let astIf (syn: SyntaxNode) =
 let astWhile (syn: SyntaxNode) =
   assert (synToKind syn = WhileNode)
 
-  let terms =
+  let cond =
     syn
-    |> synToFilterNode nodeIsTerm
-    |> List.map astTerm
+    |> synToFirstNode nodeIsTerm
+    |> Option.map astTerm
 
-  // while キーワードの左と右からそれぞれ探す方がいい。
-  let cond = terms |> List.tryItem 0
-  let body = terms |> List.tryItem 1
+  let body =
+    syn
+    |> synToFirstNode ((=) BlockNode)
+    |> Option.map astTerm
 
   AWhileTerm (cond, body, ref None, syn)
 

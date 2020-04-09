@@ -259,6 +259,7 @@ let tokenIsAtomTermFirst token =
   | BreakToken
   | ContinueToken
   | LoopToken
+  | WhileToken
   | LeftParenToken
   | LeftBraceToken ->
     true
@@ -288,15 +289,6 @@ let tokenIsParamFirst token =
 
   | _ ->
     tokenIsTermFirst token
-
-/// パイプラインのセグメントの先頭になるトークンか？
-let tokenIsSegmentFirst token =
-  match token with
-  | WhileToken ->
-    true
-
-  | _ ->
-    false
 
 let tokenIsStmtFirst token =
   tokenIsStmtKeyword token

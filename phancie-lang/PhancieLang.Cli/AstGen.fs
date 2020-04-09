@@ -167,8 +167,7 @@ let astIf (syn: SyntaxNode) =
 
   let body =
     syn
-    |> synToFirstNode ((=) ThenNode)
-    |> Option.bind (synToFirstNode nodeIsTerm)
+    |> synToFirstNode ((=) BlockNode)
     |> Option.map astTerm
 
   let alt =

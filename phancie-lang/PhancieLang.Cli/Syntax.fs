@@ -255,6 +255,7 @@ let tokenIsAtomTermFirst token =
   | IntToken
   | StrStartToken
   | IdentToken
+  | IfToken
   | BreakToken
   | ContinueToken
   | LoopToken
@@ -291,7 +292,6 @@ let tokenIsParamFirst token =
 /// パイプラインのセグメントの先頭になるトークンか？
 let tokenIsSegmentFirst token =
   match token with
-  | ThenToken
   | WhileToken ->
     true
 

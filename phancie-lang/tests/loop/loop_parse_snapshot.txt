@@ -168,13 +168,15 @@ N(SemiNode) [
                   ]
                   N(ExprNode) [
                     N(IfNode) [
+                      T(EolToken) `
+`
+                      T(EolToken) `
+`
+                      T(SpaceToken) `        `
+                      T(IfToken) `if`
+                      T(SpaceToken) ` `
                       N(BinNode) [
                         N(NameNode) [
-                          T(EolToken) `
-`
-                          T(EolToken) `
-`
-                          T(SpaceToken) `        `
                           T(IdentToken) `a`
                           T(SpaceToken) ` `
                         ]
@@ -185,40 +187,37 @@ N(SemiNode) [
                           T(SpaceToken) ` `
                         ]
                       ]
-                      N(ThenNode) [
-                        T(ThenToken) `then`
-                        T(SpaceToken) ` `
-                        N(BlockNode) [
-                          T(LeftBraceToken) `{`
-                          N(SemiNode) [
-                            N(ExprNode) [
-                              N(BreakNode) [
-                                T(EolToken) `
+                      N(BlockNode) [
+                        T(LeftBraceToken) `{`
+                        N(SemiNode) [
+                          N(ExprNode) [
+                            N(BreakNode) [
+                              T(EolToken) `
 `
-                                T(SpaceToken) `            `
-                                T(BreakToken) `break`
-                              ]
-                              T(SemiToken) `;`
+                              T(SpaceToken) `            `
+                              T(BreakToken) `break`
                             ]
+                            T(SemiToken) `;`
                           ]
-                          T(EolToken) `
-`
-                          T(SpaceToken) `        `
-                          T(RightBraceToken) `}`
                         ]
+                        T(EolToken) `
+`
+                        T(SpaceToken) `        `
+                        T(RightBraceToken) `}`
                       ]
                     ]
-                    T(SemiToken) `;`
                   ]
                   N(ExprNode) [
                     N(IfNode) [
+                      T(EolToken) `
+`
+                      T(EolToken) `
+`
+                      T(SpaceToken) `        `
+                      T(IfToken) `if`
+                      T(SpaceToken) ` `
                       N(BinNode) [
                         N(NameNode) [
-                          T(EolToken) `
-`
-                          T(EolToken) `
-`
-                          T(SpaceToken) `        `
                           T(IdentToken) `a`
                           T(SpaceToken) ` `
                         ]
@@ -229,55 +228,50 @@ N(SemiNode) [
                           T(SpaceToken) ` `
                         ]
                       ]
-                      N(ThenNode) [
-                        T(ThenToken) `then`
-                        T(SpaceToken) ` `
-                        N(BlockNode) [
-                          T(LeftBraceToken) `{`
-                          N(SemiNode) [
-                            N(ExprNode) [
-                              N(BinNode) [
-                                N(NameNode) [
-                                  T(EolToken) `
-`
-                                  T(SpaceToken) `            `
-                                  T(IdentToken) `a`
-                                  T(SpaceToken) ` `
-                                ]
-                                T(EqualToken) `=`
-                                T(SpaceToken) ` `
-                                N(BinNode) [
-                                  N(NameNode) [
-                                    T(IdentToken) `a`
-                                    T(SpaceToken) ` `
-                                  ]
-                                  T(PlusToken) `+`
-                                  T(SpaceToken) ` `
-                                  N(IntLiteralNode) [
-                                    T(IntToken) `2`
-                                  ]
-                                ]
-                              ]
-                              T(SemiToken) `;`
-                            ]
-                            N(ExprNode) [
-                              N(ContinueNode) [
+                      N(BlockNode) [
+                        T(LeftBraceToken) `{`
+                        N(SemiNode) [
+                          N(ExprNode) [
+                            N(BinNode) [
+                              N(NameNode) [
                                 T(EolToken) `
 `
                                 T(SpaceToken) `            `
-                                T(ContinueToken) `continue`
+                                T(IdentToken) `a`
+                                T(SpaceToken) ` `
                               ]
-                              T(SemiToken) `;`
+                              T(EqualToken) `=`
+                              T(SpaceToken) ` `
+                              N(BinNode) [
+                                N(NameNode) [
+                                  T(IdentToken) `a`
+                                  T(SpaceToken) ` `
+                                ]
+                                T(PlusToken) `+`
+                                T(SpaceToken) ` `
+                                N(IntLiteralNode) [
+                                  T(IntToken) `2`
+                                ]
+                              ]
                             ]
+                            T(SemiToken) `;`
                           ]
-                          T(EolToken) `
+                          N(ExprNode) [
+                            N(ContinueNode) [
+                              T(EolToken) `
 `
-                          T(SpaceToken) `        `
-                          T(RightBraceToken) `}`
+                              T(SpaceToken) `            `
+                              T(ContinueToken) `continue`
+                            ]
+                            T(SemiToken) `;`
+                          ]
                         ]
+                        T(EolToken) `
+`
+                        T(SpaceToken) `        `
+                        T(RightBraceToken) `}`
                       ]
                     ]
-                    T(SemiToken) `;`
                   ]
                   N(ExprNode) [
                     N(BinNode) [

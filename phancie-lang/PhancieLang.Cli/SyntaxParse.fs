@@ -40,6 +40,40 @@ let parseNameTerm (p: P) =
   p.Bump()
   p.EndNode(NameNode)
 
+let parseIfTerm (p: P) =
+  assert (p.Next = IfToken)
+
+  p.StartNode()
+  p.Bump()
+
+  // cond
+  parseHeadTerm p
+
+  // body
+  if p.Next = LeftBraceToken then
+    parseBlockTerm p
+  else
+    p.AddError(ExpectedError "ブロック")
+
+  // alt
+  if p.Next = ElseToken then
+    p.StartNode()
+    p.Bump()
+
+    match p.Next with
+    | IfToken ->
+      parseIfTerm p
+
+    | LeftBraceToken ->
+      parseBlockTerm p
+
+    | _ ->
+      p.AddError(ExpectedError "ブロック")
+
+    p.EndNode(ElseNode)
+
+  p.EndNode(IfNode)
+
 let parseBreakTerm (p: P) =
   assert (p.Next = BreakToken)
 
@@ -111,6 +145,9 @@ let parseAtomTerm (p: P) =
   | LeftBraceToken ->
     parseBlockTerm p
 
+  | IfToken ->
+    parseIfTerm p
+
   | BreakToken ->
     parseBreakTerm p
 
@@ -161,36 +198,6 @@ let parseEqTerm (p: P) =
 let parseHeadTerm (p: P) =
   parseEqTerm p
 
-let parseIfSegmentContent (p: P) =
-  assert (p.Next = ThenToken)
-
-  p.StartNode()
-  p.Eat(ThenToken) |> is true
-  if p.Next = LeftBraceToken then
-    parseBlockTerm p
-  else
-    p.AddError(ExpectedError "ブロック")
-  p.EndNode(ThenNode)
-
-  if p.Next = ElseToken then
-    p.StartNode()
-    p.Bump()
-    if p.Eat(IfToken) then
-      parseHeadTerm p
-
-      if p.Next = ThenToken then
-        p.StartNodeWithPrevious()
-        parseIfSegmentContent p
-        p.EndNode(IfNode)
-      else
-        p.AddError(ExpectedError "then")
-    else
-      if p.Next = LeftBraceToken then
-        parseBlockTerm p
-      else
-        p.AddError(ExpectedError "ブロック")
-    p.EndNode(ElseNode)
-
 let parseWhileSegmentContent (p: P) =
   assert (p.Next = WhileToken)
 
@@ -205,10 +212,6 @@ let parseSegmentContent (p: P) =
   assert (p.Next |> tokenIsSegmentFirst)
 
   match p.Next with
-  | ThenToken ->
-    parseIfSegmentContent p
-    IfNode
-
   | WhileToken ->
     parseWhileSegmentContent p
     WhileNode

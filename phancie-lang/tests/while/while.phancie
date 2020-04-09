@@ -6,9 +6,9 @@ fn main() {
     ok while {
         assert_eq(a, a);
         a = a + 1;
-        a == 5 then {
+        if a == 5 {
             ok = false;
-        };
+        }
     };
     assert_eq(a, 5);
 }

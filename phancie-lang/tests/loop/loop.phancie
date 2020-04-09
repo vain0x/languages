@@ -8,14 +8,14 @@ fn main() {
     loop {
         assert_eq(a, a);
 
-        a == 5 then {
+        if a == 5 {
             break;
-        };
+        }
 
-        a == 2 then {
+        if a == 2 {
             a = a + 2;
             continue;
-        };
+        }
 
         a = a + 1;
     };

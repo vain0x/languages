@@ -31,6 +31,22 @@
 
 # Not ready for releases
 
+## Jacco Language ☆☆☆
+
+[jacco-lang](./jacco-lang)
+
+- Rust-ish syntax
+- C-ish semantics
+- Written in Rust, 2020
+
+## Confwell ☆☆☆
+
+[confwell](./confwell)
+
+- Data notation for configuration
+- Written in 2020
+- No implementation yet
+
 ## X-BNF Language ★☆☆
 
 [xbnf-lang](./xbnf-lang)
@@ -38,7 +54,7 @@
 - Extended BNF processor
 - Written in: F#, 2019
 
-## Zoaride language ☆☆☆
+## Zoaride Language ☆☆☆
 
 [zoaride-lang](https://github.com/vain0x/zoaride-lang)
 

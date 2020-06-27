@@ -219,7 +219,9 @@ mod token {
 }
 
 mod utils {
+    mod id;
     mod id_provider;
 
+    pub(crate) use id::Id;
     pub(crate) use id_provider::IdProvider;
 }

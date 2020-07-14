@@ -1,6 +1,0 @@
-[workspace]
-members = [
-    "jl_compiler",
-    "jl_lsp",
-    "jl_tests"
-]

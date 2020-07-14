@@ -1,4 +1,0 @@
-int main() {
-    int add_1 = 40 + 2;
-    return add_1;
-}

@@ -33,7 +33,7 @@
 
 ## Jacco Language ☆☆☆
 
-[jacco-lang](./jacco-lang)
+[jacco-lang](https://github.com/vain0x/jacco-lang/tree/develop)
 
 - Rust-ish syntax
 - C-ish semantics

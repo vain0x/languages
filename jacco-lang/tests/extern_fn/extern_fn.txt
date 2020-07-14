@@ -1,5 +1,0 @@
-void gets();
-
-void puts();
-
-int i32_add(int left_1, int right_2);

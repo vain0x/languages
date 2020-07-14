@@ -1,6 +1,0 @@
-pub fn main() -> i32 {
-    1;
-    2;
-    let a = 0;
-    a
-}

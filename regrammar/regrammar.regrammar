@@ -1,0 +1,80 @@
+# Syntax of the Regrammar itself
+
+# ------------------------------------------------
+# Trivia
+# ------------------------------------------------
+
+space
+    = [\r \n ' ' \t]
+comment
+    = '#' .*
+_
+    = (comment | space)*
+
+# ------------------------------------------------
+# Token
+# ------------------------------------------------
+
+digit
+    = [0-9]
+alphabet
+    = [A-Z a-z]
+hex_digit
+    = [0-9 A-F a-f]
+ident
+    = (alphabet | '_') (digit | alphabet | '_')*
+
+escape
+    = '\' [0-9 A-Z a-w y z '\"+-*/%&|^<>=~@()[]{}.,:;!?' \']
+    | '\x' hex_digit hex_digit
+
+single_quote
+    = \' [^ \0 \r \n \']* \'
+double_quote
+    = \" (escape | [^ \0 \r \n \" \\]) \"
+quote
+    = single_quote
+    | double_quote
+
+name
+    = ident
+    | quote
+
+# ------------------------------------------------
+# Sets
+# ------------------------------------------------
+
+atomic_element
+    = alphabet
+    | digit
+    | escape
+    | quote
+set_element
+    = atomic_element (_ '-' _ atomic_element)?
+set
+    = '[' '^'? _ (set_element _)* ']'
+
+# ------------------------------------------------
+# Patterns
+# ------------------------------------------------
+
+atomic_pattern
+    = '$'? name
+    | '(' _ pattern _ ')'
+    | set
+suffix_pattern
+    = atomic_pattern (_ ('?' | '+' | '*'))*
+prefix_pattern
+    = (name? ':')? suffix_pattern
+sequence_pattern
+    = prefix_pattern (_ prefix_pattern)*
+pattern
+    = sequence_pattern (_ '|' _ sequence_pattern)*
+
+# ------------------------------------------------
+# Root
+# ------------------------------------------------
+
+decl = name _ '=' _ pattern
+
+\A _ (decl _)* (pattern _)? \z

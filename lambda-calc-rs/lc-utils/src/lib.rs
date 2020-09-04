@@ -1,4 +1,5 @@
 // pub mod parser;
+pub mod deque_chan;
 pub mod tokenizer;
 
 #[cfg(test)]

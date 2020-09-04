@@ -4,8 +4,15 @@ use std::fmt::{self, Debug};
 pub(crate) struct TokenData {
     pub(crate) text: String,
     pub(crate) kind: TokenKind,
-    pub(crate) start: usize,
-    pub(crate) end: usize,
+    pub(crate) len: usize,
+}
+
+impl TokenData {
+    pub(crate) const EOF: TokenData = TokenData {
+        text: String::new(),
+        kind: TokenKind::Eof,
+        len: 0,
+    };
 }
 
 impl Debug for TokenData {

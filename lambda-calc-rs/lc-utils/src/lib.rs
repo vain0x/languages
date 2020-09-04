@@ -1,5 +1,8 @@
-// pub mod parser;
 pub mod deque_chan;
+pub mod parser;
+pub mod token_kind_trait;
+pub mod token_stream;
+pub mod token_with_trivia;
 pub mod tokenizer;
 
 #[cfg(test)]

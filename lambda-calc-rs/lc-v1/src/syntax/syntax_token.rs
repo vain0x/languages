@@ -1,17 +1,23 @@
 use crate::token::token_kind::TokenKind;
+use std::fmt::{self, Debug, Formatter};
 
-/// 構文木の一要素としてのトークン
 #[derive(Copy, Clone)]
-pub(crate) struct SyntaxToken {
-    /// トリビアではないトークンの種類のみ入る。
-    kind: TokenKind,
+pub(crate) struct SyntaxToken<'a> {
+    pub(crate) index: usize,
+    pub(crate) kind: TokenKind,
+    pub(crate) text: &'a str,
+}
 
-    /// 先行トリビアの長さ
-    leading_len: u16,
-
-    /// 本体の長さ
-    body_len: u16,
-
-    /// 後続トリビアの長さ
-    trailing_len: u16,
+impl Debug for SyntaxToken<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self.kind {
+            TokenKind::NewLine
+            | TokenKind::Blank
+            | TokenKind::Comment
+            | TokenKind::BadToken
+            | TokenKind::Number
+            | TokenKind::Ident => Debug::fmt(&self.text, f),
+            _ => Debug::fmt(&self.kind, f),
+        }
+    }
 }

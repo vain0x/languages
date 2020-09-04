@@ -1,22 +1,49 @@
-// mod ast {
-//     pub(crate) mod a_tree;
-// }
+mod ast {
+    pub(crate) mod a_parser;
+    pub(crate) mod a_tree;
+}
 
-// mod parse {
-//     pub(crate) mod parse_decls;
-//     pub(crate) mod parse_exprs;
-//     pub(crate) mod parse_root;
-//     pub(crate) mod parser;
-// }
+mod parse {
+    pub(crate) mod parse_decls;
+    pub(crate) mod parse_exprs;
+    pub(crate) mod parse_root;
+    pub(crate) mod parser;
+}
 
 mod syntax {
     pub(crate) mod syntax_token;
+    pub(crate) mod syntax_tree;
 }
 
 mod token {
     pub(crate) mod token_data;
     pub(crate) mod token_kind;
     pub(crate) mod tokenize_rules;
+}
+
+mod utils {
+    pub(crate) use bumpalo::{boxed::Box as BumpaloBox, collections::Vec as BumpaloVec};
+}
+
+mod context {
+    use crate::utils::*;
+
+    #[derive(Copy, Clone)]
+    pub(crate) struct ContextRef<'a> {
+        context: &'a Context,
+    }
+
+    pub(crate) struct Context {
+        pub(crate) bump: bumpalo::Bump,
+    }
+
+    impl Context {
+        pub(crate) fn new() -> Self {
+            Self {
+                bump: bumpalo::Bump::new(),
+            }
+        }
+    }
 }
 
 #[cfg(test)]

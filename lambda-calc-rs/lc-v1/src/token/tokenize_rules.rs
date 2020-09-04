@@ -1,22 +1,34 @@
 use super::{token_data::TokenData, token_kind::TokenKind};
-use lc_utils::tokenizer::{Tokenizer, TokenizerHost};
-use std::collections::VecDeque;
+use lc_utils::{
+    deque_chan::{deque_chan, DequeSender},
+    tokenizer::{Tokenizer, TokenizerHost},
+};
+use std::{cell::RefCell, collections::VecDeque};
 
-type Tx<'a, 'h> = Tokenizer<'a, 'h, MyTokenizerHost>;
+type Tx<'a, 'h> = Tokenizer<'a, 'h, MyTokenizerHost<'h>>;
 
-pub(crate) struct MyTokenizerHost {
-    pub(crate) tokens: VecDeque<TokenData>,
+pub(crate) struct MyTokenizerHost<'h> {
+    pub(crate) stopped: bool,
+    pub(crate) tokens: DequeSender<'h, TokenData>,
 }
 
-impl TokenizerHost for MyTokenizerHost {
+impl<'h> MyTokenizerHost<'h> {
+    pub(crate) fn new(tokens: DequeSender<'h, TokenData>) -> Self {
+        Self {
+            stopped: false,
+            tokens,
+        }
+    }
+}
+
+impl<'h> TokenizerHost for MyTokenizerHost<'h> {
     type Kind = TokenKind;
 
     fn on_token(&mut self, text: &str, kind: TokenKind, start: usize, end: usize) {
         self.tokens.push_back(TokenData {
             text: text.to_string(),
             kind,
-            start,
-            end,
+            len: end - start,
         });
     }
 }
@@ -135,9 +147,9 @@ pub(crate) fn tokenize_advance(tx: &mut Tx) -> bool {
 }
 
 pub(crate) fn tokenize(source_code: &str) -> Vec<TokenData> {
-    let mut host = MyTokenizerHost {
-        tokens: VecDeque::new(),
-    };
+    let mut deque = VecDeque::new();
+    let (tx, _) = deque_chan(&mut deque);
+    let mut host = MyTokenizerHost::new(tx);
 
     {
         let mut tx = Tx::new(source_code, &mut host);
@@ -145,7 +157,7 @@ pub(crate) fn tokenize(source_code: &str) -> Vec<TokenData> {
         tx.finish();
     }
 
-    host.tokens.into_iter().collect()
+    deque.into_iter().collect()
 }
 
 #[cfg(test)]

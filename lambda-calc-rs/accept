@@ -1,0 +1,4 @@
+#!/bin/sh
+# expect![[...]] の中身を自動で書き換えて、スナップショットテストが通るようにする。
+
+UPDATE_EXPECT=1 cargo test

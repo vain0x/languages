@@ -10,10 +10,13 @@ edition = "2018"
 lc-utils = { path = "../lc-utils" }
 
 # Bump allocator <https://github.com/fitzgen/bumpalo>
-bumpalo = "3"
+bumpalo = { version = "3", features = ["boxed", "collections"] }
 
 # Logging API <https://github.com/rust-lang/log>
 log = { version = "0.4", features = ["std"] }
 
 # Snapshot testing <https://github.com/rust-analyzer/expect-test>
 expect-test = { git = "https://github.com/rust-analyzer/expect-test.git", tag = "v1.0.1" }
+
+# 構文木を表現するためのもの
+# rowan = { git = "https://github.com/rust-analyzer/rowan.git", tag = "v0.10.0" }

@@ -12,11 +12,26 @@ use lc_utils::{
 };
 
 pub(crate) trait LambdaParserHost<'a> {
+    type BeforeParamList;
+    type AfterParamList;
     type BeforeArgList;
     type AfterArgList;
     type AfterExpr;
     type AfterDecl;
     type AfterRoot;
+
+    fn before_param_list(&mut self, open_paren: SyntaxToken<'a>) -> Self::BeforeParamList;
+    fn after_param(
+        &mut self,
+        name: SyntaxToken<'a>,
+        comma_pot: Option<SyntaxToken<'a>>,
+        param_list: &mut Self::BeforeParamList,
+    );
+    fn after_param_list(
+        &mut self,
+        close_paren_opt: Option<SyntaxToken<'a>>,
+        param_list: Self::BeforeParamList,
+    ) -> Self::AfterParamList;
 
     fn before_arg_list(&mut self, open_paren: SyntaxToken<'a>) -> Self::BeforeArgList;
     fn after_arg(
@@ -37,6 +52,12 @@ pub(crate) trait LambdaParserHost<'a> {
         &mut self,
         callee: Self::AfterExpr,
         arg_list: Self::AfterArgList,
+    ) -> Self::AfterExpr;
+    fn after_fn_expr(
+        &mut self,
+        keyword: SyntaxToken<'a>,
+        param_list_opt: Option<Self::AfterParamList>,
+        body_opt: Option<Self::AfterExpr>,
     ) -> Self::AfterExpr;
 
     fn after_let_decl(

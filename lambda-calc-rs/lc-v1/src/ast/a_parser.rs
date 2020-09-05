@@ -8,12 +8,36 @@ pub struct AstLambdaParserHost<'a> {
 }
 
 impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
+    type BeforeParamList = BumpaloVec<'a, SyntaxToken<'a>>;
+    type AfterParamList = BumpaloVec<'a, SyntaxToken<'a>>;
+
     type BeforeArgList = BumpaloVec<'a, AExpr<'a>>;
     type AfterArgList = BumpaloVec<'a, AExpr<'a>>;
 
     type AfterExpr = AExpr<'a>;
     type AfterDecl = ADecl<'a>;
     type AfterRoot = ARoot<'a>;
+
+    fn before_param_list(&mut self, _open_paren: SyntaxToken<'a>) -> Self::BeforeParamList {
+        BumpaloVec::new_in(&self.context.bump)
+    }
+
+    fn after_param(
+        &mut self,
+        name: SyntaxToken<'a>,
+        _comma_opt: Option<SyntaxToken<'a>>,
+        param_list: &mut Self::BeforeParamList,
+    ) {
+        param_list.push(name);
+    }
+
+    fn after_param_list(
+        &mut self,
+        _close_paren_opt: Option<SyntaxToken<'a>>,
+        param_list: Self::BeforeParamList,
+    ) -> Self::AfterParamList {
+        param_list
+    }
 
     fn before_arg_list(&mut self, _open_paren: SyntaxToken<'a>) -> Self::BeforeArgList {
         BumpaloVec::new_in(&self.context.bump)
@@ -52,6 +76,18 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         AExpr::Call(ACallExpr {
             callee: BumpaloBox::new_in(callee, &self.context.bump),
             args: arg_list,
+        })
+    }
+
+    fn after_fn_expr(
+        &mut self,
+        _keyword: SyntaxToken<'a>,
+        param_list_opt: Option<Self::AfterParamList>,
+        body_opt: Option<Self::AfterExpr>,
+    ) -> Self::AfterExpr {
+        AExpr::Fn(AFnExpr {
+            params: param_list_opt.unwrap_or_else(|| BumpaloVec::new_in(&self.context.bump)),
+            body_opt: body_opt.map(|body| BumpaloBox::new_in(body, &self.context.bump)),
         })
     }
 

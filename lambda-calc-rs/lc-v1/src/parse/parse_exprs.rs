@@ -3,6 +3,29 @@ use crate::{syntax::syntax_token::SyntaxToken, token::token_kind::TokenKind};
 use lc_utils::parser::Parser;
 
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
+    fn parse_tuple_param_list(&mut self, open_paren: SyntaxToken<'a>) -> H::AfterParamList {
+        let mut param_list = self.host.before_param_list(open_paren);
+
+        loop {
+            let name = match self.next() {
+                TokenKind::Eof | TokenKind::CloseParen | TokenKind::SemiColon => break,
+                TokenKind::Ident => self.bump(),
+                _ => {
+                    eprintln!("expected expr");
+                    self.skip();
+                    continue;
+                }
+            };
+
+            let comma_opt = self.eat(TokenKind::Comma);
+            self.host.after_param(name, comma_opt, &mut param_list);
+        }
+
+        let close_paren_opt = self.eat(TokenKind::CloseParen);
+
+        self.host.after_param_list(close_paren_opt, param_list)
+    }
+
     fn parse_tuple_arg_list(&mut self, open_paren: SyntaxToken<'a>) -> H::AfterArgList {
         let mut arg_list = self.host.before_arg_list(open_paren);
 
@@ -78,7 +101,25 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
         }
     }
 
+    fn parse_fn_expr(&mut self) -> H::AfterExpr {
+        let keyword = self.bump();
+
+        let param_list_opt = match self.eat(TokenKind::OpenParen) {
+            Some(open_paren) => Some(self.parse_tuple_param_list(open_paren)),
+            None => None,
+        };
+
+        let body_opt = self.parse_expr();
+        self.host.after_fn_expr(keyword, param_list_opt, body_opt)
+    }
+
     pub(crate) fn parse_expr(&mut self) -> Option<H::AfterExpr> {
-        self.parse_suffix_expr()
+        match self.next() {
+            TokenKind::Eof | TokenKind::CloseParen | TokenKind::Comma | TokenKind::SemiColon => {
+                None
+            }
+            TokenKind::Fn => Some(self.parse_fn_expr()),
+            _ => self.parse_suffix_expr(),
+        }
     }
 }

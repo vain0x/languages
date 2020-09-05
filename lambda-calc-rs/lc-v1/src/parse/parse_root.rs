@@ -233,4 +233,138 @@ mod tests {
                 }"#]],
         );
     }
+
+    #[test]
+    fn test_fn_expr() {
+        do_test_parse(
+            r#"
+                let zero_fn = fn() 0;
+                let church_two = fn(f, x) f(f(x));
+                let id = fn(x) x;
+
+                let param_list_missing = fn x;
+                let body_missing = fn();
+            "#,
+            expect![[r#"
+                ARoot {
+                    decls: [
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "zero_fn",
+                                ),
+                                init_opt: Some(
+                                    Fn(
+                                        AFnExpr {
+                                            params: [],
+                                            body_opt: Some(
+                                                Number(
+                                                    "0",
+                                                ),
+                                            ),
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "church_two",
+                                ),
+                                init_opt: Some(
+                                    Fn(
+                                        AFnExpr {
+                                            params: [
+                                                "f",
+                                                "x",
+                                            ],
+                                            body_opt: Some(
+                                                Call(
+                                                    ACallExpr {
+                                                        callee: Var(
+                                                            "f",
+                                                        ),
+                                                        args: [
+                                                            Call(
+                                                                ACallExpr {
+                                                                    callee: Var(
+                                                                        "f",
+                                                                    ),
+                                                                    args: [
+                                                                        Var(
+                                                                            "x",
+                                                                        ),
+                                                                    ],
+                                                                },
+                                                            ),
+                                                        ],
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "id",
+                                ),
+                                init_opt: Some(
+                                    Fn(
+                                        AFnExpr {
+                                            params: [
+                                                "x",
+                                            ],
+                                            body_opt: Some(
+                                                Var(
+                                                    "x",
+                                                ),
+                                            ),
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "param_list_missing",
+                                ),
+                                init_opt: Some(
+                                    Fn(
+                                        AFnExpr {
+                                            params: [],
+                                            body_opt: Some(
+                                                Var(
+                                                    "x",
+                                                ),
+                                            ),
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "body_missing",
+                                ),
+                                init_opt: Some(
+                                    Fn(
+                                        AFnExpr {
+                                            params: [],
+                                            body_opt: None,
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                    ],
+                    eof: Eof,
+                }"#]],
+        );
+    }
 }

@@ -9,7 +9,7 @@ pub(crate) struct ACallExpr<'a> {
 #[derive(Debug)]
 pub(crate) struct AFnExpr<'a> {
     pub(crate) params: BumpaloVec<'a, SyntaxToken<'a>>,
-    pub(crate) body: BumpaloBox<'a, AExpr<'a>>,
+    pub(crate) body_opt: Option<BumpaloBox<'a, AExpr<'a>>>,
 }
 
 #[derive(Debug)]

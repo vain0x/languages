@@ -181,6 +181,82 @@ mod tests {
     }
 
     #[test]
+    fn test_paren_expr() {
+        do_test_parse(
+            r#"
+                let _ = (f)(x);
+                let _ = (fn(x)(x))(x);
+                let _ = ();
+            "#,
+            expect![[r#"
+                ARoot {
+                    decls: [
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "_",
+                                ),
+                                init_opt: Some(
+                                    Call(
+                                        ACallExpr {
+                                            callee: Var(
+                                                "f",
+                                            ),
+                                            args: [
+                                                Var(
+                                                    "x",
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "_",
+                                ),
+                                init_opt: Some(
+                                    Call(
+                                        ACallExpr {
+                                            callee: Fn(
+                                                AFnExpr {
+                                                    params: [
+                                                        "x",
+                                                    ],
+                                                    body_opt: Some(
+                                                        Var(
+                                                            "x",
+                                                        ),
+                                                    ),
+                                                },
+                                            ),
+                                            args: [
+                                                Var(
+                                                    "x",
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "_",
+                                ),
+                                init_opt: None,
+                            },
+                        ),
+                    ],
+                    eof: Eof,
+                }"#]],
+        );
+    }
+
+    #[test]
     fn test_call_expr_chain() {
         do_test_parse(
             r#"

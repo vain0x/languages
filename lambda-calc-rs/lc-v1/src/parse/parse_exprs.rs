@@ -57,6 +57,14 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
         self.host.after_arg_list(close_paren_opt, arg_list)
     }
 
+    fn parse_paren_expr(&mut self) -> Option<H::AfterExpr> {
+        let open_paren = self.bump();
+        let body_opt = self.parse_expr();
+        let close_paren_op = self.eat(TokenKind::CloseParen);
+        // FIXME: self.host.after_paren_expr(open_paren, body_opt, close_paren_opt);
+        body_opt
+    }
+
     fn parse_atomic_expr(&mut self) -> Option<H::AfterExpr> {
         let expr = match self.next() {
             TokenKind::Number => {
@@ -67,20 +75,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
                 let token = self.bump();
                 self.host.after_ident_expr(token)
             }
-            // TokenKind::LeftParen => {
-            //     let left_paren = self.bump();
-            //     match self.next() {
-            //         TokenKind::RightParen => {
-            //             let right_paren = self.bump();
-            //             alloc_unit_expr_from_parens(event, left_paren, right_paren, px)
-            //         }
-            //         _ => {
-            //             let body_opt = parse_expr(px);
-            //             let right_paren_opt = self.eat(TokenKind::RightParen);
-            //             alloc_paren_expr(event, left_paren, body_opt, right_paren_opt, px)
-            //         }
-            //     }
-            // }
+            TokenKind::OpenParen => return self.parse_paren_expr(),
             _ => return None,
         };
         Some(expr)

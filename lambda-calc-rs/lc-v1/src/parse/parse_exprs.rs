@@ -67,6 +67,14 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
 
     fn parse_atomic_expr(&mut self) -> Option<H::AfterExpr> {
         let expr = match self.next() {
+            TokenKind::True => {
+                let token = self.bump();
+                self.host.after_true_expr(token)
+            }
+            TokenKind::False => {
+                let token = self.bump();
+                self.host.after_false_expr(token)
+            }
             TokenKind::Number => {
                 let token = self.bump();
                 self.host.after_number_expr(token)

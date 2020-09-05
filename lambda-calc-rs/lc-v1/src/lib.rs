@@ -116,6 +116,8 @@ mod tests {
         do_test_evaluate(
             r#"
                 let num = 42;
+                let t = true;
+                let f = false;
 
                 // use var
                 let var = num;
@@ -129,6 +131,8 @@ mod tests {
             "#,
             expect![[r#"
                 val num : number = 42;
+                val t : bool = true;
+                val f : bool = false;
                 val var : number = 42;
                 val zero_fn : fn(...) -> ... = <function>;
                 val _ : number = 0;

@@ -6,6 +6,7 @@ use std::{collections::HashMap, fmt::Write};
 
 #[derive(Copy, Clone)]
 pub(crate) enum EValue<'a> {
+    Bool(bool),
     Int(i64),
     Fn(&'a AFnExpr<'a>),
 }
@@ -35,6 +36,8 @@ impl<'a> Evaluator<'a> {
 
     fn on_expr(&mut self, expr: &'a AExpr<'a>) -> Result<EValue<'a>, String> {
         let value = match expr {
+            AExpr::False(..) => EValue::Bool(false),
+            AExpr::True(..) => EValue::Bool(true),
             AExpr::Number(token) => {
                 let value = match token.text.parse::<i64>() {
                     Ok(it) => it,
@@ -46,6 +49,7 @@ impl<'a> Evaluator<'a> {
                 .find_value(token.text)
                 .ok_or_else(|| format!("unknown var {}", token.text))?,
             AExpr::Call(expr) => match self.on_expr(&*expr.callee)? {
+                EValue::Bool(_) => return Err("can't call bool".into()),
                 EValue::Int(_) => return Err("can't call int".into()),
                 EValue::Fn(callee) => {
                     let args = expr.args.iter().map(|expr| self.on_expr(expr));
@@ -104,6 +108,9 @@ impl<'a> Evaluator<'a> {
                     };
 
                     match value {
+                        EValue::Bool(value) => {
+                            writeln!(&mut self.output, "val {} : bool = {};", name, value).unwrap()
+                        }
                         EValue::Int(value) => {
                             writeln!(&mut self.output, "val {} : number = {};", name, value)
                                 .unwrap()

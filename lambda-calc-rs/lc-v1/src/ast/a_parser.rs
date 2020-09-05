@@ -60,6 +60,14 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         arg_list
     }
 
+    fn after_true_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr {
+        AExpr::True(token)
+    }
+
+    fn after_false_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr {
+        AExpr::False(token)
+    }
+
     fn after_number_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr {
         AExpr::Number(token)
     }

@@ -14,6 +14,8 @@ pub(crate) struct AFnExpr<'a> {
 
 #[derive(Debug)]
 pub(crate) enum AExpr<'a> {
+    True(SyntaxToken<'a>),
+    False(SyntaxToken<'a>),
     Number(SyntaxToken<'a>),
     Var(SyntaxToken<'a>),
     Call(ACallExpr<'a>),

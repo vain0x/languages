@@ -43,6 +43,13 @@ mod context {
                 bump: bumpalo::Bump::new(),
             }
         }
+
+        pub(crate) fn allocate_iter<T>(
+            &self,
+            iter: impl IntoIterator<Item = T>,
+        ) -> BumpaloVec<'_, T> {
+            BumpaloVec::from_iter_in(iter, &self.bump)
+        }
     }
 }
 

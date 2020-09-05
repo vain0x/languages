@@ -26,7 +26,7 @@ pub(crate) enum ADecl<'a> {
 }
 
 pub(crate) struct ARoot<'a> {
-    pub(crate) decls: ADecl<'a>,
+    pub(crate) decls: BumpaloVec<'a, ADecl<'a>>,
 }
 
 pub(crate) struct Ast<'a> {

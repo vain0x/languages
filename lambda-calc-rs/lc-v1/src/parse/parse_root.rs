@@ -1,15 +1,6 @@
 use super::parser::{LambdaParser, LambdaParserHost};
-use crate::token::{
-    token_data::TokenData,
-    token_kind::TokenKind,
-    tokenize_rules::{tokenize_advance, MyTokenizerHost},
-};
-use crate::{syntax::syntax_token::SyntaxToken, utils::*};
-use lc_utils::{
-    parser::Parser,
-    token_stream::{TokenStream, TokenStreamHost},
-    tokenizer::Tokenizer,
-};
+use crate::token::token_kind::TokenKind;
+use lc_utils::parser::Parser;
 
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     pub(crate) fn parse_root(&mut self) -> H::AfterRoot {
@@ -38,12 +29,13 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::token::tokenize_rules::MyTokenizerHost;
     use crate::{
         ast::a_parser::AstLambdaParserHost, context::Context, parse::parser::LambdaParser,
     };
     use expect_test::{expect, Expect};
     use lc_utils::deque_chan::deque_chan;
+    use lc_utils::tokenizer::Tokenizer;
     use std::collections::VecDeque;
 
     fn do_test_parse(source_code: &str, expect: Expect) {

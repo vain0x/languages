@@ -1,23 +1,18 @@
 use super::{token_data::TokenData, token_kind::TokenKind};
 use lc_utils::{
-    deque_chan::{deque_chan, DequeSender},
+    deque_chan::DequeSender,
     tokenizer::{Tokenizer, TokenizerHost},
 };
-use std::{cell::RefCell, collections::VecDeque};
 
 type Tx<'a, 'h> = Tokenizer<'a, 'h, MyTokenizerHost<'h>>;
 
 pub(crate) struct MyTokenizerHost<'h> {
-    pub(crate) stopped: bool,
     pub(crate) tokens: DequeSender<'h, TokenData>,
 }
 
 impl<'h> MyTokenizerHost<'h> {
     pub(crate) fn new(tokens: DequeSender<'h, TokenData>) -> Self {
-        Self {
-            stopped: false,
-            tokens,
-        }
+        Self { tokens }
     }
 }
 
@@ -147,26 +142,29 @@ pub(crate) fn tokenize_advance(tx: &mut Tx) -> bool {
     true
 }
 
-pub(crate) fn tokenize(source_code: &str) -> Vec<TokenData> {
-    let mut deque = VecDeque::new();
-    let (tx, _) = deque_chan(&mut deque);
-    let mut host = MyTokenizerHost::new(tx);
-
-    {
-        let mut tx = Tx::new(source_code, &mut host);
-        while tokenize_advance(&mut tx) {}
-        tx.finish();
-    }
-
-    deque.into_iter().collect()
-}
-
 #[cfg(test)]
 mod tests {
+    use super::*;
     use expect_test::{expect, Expect};
+    use lc_utils::deque_chan::deque_chan;
+    use std::collections::VecDeque;
+
+    fn tokenize(source_code: &str) -> Vec<TokenData> {
+        let mut deque = VecDeque::new();
+        let (tx, _) = deque_chan(&mut deque);
+        let mut host = MyTokenizerHost::new(tx);
+
+        {
+            let mut tx = Tx::new(source_code, &mut host);
+            while tokenize_advance(&mut tx) {}
+            tx.finish();
+        }
+
+        deque.into_iter().collect()
+    }
 
     fn do_test_tokenize(source_code: &str, expect: Expect) {
-        let actual = format!("{:#?}", super::tokenize(source_code));
+        let actual = format!("{:#?}", tokenize(source_code));
         expect.assert_eq(&actual);
     }
 

@@ -20,3 +20,7 @@ expect-test = { git = "https://github.com/rust-analyzer/expect-test.git", tag = 
 
 # 構文木を表現するためのもの
 # rowan = { git = "https://github.com/rust-analyzer/rowan.git", tag = "v0.10.0" }
+
+# 標準入力を読み込むもの。(カーソルキーなどに対応している。)
+# <https://github.com/kkawakam/rustyline>
+rustyline = "6"

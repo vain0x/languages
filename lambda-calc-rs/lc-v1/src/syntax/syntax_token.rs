@@ -3,6 +3,7 @@ use std::fmt::{self, Debug, Formatter};
 
 #[derive(Copy, Clone)]
 pub(crate) struct SyntaxToken<'a> {
+    #[allow(unused)]
     pub(crate) index: usize,
     pub(crate) kind: TokenKind,
     pub(crate) text: &'a str,

@@ -58,9 +58,9 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     }
 
     fn parse_paren_expr(&mut self) -> Option<H::AfterExpr> {
-        let open_paren = self.bump();
+        let _open_paren = self.bump();
         let body_opt = self.parse_expr();
-        let close_paren_op = self.eat(TokenKind::CloseParen);
+        let _close_paren_op = self.eat(TokenKind::CloseParen);
         // FIXME: self.host.after_paren_expr(open_paren, body_opt, close_paren_opt);
         body_opt
     }

@@ -7,14 +7,6 @@ pub(crate) struct TokenData {
     pub(crate) len: usize,
 }
 
-impl TokenData {
-    pub(crate) const EOF: TokenData = TokenData {
-        text: String::new(),
-        kind: TokenKind::Eof,
-        len: 0,
-    };
-}
-
 impl Debug for TokenData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {

@@ -28,10 +28,10 @@ mod utils {
 mod context {
     use crate::utils::*;
 
-    #[derive(Copy, Clone)]
-    pub(crate) struct ContextRef<'a> {
-        context: &'a Context,
-    }
+    // #[derive(Copy, Clone)]
+    // pub(crate) struct ContextRef<'a> {
+    //     context: &'a Context,
+    // }
 
     pub(crate) struct Context {
         pub(crate) bump: bumpalo::Bump,
@@ -50,6 +50,32 @@ mod context {
         ) -> BumpaloVec<'_, T> {
             BumpaloVec::from_iter_in(iter, &self.bump)
         }
+    }
+}
+
+pub mod rust_api {
+    use crate::{
+        ast::a_parser::AstLambdaParserHost, context::Context, parse::parser::LambdaParser,
+        token::tokenize_rules::MyTokenizerHost,
+    };
+    use lc_utils::{deque_chan::deque_chan, tokenizer::Tokenizer};
+    use std::collections::VecDeque;
+
+    pub fn syntax_tree(source_code: &str) -> String {
+        let mut context = Context::new();
+        let mut tokens = VecDeque::new();
+
+        let (tx, rx) = deque_chan(&mut tokens);
+        let mut tokenizer_host = MyTokenizerHost::new(tx);
+        let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
+
+        let mut parser_host = AstLambdaParserHost {
+            context: &mut context,
+            // ...
+        };
+        let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
+        let tokens = parser.parse_root();
+        format!("{:#?}", tokens)
     }
 }
 

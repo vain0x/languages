@@ -42,14 +42,11 @@ mod tests {
     use crate::{
         ast::a_parser::AstLambdaParserHost, context::Context, parse::parser::LambdaParser,
     };
-    use expect_test::expect;
+    use expect_test::{expect, Expect};
     use lc_utils::deque_chan::deque_chan;
     use std::collections::VecDeque;
 
-    #[test]
-    fn test_parse() {
-        let source_code = "let id = id; let x = 1;";
-
+    fn do_test_parse(source_code: &str, expect: Expect) {
         let mut context = Context::new();
         let mut tokens = VecDeque::new();
 
@@ -65,7 +62,12 @@ mod tests {
         let tokens = parser.parse_root();
 
         let actual = format!("{:#?}", tokens);
+        expect.assert_eq(&actual);
+    }
 
+    #[test]
+    fn test_parse_let_decls() {
+        let source_code = "let id = id; let x = 1;";
         let expect = expect![[r#"
             ARoot {
                 decls: [
@@ -96,6 +98,139 @@ mod tests {
                 ],
                 eof: Eof,
             }"#]];
-        expect.assert_eq(&actual);
+        do_test_parse(source_code, expect);
+    }
+
+    #[test]
+    fn test_call_expr() {
+        do_test_parse(
+            r#"
+                let x0 = f0();
+                let x1 = f1(x);
+                let x2 = f2(x, y);
+            "#,
+            expect![[r#"
+                ARoot {
+                    decls: [
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "x0",
+                                ),
+                                init_opt: Some(
+                                    Call(
+                                        ACallExpr {
+                                            callee: Var(
+                                                "f0",
+                                            ),
+                                            args: [],
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "x1",
+                                ),
+                                init_opt: Some(
+                                    Call(
+                                        ACallExpr {
+                                            callee: Var(
+                                                "f1",
+                                            ),
+                                            args: [
+                                                Var(
+                                                    "x",
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "x2",
+                                ),
+                                init_opt: Some(
+                                    Call(
+                                        ACallExpr {
+                                            callee: Var(
+                                                "f2",
+                                            ),
+                                            args: [
+                                                Var(
+                                                    "x",
+                                                ),
+                                                Var(
+                                                    "y",
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                    ],
+                    eof: Eof,
+                }"#]],
+        );
+    }
+
+    #[test]
+    fn test_call_expr_chain() {
+        do_test_parse(
+            r#"
+                let _ = f(1)(2)(3);
+            "#,
+            expect![[r#"
+                ARoot {
+                    decls: [
+                        Let(
+                            ALetDecl {
+                                name_opt: Some(
+                                    "_",
+                                ),
+                                init_opt: Some(
+                                    Call(
+                                        ACallExpr {
+                                            callee: Call(
+                                                ACallExpr {
+                                                    callee: Call(
+                                                        ACallExpr {
+                                                            callee: Var(
+                                                                "f",
+                                                            ),
+                                                            args: [
+                                                                Number(
+                                                                    "1",
+                                                                ),
+                                                            ],
+                                                        },
+                                                    ),
+                                                    args: [
+                                                        Number(
+                                                            "2",
+                                                        ),
+                                                    ],
+                                                },
+                                            ),
+                                            args: [
+                                                Number(
+                                                    "3",
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                    ],
+                    eof: Eof,
+                }"#]],
+        );
     }
 }

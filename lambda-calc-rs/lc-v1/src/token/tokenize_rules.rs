@@ -59,6 +59,7 @@ fn lookahead(tx: &mut Tx) -> Lookahead {
         'A'..='Z' | 'a'..='z' | '_' => Lookahead::Ident,
         '(' => Lookahead::Token(TokenKind::OpenParen, 1),
         ')' => Lookahead::Token(TokenKind::CloseParen, 1),
+        ',' => Lookahead::Token(TokenKind::Comma, 1),
         '=' => Lookahead::Token(TokenKind::Equal, 1),
         ';' => Lookahead::Token(TokenKind::SemiColon, 1),
         '/' if tx.nth(1) == '/' => Lookahead::Comment,

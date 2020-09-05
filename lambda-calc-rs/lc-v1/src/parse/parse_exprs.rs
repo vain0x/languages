@@ -1,8 +1,39 @@
 use super::parser::{LambdaParser, LambdaParserHost};
-use crate::token::token_kind::TokenKind;
+use crate::{syntax::syntax_token::SyntaxToken, token::token_kind::TokenKind};
 use lc_utils::parser::Parser;
 
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
+    fn parse_tuple_arg_list(&mut self, open_paren: SyntaxToken<'a>) -> H::AfterArgList {
+        let mut arg_list = self.host.before_arg_list(open_paren);
+
+        loop {
+            match self.next() {
+                TokenKind::Eof | TokenKind::CloseParen | TokenKind::SemiColon => break,
+                TokenKind::Comma => {
+                    self.skip();
+                    continue;
+                }
+                _ => {}
+            }
+
+            let expr = match self.parse_expr() {
+                Some(it) => it,
+                None => {
+                    eprintln!("expected expr");
+                    self.skip();
+                    continue;
+                }
+            };
+
+            let comma_opt = self.eat(TokenKind::Comma);
+            self.host.after_arg(expr, comma_opt, &mut arg_list);
+        }
+
+        let close_paren_opt = self.eat(TokenKind::CloseParen);
+
+        self.host.after_arg_list(close_paren_opt, arg_list)
+    }
+
     fn parse_atomic_expr(&mut self) -> Option<H::AfterExpr> {
         let expr = match self.next() {
             TokenKind::Number => {
@@ -37,12 +68,11 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
 
         loop {
             match self.next() {
-                // TokenKind::OpenParen => {
-                //     let event = self.start_parent(&left.1);
-                //     let left_paren = self.bump();
-                //     let arg_list = parse_tuple_arg_list(left_paren, px);
-                //     left = alloc_call_expr(event, left, arg_list, px);
-                // }
+                TokenKind::OpenParen => {
+                    let left_paren = self.bump();
+                    let arg_list = self.parse_tuple_arg_list(left_paren);
+                    left = self.host.after_call_expr(left, arg_list);
+                }
                 _ => return Some(left),
             }
         }

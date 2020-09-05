@@ -13,6 +13,7 @@ pub(crate) enum TokenKind {
     Let,
     OpenParen,
     CloseParen,
+    Comma,
     Equal,
     SemiColon,
 }

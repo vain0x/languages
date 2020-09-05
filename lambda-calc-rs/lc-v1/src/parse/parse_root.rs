@@ -1,7 +1,4 @@
-use super::{
-    parse_decls::parse_decl,
-    parser::{LambdaParser, LambdaParserHost},
-};
+use super::parser::{LambdaParser, LambdaParserHost};
 use crate::token::{
     token_data::TokenData,
     token_kind::TokenKind,
@@ -14,29 +11,29 @@ use lc_utils::{
     tokenizer::Tokenizer,
 };
 
-pub(crate) fn parse_root<'a, H: LambdaParserHost<'a>>(
-    px: &mut LambdaParser<'a, H>,
-) -> H::AfterRoot {
-    let mut decls = vec![];
-    loop {
-        if let TokenKind::Eof = px.next() {
-            break;
+impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
+    pub(crate) fn parse_root(&mut self) -> H::AfterRoot {
+        let mut decls = vec![];
+        loop {
+            if let TokenKind::Eof = self.next() {
+                break;
+            }
+
+            let decl = match self.parse_decl() {
+                Some(it) => it,
+                None => {
+                    eprintln!("expected decl");
+                    self.skip();
+                    continue;
+                }
+            };
+
+            decls.push(decl);
         }
 
-        let decl = match parse_decl(px) {
-            Some(it) => it,
-            None => {
-                eprintln!("expected decl");
-                px.skip();
-                continue;
-            }
-        };
-
-        decls.push(decl);
+        let eof = self.bump();
+        self.host.after_root(decls, eof)
     }
-
-    let eof = px.bump();
-    px.host.after_root(decls, eof)
 }
 
 #[cfg(test)]
@@ -65,7 +62,7 @@ mod tests {
             // ...
         };
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
-        let tokens = parse_root(&mut parser);
+        let tokens = parser.parse_root();
 
         let actual = format!("{:#?}", tokens);
 

@@ -23,19 +23,16 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         _keyword: SyntaxToken<'a>,
         name_opt: Option<SyntaxToken<'a>>,
         _equal_opt: Option<SyntaxToken<'a>>,
-        _init_opt: Option<Self::AfterExpr>,
+        init_opt: Option<Self::AfterExpr>,
         _semi_opt: Option<SyntaxToken<'a>>,
     ) -> Self::AfterDecl {
-        ADecl::Let(ALetDecl { name_opt })
+        ADecl::Let(ALetDecl { name_opt, init_opt })
     }
 
-    fn after_root(
-        &mut self,
-        decls: Vec<Self::AfterDecl>,
-        _eof: SyntaxToken<'a>,
-    ) -> Self::AfterRoot {
+    fn after_root(&mut self, decls: Vec<Self::AfterDecl>, eof: SyntaxToken<'a>) -> Self::AfterRoot {
         ARoot {
             decls: self.context.allocate_iter(decls),
+            eof,
         }
     }
 }

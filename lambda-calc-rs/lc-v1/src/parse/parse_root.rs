@@ -1,4 +1,7 @@
-use super::parser::{LambdaParser, LambdaParserHost};
+use super::{
+    parse_decls::parse_decl,
+    parser::{LambdaParser, LambdaParserHost},
+};
 use crate::token::{
     token_data::TokenData,
     token_kind::TokenKind,
@@ -11,17 +14,29 @@ use lc_utils::{
     tokenizer::Tokenizer,
 };
 
-pub(crate) fn parse_root<'a, H: LambdaParserHost>(
-    px: &mut LambdaParser<'a, '_, H>,
-) -> Vec<SyntaxToken<'a>> {
-    let mut tokens = vec![];
+pub(crate) fn parse_root<'a, H: LambdaParserHost<'a>>(
+    px: &mut LambdaParser<'a, H>,
+) -> H::AfterRoot {
+    let mut decls = vec![];
     loop {
-        match px.next() {
-            TokenKind::Eof => break,
-            _ => tokens.push(px.bump()),
+        if let TokenKind::Eof = px.next() {
+            break;
         }
+
+        let decl = match parse_decl(px) {
+            Some(it) => it,
+            None => {
+                eprintln!("expected decl");
+                px.skip();
+                continue;
+            }
+        };
+
+        decls.push(decl);
     }
-    tokens
+
+    let eof = px.bump();
+    px.host.after_root(decls, eof)
 }
 
 #[cfg(test)]
@@ -36,7 +51,7 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        let source_code = "let id = id;";
+        let source_code = "let id = id; let x = 1;";
 
         let mut context = Context::new();
         let mut tokens = VecDeque::new();
@@ -55,13 +70,35 @@ mod tests {
         let actual = format!("{:#?}", tokens);
 
         let expect = expect![[r#"
-            [
-                Let,
-                "id",
-                Equal,
-                "id",
-                SemiColon,
-            ]"#]];
+            ARoot {
+                decls: [
+                    Let(
+                        ALetDecl {
+                            name_opt: Some(
+                                "id",
+                            ),
+                            init_opt: Some(
+                                Var(
+                                    "id",
+                                ),
+                            ),
+                        },
+                    ),
+                    Let(
+                        ALetDecl {
+                            name_opt: Some(
+                                "x",
+                            ),
+                            init_opt: Some(
+                                Number(
+                                    "1",
+                                ),
+                            ),
+                        },
+                    ),
+                ],
+                eof: Eof,
+            }"#]];
         expect.assert_eq(&actual);
     }
 }

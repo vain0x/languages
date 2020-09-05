@@ -1,16 +1,18 @@
 use super::parser::{LambdaParser, LambdaParserHost};
 use crate::token::token_kind::TokenKind;
+use lc_utils::parser::Parser;
 
-fn parse_atomic_expr<H: LambdaParserHost>(px: &mut LambdaParser<H>) -> Option<H::AfterExpr> {
-    let event = px.start_element();
+fn parse_atomic_expr<'a, H: LambdaParserHost<'a>>(
+    px: &mut LambdaParser<'a, H>,
+) -> Option<H::AfterExpr> {
     let expr = match px.next() {
         TokenKind::Number => {
             let token = px.bump();
-            px.after_number_expr(event, token)
+            px.host.after_number_expr(token)
         }
         TokenKind::Ident => {
             let token = px.bump();
-            px.after_ident_expr(event, token)
+            px.host.after_ident_expr(token)
         }
         // TokenKind::LeftParen => {
         //     let left_paren = px.bump();
@@ -31,7 +33,9 @@ fn parse_atomic_expr<H: LambdaParserHost>(px: &mut LambdaParser<H>) -> Option<H:
     Some(expr)
 }
 
-fn parse_suffix_expr<H: LambdaParserHost>(px: &mut LambdaParser<H>) -> Option<H::AfterExpr> {
+fn parse_suffix_expr<'a, H: LambdaParserHost<'a>>(
+    px: &mut LambdaParser<'a, H>,
+) -> Option<H::AfterExpr> {
     let mut left = parse_atomic_expr(px)?;
 
     loop {
@@ -47,6 +51,8 @@ fn parse_suffix_expr<H: LambdaParserHost>(px: &mut LambdaParser<H>) -> Option<H:
     }
 }
 
-pub(crate) fn parse_expr<H: LambdaParserHost>(px: &mut LambdaParser<H>) -> Option<H::AfterExpr> {
+pub(crate) fn parse_expr<'a, H: LambdaParserHost<'a>>(
+    px: &mut LambdaParser<'a, H>,
+) -> Option<H::AfterExpr> {
     parse_suffix_expr(px)
 }

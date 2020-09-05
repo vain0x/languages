@@ -31,23 +31,23 @@ pub(crate) trait LambdaParserHost<'a> {
     fn after_root(&mut self, decls: Vec<Self::AfterDecl>, eof: SyntaxToken<'a>) -> Self::AfterRoot;
 }
 
-pub(crate) struct LambdaParser<'a, 'h, H: LambdaParserHost<'h>> {
+pub(crate) struct LambdaParser<'a, H: LambdaParserHost<'a>> {
     source_code: &'a str,
-    tokenizer: Tokenizer<'a, 'h, MyTokenizerHost<'h>>,
-    rx: DequeReceiver<'h, TokenData>,
+    tokenizer: Tokenizer<'a, 'a, MyTokenizerHost<'a>>,
+    rx: DequeReceiver<'a, TokenData>,
     lookahead: (TokenKind, usize),
     next: Option<SyntaxToken<'a>>,
     count: usize,
     last_index: usize,
-    pub(crate) host: &'h mut H,
+    pub(crate) host: &'a mut H,
 }
 
-impl<'a, 'h, H: LambdaParserHost<'h>> LambdaParser<'a, 'h, H> {
+impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     pub(crate) fn new(
         source_code: &'a str,
-        tokenizer: Tokenizer<'a, 'h, MyTokenizerHost<'h>>,
-        rx: DequeReceiver<'h, TokenData>,
-        host: &'h mut H,
+        tokenizer: Tokenizer<'a, 'a, MyTokenizerHost<'a>>,
+        rx: DequeReceiver<'a, TokenData>,
+        host: &'a mut H,
     ) -> Self {
         let mut parser = Self {
             source_code,
@@ -86,7 +86,7 @@ impl<'a, 'h, H: LambdaParserHost<'h>> LambdaParser<'a, 'h, H> {
     }
 }
 
-impl<'a, 'h, H: LambdaParserHost<'h>> Parser for LambdaParser<'a, 'h, H> {
+impl<'a, H: LambdaParserHost<'a>> Parser for LambdaParser<'a, H> {
     type TokenKind = TokenKind;
     type TokenData = SyntaxToken<'a>;
     type Host = H;
@@ -123,12 +123,12 @@ impl<'a, 'h, H: LambdaParserHost<'h>> Parser for LambdaParser<'a, 'h, H> {
     }
 }
 
-struct MyTokenStream<'a, 'h, 'p, H: LambdaParserHost<'h>> {
-    parser: &'p mut LambdaParser<'a, 'h, H>,
+struct MyTokenStream<'a, 'p, H: LambdaParserHost<'a>> {
+    parser: &'p mut LambdaParser<'a, H>,
 }
 
-impl<'a, 'h, 'p, H: LambdaParserHost<'h>> MyTokenStream<'a, 'h, 'p, H> {
-    fn new(parser: &'p mut LambdaParser<'a, 'h, H>) -> Self {
+impl<'a, 'p, H: LambdaParserHost<'a>> MyTokenStream<'a, 'p, H> {
+    fn new(parser: &'p mut LambdaParser<'a, H>) -> Self {
         Self { parser }
     }
 
@@ -158,14 +158,10 @@ impl<'a, 'h, 'p, H: LambdaParserHost<'h>> MyTokenStream<'a, 'h, 'p, H> {
     }
 }
 
-fn do_lookahead<'h, H: LambdaParserHost<'h>>(
+fn do_lookahead<'a, 'p, H: LambdaParserHost<'a>>(
     lookahead: &mut (TokenKind, usize),
-    host: &mut MyTokenStream<H>,
+    host: &mut MyTokenStream<'a, 'p, H>,
 ) -> Option<TokenWithTrivia<TokenKind>> {
-    if lookahead.0.is_eof() {
-        return None;
-    }
-
     let mut leading_len = 0_usize;
     while lookahead.0.is_leading_trivia() {
         leading_len += lookahead.1;

@@ -5,7 +5,7 @@ use super::{
 use crate::token::token_kind::TokenKind;
 use lc_utils::parser::Parser;
 
-fn parse_let_decl<H: LambdaParserHost>(px: &mut LambdaParser<H>) -> H::AfterDecl {
+fn parse_let_decl<'a, H: LambdaParserHost<'a>>(px: &mut LambdaParser<'a, H>) -> H::AfterDecl {
     let keyword = px.bump();
 
     let name_opt = px.eat(TokenKind::Ident);
@@ -23,7 +23,9 @@ fn parse_let_decl<H: LambdaParserHost>(px: &mut LambdaParser<H>) -> H::AfterDecl
         .after_let_decl(keyword, name_opt, equal_opt, init_opt, semi_opt)
 }
 
-pub(crate) fn parse_decl<H: LambdaParserHost>(px: &mut LambdaParser<H>) -> Option<H::AfterDecl> {
+pub(crate) fn parse_decl<'a, H: LambdaParserHost<'a>>(
+    px: &mut LambdaParser<'a, H>,
+) -> Option<H::AfterDecl> {
     let decl = match px.next() {
         TokenKind::Let => parse_let_decl(px),
         _ => return None,

@@ -11,6 +11,8 @@ pub(crate) enum EValue<'a> {
     Fn(&'a AFnExpr<'a>),
 }
 
+pub(crate) type EResult<'a> = Result<EValue<'a>, String>;
+
 pub(crate) struct Evaluator<'a> {
     map_stack: Vec<HashMap<&'a str, EValue<'a>>>,
     output: String,
@@ -34,7 +36,7 @@ impl<'a> Evaluator<'a> {
             .copied()
     }
 
-    fn on_expr(&mut self, expr: &'a AExpr<'a>) -> Result<EValue<'a>, String> {
+    fn on_expr(&mut self, expr: &'a AExpr<'a>) -> EResult<'a> {
         let value = match expr {
             AExpr::False(..) => EValue::Bool(false),
             AExpr::True(..) => EValue::Bool(true),
@@ -104,45 +106,49 @@ impl<'a> Evaluator<'a> {
                         None => "it",
                     };
 
-                    let init = match &decl.init_opt {
-                        Some(it) => it,
-                        None => {
-                            writeln!(&mut self.output, "val {} = <missing>;", name).unwrap();
-                            continue;
-                        }
+                    let result = match &decl.init_opt {
+                        Some(init) => self.on_expr(init),
+                        None => Err("missing init expression".into()),
                     };
 
-                    let value = match self.on_expr(init) {
-                        Ok(it) => it,
-                        Err(err) => {
-                            writeln!(
-                                &mut self.output,
-                                "val {} = <err>;\nERROR: \"{}\"",
-                                name, err
-                            )
-                            .unwrap();
-                            continue;
-                        }
-                    };
+                    self.emit_val(name, &result);
 
-                    match value {
-                        EValue::Bool(value) => {
-                            writeln!(&mut self.output, "val {} : bool = {};", name, value).unwrap()
-                        }
-                        EValue::Int(value) => {
-                            writeln!(&mut self.output, "val {} : number = {};", name, value)
-                                .unwrap()
-                        }
-                        EValue::Fn(_) => writeln!(
-                            &mut self.output,
-                            "val {} : fn(...) -> ... = <function>;",
-                            name
-                        )
-                        .unwrap(),
+                    if let Ok(value) = result {
+                        self.map_stack.last_mut().unwrap().insert(name, value);
                     }
-
-                    self.map_stack.last_mut().unwrap().insert(name, value);
                 }
+            }
+        }
+    }
+
+    fn emit_val(&mut self, name: &str, result: &EResult<'a>) {
+        let value = match result {
+            Ok(value) => value,
+            Err(err) => {
+                writeln!(
+                    &mut self.output,
+                    "val {} = <err>;\nERROR: \"{}\"",
+                    name, err
+                )
+                .unwrap();
+                return;
+            }
+        };
+
+        match value {
+            EValue::Bool(value) => {
+                writeln!(&mut self.output, "val {} : bool = {};", name, value).unwrap();
+            }
+            EValue::Int(value) => {
+                writeln!(&mut self.output, "val {} : number = {};", name, value).unwrap();
+            }
+            EValue::Fn(_) => {
+                writeln!(
+                    &mut self.output,
+                    "val {} : fn(...) -> ... = <function>;",
+                    name
+                )
+                .unwrap();
             }
         }
     }

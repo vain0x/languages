@@ -50,11 +50,22 @@ pub(crate) trait LambdaParserHost<'a> {
     fn after_false_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr;
     fn after_number_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr;
     fn after_ident_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr;
+
     fn after_call_expr(
         &mut self,
         callee: Self::AfterExpr,
         arg_list: Self::AfterArgList,
     ) -> Self::AfterExpr;
+
+    fn after_if_expr(
+        &mut self,
+        if_keyword: SyntaxToken<'a>,
+        cond_opt: Option<Self::AfterExpr>,
+        body_opt: Option<Self::AfterExpr>,
+        else_keyword: Option<SyntaxToken<'a>>,
+        alt_opt: Option<Self::AfterExpr>,
+    ) -> Self::AfterExpr;
+
     fn after_fn_expr(
         &mut self,
         keyword: SyntaxToken<'a>,

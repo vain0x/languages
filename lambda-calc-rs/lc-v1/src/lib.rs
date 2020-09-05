@@ -119,12 +119,18 @@ mod tests {
                 let t = true;
                 let f = false;
 
-                // use var
+                // var expr
                 let var = num;
 
-                // define and call fn
+                // fn expr
                 let zero_fn = fn() 0;
+
+                // call expr
                 let _ = zero_fn();
+
+                // if expr
+                let _ = if true { 1 } else { 0 };
+                let _ = if false { 1 } else { 0 };
 
                 let id = fn(x) x;
                 let _ = id(id)(id)(id)(zero_fn)();
@@ -135,6 +141,8 @@ mod tests {
                 val f : bool = false;
                 val var : number = 42;
                 val zero_fn : fn(...) -> ... = <function>;
+                val _ : number = 0;
+                val _ : number = 1;
                 val _ : number = 0;
                 val id : fn(...) -> ... = <function>;
                 val _ : number = 0;

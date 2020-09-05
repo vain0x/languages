@@ -7,6 +7,12 @@ pub struct AstLambdaParserHost<'a> {
     pub(crate) context: &'a Context,
 }
 
+impl<'a> AstLambdaParserHost<'a> {
+    fn new_box<T>(&self, value: T) -> BumpaloBox<'a, T> {
+        BumpaloBox::new_in(value, &self.context.bump)
+    }
+}
+
 impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     type BeforeParamList = BumpaloVec<'a, SyntaxToken<'a>>;
     type AfterParamList = BumpaloVec<'a, SyntaxToken<'a>>;
@@ -82,8 +88,23 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         arg_list: Self::AfterArgList,
     ) -> Self::AfterExpr {
         AExpr::Call(ACallExpr {
-            callee: BumpaloBox::new_in(callee, &self.context.bump),
+            callee: self.new_box(callee),
             args: arg_list,
+        })
+    }
+
+    fn after_if_expr(
+        &mut self,
+        _if_keyword: SyntaxToken<'a>,
+        cond_opt: Option<Self::AfterExpr>,
+        body_opt: Option<Self::AfterExpr>,
+        _else_keyword: Option<SyntaxToken<'a>>,
+        alt_opt: Option<Self::AfterExpr>,
+    ) -> Self::AfterExpr {
+        AExpr::If(AIfExpr {
+            cond_opt: cond_opt.map(|expr| self.new_box(expr)),
+            body_opt: body_opt.map(|expr| self.new_box(expr)),
+            alt_opt: alt_opt.map(|expr| self.new_box(expr)),
         })
     }
 
@@ -95,7 +116,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     ) -> Self::AfterExpr {
         AExpr::Fn(AFnExpr {
             params: param_list_opt.unwrap_or_else(|| BumpaloVec::new_in(&self.context.bump)),
-            body_opt: body_opt.map(|body| BumpaloBox::new_in(body, &self.context.bump)),
+            body_opt: body_opt.map(|body| self.new_box(body)),
         })
     }
 

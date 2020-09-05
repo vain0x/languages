@@ -9,12 +9,16 @@ pub(crate) enum TokenKind {
     BadToken,
     Number,
     Ident,
+    Else,
     False,
     Fn,
+    If,
     Let,
     True,
     OpenParen,
     CloseParen,
+    OpenBrace,
+    CloseBrace,
     Comma,
     Equal,
     SemiColon,
@@ -23,8 +27,10 @@ pub(crate) enum TokenKind {
 impl TokenKind {
     pub(crate) fn from_ident(s: &str) -> TokenKind {
         match s {
+            "else" => TokenKind::Else,
             "false" => TokenKind::False,
             "fn" => TokenKind::Fn,
+            "if" => TokenKind::If,
             "let" => TokenKind::Let,
             "true" => TokenKind::True,
             _ => TokenKind::Ident,

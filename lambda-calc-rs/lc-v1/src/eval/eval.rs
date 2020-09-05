@@ -68,6 +68,24 @@ impl<'a> Evaluator<'a> {
                     result
                 }
             },
+            AExpr::If(expr) => {
+                let cond = match &expr.cond_opt {
+                    Some(it) => it,
+                    None => return Err("cond missing".into()),
+                };
+
+                let cond = match self.on_expr(cond)? {
+                    EValue::Bool(it) => it,
+                    _ => return Err("non-bool condition".into()),
+                };
+
+                match (cond, &expr.body_opt, &expr.alt_opt) {
+                    (true, Some(body), _) => self.on_expr(body)?,
+                    (true, None, _) => return Err("body missing".into()),
+                    (false, _, Some(alt)) => self.on_expr(alt)?,
+                    (false, _, None) => return Err("alt missing".into()),
+                }
+            }
             AExpr::Fn(value) => EValue::Fn(value),
         };
         Ok(value)

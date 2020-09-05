@@ -7,6 +7,13 @@ pub(crate) struct ACallExpr<'a> {
 }
 
 #[derive(Debug)]
+pub(crate) struct AIfExpr<'a> {
+    pub(crate) cond_opt: Option<BumpaloBox<'a, AExpr<'a>>>,
+    pub(crate) body_opt: Option<BumpaloBox<'a, AExpr<'a>>>,
+    pub(crate) alt_opt: Option<BumpaloBox<'a, AExpr<'a>>>,
+}
+
+#[derive(Debug)]
 pub(crate) struct AFnExpr<'a> {
     pub(crate) params: BumpaloVec<'a, SyntaxToken<'a>>,
     pub(crate) body_opt: Option<BumpaloBox<'a, AExpr<'a>>>,
@@ -19,6 +26,7 @@ pub(crate) enum AExpr<'a> {
     Number(SyntaxToken<'a>),
     Var(SyntaxToken<'a>),
     Call(ACallExpr<'a>),
+    If(AIfExpr<'a>),
     Fn(AFnExpr<'a>),
 }
 

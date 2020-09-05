@@ -104,6 +104,38 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
         }
     }
 
+    fn parse_if_expr(&mut self) -> H::AfterExpr {
+        let keyword = self.bump();
+
+        let cond_opt = self.parse_expr();
+
+        let body_opt = if self.eat(TokenKind::OpenBrace).is_some() {
+            let body = self.parse_expr();
+            self.eat(TokenKind::CloseBrace);
+            body
+        } else {
+            None
+        };
+        let else_opt = self.eat(TokenKind::Else);
+        let alt_opt = if else_opt.is_some() {
+            match self.next() {
+                TokenKind::If => self.parse_expr(),
+                TokenKind::OpenBrace => {
+                    self.bump();
+                    let alt = self.parse_expr();
+                    self.eat(TokenKind::CloseBrace);
+                    alt
+                }
+                _ => None,
+            }
+        } else {
+            None
+        };
+
+        self.host
+            .after_if_expr(keyword, cond_opt, body_opt, else_opt, alt_opt)
+    }
+
     fn parse_fn_expr(&mut self) -> H::AfterExpr {
         let keyword = self.bump();
 
@@ -117,12 +149,14 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     }
 
     pub(crate) fn parse_expr(&mut self) -> Option<H::AfterExpr> {
-        match self.next() {
+        let expr = match self.next() {
             TokenKind::Eof | TokenKind::CloseParen | TokenKind::Comma | TokenKind::SemiColon => {
-                None
+                return None;
             }
-            TokenKind::Fn => Some(self.parse_fn_expr()),
-            _ => self.parse_suffix_expr(),
-        }
+            TokenKind::If => self.parse_if_expr(),
+            TokenKind::Fn => self.parse_fn_expr(),
+            _ => self.parse_suffix_expr()?,
+        };
+        Some(expr)
     }
 }

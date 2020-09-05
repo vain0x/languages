@@ -20,7 +20,7 @@ pub(crate) trait LambdaParserHost<'a> {
     type AfterDecl;
     type AfterRoot;
 
-    fn before_param_list(&mut self, open_paren: SyntaxToken<'a>) -> Self::BeforeParamList;
+    fn before_param_list(&mut self, left_paren: SyntaxToken<'a>) -> Self::BeforeParamList;
     fn after_param(
         &mut self,
         name: SyntaxToken<'a>,
@@ -29,11 +29,11 @@ pub(crate) trait LambdaParserHost<'a> {
     );
     fn after_param_list(
         &mut self,
-        close_paren_opt: Option<SyntaxToken<'a>>,
+        right_paren_opt: Option<SyntaxToken<'a>>,
         param_list: Self::BeforeParamList,
     ) -> Self::AfterParamList;
 
-    fn before_arg_list(&mut self, open_paren: SyntaxToken<'a>) -> Self::BeforeArgList;
+    fn before_arg_list(&mut self, left_paren: SyntaxToken<'a>) -> Self::BeforeArgList;
     fn after_arg(
         &mut self,
         expr: Self::AfterExpr,
@@ -42,7 +42,7 @@ pub(crate) trait LambdaParserHost<'a> {
     );
     fn after_arg_list(
         &mut self,
-        close_paren_opt: Option<SyntaxToken<'a>>,
+        right_paren_opt: Option<SyntaxToken<'a>>,
         arg_list: Self::BeforeArgList,
     ) -> Self::AfterArgList;
 

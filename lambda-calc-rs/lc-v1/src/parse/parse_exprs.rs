@@ -3,12 +3,12 @@ use crate::{syntax::syntax_token::SyntaxToken, token::token_kind::TokenKind};
 use lc_utils::parser::Parser;
 
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
-    fn parse_tuple_param_list(&mut self, open_paren: SyntaxToken<'a>) -> H::AfterParamList {
-        let mut param_list = self.host.before_param_list(open_paren);
+    fn parse_tuple_param_list(&mut self, left_paren: SyntaxToken<'a>) -> H::AfterParamList {
+        let mut param_list = self.host.before_param_list(left_paren);
 
         loop {
             let name = match self.next() {
-                TokenKind::Eof | TokenKind::CloseParen | TokenKind::SemiColon => break,
+                TokenKind::Eof | TokenKind::RightParen | TokenKind::SemiColon => break,
                 TokenKind::Ident => self.bump(),
                 _ => {
                     eprintln!("expected expr");
@@ -21,17 +21,17 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
             self.host.after_param(name, comma_opt, &mut param_list);
         }
 
-        let close_paren_opt = self.eat(TokenKind::CloseParen);
+        let right_paren_opt = self.eat(TokenKind::RightParen);
 
-        self.host.after_param_list(close_paren_opt, param_list)
+        self.host.after_param_list(right_paren_opt, param_list)
     }
 
-    fn parse_tuple_arg_list(&mut self, open_paren: SyntaxToken<'a>) -> H::AfterArgList {
-        let mut arg_list = self.host.before_arg_list(open_paren);
+    fn parse_tuple_arg_list(&mut self, left_paren: SyntaxToken<'a>) -> H::AfterArgList {
+        let mut arg_list = self.host.before_arg_list(left_paren);
 
         loop {
             match self.next() {
-                TokenKind::Eof | TokenKind::CloseParen | TokenKind::SemiColon => break,
+                TokenKind::Eof | TokenKind::RightParen | TokenKind::SemiColon => break,
                 TokenKind::Comma => {
                     self.skip();
                     continue;
@@ -52,16 +52,16 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
             self.host.after_arg(expr, comma_opt, &mut arg_list);
         }
 
-        let close_paren_opt = self.eat(TokenKind::CloseParen);
+        let right_paren_opt = self.eat(TokenKind::RightParen);
 
-        self.host.after_arg_list(close_paren_opt, arg_list)
+        self.host.after_arg_list(right_paren_opt, arg_list)
     }
 
     fn parse_paren_expr(&mut self) -> Option<H::AfterExpr> {
-        let _open_paren = self.bump();
+        let _left_paren = self.bump();
         let body_opt = self.parse_expr();
-        let _close_paren_op = self.eat(TokenKind::CloseParen);
-        // FIXME: self.host.after_paren_expr(open_paren, body_opt, close_paren_opt);
+        let _right_paren_op = self.eat(TokenKind::RightParen);
+        // FIXME: self.host.after_paren_expr(left_paren, body_opt, right_paren_opt);
         body_opt
     }
 
@@ -83,7 +83,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
                 let token = self.bump();
                 self.host.after_ident_expr(token)
             }
-            TokenKind::OpenParen => return self.parse_paren_expr(),
+            TokenKind::LeftParen => return self.parse_paren_expr(),
             _ => return None,
         };
         Some(expr)
@@ -94,7 +94,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
 
         loop {
             match self.next() {
-                TokenKind::OpenParen => {
+                TokenKind::LeftParen => {
                     let left_paren = self.bump();
                     let arg_list = self.parse_tuple_arg_list(left_paren);
                     left = self.host.after_call_expr(left, arg_list);
@@ -109,9 +109,9 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
 
         let cond_opt = self.parse_expr();
 
-        let body_opt = if self.eat(TokenKind::OpenBrace).is_some() {
+        let body_opt = if self.eat(TokenKind::LeftBrace).is_some() {
             let body = self.parse_expr();
-            self.eat(TokenKind::CloseBrace);
+            self.eat(TokenKind::RightBrace);
             body
         } else {
             None
@@ -120,10 +120,10 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
         let alt_opt = if else_opt.is_some() {
             match self.next() {
                 TokenKind::If => self.parse_expr(),
-                TokenKind::OpenBrace => {
+                TokenKind::LeftBrace => {
                     self.bump();
                     let alt = self.parse_expr();
-                    self.eat(TokenKind::CloseBrace);
+                    self.eat(TokenKind::RightBrace);
                     alt
                 }
                 _ => None,
@@ -139,8 +139,8 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     fn parse_fn_expr(&mut self) -> H::AfterExpr {
         let keyword = self.bump();
 
-        let param_list_opt = match self.eat(TokenKind::OpenParen) {
-            Some(open_paren) => Some(self.parse_tuple_param_list(open_paren)),
+        let param_list_opt = match self.eat(TokenKind::LeftParen) {
+            Some(left_paren) => Some(self.parse_tuple_param_list(left_paren)),
             None => None,
         };
 
@@ -150,7 +150,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
 
     pub(crate) fn parse_expr(&mut self) -> Option<H::AfterExpr> {
         let expr = match self.next() {
-            TokenKind::Eof | TokenKind::CloseParen | TokenKind::Comma | TokenKind::SemiColon => {
+            TokenKind::Eof | TokenKind::RightParen | TokenKind::Comma | TokenKind::SemiColon => {
                 return None;
             }
             TokenKind::If => self.parse_if_expr(),

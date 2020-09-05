@@ -24,7 +24,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     type AfterDecl = ADecl<'a>;
     type AfterRoot = ARoot<'a>;
 
-    fn before_param_list(&mut self, _open_paren: SyntaxToken<'a>) -> Self::BeforeParamList {
+    fn before_param_list(&mut self, _left_paren: SyntaxToken<'a>) -> Self::BeforeParamList {
         BumpaloVec::new_in(&self.context.bump)
     }
 
@@ -39,13 +39,13 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
 
     fn after_param_list(
         &mut self,
-        _close_paren_opt: Option<SyntaxToken<'a>>,
+        _right_paren_opt: Option<SyntaxToken<'a>>,
         param_list: Self::BeforeParamList,
     ) -> Self::AfterParamList {
         param_list
     }
 
-    fn before_arg_list(&mut self, _open_paren: SyntaxToken<'a>) -> Self::BeforeArgList {
+    fn before_arg_list(&mut self, _left_paren: SyntaxToken<'a>) -> Self::BeforeArgList {
         BumpaloVec::new_in(&self.context.bump)
     }
 
@@ -60,7 +60,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
 
     fn after_arg_list(
         &mut self,
-        _close_paren: Option<SyntaxToken<'a>>,
+        _right_paren: Option<SyntaxToken<'a>>,
         arg_list: Self::BeforeArgList,
     ) -> Self::AfterArgList {
         arg_list

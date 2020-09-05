@@ -3,12 +3,21 @@ mod ast {
     pub(crate) mod a_tree;
 }
 
+mod eval {
+    pub(crate) mod eval;
+}
+
 mod parse {
     pub(crate) mod parse_decls;
     pub(crate) mod parse_exprs;
     pub(crate) mod parse_root;
     pub(crate) mod parser;
 }
+
+// mod scope {
+//     pub(crate) mod name_resolver;
+//     pub(crate) mod scope_chain;
+// }
 
 mod syntax {
     pub(crate) mod syntax_token;
@@ -55,14 +64,14 @@ mod context {
 
 pub mod rust_api {
     use crate::{
-        ast::a_parser::AstLambdaParserHost, context::Context, parse::parser::LambdaParser,
-        token::tokenize_rules::MyTokenizerHost,
+        ast::a_parser::AstLambdaParserHost, ast::a_tree::Ast, context::Context,
+        parse::parser::LambdaParser, token::tokenize_rules::MyTokenizerHost,
     };
     use lc_utils::{deque_chan::deque_chan, tokenizer::Tokenizer};
     use std::collections::VecDeque;
 
-    pub fn syntax_tree(source_code: &str) -> String {
-        let mut context = Context::new();
+    pub fn evaluate(source_code: &str) -> String {
+        let context = Context::new();
         let mut tokens = VecDeque::new();
 
         let (tx, rx) = deque_chan(&mut tokens);
@@ -70,18 +79,20 @@ pub mod rust_api {
         let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
 
         let mut parser_host = AstLambdaParserHost {
-            context: &mut context,
+            context: &context,
             // ...
         };
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
-        let tokens = parser.parse_root();
-        format!("{:#?}", tokens)
+        let root = parser.parse_root();
+        let ast = context.bump.alloc(Ast { root });
+
+        crate::eval::eval::evaluate(ast)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use expect_test::expect;
+    use expect_test::{expect, Expect};
 
     #[test]
     fn it_works() {
@@ -93,5 +104,37 @@ mod tests {
         let actual = "OK!";
         let expect = expect![[r#"OK!"#]];
         expect.assert_eq(actual);
+    }
+
+    fn do_test_evaluate(input: &str, expect: Expect) {
+        let actual = crate::rust_api::evaluate(input);
+        expect.assert_eq(&actual)
+    }
+
+    #[test]
+    fn test_evaluate() {
+        do_test_evaluate(
+            r#"
+                let num = 42;
+
+                // use var
+                let var = num;
+
+                // define and call fn
+                let zero_fn = fn() 0;
+                let _ = zero_fn();
+
+                let id = fn(x) x;
+                let _ = id(id)(id)(id)(zero_fn)();
+            "#,
+            expect![[r#"
+                val num : number = 42;
+                val var : number = 42;
+                val zero_fn : fn(...) -> ... = <function>;
+                val _ : number = 0;
+                val id : fn(...) -> ... = <function>;
+                val _ : number = 0;
+            "#]],
+        );
     }
 }

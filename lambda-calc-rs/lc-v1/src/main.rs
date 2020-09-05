@@ -2,7 +2,7 @@ use lc_v1;
 use rustyline::{error::ReadlineError, Editor};
 
 fn on_read(s: &str) {
-    let output = lc_v1::rust_api::syntax_tree(s);
+    let output = lc_v1::rust_api::evaluate(s);
     println!("{}", output);
 }
 

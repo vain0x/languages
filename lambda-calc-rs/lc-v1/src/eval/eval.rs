@@ -100,6 +100,15 @@ impl<'a> Evaluator<'a> {
     fn on_root(&mut self) {
         for decl in &self.ast.root.decls {
             match decl {
+                ADecl::Expr(expr) => {
+                    let name = "it";
+                    let result = self.on_expr(expr);
+
+                    self.emit_val(name, &result);
+                    if let Ok(value) = result {
+                        self.map_stack.last_mut().unwrap().insert(name, value);
+                    }
+                }
                 ADecl::Let(decl) => {
                     let name = match decl.name_opt {
                         Some(name) => name.text,
@@ -112,7 +121,6 @@ impl<'a> Evaluator<'a> {
                     };
 
                     self.emit_val(name, &result);
-
                     if let Ok(value) = result {
                         self.map_stack.last_mut().unwrap().insert(name, value);
                     }

@@ -120,6 +120,14 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         })
     }
 
+    fn after_expr_decl(
+        &mut self,
+        expr: Self::AfterExpr,
+        _semi_opt: Option<SyntaxToken<'a>>,
+    ) -> Self::AfterDecl {
+        ADecl::Expr(expr)
+    }
+
     fn after_let_decl(
         &mut self,
         _keyword: SyntaxToken<'a>,

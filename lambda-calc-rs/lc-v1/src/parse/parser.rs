@@ -73,6 +73,12 @@ pub(crate) trait LambdaParserHost<'a> {
         body_opt: Option<Self::AfterExpr>,
     ) -> Self::AfterExpr;
 
+    fn after_expr_decl(
+        &mut self,
+        expr: Self::AfterExpr,
+        semi_opt: Option<SyntaxToken<'a>>,
+    ) -> Self::AfterDecl;
+
     fn after_let_decl(
         &mut self,
         keyword: SyntaxToken<'a>,

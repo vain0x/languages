@@ -38,6 +38,7 @@ pub(crate) struct ALetDecl<'a> {
 
 #[derive(Debug)]
 pub(crate) enum ADecl<'a> {
+    Expr(AExpr<'a>),
     Let(ALetDecl<'a>),
 }
 

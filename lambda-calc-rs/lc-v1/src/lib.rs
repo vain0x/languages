@@ -132,6 +132,10 @@ mod tests {
                 let _ = if true { 1 } else { 0 };
                 let _ = if false { 1 } else { 0 };
 
+                // expr decl
+                42;
+                let the_value = it;
+
                 let id = fn(x) x;
                 let _ = id(id)(id)(id)(zero_fn)();
             "#,
@@ -144,6 +148,8 @@ mod tests {
                 val _ : number = 0;
                 val _ : number = 1;
                 val _ : number = 0;
+                val it : number = 42;
+                val the_value : number = 42;
                 val id : fn(...) -> ... = <function>;
                 val _ : number = 0;
             "#]],

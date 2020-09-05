@@ -24,7 +24,13 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     pub(crate) fn parse_decl(&mut self) -> Option<H::AfterDecl> {
         let decl = match self.next() {
             TokenKind::Let => self.parse_let_decl(),
-            _ => return None,
+            _ => match self.parse_expr() {
+                Some(expr) => {
+                    let semi_opt = self.eat(TokenKind::SemiColon);
+                    self.host.after_expr_decl(expr, semi_opt)
+                }
+                None => return None,
+            },
         };
         Some(decl)
     }

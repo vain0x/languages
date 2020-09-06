@@ -46,10 +46,7 @@ mod tests {
         let mut tokenizer_host = MyTokenizerHost::new(tx);
         let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
 
-        let mut parser_host = AstLambdaParserHost {
-            context: &mut context,
-            // ...
-        };
+        let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
         let tokens = parser.parse_root();
 

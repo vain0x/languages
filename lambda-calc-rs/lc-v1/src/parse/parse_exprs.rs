@@ -167,6 +167,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
 
     fn parse_fn_expr(&mut self) -> H::AfterExpr {
         let keyword = self.bump();
+        self.host.before_fn_expr();
 
         let param_list_opt = match self.eat(TokenKind::LeftParen) {
             Some(left_paren) => Some(self.parse_tuple_param_list(left_paren)),

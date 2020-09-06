@@ -79,10 +79,7 @@ pub mod rust_api {
         let mut tokenizer_host = MyTokenizerHost::new(tx);
         let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
 
-        let mut parser_host = AstLambdaParserHost {
-            context: &context,
-            // ...
-        };
+        let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
         let root = parser.parse_root();
         let ast = context.bump.alloc(Ast { root });
@@ -98,10 +95,7 @@ pub mod rust_api {
         let mut tokenizer_host = MyTokenizerHost::new(tx);
         let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
 
-        let mut parser_host = AstLambdaParserHost {
-            context: &context,
-            // ...
-        };
+        let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
         let root = parser.parse_root();
         let ast = context.bump.alloc(Ast { root });

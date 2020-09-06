@@ -1,13 +1,53 @@
+use std::collections::HashMap;
+
 use super::a_tree::*;
 use crate::{
     context::Context, parse::parser::LambdaParserHost, syntax::syntax_token::SyntaxToken, utils::*,
 };
 
-pub struct AstLambdaParserHost<'a> {
+#[derive(Debug)]
+pub(crate) enum NSymbol {
+    // StaticVar,
+    Param,
+    LocalVar,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum ScopeKind {
+    Block,
+    Fn,
+    Root,
+}
+
+pub(crate) struct Scope<'a> {
+    kind: ScopeKind,
+    map: HashMap<&'a str, NSymbol>,
+}
+
+impl<'a> Scope<'a> {
+    pub(crate) fn new(kind: ScopeKind) -> Self {
+        Self {
+            kind,
+            map: HashMap::new(),
+        }
+    }
+}
+
+pub(crate) struct AstLambdaParserHost<'a> {
+    pub(crate) name_res: HashMap<*const SyntaxToken<'a>, NSymbol>,
+    pub(crate) scope_chain: Vec<Scope<'a>>,
     pub(crate) context: &'a Context,
 }
 
 impl<'a> AstLambdaParserHost<'a> {
+    pub(crate) fn new(context: &'a Context) -> Self {
+        Self {
+            name_res: HashMap::new(),
+            scope_chain: vec![Scope::new(ScopeKind::Root)],
+            context,
+        }
+    }
+
     fn new_box<T>(&self, value: T) -> BumpaloBox<'a, T> {
         BumpaloBox::new_in(value, &self.context.bump)
     }
@@ -36,6 +76,12 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         _comma_opt: Option<SyntaxToken<'a>>,
         param_list: &mut Self::BeforeParamList,
     ) {
+        self.scope_chain
+            .last_mut()
+            .unwrap()
+            .map
+            .insert(name.text, NSymbol::Param);
+
         param_list.push(name);
     }
 
@@ -81,6 +127,19 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     }
 
     fn after_ident_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr {
+        match self
+            .scope_chain
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(index, scope)| scope.map.get(token.text).map(|symbol| (index, symbol)))
+        {
+            Some((depth, symbol)) => {
+                eprintln!("{}: {:?}", token.text, (depth, symbol));
+            }
+            None => eprintln!("{}: undefined?", token.text),
+        };
+
         AExpr::Var(token)
     }
 
@@ -96,6 +155,8 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     }
 
     fn before_block_expr(&mut self, _left_paren: SyntaxToken<'a>) -> Self::BeforeBlockExpr {
+        self.scope_chain.push(Scope::new(ScopeKind::Block));
+
         BumpaloVec::new_in(&self.context.bump)
     }
 
@@ -112,6 +173,9 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         _right_paren_opt: Option<SyntaxToken<'a>>,
         block_expr: Self::BeforeBlockExpr,
     ) -> Self::AfterExpr {
+        let scope_opt = self.scope_chain.pop();
+        assert_eq!(scope_opt.map(|s| s.kind), Some(ScopeKind::Block));
+
         AExpr::Block(block_expr)
     }
 
@@ -130,12 +194,19 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         })
     }
 
+    fn before_fn_expr(&mut self) {
+        self.scope_chain.push(Scope::new(ScopeKind::Fn));
+    }
+
     fn after_fn_expr(
         &mut self,
         _keyword: SyntaxToken<'a>,
         param_list_opt: Option<Self::AfterParamList>,
         body_opt: Option<Self::AfterExpr>,
     ) -> Self::AfterExpr {
+        let scope_opt = self.scope_chain.pop();
+        assert_eq!(scope_opt.map(|s| s.kind), Some(ScopeKind::Fn));
+
         AExpr::Fn(AFnExpr {
             params: param_list_opt.unwrap_or_else(|| BumpaloVec::new_in(&self.context.bump)),
             body_opt: body_opt.map(|body| self.new_box(body)),
@@ -158,10 +229,21 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         init_opt: Option<Self::AfterExpr>,
         _semi_opt: Option<SyntaxToken<'a>>,
     ) -> Self::AfterDecl {
+        if let Some(name) = &name_opt {
+            self.scope_chain
+                .last_mut()
+                .unwrap()
+                .map
+                .insert(name.text, NSymbol::LocalVar);
+        }
+
         ADecl::Let(ALetDecl { name_opt, init_opt })
     }
 
     fn after_root(&mut self, decls: Vec<Self::AfterDecl>, eof: SyntaxToken<'a>) -> Self::AfterRoot {
+        let scope_opt = self.scope_chain.pop();
+        assert_eq!(scope_opt.map(|s| s.kind), Some(ScopeKind::Root));
+
         ARoot {
             decls: self.context.allocate_iter(decls),
             eof,

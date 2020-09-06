@@ -13,6 +13,7 @@ mod parse {
     pub(crate) mod parse_decls;
     pub(crate) mod parse_exprs;
     pub(crate) mod parse_root;
+    pub(crate) mod parse_tys;
     pub(crate) mod parser;
 }
 

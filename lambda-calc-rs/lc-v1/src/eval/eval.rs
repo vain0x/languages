@@ -40,7 +40,10 @@ impl<'a> Evaluator<'a> {
     fn assign_value_opt(&mut self, name_opt: Option<SyntaxToken<'a>>, value: EValue<'a>) {
         if let Some(symbol) = name_opt.map(|token| self.ast.name_res[&token.index]) {
             match symbol {
-                NSymbol::Missing | NSymbol::Prim(_) | NSymbol::Param { .. } => unreachable!(),
+                NSymbol::Missing
+                | NSymbol::Prim(_)
+                | NSymbol::PrimTy(..)
+                | NSymbol::Param { .. } => unreachable!(),
                 NSymbol::StaticVar { id, .. } => {
                     self.static_vars.insert(id, value);
                 }
@@ -65,6 +68,7 @@ impl<'a> Evaluator<'a> {
             AExpr::Var(token) => match self.ast.name_res[&token.index] {
                 NSymbol::Missing => return Err(format!("unknown var {}", token.text)),
                 NSymbol::Prim(prim) => EValue::Prim(prim),
+                NSymbol::PrimTy(..) => unreachable!(),
                 NSymbol::StaticVar { id, .. } => self.static_vars[&id],
                 NSymbol::Param { index, .. } => self.params[index],
                 NSymbol::LocalVar { id, .. } => self.local_vars[&id],

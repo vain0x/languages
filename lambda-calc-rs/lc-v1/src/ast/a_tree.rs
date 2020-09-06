@@ -5,6 +5,18 @@ use crate::{syntax::syntax_token::SyntaxToken, utils::*};
 use super::a_parser::NSymbol;
 
 #[derive(Debug)]
+pub(crate) struct AFnTy<'a> {
+    pub(crate) param_tys: &'a [ATy<'a>],
+    pub(crate) result_ty_opt: Option<&'a ATy<'a>>,
+}
+
+#[derive(Debug)]
+pub(crate) enum ATy<'a> {
+    Name(SyntaxToken<'a>),
+    Fn(AFnTy<'a>),
+}
+
+#[derive(Debug)]
 pub(crate) struct ACallExpr<'a> {
     pub(crate) callee: BumpaloBox<'a, AExpr<'a>>,
     pub(crate) args: BumpaloVec<'a, AExpr<'a>>,
@@ -19,7 +31,7 @@ pub(crate) struct AIfExpr<'a> {
 
 #[derive(Debug)]
 pub(crate) struct AFnExpr<'a> {
-    pub(crate) params: BumpaloVec<'a, SyntaxToken<'a>>,
+    pub(crate) params: BumpaloVec<'a, (SyntaxToken<'a>, Option<ATy<'a>>)>,
     pub(crate) body_opt: Option<BumpaloBox<'a, AExpr<'a>>>,
 }
 

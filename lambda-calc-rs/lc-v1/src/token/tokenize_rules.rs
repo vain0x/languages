@@ -56,8 +56,13 @@ fn lookahead(tx: &mut Tx) -> Lookahead {
         ')' => Lookahead::Token(TokenKind::RightParen, 1),
         '{' => Lookahead::Token(TokenKind::LeftBrace, 1),
         '}' => Lookahead::Token(TokenKind::RightBrace, 1),
+        ':' => Lookahead::Token(TokenKind::Colon, 1),
         ',' => Lookahead::Token(TokenKind::Comma, 1),
         '=' => Lookahead::Token(TokenKind::Equal, 1),
+        '-' => match tx.next() {
+            '>' => Lookahead::Token(TokenKind::MinusRight, 2),
+            _ => Lookahead::BadToken,
+        },
         ';' => Lookahead::Token(TokenKind::SemiColon, 1),
         '/' if tx.nth(1) == '/' => Lookahead::Comment,
         _ => Lookahead::BadToken,

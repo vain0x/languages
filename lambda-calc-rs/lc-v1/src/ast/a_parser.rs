@@ -2,14 +2,15 @@ use std::collections::HashMap;
 
 use super::a_tree::*;
 use crate::{
-    context::Context, eval::code_gen::Prim, parse::parser::LambdaParserHost,
-    syntax::syntax_token::SyntaxToken, utils::*,
+    context::Context, eval::code_gen::Prim, eval::type_check::PrimTy,
+    parse::parser::LambdaParserHost, syntax::syntax_token::SyntaxToken, utils::*,
 };
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum NSymbol {
     Missing,
     Prim(Prim),
+    PrimTy(PrimTy),
     StaticVar {
         id: usize,
         depth: usize,
@@ -51,6 +52,16 @@ impl<'a> Scope<'a> {
     }
 }
 
+fn resolve_builtin_ty(name: &str) -> Option<PrimTy> {
+    let ty = match name {
+        "unit" => PrimTy::Unit,
+        "bool" => PrimTy::Bool,
+        "int" => PrimTy::Int,
+        _ => return None,
+    };
+    Some(ty)
+}
+
 pub(crate) struct AstLambdaParserHost<'a> {
     symbol_id: usize,
     pub(crate) name_res: HashMap<usize, NSymbol>,
@@ -78,6 +89,10 @@ impl<'a> AstLambdaParserHost<'a> {
         BumpaloBox::new_in(value, &self.context.bump)
     }
 
+    fn new_vec<T>(&self) -> BumpaloVec<'a, T> {
+        BumpaloVec::new_in(&self.context.bump)
+    }
+
     fn fresh_symbol_id(&mut self) -> usize {
         self.symbol_id += 1;
         self.symbol_id
@@ -85,17 +100,42 @@ impl<'a> AstLambdaParserHost<'a> {
 }
 
 impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
-    type BeforeParamList = BumpaloVec<'a, SyntaxToken<'a>>;
-    type AfterParamList = BumpaloVec<'a, SyntaxToken<'a>>;
+    type BeforeParamTyList = BumpaloVec<'a, ATy<'a>>;
+    type AfterParamTyList = BumpaloVec<'a, ATy<'a>>;
+
+    type BeforeParamList = BumpaloVec<'a, (SyntaxToken<'a>, Option<ATy<'a>>)>;
+    type AfterParamList = BumpaloVec<'a, (SyntaxToken<'a>, Option<ATy<'a>>)>;
 
     type BeforeArgList = BumpaloVec<'a, AExpr<'a>>;
     type AfterArgList = BumpaloVec<'a, AExpr<'a>>;
 
     type BeforeBlockExpr = BumpaloVec<'a, ADecl<'a>>;
 
+    type AfterTy = ATy<'a>;
     type AfterExpr = AExpr<'a>;
     type AfterDecl = ADecl<'a>;
     type AfterRoot = ARoot<'a>;
+
+    fn before_param_ty_list(&mut self, _left_paren: SyntaxToken<'a>) -> Self::BeforeParamTyList {
+        BumpaloVec::new_in(&self.context.bump)
+    }
+
+    fn after_param_ty(
+        &mut self,
+        param_ty: Self::AfterTy,
+        _comma_opt: Option<SyntaxToken<'a>>,
+        param_ty_list: &mut Self::BeforeParamTyList,
+    ) {
+        param_ty_list.push(param_ty);
+    }
+
+    fn after_param_ty_list(
+        &mut self,
+        _right_paren_opt: Option<SyntaxToken<'a>>,
+        param_ty_list: Self::BeforeParamTyList,
+    ) -> Self::AfterParamTyList {
+        param_ty_list
+    }
 
     fn before_param_list(&mut self, _left_paren: SyntaxToken<'a>) -> Self::BeforeParamList {
         BumpaloVec::new_in(&self.context.bump)
@@ -104,6 +144,8 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     fn after_param(
         &mut self,
         name: SyntaxToken<'a>,
+        _colon_opt: Option<SyntaxToken<'a>>,
+        ty_opt: Option<Self::AfterTy>,
         _comma_opt: Option<SyntaxToken<'a>>,
         param_list: &mut Self::BeforeParamList,
     ) {
@@ -116,7 +158,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
             .map
             .insert(name.text, NSymbol::Param { id, depth, index });
 
-        param_list.push(name);
+        param_list.push((name, ty_opt));
     }
 
     fn after_param_list(
@@ -146,6 +188,33 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         arg_list: Self::BeforeArgList,
     ) -> Self::AfterArgList {
         arg_list
+    }
+
+    fn after_name_ty(&mut self, token: SyntaxToken<'a>) -> Self::AfterTy {
+        let symbol = match resolve_builtin_ty(token.text) {
+            Some(ty) => NSymbol::PrimTy(ty),
+            None => NSymbol::Missing,
+        };
+        self.name_res.insert(token.index, symbol);
+
+        ATy::Name(token)
+    }
+
+    fn after_fn_ty(
+        &mut self,
+        _keyword: SyntaxToken<'a>,
+        param_ty_list_opt: Option<Self::AfterParamTyList>,
+        _arrow_opt: Option<SyntaxToken<'a>>,
+        result_ty_opt: Option<Self::AfterTy>,
+    ) -> Self::AfterTy {
+        ATy::Fn(AFnTy {
+            param_tys: self
+                .context
+                .bump
+                .alloc(param_ty_list_opt.unwrap_or_else(|| self.new_vec()))
+                .as_slice(),
+            result_ty_opt: result_ty_opt.map(|ty| &*self.context.bump.alloc(ty)),
+        })
     }
 
     fn after_true_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr {

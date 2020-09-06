@@ -17,8 +17,11 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
                 }
             };
 
+            let (colon_opt, ty_opt) = self.parse_ty_ascription();
+
             let comma_opt = self.eat(TokenKind::Comma);
-            self.host.after_param(name, comma_opt, &mut param_list);
+            self.host
+                .after_param(name, colon_opt, ty_opt, comma_opt, &mut param_list);
         }
 
         let right_paren_opt = self.eat(TokenKind::RightParen);

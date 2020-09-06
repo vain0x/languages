@@ -1,5 +1,5 @@
 use super::parser::{LambdaParser, LambdaParserHost};
-use crate::token::token_kind::TokenKind;
+use crate::{syntax::syntax_token::SyntaxToken, token::token_kind::TokenKind};
 use lc_utils::parser::Parser;
 
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
@@ -7,7 +7,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
         let keyword = self.bump();
 
         let name_opt = self.eat(TokenKind::Ident);
-        // let (colon_opt, ty_opt) = parse_ty_ascription(px);
+        // let (colon_opt, ty_opt) = self.parse_ty_ascription();
 
         let equal_opt = self.eat(TokenKind::Equal);
         let init_opt = if equal_opt.is_some() {

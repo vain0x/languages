@@ -19,8 +19,10 @@ pub(crate) enum TokenKind {
     RightParen,
     LeftBrace,
     RightBrace,
+    Colon,
     Comma,
     Equal,
+    MinusRight,
     SemiColon,
 }
 

@@ -12,20 +12,38 @@ use lc_utils::{
 };
 
 pub(crate) trait LambdaParserHost<'a> {
+    type BeforeParamTyList;
+    type AfterParamTyList;
     type BeforeParamList;
     type AfterParamList;
     type BeforeArgList;
     type AfterArgList;
     type BeforeBlockExpr;
+    type AfterTy;
     type AfterExpr;
     type AfterDecl;
     type AfterRoot;
+
+    fn before_param_ty_list(&mut self, left_paren: SyntaxToken<'a>) -> Self::BeforeParamTyList;
+    fn after_param_ty(
+        &mut self,
+        param_ty: Self::AfterTy,
+        comma_opt: Option<SyntaxToken<'a>>,
+        param_ty_list: &mut Self::BeforeParamTyList,
+    );
+    fn after_param_ty_list(
+        &mut self,
+        right_paren_opt: Option<SyntaxToken<'a>>,
+        param_ty_list: Self::BeforeParamTyList,
+    ) -> Self::AfterParamTyList;
 
     fn before_param_list(&mut self, left_paren: SyntaxToken<'a>) -> Self::BeforeParamList;
     fn after_param(
         &mut self,
         name: SyntaxToken<'a>,
-        comma_pot: Option<SyntaxToken<'a>>,
+        colon_opt: Option<SyntaxToken<'a>>,
+        ty_opt: Option<Self::AfterTy>,
+        comma_opt: Option<SyntaxToken<'a>>,
         param_list: &mut Self::BeforeParamList,
     );
     fn after_param_list(
@@ -38,7 +56,7 @@ pub(crate) trait LambdaParserHost<'a> {
     fn after_arg(
         &mut self,
         expr: Self::AfterExpr,
-        comma_pot: Option<SyntaxToken<'a>>,
+        comma_opt: Option<SyntaxToken<'a>>,
         arg_list: &mut Self::BeforeArgList,
     );
     fn after_arg_list(
@@ -46,6 +64,15 @@ pub(crate) trait LambdaParserHost<'a> {
         right_paren_opt: Option<SyntaxToken<'a>>,
         arg_list: Self::BeforeArgList,
     ) -> Self::AfterArgList;
+
+    fn after_name_ty(&mut self, token: SyntaxToken<'a>) -> Self::AfterTy;
+    fn after_fn_ty(
+        &mut self,
+        _keyword: SyntaxToken<'a>,
+        param_ty_list_opt: Option<Self::AfterParamTyList>,
+        arrow_opt: Option<SyntaxToken<'a>>,
+        result_ty_opt: Option<Self::AfterTy>,
+    ) -> Self::AfterTy;
 
     fn after_true_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr;
     fn after_false_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr;

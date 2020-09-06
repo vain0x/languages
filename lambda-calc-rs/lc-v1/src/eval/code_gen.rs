@@ -313,7 +313,7 @@ impl<'a> CodeGenerator<'a> {
                 let codes = take(&mut self.program.codes);
                 let local_map = self.enter_scope();
 
-                for (i, param) in expr.params.iter().enumerate() {
+                for (i, (param, _ty)) in expr.params.iter().enumerate() {
                     local_map.insert(param.text, Name::LocalVar(i));
                 }
                 let result = match &expr.body_opt {

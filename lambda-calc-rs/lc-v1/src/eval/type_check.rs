@@ -2,12 +2,30 @@ use super::code_gen::Prim;
 use crate::{
     ast::a_parser::NSymbol,
     ast::a_tree::AFnExpr,
+    ast::a_tree::ATy,
     ast::a_tree::{ADecl, AExpr, Ast},
     context::Context,
     syntax::syntax_token::SyntaxToken,
     utils::*,
 };
 use std::{collections::HashMap, fmt::Write, mem::replace, mem::take};
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum PrimTy {
+    Unit,
+    Bool,
+    Int,
+}
+
+impl PrimTy {
+    pub(crate) fn to_ty(self) -> Ty<'static> {
+        match self {
+            PrimTy::Unit => Ty::Unit,
+            PrimTy::Bool => Ty::Bool,
+            PrimTy::Int => Ty::Int,
+        }
+    }
+}
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub(crate) enum Ty<'a> {
@@ -36,7 +54,10 @@ impl<'a> TypeChecker<'a> {
     fn assign_value_opt(&mut self, name_opt: Option<SyntaxToken<'a>>, ty: Ty<'a>) {
         if let Some(symbol) = name_opt.map(|token| self.ast_opt.unwrap().name_res[&token.index]) {
             match symbol {
-                NSymbol::Missing | NSymbol::Prim(_) | NSymbol::Param { .. } => unreachable!(),
+                NSymbol::Missing
+                | NSymbol::Prim(_)
+                | NSymbol::PrimTy(..)
+                | NSymbol::Param { .. } => unreachable!(),
                 NSymbol::StaticVar { id, .. } => {
                     self.static_vars.insert(id, ty);
                 }
@@ -51,11 +72,39 @@ impl<'a> TypeChecker<'a> {
         &self.context_opt.unwrap().bump
     }
 
+    fn on_ty(&mut self, ty: &'a ATy<'a>) -> TResult<Ty<'a>> {
+        let ty = match ty {
+            ATy::Name(token) => match self.ast_opt.unwrap().name_res[&token.index] {
+                NSymbol::Missing => return Err(format!("unknown type {}", token.text)),
+                NSymbol::Prim(..)
+                | NSymbol::StaticVar { .. }
+                | NSymbol::Param { .. }
+                | NSymbol::LocalVar { .. } => unreachable!(),
+                NSymbol::PrimTy(prim_ty) => prim_ty.to_ty(),
+            },
+            ATy::Fn(ty) => {
+                let param_tys = ty
+                    .param_tys
+                    .iter()
+                    .map(|ty| self.on_ty(ty))
+                    .collect::<TResult<Vec<_>>>()?;
+                let result_ty = match ty.result_ty_opt {
+                    Some(ty) => self.on_ty(ty)?,
+                    None => Ty::Unit,
+                };
+                Ty::Fn {
+                    params: self.bump().alloc_slice_copy(&param_tys),
+                    result: self.bump().alloc(result_ty),
+                }
+            }
+        };
+        Ok(ty)
+    }
+
     fn on_expr(&mut self, expr: &'a AExpr<'a>) -> TResult<Ty<'a>> {
         let ty = match expr {
             AExpr::False(..) | AExpr::True(..) => Ty::Bool,
-            AExpr::Number(token) => Ty::Int,
-
+            AExpr::Number(..) => Ty::Int,
             AExpr::Var(token) => match self.ast_opt.unwrap().name_res[&token.index] {
                 NSymbol::Missing => return Err(format!("unknown var {}", token.text)),
                 NSymbol::Prim(prim) => match prim {
@@ -68,6 +117,7 @@ impl<'a> TypeChecker<'a> {
                         result: self.bump().alloc(Ty::Int),
                     },
                 },
+                NSymbol::PrimTy(..) => unreachable!(),
                 NSymbol::StaticVar { id, .. } => self.static_vars[&id],
                 NSymbol::Param { index, .. } => self.params[index],
                 NSymbol::LocalVar { id, .. } => self.local_vars[&id],

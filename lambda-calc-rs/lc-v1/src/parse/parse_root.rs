@@ -212,7 +212,10 @@ mod tests {
                                             callee: Fn(
                                                 AFnExpr {
                                                     params: [
-                                                        "x",
+                                                        (
+                                                            "x",
+                                                            None,
+                                                        ),
                                                     ],
                                                     body_opt: Some(
                                                         Var(
@@ -341,8 +344,14 @@ mod tests {
                                     Fn(
                                         AFnExpr {
                                             params: [
-                                                "f",
-                                                "x",
+                                                (
+                                                    "f",
+                                                    None,
+                                                ),
+                                                (
+                                                    "x",
+                                                    None,
+                                                ),
                                             ],
                                             body_opt: Some(
                                                 Call(
@@ -381,7 +390,10 @@ mod tests {
                                     Fn(
                                         AFnExpr {
                                             params: [
-                                                "x",
+                                                (
+                                                    "x",
+                                                    None,
+                                                ),
                                             ],
                                             body_opt: Some(
                                                 Var(

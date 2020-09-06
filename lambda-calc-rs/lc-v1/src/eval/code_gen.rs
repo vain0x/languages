@@ -7,8 +7,7 @@ use crate::{
 
 type GResult<T> = Result<T, String>;
 
-#[derive(Debug)]
-pub(crate) struct Label(usize);
+pub(crate) type LabelId = usize;
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct Reg(usize);
@@ -40,8 +39,9 @@ pub(crate) enum Code<'a> {
     LoadStaticVar(Reg, StaticVarId),
     LoadLocalVar(Reg, LocalVarId),
     StoreLocalVar(LocalVarId, Reg),
-    // Jump(Label),
-    // JumpIf(Label, Reg),
+    LabelDecl(LabelId),
+    Jump(LabelId),
+    JumpUnless(LabelId, Reg),
     // callee, arity
     BeginCall(Reg, usize),
     EndCall(Reg),
@@ -51,9 +51,16 @@ pub(crate) enum Code<'a> {
 }
 
 #[derive(Debug, Default)]
+pub(crate) struct FnInfo {
+    local_var_count: usize,
+    pc: usize,
+}
+
+#[derive(Debug, Default)]
 pub(crate) struct Program<'a> {
     reg_count: usize,
     labels: Vec<usize>,
+    fns: Vec<FnInfo>,
     codes: Vec<Code<'a>>,
 }
 
@@ -76,8 +83,10 @@ struct FnData<'a> {
 #[derive(Default)]
 struct CodeGenerator<'a> {
     current_fn: Option<FnId>,
+    current_break: Option<(LabelId, Reg)>,
     static_vars: Vec<&'a SyntaxToken<'a>>,
     fns: Vec<FnData<'a>>,
+    label_count: usize,
     map_stack: Vec<HashMap<&'a str, Name>>,
     program: Program<'a>,
 }
@@ -122,16 +131,60 @@ impl<'a> CodeGenerator<'a> {
         id
     }
 
-    fn alloc_reg(&mut self, term: &GTerm<'a>) -> Reg {
+    fn fresh_reg(&mut self) -> Reg {
         let reg = Reg(self.program.reg_count);
         self.program.reg_count += 1;
+        reg
+    }
 
+    fn alloc_reg(&mut self, term: &GTerm<'a>) -> Reg {
+        let reg = self.fresh_reg();
         self.set_to_reg(reg, term);
         reg
     }
 
+    fn fresh_label(&mut self) -> LabelId {
+        let label = self.label_count;
+        self.label_count += 1;
+        label
+    }
+
     fn emit(&mut self, code: Code<'a>) {
         self.program.codes.push(code);
+    }
+
+    // fn emit_break(&mut self, term: &GTerm<'a>) {
+    //     self.emit(Code::Jump(self.current_break.unwrap().0));
+    // }
+
+    fn do_in_branch(
+        &mut self,
+        break_label: LabelId,
+        f: impl FnOnce(&mut CodeGenerator<'a>) -> GResult<()>,
+    ) -> GResult<Reg> {
+        let output_reg = self.fresh_reg();
+
+        let parent_break = replace(&mut self.current_break, Some((break_label, output_reg)));
+
+        f(self)?;
+        self.emit(Code::LabelDecl(break_label));
+
+        self.current_break = parent_break;
+        Ok(output_reg)
+    }
+
+    fn do_in_arm(
+        &mut self,
+        arm_label: LabelId,
+        f: impl FnOnce(&mut CodeGenerator<'a>) -> GResult<GTerm<'a>>,
+    ) -> GResult<()> {
+        let (break_label, output_reg) = self.current_break.unwrap();
+
+        self.emit(Code::LabelDecl(arm_label));
+        let result = f(self)?;
+        self.set_to_reg(output_reg, &result);
+        self.emit(Code::Jump(break_label));
+        Ok(())
     }
 
     fn on_block(&mut self, decls: &'a [ADecl<'a>]) -> GResult<GTerm<'a>> {
@@ -203,7 +256,41 @@ impl<'a> CodeGenerator<'a> {
                 self.leave_scope();
                 result?
             }
-            AExpr::If(..) => todo!(),
+            AExpr::If(expr) => {
+                let cond = match &expr.cond_opt {
+                    Some(it) => it,
+                    None => return Err("missing condition".into()),
+                };
+                let cond = self.on_expr(cond)?;
+                let cond = self.alloc_reg(&cond);
+
+                let then_label = self.fresh_label();
+                let else_label = self.fresh_label();
+                let break_label = self.fresh_label();
+
+                let reg = self.do_in_branch(break_label, |xx| {
+                    xx.emit(Code::JumpUnless(break_label, cond));
+
+                    xx.do_in_arm(then_label, |xx| {
+                        let body = match &expr.body_opt {
+                            Some(it) => it,
+                            None => return Err("missing then clause".into()),
+                        };
+                        xx.on_expr(body)
+                    })?;
+
+                    xx.do_in_arm(else_label, |xx| {
+                        let alt = match &expr.alt_opt {
+                            Some(it) => it,
+                            None => return Err("missing else clause".into()),
+                        };
+                        xx.on_expr(alt)
+                    })?;
+
+                    Ok(())
+                })?;
+                GTerm::Reg(reg)
+            }
             AExpr::Fn(expr) => {
                 let fn_id = self.fns.len();
                 self.fns.push(FnData {
@@ -311,9 +398,19 @@ pub(crate) fn code_gen<'a>(ast: &'a Ast<'a>) -> GResult<Program<'a>> {
 
     for fn_data in generator.fns {
         let pc = program.codes.len();
-        program.labels.push(pc);
+        program.fns.push(FnInfo {
+            pc,
+            local_var_count: fn_data.local_var_count,
+        });
 
         program.codes.extend(fn_data.codes);
+    }
+
+    program.labels = vec![!0; generator.label_count];
+    for (pc, code) in program.codes.iter().enumerate() {
+        if let Code::LabelDecl(label) = *code {
+            program.labels[label] = pc + 1;
+        }
     }
 
     Ok(program)

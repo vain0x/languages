@@ -209,6 +209,7 @@ mod tests {
                     Program {
                         reg_count: 5,
                         labels: [],
+                        fns: [],
                         codes: [
                             MovImm(
                                 Reg(
@@ -272,6 +273,137 @@ mod tests {
     }
 
     #[test]
+    fn test_compile_if() {
+        do_test_compile(
+            r#"
+                if false { 1 } else if false { 2 } else { 3 }
+            "#,
+            expect![[r#"
+                Ok(
+                    Program {
+                        reg_count: 6,
+                        labels: [
+                            3,
+                            6,
+                            18,
+                            9,
+                            12,
+                            15,
+                        ],
+                        fns: [],
+                        codes: [
+                            MovImm(
+                                Reg(
+                                    1,
+                                ),
+                                Bool(
+                                    false,
+                                ),
+                            ),
+                            JumpUnless(
+                                2,
+                                Reg(
+                                    1,
+                                ),
+                            ),
+                            LabelDecl(
+                                0,
+                            ),
+                            MovImm(
+                                Reg(
+                                    2,
+                                ),
+                                Int(
+                                    1,
+                                ),
+                            ),
+                            Jump(
+                                2,
+                            ),
+                            LabelDecl(
+                                1,
+                            ),
+                            MovImm(
+                                Reg(
+                                    3,
+                                ),
+                                Bool(
+                                    false,
+                                ),
+                            ),
+                            JumpUnless(
+                                5,
+                                Reg(
+                                    3,
+                                ),
+                            ),
+                            LabelDecl(
+                                3,
+                            ),
+                            MovImm(
+                                Reg(
+                                    4,
+                                ),
+                                Int(
+                                    2,
+                                ),
+                            ),
+                            Jump(
+                                5,
+                            ),
+                            LabelDecl(
+                                4,
+                            ),
+                            MovImm(
+                                Reg(
+                                    4,
+                                ),
+                                Int(
+                                    3,
+                                ),
+                            ),
+                            Jump(
+                                5,
+                            ),
+                            LabelDecl(
+                                5,
+                            ),
+                            Mov(
+                                Reg(
+                                    2,
+                                ),
+                                Reg(
+                                    4,
+                                ),
+                            ),
+                            Jump(
+                                2,
+                            ),
+                            LabelDecl(
+                                2,
+                            ),
+                            Mov(
+                                Reg(
+                                    5,
+                                ),
+                                Reg(
+                                    2,
+                                ),
+                            ),
+                            PrintVal(
+                                "it",
+                                Reg(
+                                    5,
+                                ),
+                            ),
+                            Exit,
+                        ],
+                    },
+                )"#]],
+        );
+    }
+
+    #[test]
     fn test_compile_fn_with_arity_zero() {
         do_test_compile(
             r#"
@@ -282,8 +414,12 @@ mod tests {
                 Ok(
                     Program {
                         reg_count: 4,
-                        labels: [
-                            8,
+                        labels: [],
+                        fns: [
+                            FnInfo {
+                                local_var_count: 0,
+                                pc: 8,
+                            },
                         ],
                         codes: [
                             MovImm(
@@ -358,9 +494,16 @@ mod tests {
                 Ok(
                     Program {
                         reg_count: 10,
-                        labels: [
-                            12,
-                            24,
+                        labels: [],
+                        fns: [
+                            FnInfo {
+                                local_var_count: 2,
+                                pc: 12,
+                            },
+                            FnInfo {
+                                local_var_count: 1,
+                                pc: 24,
+                            },
                         ],
                         codes: [
                             MovImm(

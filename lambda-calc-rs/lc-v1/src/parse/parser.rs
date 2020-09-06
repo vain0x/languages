@@ -210,7 +210,7 @@ impl<'a, 'p, H: LambdaParserHost<'a>> MyTokenStream<'a, 'p, H> {
     fn try_pop_front(&mut self) -> Option<(TokenKind, usize)> {
         match self.parser.rx.pop_front() {
             Some(token_data) => {
-                println!("rx -> {:?}", token_data);
+                // println!("rx -> {:?}", token_data);
                 Some((token_data.kind, token_data.len))
             }
             None => None,

@@ -1,20 +1,27 @@
 use crate::{
+    ast::a_parser::NSymbol,
     ast::a_tree::AFnExpr,
     ast::a_tree::{ADecl, AExpr, Ast},
+    syntax::syntax_token::SyntaxToken,
 };
-use std::{collections::HashMap, fmt::Write};
+use std::{collections::HashMap, fmt::Write, mem::replace, mem::take};
+
+use super::code_gen::Prim;
 
 #[derive(Copy, Clone)]
 pub(crate) enum EValue<'a> {
     Bool(bool),
     Int(i64),
     Fn(&'a AFnExpr<'a>),
+    Prim(Prim),
 }
 
 pub(crate) type EResult<'a> = Result<EValue<'a>, String>;
 
 pub(crate) struct Evaluator<'a> {
-    map_stack: Vec<HashMap<&'a str, EValue<'a>>>,
+    static_vars: HashMap<usize, EValue<'a>>,
+    params: Vec<EValue<'a>>,
+    local_vars: HashMap<usize, EValue<'a>>,
     output: String,
     ast: &'a Ast<'a>,
 }
@@ -22,18 +29,26 @@ pub(crate) struct Evaluator<'a> {
 impl<'a> Evaluator<'a> {
     pub(crate) fn new(ast: &'a Ast<'a>) -> Self {
         Self {
-            map_stack: vec![HashMap::new()],
+            static_vars: HashMap::new(),
+            params: vec![],
+            local_vars: HashMap::new(),
             output: String::new(),
             ast,
         }
     }
 
-    fn find_value(&self, name: &str) -> Option<EValue<'a>> {
-        self.map_stack
-            .iter()
-            .rev()
-            .find_map(|map| map.get(name))
-            .copied()
+    fn assign_value_opt(&mut self, name_opt: Option<SyntaxToken<'a>>, value: EValue<'a>) {
+        if let Some(symbol) = name_opt.map(|token| self.ast.name_res[&token.index]) {
+            match symbol {
+                NSymbol::Missing | NSymbol::Prim(_) | NSymbol::Param { .. } => unreachable!(),
+                NSymbol::StaticVar { id, .. } => {
+                    self.static_vars.insert(id, value);
+                }
+                NSymbol::LocalVar { id, .. } => {
+                    self.local_vars.insert(id, value);
+                }
+            }
+        }
     }
 
     fn on_expr(&mut self, expr: &'a AExpr<'a>) -> EResult<'a> {
@@ -47,32 +62,42 @@ impl<'a> Evaluator<'a> {
                 };
                 EValue::Int(value)
             }
-            AExpr::Var(token) => self
-                .find_value(token.text)
-                .ok_or_else(|| format!("unknown var {}", token.text))?,
+            AExpr::Var(token) => match self.ast.name_res[&token.index] {
+                NSymbol::Missing => return Err(format!("unknown var {}", token.text)),
+                NSymbol::Prim(prim) => EValue::Prim(prim),
+                NSymbol::StaticVar { id, .. } => self.static_vars[&id],
+                NSymbol::Param { index, .. } => self.params[index],
+                NSymbol::LocalVar { id, .. } => self.local_vars[&id],
+            },
             AExpr::Call(expr) => match self.on_expr(&*expr.callee)? {
                 EValue::Bool(_) => return Err("can't call bool".into()),
                 EValue::Int(_) => return Err("can't call int".into()),
                 EValue::Fn(callee) => {
-                    let args = expr.args.iter().map(|expr| self.on_expr(expr));
-
-                    let mut local_map = HashMap::new();
-                    for (param, arg) in callee.params.iter().zip(args) {
-                        local_map.insert(param.text, arg?);
+                    let args = expr
+                        .args
+                        .iter()
+                        .map(|expr| self.on_expr(expr))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    if args.len() != callee.params.len() {
+                        return Err("arity mismatch".into());
                     }
-                    self.map_stack.push(local_map);
+
+                    let parent_params = replace(&mut self.params, args);
+                    let parent_local_vars = take(&mut self.local_vars);
+
                     let result = match &callee.body_opt {
                         Some(body) => self.on_expr(&*body)?,
                         None => return Err("body missing".into()),
                     };
-                    self.map_stack.pop();
+
+                    self.params = parent_params;
+                    self.local_vars = parent_local_vars;
 
                     result
                 }
+                EValue::Prim(..) => todo!(),
             },
             AExpr::Block(decls) => {
-                self.map_stack.push(HashMap::new());
-
                 let (decls, last_opt) = match decls.split_last() {
                     Some((ADecl::Expr(last), decls)) => (decls, Some(last)),
                     _ => (decls.as_slice(), None),
@@ -86,8 +111,6 @@ impl<'a> Evaluator<'a> {
                     Some(last) => self.on_expr(last)?,
                     None => EValue::Bool(false), // unit?
                 };
-
-                self.map_stack.pop();
                 last
             }
             AExpr::If(expr) => {
@@ -124,9 +147,7 @@ impl<'a> Evaluator<'a> {
                     None => return Err("missing init expression".into()),
                 };
 
-                if let Some(name) = decl.name_opt.map(|token| token.text) {
-                    self.map_stack.last_mut().unwrap().insert(name, value);
-                }
+                self.assign_value_opt(decl.name_opt, value);
             }
         }
         Ok(())
@@ -141,7 +162,7 @@ impl<'a> Evaluator<'a> {
 
                     self.emit_val(name, &result);
                     if let Ok(value) = result {
-                        self.map_stack.last_mut().unwrap().insert(name, value);
+                        self.assign_value_opt(None, value);
                     }
                 }
                 ADecl::Let(decl) => {
@@ -157,7 +178,7 @@ impl<'a> Evaluator<'a> {
 
                     self.emit_val(name, &result);
                     if let Ok(value) = result {
-                        self.map_stack.last_mut().unwrap().insert(name, value);
+                        self.assign_value_opt(decl.name_opt, value);
                     }
                 }
             }
@@ -190,6 +211,14 @@ impl<'a> Evaluator<'a> {
                     &mut self.output,
                     "val {} : fn(...) -> ... = <function>;",
                     name
+                )
+                .unwrap();
+            }
+            EValue::Prim(prim) => {
+                writeln!(
+                    &mut self.output,
+                    "val {} : fn... = <primitive({:?})>;",
+                    name, prim
                 )
                 .unwrap();
             }

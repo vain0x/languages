@@ -2,14 +2,29 @@ use std::collections::HashMap;
 
 use super::a_tree::*;
 use crate::{
-    context::Context, parse::parser::LambdaParserHost, syntax::syntax_token::SyntaxToken, utils::*,
+    context::Context, eval::code_gen::Prim, parse::parser::LambdaParserHost,
+    syntax::syntax_token::SyntaxToken, utils::*,
 };
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) enum NSymbol {
-    // StaticVar,
-    Param,
-    LocalVar,
+    Missing,
+    Prim(Prim),
+    StaticVar {
+        id: usize,
+        depth: usize,
+        index: usize,
+    },
+    Param {
+        id: usize,
+        depth: usize,
+        index: usize,
+    },
+    LocalVar {
+        id: usize,
+        depth: usize,
+        index: usize,
+    },
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -17,11 +32,13 @@ pub(crate) enum ScopeKind {
     Block,
     Fn,
     Root,
+    Prim,
 }
 
 pub(crate) struct Scope<'a> {
     kind: ScopeKind,
     map: HashMap<&'a str, NSymbol>,
+    local_var_count: usize,
 }
 
 impl<'a> Scope<'a> {
@@ -29,27 +46,41 @@ impl<'a> Scope<'a> {
         Self {
             kind,
             map: HashMap::new(),
+            local_var_count: 0,
         }
     }
 }
 
 pub(crate) struct AstLambdaParserHost<'a> {
-    pub(crate) name_res: HashMap<*const SyntaxToken<'a>, NSymbol>,
+    symbol_id: usize,
+    pub(crate) name_res: HashMap<usize, NSymbol>,
     pub(crate) scope_chain: Vec<Scope<'a>>,
     pub(crate) context: &'a Context,
 }
 
 impl<'a> AstLambdaParserHost<'a> {
     pub(crate) fn new(context: &'a Context) -> Self {
+        let mut scope = Scope::new(ScopeKind::Prim);
+        scope.map.insert("int_eq", NSymbol::Prim(Prim::IntEq));
+        scope.map.insert("int_add", NSymbol::Prim(Prim::IntAdd));
+
+        let scope_chain = vec![scope, Scope::new(ScopeKind::Root)];
+
         Self {
+            symbol_id: 0,
             name_res: HashMap::new(),
-            scope_chain: vec![Scope::new(ScopeKind::Root)],
+            scope_chain,
             context,
         }
     }
 
     fn new_box<T>(&self, value: T) -> BumpaloBox<'a, T> {
         BumpaloBox::new_in(value, &self.context.bump)
+    }
+
+    fn fresh_symbol_id(&mut self) -> usize {
+        self.symbol_id += 1;
+        self.symbol_id
     }
 }
 
@@ -76,11 +107,14 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         _comma_opt: Option<SyntaxToken<'a>>,
         param_list: &mut Self::BeforeParamList,
     ) {
+        let id = self.fresh_symbol_id();
+        let depth = self.scope_chain.len() - 1;
+        let index = param_list.len();
         self.scope_chain
             .last_mut()
             .unwrap()
             .map
-            .insert(name.text, NSymbol::Param);
+            .insert(name.text, NSymbol::Param { id, depth, index });
 
         param_list.push(name);
     }
@@ -127,18 +161,13 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     }
 
     fn after_ident_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr {
-        match self
+        let symbol = self
             .scope_chain
             .iter()
-            .enumerate()
             .rev()
-            .find_map(|(index, scope)| scope.map.get(token.text).map(|symbol| (index, symbol)))
-        {
-            Some((depth, symbol)) => {
-                eprintln!("{}: {:?}", token.text, (depth, symbol));
-            }
-            None => eprintln!("{}: undefined?", token.text),
-        };
+            .find_map(|scope| scope.map.get(token.text).copied())
+            .unwrap_or(NSymbol::Missing);
+        self.name_res.insert(token.index, symbol);
 
         AExpr::Var(token)
     }
@@ -230,11 +259,28 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         _semi_opt: Option<SyntaxToken<'a>>,
     ) -> Self::AfterDecl {
         if let Some(name) = &name_opt {
-            self.scope_chain
-                .last_mut()
+            let id = self.fresh_symbol_id();
+            let is_global = self
+                .scope_chain
+                .iter()
+                .rev()
+                .skip_while(|s| s.kind == ScopeKind::Block)
+                .next()
                 .unwrap()
-                .map
-                .insert(name.text, NSymbol::LocalVar);
+                .kind
+                == ScopeKind::Root;
+
+            let depth = self.scope_chain.len() - 1;
+            let scope = self.scope_chain.last_mut().unwrap();
+            let index = scope.local_var_count;
+            let symbol = if is_global {
+                NSymbol::StaticVar { id, depth, index }
+            } else {
+                NSymbol::LocalVar { id, depth, index }
+            };
+            scope.map.insert(name.text, symbol);
+
+            self.name_res.insert(name.index, symbol);
         }
 
         ADecl::Let(ALetDecl { name_opt, init_opt })

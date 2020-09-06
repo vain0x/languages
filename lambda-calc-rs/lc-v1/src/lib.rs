@@ -69,7 +69,7 @@ pub mod rust_api {
         parse::parser::LambdaParser, token::tokenize_rules::MyTokenizerHost,
     };
     use lc_utils::{deque_chan::deque_chan, tokenizer::Tokenizer};
-    use std::collections::VecDeque;
+    use std::{collections::VecDeque, mem::take};
 
     pub fn evaluate(source_code: &str) -> String {
         let context = Context::new();
@@ -82,7 +82,11 @@ pub mod rust_api {
         let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
         let root = parser.parse_root();
-        let ast = context.bump.alloc(Ast { root });
+        // eprintln!("name_res = {:#?}", parser.host.name_res);
+        let ast = context.bump.alloc(Ast {
+            root,
+            name_res: take(&mut parser.host.name_res),
+        });
 
         crate::eval::eval::evaluate(ast)
     }
@@ -98,7 +102,10 @@ pub mod rust_api {
         let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
         let root = parser.parse_root();
-        let ast = context.bump.alloc(Ast { root });
+        let ast = context.bump.alloc(Ast {
+            root,
+            name_res: take(&mut parser.host.name_res),
+        });
 
         let program = crate::eval::code_gen::code_gen(ast);
         format!("{:#?}", program)
@@ -156,7 +163,6 @@ mod tests {
 
                 // expr decl
                 42;
-                let the_value = it;
 
                 let id = fn(x) x;
                 let _ = id(id)(id)(id)(zero_fn)();
@@ -174,7 +180,6 @@ mod tests {
                 val _ : number = 1;
                 val _ : number = 0;
                 val it : number = 42;
-                val the_value : number = 42;
                 val id : fn(...) -> ... = <function>;
                 val _ : number = 0;
             "#]],

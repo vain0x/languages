@@ -39,7 +39,7 @@ mod tests {
     use std::collections::VecDeque;
 
     fn do_test_parse(source_code: &str, expect: Expect) {
-        let mut context = Context::new();
+        let context = Context::new();
         let mut tokens = VecDeque::new();
 
         let (tx, rx) = deque_chan(&mut tokens);

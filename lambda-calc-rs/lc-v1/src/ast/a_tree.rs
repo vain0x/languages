@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
 use crate::{syntax::syntax_token::SyntaxToken, utils::*};
+
+use super::a_parser::NSymbol;
 
 #[derive(Debug)]
 pub(crate) struct ACallExpr<'a> {
@@ -52,4 +56,5 @@ pub(crate) struct ARoot<'a> {
 #[derive(Debug)]
 pub(crate) struct Ast<'a> {
     pub(crate) root: ARoot<'a>,
+    pub(crate) name_res: HashMap<usize, NSymbol>,
 }

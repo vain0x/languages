@@ -4,6 +4,7 @@ mod ast {
 }
 
 mod eval {
+    pub(crate) mod code_gen;
     pub(crate) mod eval;
 }
 
@@ -88,6 +89,26 @@ pub mod rust_api {
 
         crate::eval::eval::evaluate(ast)
     }
+
+    pub fn compile(source_code: &str) -> String {
+        let context = Context::new();
+        let mut tokens = VecDeque::new();
+
+        let (tx, rx) = deque_chan(&mut tokens);
+        let mut tokenizer_host = MyTokenizerHost::new(tx);
+        let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
+
+        let mut parser_host = AstLambdaParserHost {
+            context: &context,
+            // ...
+        };
+        let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
+        let root = parser.parse_root();
+        let ast = context.bump.alloc(Ast { root });
+
+        let program = crate::eval::code_gen::code_gen(ast);
+        format!("{:#?}", program)
+    }
 }
 
 #[cfg(test)]
@@ -164,5 +185,104 @@ mod tests {
                 val _ : number = 0;
             "#]],
         );
+    }
+
+    fn do_test_compile(input: &str, expect: Expect) {
+        let actual = crate::rust_api::compile(input);
+        expect.assert_eq(&actual)
+    }
+
+    #[test]
+    fn test_compile() {
+        do_test_compile(
+            r#"
+                0;
+                let a = 42;
+
+                {
+                    let b = 1;
+                    b;
+                }
+            "#,
+            expect![[r#"
+                Ok(
+                    Program {
+                        reg_count: 4,
+                        labels: [],
+                        codes: [
+                            MovImm(
+                                Reg(
+                                    0,
+                                ),
+                                Int(
+                                    0,
+                                ),
+                            ),
+                            PrintVal(
+                                "it",
+                                Reg(
+                                    0,
+                                ),
+                            ),
+                            MovImm(
+                                Reg(
+                                    1,
+                                ),
+                                Int(
+                                    42,
+                                ),
+                            ),
+                            PrintVal(
+                                "a",
+                                Reg(
+                                    1,
+                                ),
+                            ),
+                            MovImm(
+                                Reg(
+                                    2,
+                                ),
+                                Int(
+                                    1,
+                                ),
+                            ),
+                            PrintVal(
+                                "b",
+                                Reg(
+                                    2,
+                                ),
+                            ),
+                            LoadStaticVar(
+                                Reg(
+                                    3,
+                                ),
+                                1,
+                            ),
+                            PrintVal(
+                                "it",
+                                Reg(
+                                    3,
+                                ),
+                            ),
+                        ],
+                    },
+                )"#]],
+        )
+    }
+
+    #[test]
+    fn test_compile_scope_error() {
+        do_test_compile(
+            r#"
+                {
+                    let inner = 1;
+                }
+                inner;
+            "#,
+            expect![[r#"
+                Err(
+                    "undefined value \"inner\"",
+                )"#]],
+        )
     }
 }

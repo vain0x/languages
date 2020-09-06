@@ -26,6 +26,7 @@ pub(crate) enum AExpr<'a> {
     Number(SyntaxToken<'a>),
     Var(SyntaxToken<'a>),
     Call(ACallExpr<'a>),
+    Block(BumpaloVec<'a, ADecl<'a>>),
     If(AIfExpr<'a>),
     Fn(AFnExpr<'a>),
 }

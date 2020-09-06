@@ -128,6 +128,13 @@ mod tests {
                 // call expr
                 let _ = zero_fn();
 
+                // block expr
+                {
+                    let inner_var = 4;
+                    inner_var
+                }
+                inner_var
+
                 // if expr
                 let _ = if true { 1 } else { 0 };
                 let _ = if false { 1 } else { 0 };
@@ -146,6 +153,9 @@ mod tests {
                 val var : number = 42;
                 val zero_fn : fn(...) -> ... = <function>;
                 val _ : number = 0;
+                val it : number = 4;
+                val it = <err>;
+                ERROR: "unknown var inner_var"
                 val _ : number = 1;
                 val _ : number = 0;
                 val it : number = 42;

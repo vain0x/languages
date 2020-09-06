@@ -104,6 +104,35 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
         }
     }
 
+    fn parse_block_expr(&mut self) -> H::AfterExpr {
+        let left_brace = self.bump();
+        let mut block_expr = self.host.before_block_expr(left_brace);
+
+        loop {
+            match self.next() {
+                TokenKind::Eof | TokenKind::RightBrace => break,
+                TokenKind::SemiColon => {
+                    self.bump();
+                    continue;
+                }
+                _ => {}
+            }
+
+            let decl = match self.parse_decl() {
+                Some(it) => it,
+                None => {
+                    self.skip();
+                    continue;
+                }
+            };
+
+            self.host.after_decl_in_block(decl, &mut block_expr);
+        }
+
+        let right_brace_opt = self.eat(TokenKind::RightBrace);
+        self.host.after_block_expr(right_brace_opt, block_expr)
+    }
+
     fn parse_if_expr(&mut self) -> H::AfterExpr {
         let keyword = self.bump();
 
@@ -153,6 +182,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
             TokenKind::Eof | TokenKind::RightParen | TokenKind::Comma | TokenKind::SemiColon => {
                 return None;
             }
+            TokenKind::LeftBrace => self.parse_block_expr(),
             TokenKind::If => self.parse_if_expr(),
             TokenKind::Fn => self.parse_fn_expr(),
             _ => self.parse_suffix_expr()?,

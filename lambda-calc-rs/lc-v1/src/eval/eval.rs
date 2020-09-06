@@ -70,6 +70,26 @@ impl<'a> Evaluator<'a> {
                     result
                 }
             },
+            AExpr::Block(decls) => {
+                self.map_stack.push(HashMap::new());
+
+                let (decls, last_opt) = match decls.split_last() {
+                    Some((ADecl::Expr(last), decls)) => (decls, Some(last)),
+                    _ => (decls.as_slice(), None),
+                };
+
+                for decl in decls {
+                    self.on_decl(decl)?;
+                }
+
+                let last = match last_opt {
+                    Some(last) => self.on_expr(last)?,
+                    None => EValue::Bool(false), // unit?
+                };
+
+                self.map_stack.pop();
+                last
+            }
             AExpr::If(expr) => {
                 let cond = match &expr.cond_opt {
                     Some(it) => it,
@@ -93,9 +113,24 @@ impl<'a> Evaluator<'a> {
         Ok(value)
     }
 
-    // fn on_decl(&mut self, decl: ADecl<'a>) {
-    //     //
-    // }
+    fn on_decl(&mut self, decl: &'a ADecl<'a>) -> Result<(), String> {
+        match decl {
+            ADecl::Expr(expr) => {
+                let _value = self.on_expr(expr)?;
+            }
+            ADecl::Let(decl) => {
+                let value = match &decl.init_opt {
+                    Some(init) => self.on_expr(init)?,
+                    None => return Err("missing init expression".into()),
+                };
+
+                if let Some(name) = decl.name_opt.map(|token| token.text) {
+                    self.map_stack.last_mut().unwrap().insert(name, value);
+                }
+            }
+        }
+        Ok(())
+    }
 
     fn on_root(&mut self) {
         for decl in &self.ast.root.decls {

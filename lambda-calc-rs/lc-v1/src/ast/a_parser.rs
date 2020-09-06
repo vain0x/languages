@@ -20,6 +20,8 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     type BeforeArgList = BumpaloVec<'a, AExpr<'a>>;
     type AfterArgList = BumpaloVec<'a, AExpr<'a>>;
 
+    type BeforeBlockExpr = BumpaloVec<'a, ADecl<'a>>;
+
     type AfterExpr = AExpr<'a>;
     type AfterDecl = ADecl<'a>;
     type AfterRoot = ARoot<'a>;
@@ -91,6 +93,26 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
             callee: self.new_box(callee),
             args: arg_list,
         })
+    }
+
+    fn before_block_expr(&mut self, _left_paren: SyntaxToken<'a>) -> Self::BeforeBlockExpr {
+        BumpaloVec::new_in(&self.context.bump)
+    }
+
+    fn after_decl_in_block(
+        &mut self,
+        decl: Self::AfterDecl,
+        block_expr: &mut Self::BeforeBlockExpr,
+    ) {
+        block_expr.push(decl);
+    }
+
+    fn after_block_expr(
+        &mut self,
+        _right_paren_opt: Option<SyntaxToken<'a>>,
+        block_expr: Self::BeforeBlockExpr,
+    ) -> Self::AfterExpr {
+        AExpr::Block(block_expr)
     }
 
     fn after_if_expr(

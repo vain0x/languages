@@ -16,6 +16,7 @@ pub(crate) trait LambdaParserHost<'a> {
     type AfterParamList;
     type BeforeArgList;
     type AfterArgList;
+    type BeforeBlockExpr;
     type AfterExpr;
     type AfterDecl;
     type AfterRoot;
@@ -55,6 +56,18 @@ pub(crate) trait LambdaParserHost<'a> {
         &mut self,
         callee: Self::AfterExpr,
         arg_list: Self::AfterArgList,
+    ) -> Self::AfterExpr;
+
+    fn before_block_expr(&mut self, left_paren: SyntaxToken<'a>) -> Self::BeforeBlockExpr;
+    fn after_decl_in_block(
+        &mut self,
+        decl: Self::AfterDecl,
+        block_expr: &mut Self::BeforeBlockExpr,
+    );
+    fn after_block_expr(
+        &mut self,
+        right_paren_opt: Option<SyntaxToken<'a>>,
+        block_expr: Self::BeforeBlockExpr,
     ) -> Self::AfterExpr;
 
     fn after_if_expr(

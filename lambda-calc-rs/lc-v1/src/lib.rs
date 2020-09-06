@@ -6,6 +6,7 @@ mod ast {
 mod eval {
     pub(crate) mod code_gen;
     pub(crate) mod eval;
+    pub(crate) mod type_check;
 }
 
 mod parse {

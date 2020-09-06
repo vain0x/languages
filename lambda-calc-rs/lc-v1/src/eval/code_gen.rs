@@ -12,6 +12,12 @@ pub(crate) type LabelId = usize;
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct Reg(usize);
 
+#[derive(Copy, Clone, Debug)]
+pub(crate) enum Prim {
+    IntEq,
+    IntAdd,
+}
+
 #[derive(Debug)]
 enum GTerm<'a> {
     Bool(bool),
@@ -19,6 +25,7 @@ enum GTerm<'a> {
     StaticVar(StaticVarId),
     LocalVar(LocalVarId),
     Fn(FnId),
+    Prim(Prim),
     Reg(Reg),
     #[allow(unused)]
     Unused(PhantomData<&'a ()>),
@@ -30,6 +37,7 @@ pub(crate) enum Imm {
     Bool(bool),
     Int(i64),
     Fn(FnId),
+    Prim(Prim),
 }
 
 #[derive(Debug)]
@@ -72,6 +80,7 @@ type FnId = usize;
 pub(crate) enum Name {
     StaticVar(StaticVarId),
     LocalVar(LocalVarId),
+    Prim(Prim),
     // upvar
 }
 
@@ -121,6 +130,7 @@ impl<'a> CodeGenerator<'a> {
             GTerm::LocalVar(id) => self.emit(Code::LoadLocalVar(reg, id)),
             GTerm::Fn(id) => self.emit(Code::MovImm(reg, Imm::Fn(id))),
             GTerm::Reg(src) => self.emit(Code::Mov(reg, src)),
+            GTerm::Prim(prim) => self.emit(Code::MovImm(reg, Imm::Prim(prim))),
             GTerm::Unused(..) => unreachable!(),
         }
     }
@@ -227,6 +237,7 @@ impl<'a> CodeGenerator<'a> {
                 match name {
                     Name::StaticVar(id) => GTerm::StaticVar(id),
                     Name::LocalVar(id) => GTerm::LocalVar(id),
+                    Name::Prim(prim) => GTerm::Prim(prim),
                 }
             }
             AExpr::Call(expr) => {
@@ -391,7 +402,11 @@ impl<'a> CodeGenerator<'a> {
 pub(crate) fn code_gen<'a>(ast: &'a Ast<'a>) -> GResult<Program<'a>> {
     let mut generator = CodeGenerator::default();
     generator.program.reg_count += 1; // 関数の結果を入れるレジスタを確保
-    generator.enter_scope();
+
+    let map = generator.enter_scope();
+    map.insert("int_eq", Name::Prim(Prim::IntEq));
+    map.insert("int_add", Name::Prim(Prim::IntAdd));
+
     generator.on_root(&ast.root)?;
 
     let mut program = generator.program;

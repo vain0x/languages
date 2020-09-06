@@ -273,6 +273,87 @@ mod tests {
     }
 
     #[test]
+    fn test_compile_call_prim() {
+        do_test_compile(
+            r#"
+                int_add(2, 3)
+            "#,
+            expect![[r#"
+                Ok(
+                    Program {
+                        reg_count: 5,
+                        labels: [],
+                        fns: [],
+                        codes: [
+                            MovImm(
+                                Reg(
+                                    1,
+                                ),
+                                Prim(
+                                    IntAdd,
+                                ),
+                            ),
+                            MovImm(
+                                Reg(
+                                    2,
+                                ),
+                                Int(
+                                    2,
+                                ),
+                            ),
+                            MovImm(
+                                Reg(
+                                    3,
+                                ),
+                                Int(
+                                    3,
+                                ),
+                            ),
+                            BeginCall(
+                                Reg(
+                                    1,
+                                ),
+                                2,
+                            ),
+                            StoreLocalVar(
+                                0,
+                                Reg(
+                                    2,
+                                ),
+                            ),
+                            StoreLocalVar(
+                                1,
+                                Reg(
+                                    3,
+                                ),
+                            ),
+                            EndCall(
+                                Reg(
+                                    1,
+                                ),
+                            ),
+                            Mov(
+                                Reg(
+                                    4,
+                                ),
+                                Reg(
+                                    0,
+                                ),
+                            ),
+                            PrintVal(
+                                "it",
+                                Reg(
+                                    4,
+                                ),
+                            ),
+                            Exit,
+                        ],
+                    },
+                )"#]],
+        );
+    }
+
+    #[test]
     fn test_compile_if() {
         do_test_compile(
             r#"

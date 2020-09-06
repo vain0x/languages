@@ -207,12 +207,12 @@ mod tests {
             expect![[r#"
                 Ok(
                     Program {
-                        reg_count: 4,
+                        reg_count: 5,
                         labels: [],
                         codes: [
                             MovImm(
                                 Reg(
-                                    0,
+                                    1,
                                 ),
                                 Int(
                                     0,
@@ -221,12 +221,12 @@ mod tests {
                             PrintVal(
                                 "it",
                                 Reg(
-                                    0,
+                                    1,
                                 ),
                             ),
                             MovImm(
                                 Reg(
-                                    1,
+                                    2,
                                 ),
                                 Int(
                                     42,
@@ -235,12 +235,12 @@ mod tests {
                             PrintVal(
                                 "a",
                                 Reg(
-                                    1,
+                                    2,
                                 ),
                             ),
                             MovImm(
                                 Reg(
-                                    2,
+                                    3,
                                 ),
                                 Int(
                                     1,
@@ -249,14 +249,81 @@ mod tests {
                             PrintVal(
                                 "b",
                                 Reg(
-                                    2,
+                                    3,
                                 ),
                             ),
                             LoadStaticVar(
                                 Reg(
-                                    3,
+                                    4,
                                 ),
                                 1,
+                            ),
+                            PrintVal(
+                                "it",
+                                Reg(
+                                    4,
+                                ),
+                            ),
+                            Exit,
+                        ],
+                    },
+                )"#]],
+        )
+    }
+
+    #[test]
+    fn test_compile_fn_with_arity_zero() {
+        do_test_compile(
+            r#"
+                let zero_fn = fn() 0;
+                zero_fn();
+            "#,
+            expect![[r#"
+                Ok(
+                    Program {
+                        reg_count: 4,
+                        labels: [
+                            8,
+                        ],
+                        codes: [
+                            MovImm(
+                                Reg(
+                                    1,
+                                ),
+                                Fn(
+                                    0,
+                                ),
+                            ),
+                            PrintVal(
+                                "zero_fn",
+                                Reg(
+                                    1,
+                                ),
+                            ),
+                            LoadStaticVar(
+                                Reg(
+                                    2,
+                                ),
+                                0,
+                            ),
+                            BeginCall(
+                                Reg(
+                                    2,
+                                ),
+                                0,
+                            ),
+                            EndCall(
+                                Reg(
+                                    2,
+                                ),
+                            ),
+                            Mov(
+                                Reg(
+                                    3,
+                                ),
+                                Reg(
+                                    0,
+                                ),
                             ),
                             PrintVal(
                                 "it",
@@ -264,10 +331,192 @@ mod tests {
                                     3,
                                 ),
                             ),
+                            Exit,
+                            MovImm(
+                                Reg(
+                                    0,
+                                ),
+                                Int(
+                                    0,
+                                ),
+                            ),
+                            Return,
                         ],
                     },
                 )"#]],
-        )
+        );
+    }
+
+    #[test]
+    fn test_compile_fn_with_params() {
+        do_test_compile(
+            r#"
+                let twice = fn(f, x) f(f(x));
+                twice(fn(x) x, 0);
+            "#,
+            expect![[r#"
+                Ok(
+                    Program {
+                        reg_count: 10,
+                        labels: [
+                            12,
+                            24,
+                        ],
+                        codes: [
+                            MovImm(
+                                Reg(
+                                    5,
+                                ),
+                                Fn(
+                                    0,
+                                ),
+                            ),
+                            PrintVal(
+                                "twice",
+                                Reg(
+                                    5,
+                                ),
+                            ),
+                            LoadStaticVar(
+                                Reg(
+                                    6,
+                                ),
+                                0,
+                            ),
+                            MovImm(
+                                Reg(
+                                    7,
+                                ),
+                                Fn(
+                                    1,
+                                ),
+                            ),
+                            MovImm(
+                                Reg(
+                                    8,
+                                ),
+                                Int(
+                                    0,
+                                ),
+                            ),
+                            BeginCall(
+                                Reg(
+                                    6,
+                                ),
+                                2,
+                            ),
+                            StoreLocalVar(
+                                0,
+                                Reg(
+                                    7,
+                                ),
+                            ),
+                            StoreLocalVar(
+                                1,
+                                Reg(
+                                    8,
+                                ),
+                            ),
+                            EndCall(
+                                Reg(
+                                    6,
+                                ),
+                            ),
+                            Mov(
+                                Reg(
+                                    9,
+                                ),
+                                Reg(
+                                    0,
+                                ),
+                            ),
+                            PrintVal(
+                                "it",
+                                Reg(
+                                    9,
+                                ),
+                            ),
+                            Exit,
+                            LoadLocalVar(
+                                Reg(
+                                    1,
+                                ),
+                                0,
+                            ),
+                            LoadLocalVar(
+                                Reg(
+                                    2,
+                                ),
+                                0,
+                            ),
+                            LoadLocalVar(
+                                Reg(
+                                    3,
+                                ),
+                                1,
+                            ),
+                            BeginCall(
+                                Reg(
+                                    2,
+                                ),
+                                1,
+                            ),
+                            StoreLocalVar(
+                                0,
+                                Reg(
+                                    3,
+                                ),
+                            ),
+                            EndCall(
+                                Reg(
+                                    2,
+                                ),
+                            ),
+                            Mov(
+                                Reg(
+                                    4,
+                                ),
+                                Reg(
+                                    0,
+                                ),
+                            ),
+                            BeginCall(
+                                Reg(
+                                    1,
+                                ),
+                                1,
+                            ),
+                            StoreLocalVar(
+                                0,
+                                Reg(
+                                    4,
+                                ),
+                            ),
+                            EndCall(
+                                Reg(
+                                    1,
+                                ),
+                            ),
+                            Mov(
+                                Reg(
+                                    0,
+                                ),
+                                Reg(
+                                    0,
+                                ),
+                            ),
+                            Return,
+                            LoadLocalVar(
+                                Reg(
+                                    0,
+                                ),
+                                0,
+                            ),
+                            Return,
+                        ],
+                    },
+                )"#]],
+        );
     }
 
     #[test]

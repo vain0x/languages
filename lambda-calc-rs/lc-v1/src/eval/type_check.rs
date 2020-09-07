@@ -190,6 +190,20 @@ impl<'a> TypeChecker<'a> {
                 body
             }
             AExpr::Fn(expr) => {
+                let escaping_symbols = self
+                    .ast_opt
+                    .unwrap()
+                    .fn_escapes
+                    .get(&expr.id)
+                    .into_iter()
+                    .flatten()
+                    .map(|symbol| format!("{:?}", symbol))
+                    .collect::<Vec<_>>();
+                if !escaping_symbols.is_empty() {
+                    self.errors
+                        .push(format!("escaping: {}", escaping_symbols.join(", ")));
+                }
+
                 let mut param_tys = BumpaloVec::new_in(self.bump());
                 for (token, ty_opt) in &expr.params {
                     let ty = ty_opt

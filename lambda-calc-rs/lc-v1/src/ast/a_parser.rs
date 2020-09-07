@@ -1,9 +1,26 @@
-use std::collections::HashMap;
 use super::a_tree::*;
 use crate::{
     context::Context, eval::code_gen::Prim, eval::type_check::PrimTy,
     parse::parser::LambdaParserHost, syntax::syntax_token::SyntaxToken, utils::*,
 };
+use std::collections::{HashMap, HashSet};
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub(crate) enum NLocalSymbol {
+    Param { id: usize },
+    LocalVar { id: usize },
+}
+
+impl NLocalSymbol {
+    pub(crate) fn from_symbol(symbol: NSymbol) -> Option<Self> {
+        let symbol = match symbol {
+            NSymbol::Param { id, .. } => NLocalSymbol::Param { id },
+            NSymbol::LocalVar { id, .. } => NLocalSymbol::LocalVar { id },
+            _ => return None,
+        };
+        Some(symbol)
+    }
+}
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum NSymbol {
@@ -30,7 +47,8 @@ pub(crate) enum NSymbol {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ScopeKind {
     Block,
-    Fn,
+    // `fn` キーワードの id
+    Fn(usize),
     Root,
     Prim,
 }
@@ -64,6 +82,8 @@ fn resolve_builtin_ty(name: &str) -> Option<PrimTy> {
 pub(crate) struct AstLambdaParserHost<'a> {
     symbol_id: usize,
     pub(crate) name_res: HashMap<usize, NSymbol>,
+    // キーは `fn` キーワードの id
+    pub(crate) fn_escapes: HashMap<usize, HashSet<NLocalSymbol>>,
     pub(crate) scope_chain: Vec<Scope<'a>>,
     pub(crate) context: &'a Context,
 }
@@ -79,6 +99,7 @@ impl<'a> AstLambdaParserHost<'a> {
         Self {
             symbol_id: 0,
             name_res: HashMap::new(),
+            fn_escapes: HashMap::new(),
             scope_chain,
             context,
         }
@@ -95,6 +116,41 @@ impl<'a> AstLambdaParserHost<'a> {
     fn fresh_symbol_id(&mut self) -> usize {
         self.symbol_id += 1;
         self.symbol_id
+    }
+
+    fn find_value(&mut self, token: SyntaxToken<'a>) -> Option<NSymbol> {
+        let mut outer = false;
+        let mut found = None;
+
+        for (i, scope) in self.scope_chain.iter().enumerate().rev() {
+            match scope.map.get(token.text).copied() {
+                Some(symbol) => {
+                    found = Some((i, symbol));
+                    break;
+                }
+                None => {
+                    if let ScopeKind::Fn(..) = scope.kind {
+                        outer = true;
+                    }
+                    continue;
+                }
+            }
+        }
+
+        let (i, symbol) = found?;
+        if outer {
+            if let Some(local_symbol) = NLocalSymbol::from_symbol(symbol) {
+                for scope in self.scope_chain[i..].iter_mut() {
+                    if let ScopeKind::Fn(fn_id) = scope.kind {
+                        self.fn_escapes
+                            .entry(fn_id)
+                            .or_default()
+                            .insert(local_symbol);
+                    }
+                }
+            }
+        }
+        Some(symbol)
     }
 }
 
@@ -231,12 +287,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     }
 
     fn after_ident_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr {
-        let symbol = self
-            .scope_chain
-            .iter()
-            .rev()
-            .find_map(|scope| scope.map.get(token.text).copied())
-            .unwrap_or(NSymbol::Missing);
+        let symbol = self.find_value(token).unwrap_or(NSymbol::Missing);
         self.name_res.insert(token.index, symbol);
 
         AExpr::Var(token)
@@ -293,22 +344,27 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         })
     }
 
-    fn before_fn_expr(&mut self) {
-        self.scope_chain.push(Scope::new(ScopeKind::Fn));
+    fn before_fn_expr(&mut self, keyword: SyntaxToken<'a>) {
+        self.scope_chain
+            .push(Scope::new(ScopeKind::Fn(keyword.index)));
     }
 
     fn after_fn_expr(
         &mut self,
-        _keyword: SyntaxToken<'a>,
+        keyword: SyntaxToken<'a>,
         param_list_opt: Option<Self::AfterParamList>,
         _arrow_opt: Option<SyntaxToken<'a>>,
         result_ty_opt: Option<Self::AfterTy>,
         body_opt: Option<Self::AfterExpr>,
     ) -> Self::AfterExpr {
         let scope_opt = self.scope_chain.pop();
-        assert_eq!(scope_opt.map(|s| s.kind), Some(ScopeKind::Fn));
+        assert_eq!(
+            scope_opt.map(|s| s.kind),
+            Some(ScopeKind::Fn(keyword.index))
+        );
 
         AExpr::Fn(AFnExpr {
+            id: keyword.index,
             params: param_list_opt.unwrap_or_else(|| BumpaloVec::new_in(&self.context.bump)),
             result_ty_opt: result_ty_opt.map(|ty| self.new_box(ty)),
             body_opt: body_opt.map(|body| self.new_box(body)),

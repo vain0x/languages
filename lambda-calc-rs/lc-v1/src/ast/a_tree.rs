@@ -1,6 +1,6 @@
-use super::a_parser::NSymbol;
+use super::a_parser::{NLocalSymbol, NSymbol};
 use crate::{syntax::syntax_token::SyntaxToken, utils::*};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub(crate) struct AFnTy<'a> {
@@ -29,6 +29,7 @@ pub(crate) struct AIfExpr<'a> {
 
 #[derive(Debug)]
 pub(crate) struct AFnExpr<'a> {
+    pub(crate) id: usize,
     pub(crate) params: BumpaloVec<'a, (SyntaxToken<'a>, Option<ATy<'a>>)>,
     pub(crate) result_ty_opt: Option<BumpaloBox<'a, ATy<'a>>>,
     pub(crate) body_opt: Option<BumpaloBox<'a, AExpr<'a>>>,
@@ -68,4 +69,5 @@ pub(crate) struct ARoot<'a> {
 pub(crate) struct Ast<'a> {
     pub(crate) root: ARoot<'a>,
     pub(crate) name_res: HashMap<usize, NSymbol>,
+    pub(crate) fn_escapes: HashMap<usize, HashSet<NLocalSymbol>>,
 }

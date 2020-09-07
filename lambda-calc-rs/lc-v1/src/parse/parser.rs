@@ -106,7 +106,7 @@ pub(crate) trait LambdaParserHost<'a> {
         alt_opt: Option<Self::AfterExpr>,
     ) -> Self::AfterExpr;
 
-    fn before_fn_expr(&mut self) {}
+    fn before_fn_expr(&mut self, keyword: SyntaxToken<'a>);
 
     fn after_fn_expr(
         &mut self,

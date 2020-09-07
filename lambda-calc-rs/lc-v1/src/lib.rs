@@ -88,6 +88,7 @@ pub mod rust_api {
         let ast = context.bump.alloc(Ast {
             root,
             name_res: take(&mut parser.host.name_res),
+            fn_escapes: take(&mut parser.host.fn_escapes),
         });
 
         crate::eval::eval::evaluate(ast)
@@ -107,6 +108,7 @@ pub mod rust_api {
         let ast = context.bump.alloc(Ast {
             root,
             name_res: take(&mut parser.host.name_res),
+            fn_escapes: take(&mut parser.host.fn_escapes),
         });
 
         let errors = crate::eval::type_check::type_check(&context, ast);
@@ -127,6 +129,7 @@ pub mod rust_api {
         let ast = context.bump.alloc(Ast {
             root,
             name_res: take(&mut parser.host.name_res),
+            fn_escapes: take(&mut parser.host.fn_escapes),
         });
 
         let program = crate::eval::code_gen::code_gen(ast);
@@ -230,6 +233,31 @@ mod tests {
                     "static b : Bool",
                     "param f : Fn { params: [Bool, Int], result: Fn { params: [], result: Unit } }",
                     "static ff : Fn { params: [Fn { params: [Bool, Int], result: Fn { params: [], result: Unit } }], result: Fn { params: [Bool, Int], result: Fn { params: [], result: Unit } } }",
+                ]"#]],
+        );
+    }
+
+    #[test]
+    fn test_escaping_check() {
+        do_test_type_check(
+            r#"
+                let PI = 3;
+                fn(x: int) {
+                    let a = 4; // escaping
+                    fn(y: int) {
+                        int_add(x, PI); // PI is global
+                        int_add(y, a) // y is local
+                    }
+                }
+            "#,
+            expect![[r#"
+                [
+                    "static PI : Int",
+                    "escaping: Param { id: 2 }",
+                    "param x : Int",
+                    "val a : Int",
+                    "escaping: LocalVar { id: 3 }, Param { id: 2 }",
+                    "param y : Int",
                 ]"#]],
         );
     }

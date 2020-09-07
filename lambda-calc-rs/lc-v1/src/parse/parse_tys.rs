@@ -68,8 +68,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     pub(crate) fn parse_ty_ascription(&mut self) -> (Option<SyntaxToken<'a>>, Option<H::AfterTy>) {
         let colon_opt = self.eat(TokenKind::Colon);
         let ty_opt = if colon_opt.is_some() {
-            self.eat(TokenKind::Ident)
-                .map(|name| self.host.after_name_ty(name))
+            self.parse_ty()
         } else {
             None
         };

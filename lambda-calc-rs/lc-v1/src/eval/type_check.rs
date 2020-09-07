@@ -1,14 +1,13 @@
 use super::code_gen::Prim;
 use crate::{
     ast::a_parser::NSymbol,
-    ast::a_tree::AFnExpr,
     ast::a_tree::ATy,
     ast::a_tree::{ADecl, AExpr, Ast},
     context::Context,
     syntax::syntax_token::SyntaxToken,
     utils::*,
 };
-use std::{collections::HashMap, fmt::Write, mem::replace, mem::take};
+use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum PrimTy {
@@ -27,7 +26,7 @@ impl PrimTy {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Ty<'a> {
     Unit,
     Bool,
@@ -43,7 +42,7 @@ pub(crate) type TResult<T> = Result<T, String>;
 #[derive(Default)]
 pub(crate) struct TypeChecker<'a> {
     static_vars: HashMap<usize, Ty<'a>>,
-    params: Vec<Ty<'a>>,
+    params: HashMap<usize, Ty<'a>>,
     local_vars: HashMap<usize, Ty<'a>>,
     errors: Vec<String>,
     context_opt: Option<&'a Context>,
@@ -52,18 +51,28 @@ pub(crate) struct TypeChecker<'a> {
 
 impl<'a> TypeChecker<'a> {
     fn assign_value_opt(&mut self, name_opt: Option<SyntaxToken<'a>>, ty: Ty<'a>) {
-        if let Some(symbol) = name_opt.map(|token| self.ast_opt.unwrap().name_res[&token.index]) {
-            match symbol {
-                NSymbol::Missing
-                | NSymbol::Prim(_)
-                | NSymbol::PrimTy(..)
-                | NSymbol::Param { .. } => unreachable!(),
-                NSymbol::StaticVar { id, .. } => {
-                    self.static_vars.insert(id, ty);
-                }
-                NSymbol::LocalVar { id, .. } => {
-                    self.local_vars.insert(id, ty);
-                }
+        let token = match name_opt {
+            Some(token) => token,
+            None => return,
+        };
+
+        let symbol = self.ast_opt.unwrap().name_res[&token.index];
+
+        match symbol {
+            NSymbol::Missing | NSymbol::Prim(_) | NSymbol::PrimTy(..) => unreachable!(),
+            NSymbol::StaticVar { id, .. } => {
+                self.errors
+                    .push(format!("static {} : {:?}", token.text, &ty));
+                self.static_vars.insert(id, ty);
+            }
+            NSymbol::Param { id, .. } => {
+                self.errors
+                    .push(format!("param {} : {:?}", token.text, &ty));
+                self.params.insert(id, ty);
+            }
+            NSymbol::LocalVar { id, .. } => {
+                self.errors.push(format!("val {} : {:?}", token.text, &ty));
+                self.local_vars.insert(id, ty);
             }
         }
     }
@@ -119,7 +128,7 @@ impl<'a> TypeChecker<'a> {
                 },
                 NSymbol::PrimTy(..) => unreachable!(),
                 NSymbol::StaticVar { id, .. } => self.static_vars[&id],
-                NSymbol::Param { index, .. } => self.params[index],
+                NSymbol::Param { id, .. } => self.params[&id],
                 NSymbol::LocalVar { id, .. } => self.local_vars[&id],
             },
             AExpr::Call(expr) => match self.on_expr(&*expr.callee)? {
@@ -181,12 +190,27 @@ impl<'a> TypeChecker<'a> {
                 body
             }
             AExpr::Fn(expr) => {
-                let params = expr.params.iter().map(|token| {
-                    // param ty?
-                    todo!()
-                });
-                todo!()
-                // Ty::Fn()
+                let mut param_tys = BumpaloVec::new_in(self.bump());
+                for (token, ty_opt) in &expr.params {
+                    let ty = ty_opt
+                        .as_ref()
+                        .ok_or_else(|| "missing type ascription".to_string())?;
+                    let ty = self.on_ty(&ty)?;
+                    param_tys.push(ty);
+
+                    self.assign_value_opt(Some(*token), ty);
+                }
+
+                let body = expr
+                    .body_opt
+                    .as_ref()
+                    .ok_or_else(|| "function body missing".to_string())?;
+                let result_ty = self.on_expr(body)?;
+
+                Ty::Fn {
+                    params: self.bump().alloc_slice_fill_iter(param_tys),
+                    result: self.bump().alloc(result_ty),
+                }
             }
         };
         Ok(ty)
@@ -209,17 +233,18 @@ impl<'a> TypeChecker<'a> {
         Ok(())
     }
 
-    fn on_root(&mut self) {
+    fn on_root(&mut self) -> Result<(), String> {
         for decl in &self.ast_opt.unwrap().root.decls {
-            self.on_decl(decl);
+            self.on_decl(decl)?;
         }
+        Ok(())
     }
 }
 
 pub(crate) fn type_check<'a>(context: &'a Context, ast: &'a Ast<'a>) -> Vec<String> {
-    let mut evaluator = TypeChecker::default();
-    evaluator.ast_opt = Some(ast);
-    evaluator.context_opt = Some(context);
-    evaluator.on_root();
-    evaluator.errors
+    let mut type_checker = TypeChecker::default();
+    type_checker.ast_opt = Some(ast);
+    type_checker.context_opt = Some(context);
+    type_checker.on_root().unwrap();
+    type_checker.errors
 }

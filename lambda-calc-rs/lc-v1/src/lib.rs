@@ -93,6 +93,26 @@ pub mod rust_api {
         crate::eval::eval::evaluate(ast)
     }
 
+    pub fn type_check(source_code: &str) -> String {
+        let context = Context::new();
+        let mut tokens = VecDeque::new();
+
+        let (tx, rx) = deque_chan(&mut tokens);
+        let mut tokenizer_host = MyTokenizerHost::new(tx);
+        let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
+
+        let mut parser_host = AstLambdaParserHost::new(&context);
+        let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
+        let root = parser.parse_root();
+        let ast = context.bump.alloc(Ast {
+            root,
+            name_res: take(&mut parser.host.name_res),
+        });
+
+        let errors = crate::eval::type_check::type_check(&context, ast);
+        format!("{:#?}", errors)
+    }
+
     pub fn compile(source_code: &str) -> String {
         let context = Context::new();
         let mut tokens = VecDeque::new();
@@ -185,6 +205,43 @@ mod tests {
                 val id : fn(...) -> ... = <function>;
                 val _ : number = 0;
             "#]],
+        );
+    }
+
+    fn do_test_type_check(input: &str, expect: Expect) {
+        let actual = crate::rust_api::type_check(input);
+        expect.assert_eq(&actual)
+    }
+
+    #[test]
+    fn test_type_check() {
+        do_test_type_check(
+            r#"
+                let a = 1;
+                let f = fn(x: int) x;
+                let b = int_eq(2, 3);
+                let ff = fn(f: fn(bool, int)) f;
+            "#,
+            expect![[r#"
+                [
+                    "static a : Int",
+                    "param x : Int",
+                    "static f : Fn { params: [Int], result: Int }",
+                    "static b : Bool",
+                    "param f : Fn { params: [Bool, Int], result: Unit }",
+                    "static ff : Fn { params: [Fn { params: [Bool, Int], result: Unit }], result: Fn { params: [Bool, Int], result: Unit } }",
+                ]"#]],
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "type mismatch")]
+    fn test_type_check_error() {
+        do_test_type_check(
+            r#"
+                (fn(x: int) {})(true);
+            "#,
+            expect![[]],
         );
     }
 

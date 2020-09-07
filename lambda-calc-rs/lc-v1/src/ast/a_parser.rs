@@ -152,11 +152,13 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         let id = self.fresh_symbol_id();
         let depth = self.scope_chain.len() - 1;
         let index = param_list.len();
+        let symbol = NSymbol::Param { id, depth, index };
         self.scope_chain
             .last_mut()
             .unwrap()
             .map
-            .insert(name.text, NSymbol::Param { id, depth, index });
+            .insert(name.text, symbol);
+        self.name_res.insert(name.index, symbol);
 
         param_list.push((name, ty_opt));
     }

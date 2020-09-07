@@ -217,6 +217,7 @@ mod tests {
                                                             None,
                                                         ),
                                                     ],
+                                                    result_ty_opt: None,
                                                     body_opt: Some(
                                                         Var(
                                                             "x",
@@ -325,6 +326,7 @@ mod tests {
                                     Fn(
                                         AFnExpr {
                                             params: [],
+                                            result_ty_opt: None,
                                             body_opt: Some(
                                                 Number(
                                                     "0",
@@ -353,6 +355,7 @@ mod tests {
                                                     None,
                                                 ),
                                             ],
+                                            result_ty_opt: None,
                                             body_opt: Some(
                                                 Call(
                                                     ACallExpr {
@@ -395,6 +398,7 @@ mod tests {
                                                     None,
                                                 ),
                                             ],
+                                            result_ty_opt: None,
                                             body_opt: Some(
                                                 Var(
                                                     "x",
@@ -414,6 +418,7 @@ mod tests {
                                     Fn(
                                         AFnExpr {
                                             params: [],
+                                            result_ty_opt: None,
                                             body_opt: Some(
                                                 Var(
                                                     "x",
@@ -433,6 +438,7 @@ mod tests {
                                     Fn(
                                         AFnExpr {
                                             params: [],
+                                            result_ty_opt: None,
                                             body_opt: None,
                                         },
                                     ),

@@ -59,7 +59,7 @@ fn lookahead(tx: &mut Tx) -> Lookahead {
         ':' => Lookahead::Token(TokenKind::Colon, 1),
         ',' => Lookahead::Token(TokenKind::Comma, 1),
         '=' => Lookahead::Token(TokenKind::Equal, 1),
-        '-' => match tx.next() {
+        '-' => match tx.nth(1) {
             '>' => Lookahead::Token(TokenKind::MinusRight, 2),
             _ => Lookahead::BadToken,
         },

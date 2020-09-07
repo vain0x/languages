@@ -32,6 +32,7 @@ pub(crate) struct AIfExpr<'a> {
 #[derive(Debug)]
 pub(crate) struct AFnExpr<'a> {
     pub(crate) params: BumpaloVec<'a, (SyntaxToken<'a>, Option<ATy<'a>>)>,
+    pub(crate) result_ty_opt: Option<BumpaloBox<'a, ATy<'a>>>,
     pub(crate) body_opt: Option<BumpaloBox<'a, AExpr<'a>>>,
 }
 

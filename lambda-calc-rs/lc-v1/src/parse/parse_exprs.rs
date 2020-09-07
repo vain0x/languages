@@ -176,9 +176,18 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
             Some(left_paren) => Some(self.parse_tuple_param_list(left_paren)),
             None => None,
         };
-
-        let body_opt = self.parse_expr();
-        self.host.after_fn_expr(keyword, param_list_opt, body_opt)
+        let (arrow_opt, result_ty_opt) = self.parse_result_ty();
+        let body_opt = if arrow_opt.is_some() {
+            if self.next() == TokenKind::LeftBrace {
+                Some(self.parse_block_expr())
+            } else {
+                None
+            }
+        } else {
+            self.parse_expr()
+        };
+        self.host
+            .after_fn_expr(keyword, param_list_opt, arrow_opt, result_ty_opt, body_opt)
     }
 
     pub(crate) fn parse_expr(&mut self) -> Option<H::AfterExpr> {

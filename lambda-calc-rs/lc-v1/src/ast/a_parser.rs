@@ -302,6 +302,8 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         &mut self,
         _keyword: SyntaxToken<'a>,
         param_list_opt: Option<Self::AfterParamList>,
+        _arrow_opt: Option<SyntaxToken<'a>>,
+        result_ty_opt: Option<Self::AfterTy>,
         body_opt: Option<Self::AfterExpr>,
     ) -> Self::AfterExpr {
         let scope_opt = self.scope_chain.pop();
@@ -309,6 +311,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
 
         AExpr::Fn(AFnExpr {
             params: param_list_opt.unwrap_or_else(|| BumpaloVec::new_in(&self.context.bump)),
+            result_ty_opt: result_ty_opt.map(|ty| self.new_box(ty)),
             body_opt: body_opt.map(|body| self.new_box(body)),
         })
     }

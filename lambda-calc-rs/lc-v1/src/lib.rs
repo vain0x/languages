@@ -220,7 +220,7 @@ mod tests {
                 let a = 1;
                 let f = fn(x: int) x;
                 let b = int_eq(2, 3);
-                let ff = fn(f: fn(bool, int)) f;
+                let ff = fn(f: fn(bool, int) -> fn()) f;
             "#,
             expect![[r#"
                 [
@@ -228,8 +228,8 @@ mod tests {
                     "param x : Int",
                     "static f : Fn { params: [Int], result: Int }",
                     "static b : Bool",
-                    "param f : Fn { params: [Bool, Int], result: Unit }",
-                    "static ff : Fn { params: [Fn { params: [Bool, Int], result: Unit }], result: Fn { params: [Bool, Int], result: Unit } }",
+                    "param f : Fn { params: [Bool, Int], result: Fn { params: [], result: Unit } }",
+                    "static ff : Fn { params: [Fn { params: [Bool, Int], result: Fn { params: [], result: Unit } }], result: Fn { params: [Bool, Int], result: Fn { params: [], result: Unit } } }",
                 ]"#]],
         );
     }

@@ -112,6 +112,8 @@ pub(crate) trait LambdaParserHost<'a> {
         &mut self,
         keyword: SyntaxToken<'a>,
         param_list_opt: Option<Self::AfterParamList>,
+        arrow_opt: Option<SyntaxToken<'a>>,
+        result_ty_opt: Option<Self::AfterTy>,
         body_opt: Option<Self::AfterExpr>,
     ) -> Self::AfterExpr;
 
@@ -221,7 +223,7 @@ impl<'a, H: LambdaParserHost<'a>> Parser for LambdaParser<'a, H> {
     }
 
     fn skip(&mut self) {
-        todo!()
+        todo!("{:?}", self.next_data())
     }
 }
 

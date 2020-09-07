@@ -41,13 +41,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
         } else {
             None
         };
-
-        let arrow_opt = self.eat(TokenKind::MinusRight);
-        let result_ty_opt = if arrow_opt.is_some() {
-            self.parse_ty()
-        } else {
-            None
-        };
+        let (arrow_opt, result_ty_opt) = self.parse_result_ty();
 
         self.host
             .after_fn_ty(keyword, param_ty_list_opt, arrow_opt, result_ty_opt)
@@ -73,5 +67,15 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
             None
         };
         (colon_opt, ty_opt)
+    }
+
+    pub(crate) fn parse_result_ty(&mut self) -> (Option<SyntaxToken<'a>>, Option<H::AfterTy>) {
+        let arrow_opt = self.eat(TokenKind::MinusRight);
+        let result_ty_opt = if arrow_opt.is_some() {
+            self.parse_ty()
+        } else {
+            None
+        };
+        (arrow_opt, result_ty_opt)
     }
 }

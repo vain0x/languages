@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use super::a_tree::*;
 use crate::{
     context::Context, eval::code_gen::Prim, eval::type_check::PrimTy,

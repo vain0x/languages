@@ -1,5 +1,4 @@
 use std::{collections::HashMap, marker::PhantomData, mem::replace, mem::take};
-
 use crate::{
     ast::a_tree::{ADecl, AExpr, ARoot, Ast},
     syntax::syntax_token::SyntaxToken,

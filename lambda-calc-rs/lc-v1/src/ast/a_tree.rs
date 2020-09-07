@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
-use crate::{syntax::syntax_token::SyntaxToken, utils::*};
-
 use super::a_parser::NSymbol;
+use crate::{syntax::syntax_token::SyntaxToken, utils::*};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub(crate) struct AFnTy<'a> {

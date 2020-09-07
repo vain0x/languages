@@ -1,3 +1,4 @@
+use super::code_gen::Prim;
 use crate::{
     ast::a_parser::NSymbol,
     ast::a_tree::AFnExpr,
@@ -5,8 +6,6 @@ use crate::{
     syntax::syntax_token::SyntaxToken,
 };
 use std::{collections::HashMap, fmt::Write, mem::replace, mem::take};
-
-use super::code_gen::Prim;
 
 #[derive(Copy, Clone)]
 pub(crate) enum EValue<'a> {

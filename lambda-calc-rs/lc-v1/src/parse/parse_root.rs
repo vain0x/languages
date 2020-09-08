@@ -200,7 +200,7 @@ mod tests {
                                         ACallExpr {
                                             callee: Fn(
                                                 AFnExpr {
-                                                    id: 23,
+                                                    id: 14,
                                                     params: [
                                                         (
                                                             "x",
@@ -315,7 +315,7 @@ mod tests {
                                 init_opt: Some(
                                     Fn(
                                         AFnExpr {
-                                            id: 8,
+                                            id: 3,
                                             params: [],
                                             result_ty_opt: None,
                                             body_opt: Some(
@@ -336,7 +336,7 @@ mod tests {
                                 init_opt: Some(
                                     Fn(
                                         AFnExpr {
-                                            id: 21,
+                                            id: 11,
                                             params: [
                                                 (
                                                     "f",
@@ -384,7 +384,7 @@ mod tests {
                                 init_opt: Some(
                                     Fn(
                                         AFnExpr {
-                                            id: 44,
+                                            id: 28,
                                             params: [
                                                 (
                                                     "x",
@@ -410,7 +410,7 @@ mod tests {
                                 init_opt: Some(
                                     Fn(
                                         AFnExpr {
-                                            id: 58,
+                                            id: 37,
                                             params: [],
                                             result_ty_opt: None,
                                             body_opt: Some(
@@ -431,7 +431,7 @@ mod tests {
                                 init_opt: Some(
                                     Fn(
                                         AFnExpr {
-                                            id: 69,
+                                            id: 43,
                                             params: [],
                                             result_ty_opt: None,
                                             body_opt: None,

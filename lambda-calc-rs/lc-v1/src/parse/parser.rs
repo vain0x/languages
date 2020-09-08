@@ -6,15 +6,43 @@ use crate::{
         tokenize_rules::{tokenize_advance, MyTokenizerHost},
     },
 };
-use lc_utils::{
-    token_kind_trait::TokenKindTrait, token_with_trivia::TokenWithTrivia, tokenizer::Tokenizer,
-};
+use lc_utils::{token_stream::TokenStream, token_stream::TokenStreamHost, tokenizer::Tokenizer};
 use std::collections::VecDeque;
+
+pub(crate) struct MyTokenStreamState<'a> {
+    tokenizer: Tokenizer<'a, MyTokenizerHost>,
+}
+
+impl<'a> MyTokenStreamState<'a> {
+    fn try_pop_next_token(&mut self) -> Option<(TokenKind, usize)> {
+        self.tokenizer
+            .host
+            .tokens
+            .pop_front()
+            .map(|token_data| (token_data.kind, token_data.len))
+    }
+}
+
+impl<'a> TokenStreamHost for MyTokenStreamState<'a> {
+    type TokenKind = TokenKind;
+
+    fn advance(&mut self) -> (Self::TokenKind, usize) {
+        let token_opt = self.try_pop_next_token();
+        if let Some(token) = token_opt {
+            return token;
+        }
+
+        if !tokenize_advance(&mut self.tokenizer) {
+            return (TokenKind::Eof, 0);
+        }
+
+        self.try_pop_next_token().unwrap_or((TokenKind::Eof, 0))
+    }
+}
 
 pub(crate) struct LambdaParser<'a, H: LambdaParserHost<'a>> {
     source_code: &'a str,
-    tokenizer: Tokenizer<'a, MyTokenizerHost>,
-    lookahead: (TokenKind, usize),
+    token_stream: TokenStream<MyTokenStreamState<'a>>,
     next: Option<SyntaxToken<'a>>,
     count: usize,
     last_index: usize,
@@ -28,10 +56,9 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
 
         let mut parser = Self {
             source_code,
-            tokenizer,
+            token_stream: TokenStream::new(MyTokenStreamState { tokenizer }),
             count: 0,
             last_index: 0,
-            lookahead: (TokenKind::Blank, 0),
             next: None,
             host,
         };
@@ -40,25 +67,21 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     }
 
     fn do_advance(&mut self) {
-        let index = self.count;
-        let start = self.last_index;
-        let mut lookahead = self.lookahead;
-        let token = {
-            let opt = do_lookahead(&mut lookahead, &mut MyTokenStream::new(self));
-            self.lookahead = lookahead;
-            match opt {
-                Some(it) => it,
-                None => return,
-            }
+        debug_assert!(self.next.is_none());
+        let token = self.token_stream.advance();
+
+        let id = self.count;
+        let start = self.last_index + token.leading_len;
+        let end = start + token.body_len;
+        let next = SyntaxToken {
+            index: id,
+            kind: token.kind,
+            text: &self.source_code[start..end],
         };
 
-        self.next = Some(SyntaxToken {
-            index,
-            kind: token.kind,
-            text: &self.source_code
-                [start + token.leading_len..start + token.leading_len + token.body_len],
-        });
+        self.count += 1;
         self.last_index += token.total_len();
+        self.next = Some(next);
     }
 
     pub(crate) fn nth(&self, index: usize) -> TokenKind {
@@ -103,66 +126,4 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     pub(crate) fn skip(&mut self) {
         todo!("{:?}", self.next_data())
     }
-}
-
-struct MyTokenStream<'a, 'p, H: LambdaParserHost<'a>> {
-    parser: &'p mut LambdaParser<'a, H>,
-}
-
-impl<'a, 'h, 'p, H: LambdaParserHost<'a>> MyTokenStream<'a, 'p, H> {
-    fn new(parser: &'p mut LambdaParser<'a, H>) -> Self {
-        Self { parser }
-    }
-
-    fn try_pop_front(&mut self) -> Option<(TokenKind, usize)> {
-        match self.parser.tokenizer.host.tokens.pop_front() {
-            Some(token_data) => {
-                // println!("rx -> {:?}", token_data);
-                Some((token_data.kind, token_data.len))
-            }
-            None => None,
-        }
-    }
-
-    pub(crate) fn next(&mut self) -> (TokenKind, usize) {
-        let token_opt = self.try_pop_front();
-        if let Some(token) = token_opt {
-            self.parser.count += 1;
-            return token;
-        }
-
-        if !tokenize_advance(&mut self.parser.tokenizer) {
-            return (TokenKind::Eof, 0);
-        }
-
-        self.parser.count += 1;
-        self.try_pop_front().unwrap_or((TokenKind::Eof, 0))
-    }
-}
-
-fn do_lookahead<'a, 'p, H: LambdaParserHost<'a>>(
-    lookahead: &mut (TokenKind, usize),
-    host: &mut MyTokenStream<'a, 'p, H>,
-) -> Option<TokenWithTrivia<TokenKind>> {
-    let mut leading_len = 0_usize;
-    while lookahead.0.is_leading_trivia() {
-        leading_len += lookahead.1;
-        *lookahead = host.next();
-    }
-
-    let (kind, body_len) = *lookahead;
-    *lookahead = host.next();
-
-    let mut trailing_len = 0_usize;
-    while lookahead.0.is_trailing_trivia() {
-        trailing_len += lookahead.1;
-        *lookahead = host.next();
-    }
-
-    Some(TokenWithTrivia {
-        kind,
-        leading_len,
-        body_len,
-        trailing_len,
-    })
 }

@@ -3,7 +3,7 @@ use crate::{token_kind_trait::TokenKindTrait, token_with_trivia::TokenWithTrivia
 pub trait TokenStreamHost {
     type TokenKind: TokenKindTrait;
 
-    fn next(&mut self) -> (Self::TokenKind, usize);
+    fn advance(&mut self) -> (Self::TokenKind, usize);
 }
 
 pub struct TokenStream<H: TokenStreamHost> {
@@ -11,38 +11,34 @@ pub struct TokenStream<H: TokenStreamHost> {
     pub host: H,
 }
 
-impl<'h, H: TokenStreamHost> TokenStream<H> {
+impl<H: TokenStreamHost> TokenStream<H> {
     pub fn new(mut host: H) -> Self {
-        let lookahead = host.next();
+        let lookahead = host.advance();
 
         TokenStream { lookahead, host }
     }
 
-    pub fn next(&mut self) -> Option<TokenWithTrivia<H::TokenKind>> {
-        if self.lookahead.0.is_eof() {
-            return None;
-        }
-
+    pub fn advance(&mut self) -> TokenWithTrivia<H::TokenKind> {
         let mut leading_len = 0_usize;
         while self.lookahead.0.is_leading_trivia() {
             leading_len += self.lookahead.1;
-            self.lookahead = self.host.next();
+            self.lookahead = self.host.advance();
         }
 
         let (kind, body_len) = self.lookahead;
-        self.lookahead = self.host.next();
+        self.lookahead = self.host.advance();
 
         let mut trailing_len = 0_usize;
         while self.lookahead.0.is_trailing_trivia() {
             trailing_len += self.lookahead.1;
-            self.lookahead = self.host.next();
+            self.lookahead = self.host.advance();
         }
 
-        Some(TokenWithTrivia {
+        TokenWithTrivia {
             kind,
             leading_len,
             body_len,
             trailing_len,
-        })
+        }
     }
 }

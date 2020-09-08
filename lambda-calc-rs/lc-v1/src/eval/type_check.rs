@@ -163,7 +163,7 @@ impl<'a> TypeChecker<'a> {
                 body
             }
             AExpr::Fn(expr) => {
-                let escaping_symbols = self
+                let mut escaping_symbols = self
                     .ast_opt
                     .unwrap()
                     .fn_escapes
@@ -173,6 +173,7 @@ impl<'a> TypeChecker<'a> {
                     .map(|symbol| format!("{:?}", symbol))
                     .collect::<Vec<_>>();
                 if !escaping_symbols.is_empty() {
+                    escaping_symbols.sort();
                     self.errors
                         .push(format!("escaping: {}", escaping_symbols.join(", ")));
                 }

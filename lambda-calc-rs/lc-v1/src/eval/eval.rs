@@ -1,8 +1,8 @@
-use super::code_gen::Prim;
 use crate::{
-    ast::a_parser::NSymbol,
     ast::a_tree::AFnExpr,
     ast::a_tree::{ADecl, AExpr, Ast},
+    semantics::prim::Prim,
+    semantics::symbol::NSymbol,
     syntax::syntax_token::SyntaxToken,
 };
 use std::{collections::HashMap, fmt::Write, mem::replace, mem::take};

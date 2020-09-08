@@ -1,6 +1,6 @@
-// 参考: [PhantomData - The Rustonomicon](https://doc.rust-lang.org/nomicon/phantom-data.html)
-
 use std::{collections::VecDeque, marker::PhantomData};
+
+// 参考: [PhantomData - The Rustonomicon](https://doc.rust-lang.org/nomicon/phantom-data.html)
 
 /// 単一のデックへの可変参照を追加用と取り出し用の2つに分割する。
 pub fn deque_chan<'a, T>(deque: &'a mut VecDeque<T>) -> (DequeSender<'a, T>, DequeReceiver<'a, T>) {

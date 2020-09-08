@@ -1,8 +1,9 @@
-use std::{collections::HashMap, marker::PhantomData, mem::replace, mem::take};
 use crate::{
     ast::a_tree::{ADecl, AExpr, ARoot, Ast},
+    semantics::prim::Prim,
     syntax::syntax_token::SyntaxToken,
 };
+use std::{collections::HashMap, marker::PhantomData, mem::replace, mem::take};
 
 type GResult<T> = Result<T, String>;
 
@@ -10,12 +11,6 @@ pub(crate) type LabelId = usize;
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct Reg(usize);
-
-#[derive(Copy, Clone, Debug)]
-pub(crate) enum Prim {
-    IntEq,
-    IntAdd,
-}
 
 #[derive(Debug)]
 enum GTerm<'a> {

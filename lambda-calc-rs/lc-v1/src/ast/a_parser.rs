@@ -1,106 +1,19 @@
 use super::a_tree::*;
 use crate::{
-    context::Context, eval::code_gen::Prim, eval::type_check::PrimTy,
-    parse::parser::LambdaParserHost, syntax::syntax_token::SyntaxToken, utils::*,
+    context::Context, parse::parser::LambdaParserHost,
+    semantics::scope::name_resolution::NameResolution,
+    semantics::scope::scope_resolver::ScopeResolver, syntax::syntax_token::SyntaxToken, utils::*,
 };
-use std::collections::{HashMap, HashSet};
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) enum NLocalSymbol {
-    Param { id: usize },
-    LocalVar { id: usize },
-}
-
-impl NLocalSymbol {
-    pub(crate) fn from_symbol(symbol: NSymbol) -> Option<Self> {
-        let symbol = match symbol {
-            NSymbol::Param { id, .. } => NLocalSymbol::Param { id },
-            NSymbol::LocalVar { id, .. } => NLocalSymbol::LocalVar { id },
-            _ => return None,
-        };
-        Some(symbol)
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub(crate) enum NSymbol {
-    Missing,
-    Prim(Prim),
-    PrimTy(PrimTy),
-    StaticVar {
-        id: usize,
-        depth: usize,
-        index: usize,
-    },
-    Param {
-        id: usize,
-        depth: usize,
-        index: usize,
-    },
-    LocalVar {
-        id: usize,
-        depth: usize,
-        index: usize,
-    },
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum ScopeKind {
-    Block,
-    // `fn` キーワードの id
-    Fn(usize),
-    Root,
-    Prim,
-}
-
-pub(crate) struct Scope<'a> {
-    kind: ScopeKind,
-    map: HashMap<&'a str, NSymbol>,
-    local_var_count: usize,
-}
-
-impl<'a> Scope<'a> {
-    pub(crate) fn new(kind: ScopeKind) -> Self {
-        Self {
-            kind,
-            map: HashMap::new(),
-            local_var_count: 0,
-        }
-    }
-}
-
-fn resolve_builtin_ty(name: &str) -> Option<PrimTy> {
-    let ty = match name {
-        "unit" => PrimTy::Unit,
-        "bool" => PrimTy::Bool,
-        "int" => PrimTy::Int,
-        _ => return None,
-    };
-    Some(ty)
-}
 
 pub(crate) struct AstLambdaParserHost<'a> {
-    symbol_id: usize,
-    pub(crate) name_res: HashMap<usize, NSymbol>,
-    // キーは `fn` キーワードの id
-    pub(crate) fn_escapes: HashMap<usize, HashSet<NLocalSymbol>>,
-    pub(crate) scope_chain: Vec<Scope<'a>>,
+    scope_resolver: ScopeResolver<'a>,
     pub(crate) context: &'a Context,
 }
 
 impl<'a> AstLambdaParserHost<'a> {
     pub(crate) fn new(context: &'a Context) -> Self {
-        let mut scope = Scope::new(ScopeKind::Prim);
-        scope.map.insert("int_eq", NSymbol::Prim(Prim::IntEq));
-        scope.map.insert("int_add", NSymbol::Prim(Prim::IntAdd));
-
-        let scope_chain = vec![scope, Scope::new(ScopeKind::Root)];
-
         Self {
-            symbol_id: 0,
-            name_res: HashMap::new(),
-            fn_escapes: HashMap::new(),
-            scope_chain,
+            scope_resolver: ScopeResolver::new(context),
             context,
         }
     }
@@ -113,44 +26,8 @@ impl<'a> AstLambdaParserHost<'a> {
         BumpaloVec::new_in(&self.context.bump)
     }
 
-    fn fresh_symbol_id(&mut self) -> usize {
-        self.symbol_id += 1;
-        self.symbol_id
-    }
-
-    fn find_value(&mut self, token: SyntaxToken<'a>) -> Option<NSymbol> {
-        let mut outer = false;
-        let mut found = None;
-
-        for (i, scope) in self.scope_chain.iter().enumerate().rev() {
-            match scope.map.get(token.text).copied() {
-                Some(symbol) => {
-                    found = Some((i, symbol));
-                    break;
-                }
-                None => {
-                    if let ScopeKind::Fn(..) = scope.kind {
-                        outer = true;
-                    }
-                    continue;
-                }
-            }
-        }
-
-        let (i, symbol) = found?;
-        if outer {
-            if let Some(local_symbol) = NLocalSymbol::from_symbol(symbol) {
-                for scope in self.scope_chain[i..].iter_mut() {
-                    if let ScopeKind::Fn(fn_id) = scope.kind {
-                        self.fn_escapes
-                            .entry(fn_id)
-                            .or_default()
-                            .insert(local_symbol);
-                    }
-                }
-            }
-        }
-        Some(symbol)
+    pub(crate) fn take_output(&mut self) -> NameResolution {
+        self.scope_resolver.take_output()
     }
 }
 
@@ -204,16 +81,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         _comma_opt: Option<SyntaxToken<'a>>,
         param_list: &mut Self::BeforeParamList,
     ) {
-        let id = self.fresh_symbol_id();
-        let depth = self.scope_chain.len() - 1;
-        let index = param_list.len();
-        let symbol = NSymbol::Param { id, depth, index };
-        self.scope_chain
-            .last_mut()
-            .unwrap()
-            .map
-            .insert(name.text, symbol);
-        self.name_res.insert(name.index, symbol);
+        self.scope_resolver.after_param(name, param_list.len());
 
         param_list.push((name, ty_opt));
     }
@@ -248,11 +116,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     }
 
     fn after_name_ty(&mut self, token: SyntaxToken<'a>) -> Self::AfterTy {
-        let symbol = match resolve_builtin_ty(token.text) {
-            Some(ty) => NSymbol::PrimTy(ty),
-            None => NSymbol::Missing,
-        };
-        self.name_res.insert(token.index, symbol);
+        self.scope_resolver.after_name_ty(token);
 
         ATy::Name(token)
     }
@@ -287,8 +151,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     }
 
     fn after_ident_expr(&mut self, token: SyntaxToken<'a>) -> Self::AfterExpr {
-        let symbol = self.find_value(token).unwrap_or(NSymbol::Missing);
-        self.name_res.insert(token.index, symbol);
+        self.scope_resolver.after_ident_expr(token);
 
         AExpr::Var(token)
     }
@@ -305,7 +168,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     }
 
     fn before_block_expr(&mut self, _left_paren: SyntaxToken<'a>) -> Self::BeforeBlockExpr {
-        self.scope_chain.push(Scope::new(ScopeKind::Block));
+        self.scope_resolver.before_block_expr();
 
         BumpaloVec::new_in(&self.context.bump)
     }
@@ -323,8 +186,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         _right_paren_opt: Option<SyntaxToken<'a>>,
         block_expr: Self::BeforeBlockExpr,
     ) -> Self::AfterExpr {
-        let scope_opt = self.scope_chain.pop();
-        assert_eq!(scope_opt.map(|s| s.kind), Some(ScopeKind::Block));
+        self.scope_resolver.after_block_expr();
 
         AExpr::Block(block_expr)
     }
@@ -345,8 +207,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     }
 
     fn before_fn_expr(&mut self, keyword: SyntaxToken<'a>) {
-        self.scope_chain
-            .push(Scope::new(ScopeKind::Fn(keyword.index)));
+        self.scope_resolver.before_fn_expr(keyword);
     }
 
     fn after_fn_expr(
@@ -357,11 +218,7 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         result_ty_opt: Option<Self::AfterTy>,
         body_opt: Option<Self::AfterExpr>,
     ) -> Self::AfterExpr {
-        let scope_opt = self.scope_chain.pop();
-        assert_eq!(
-            scope_opt.map(|s| s.kind),
-            Some(ScopeKind::Fn(keyword.index))
-        );
+        self.scope_resolver.after_fn_expr(keyword);
 
         AExpr::Fn(AFnExpr {
             id: keyword.index,
@@ -387,37 +244,13 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         init_opt: Option<Self::AfterExpr>,
         _semi_opt: Option<SyntaxToken<'a>>,
     ) -> Self::AfterDecl {
-        if let Some(name) = &name_opt {
-            let id = self.fresh_symbol_id();
-            let is_global = self
-                .scope_chain
-                .iter()
-                .rev()
-                .skip_while(|s| s.kind == ScopeKind::Block)
-                .next()
-                .unwrap()
-                .kind
-                == ScopeKind::Root;
-
-            let depth = self.scope_chain.len() - 1;
-            let scope = self.scope_chain.last_mut().unwrap();
-            let index = scope.local_var_count;
-            let symbol = if is_global {
-                NSymbol::StaticVar { id, depth, index }
-            } else {
-                NSymbol::LocalVar { id, depth, index }
-            };
-            scope.map.insert(name.text, symbol);
-
-            self.name_res.insert(name.index, symbol);
-        }
+        self.scope_resolver.after_let_decl(name_opt);
 
         ADecl::Let(ALetDecl { name_opt, init_opt })
     }
 
     fn after_root(&mut self, decls: Vec<Self::AfterDecl>, eof: SyntaxToken<'a>) -> Self::AfterRoot {
-        let scope_opt = self.scope_chain.pop();
-        assert_eq!(scope_opt.map(|s| s.kind), Some(ScopeKind::Root));
+        self.scope_resolver.after_root();
 
         ARoot {
             decls: self.context.allocate_iter(decls),

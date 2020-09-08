@@ -17,10 +17,20 @@ mod parse {
     pub(crate) mod parser;
 }
 
-// mod scope {
-//     pub(crate) mod name_resolver;
-//     pub(crate) mod scope_chain;
-// }
+mod semantics {
+    pub(crate) mod local_symbol;
+    pub(crate) mod prim;
+    pub(crate) mod prim_ty;
+    pub(crate) mod symbol;
+    pub(crate) mod ty;
+    pub(crate) mod scope {
+        pub(crate) mod name_resolution;
+        pub(crate) mod scope;
+        pub(crate) mod scope_chain;
+        pub(crate) mod scope_kind;
+        pub(crate) mod scope_resolver;
+    }
+}
 
 mod syntax {
     pub(crate) mod syntax_token;
@@ -71,7 +81,7 @@ pub mod rust_api {
         parse::parser::LambdaParser, token::tokenize_rules::MyTokenizerHost,
     };
     use lc_utils::{deque_chan::deque_chan, tokenizer::Tokenizer};
-    use std::{collections::VecDeque, mem::take};
+    use std::collections::VecDeque;
 
     pub fn evaluate(source_code: &str) -> String {
         let context = Context::new();
@@ -84,11 +94,12 @@ pub mod rust_api {
         let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
         let root = parser.parse_root();
+        let name_res = parser.host.take_output();
         // eprintln!("name_res = {:#?}", parser.host.name_res);
         let ast = context.bump.alloc(Ast {
             root,
-            name_res: take(&mut parser.host.name_res),
-            fn_escapes: take(&mut parser.host.fn_escapes),
+            name_res: name_res.ident_symbols,
+            fn_escapes: name_res.fn_escapes,
         });
 
         crate::eval::eval::evaluate(ast)
@@ -105,10 +116,11 @@ pub mod rust_api {
         let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
         let root = parser.parse_root();
+        let name_res = parser.host.take_output();
         let ast = context.bump.alloc(Ast {
             root,
-            name_res: take(&mut parser.host.name_res),
-            fn_escapes: take(&mut parser.host.fn_escapes),
+            name_res: name_res.ident_symbols,
+            fn_escapes: name_res.fn_escapes,
         });
 
         let errors = crate::eval::type_check::type_check(&context, ast);
@@ -126,10 +138,11 @@ pub mod rust_api {
         let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
         let root = parser.parse_root();
+        let name_res = parser.host.take_output();
         let ast = context.bump.alloc(Ast {
             root,
-            name_res: take(&mut parser.host.name_res),
-            fn_escapes: take(&mut parser.host.fn_escapes),
+            name_res: name_res.ident_symbols,
+            fn_escapes: name_res.fn_escapes,
         });
 
         let program = crate::eval::code_gen::code_gen(ast);

@@ -1,41 +1,14 @@
-use super::code_gen::Prim;
 use crate::{
-    ast::a_parser::NSymbol,
     ast::a_tree::ATy,
     ast::a_tree::{ADecl, AExpr, Ast},
     context::Context,
+    semantics::prim::Prim,
+    semantics::symbol::NSymbol,
+    semantics::ty::Ty,
     syntax::syntax_token::SyntaxToken,
     utils::*,
 };
 use std::collections::HashMap;
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum PrimTy {
-    Unit,
-    Bool,
-    Int,
-}
-
-impl PrimTy {
-    pub(crate) fn to_ty(self) -> Ty<'static> {
-        match self {
-            PrimTy::Unit => Ty::Unit,
-            PrimTy::Bool => Ty::Bool,
-            PrimTy::Int => Ty::Int,
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum Ty<'a> {
-    Unit,
-    Bool,
-    Int,
-    Fn {
-        params: &'a [Ty<'a>],
-        result: &'a Ty<'a>,
-    },
-}
 
 pub(crate) type TResult<T> = Result<T, String>;
 

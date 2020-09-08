@@ -1,5 +1,7 @@
-use super::a_parser::{NLocalSymbol, NSymbol};
-use crate::{syntax::syntax_token::SyntaxToken, utils::*};
+use crate::{
+    semantics::local_symbol::NLocalSymbol, semantics::symbol::NSymbol,
+    syntax::syntax_token::SyntaxToken, utils::*,
+};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]

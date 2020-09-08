@@ -6,13 +6,13 @@ pub trait TokenStreamHost {
     fn next(&mut self) -> (Self::TokenKind, usize);
 }
 
-pub struct TokenStream<'h, H: TokenStreamHost> {
+pub struct TokenStream<H: TokenStreamHost> {
     lookahead: (H::TokenKind, usize),
-    host: &'h mut H,
+    pub host: H,
 }
 
-impl<'h, H: TokenStreamHost> TokenStream<'h, H> {
-    pub fn new(host: &'h mut H) -> Self {
+impl<'h, H: TokenStreamHost> TokenStream<H> {
+    pub fn new(mut host: H) -> Self {
         let lookahead = host.next();
 
         TokenStream { lookahead, host }

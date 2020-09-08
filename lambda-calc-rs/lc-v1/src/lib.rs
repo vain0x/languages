@@ -85,8 +85,8 @@ pub mod rust_api {
     pub fn evaluate(source_code: &str) -> String {
         let context = Context::new();
 
-        let mut parser_host = AstLambdaParserHost::new(&context);
-        let mut parser = LambdaParser::new(source_code, &mut parser_host);
+        let parser_host = AstLambdaParserHost::new(&context);
+        let mut parser = LambdaParser::new(source_code, parser_host);
         let root = parser.parse_root();
         let name_res = parser.host.take_output();
         // eprintln!("name_res = {:#?}", parser.host.name_res);
@@ -102,8 +102,8 @@ pub mod rust_api {
     pub fn type_check(source_code: &str) -> String {
         let context = Context::new();
 
-        let mut parser_host = AstLambdaParserHost::new(&context);
-        let mut parser = LambdaParser::new(source_code, &mut parser_host);
+        let parser_host = AstLambdaParserHost::new(&context);
+        let mut parser = LambdaParser::new(source_code, parser_host);
         let root = parser.parse_root();
         let name_res = parser.host.take_output();
         let ast = context.bump.alloc(Ast {
@@ -119,8 +119,8 @@ pub mod rust_api {
     pub fn compile(source_code: &str) -> String {
         let context = Context::new();
 
-        let mut parser_host = AstLambdaParserHost::new(&context);
-        let mut parser = LambdaParser::new(source_code, &mut parser_host);
+        let parser_host = AstLambdaParserHost::new(&context);
+        let mut parser = LambdaParser::new(source_code, parser_host);
         let root = parser.parse_root();
         let name_res = parser.host.take_output();
         let ast = context.bump.alloc(Ast {

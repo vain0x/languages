@@ -1,7 +1,7 @@
 use super::{parser::LambdaParser, parser_host::LambdaParserHost};
 use crate::{syntax::syntax_token::SyntaxToken, token::token_kind::TokenKind};
 
-impl<'a, 'h, H: LambdaParserHost<'a>> LambdaParser<'a, 'h, H> {
+impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     fn parse_fn_ty(&mut self) -> H::AfterTy {
         let keyword = self.bump();
 

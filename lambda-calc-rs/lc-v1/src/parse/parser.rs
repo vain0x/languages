@@ -11,18 +11,18 @@ use lc_utils::{
 };
 use std::collections::VecDeque;
 
-pub(crate) struct LambdaParser<'a, 'h, H: LambdaParserHost<'a>> {
+pub(crate) struct LambdaParser<'a, H: LambdaParserHost<'a>> {
     source_code: &'a str,
     tokenizer: Tokenizer<'a, MyTokenizerHost>,
     lookahead: (TokenKind, usize),
     next: Option<SyntaxToken<'a>>,
     count: usize,
     last_index: usize,
-    pub(crate) host: &'h mut H,
+    pub(crate) host: H,
 }
 
-impl<'a, 'h, H: LambdaParserHost<'a>> LambdaParser<'a, 'h, H> {
-    pub(crate) fn new(source_code: &'a str, host: &'h mut H) -> Self {
+impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
+    pub(crate) fn new(source_code: &'a str, host: H) -> Self {
         let tokenizer_host = MyTokenizerHost::new(VecDeque::new());
         let tokenizer = Tokenizer::new(source_code, tokenizer_host);
 
@@ -105,12 +105,12 @@ impl<'a, 'h, H: LambdaParserHost<'a>> LambdaParser<'a, 'h, H> {
     }
 }
 
-struct MyTokenStream<'a, 'h, 'p, H: LambdaParserHost<'a>> {
-    parser: &'p mut LambdaParser<'a, 'h, H>,
+struct MyTokenStream<'a, 'p, H: LambdaParserHost<'a>> {
+    parser: &'p mut LambdaParser<'a, H>,
 }
 
-impl<'a, 'h, 'p, H: LambdaParserHost<'a>> MyTokenStream<'a, 'h, 'p, H> {
-    fn new(parser: &'p mut LambdaParser<'a, 'h, H>) -> Self {
+impl<'a, 'h, 'p, H: LambdaParserHost<'a>> MyTokenStream<'a, 'p, H> {
+    fn new(parser: &'p mut LambdaParser<'a, H>) -> Self {
         Self { parser }
     }
 
@@ -142,7 +142,7 @@ impl<'a, 'h, 'p, H: LambdaParserHost<'a>> MyTokenStream<'a, 'h, 'p, H> {
 
 fn do_lookahead<'a, 'p, H: LambdaParserHost<'a>>(
     lookahead: &mut (TokenKind, usize),
-    host: &mut MyTokenStream<'a, '_, 'p, H>,
+    host: &mut MyTokenStream<'a, 'p, H>,
 ) -> Option<TokenWithTrivia<TokenKind>> {
     let mut leading_len = 0_usize;
     while lookahead.0.is_leading_trivia() {

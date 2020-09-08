@@ -1,7 +1,7 @@
 use super::{parser::LambdaParser, parser_host::LambdaParserHost};
 use crate::token::token_kind::TokenKind;
 
-impl<'a, 'h, H: LambdaParserHost<'a>> LambdaParser<'a, 'h, H> {
+impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     pub(crate) fn parse_root(&mut self) -> H::AfterRoot {
         let mut decls = vec![];
         loop {
@@ -35,8 +35,8 @@ mod tests {
 
     fn do_test_parse(source_code: &str, expect: Expect) {
         let context = Context::new();
-        let mut parser_host = AstLambdaParserHost::new(&context);
-        let mut parser = LambdaParser::new(source_code, &mut parser_host);
+        let parser_host = AstLambdaParserHost::new(&context);
+        let mut parser = LambdaParser::new(source_code, parser_host);
         let tokens = parser.parse_root();
 
         let actual = format!("{:#?}", tokens);

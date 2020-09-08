@@ -1,7 +1,7 @@
 use super::{parser::LambdaParser, parser_host::LambdaParserHost};
 use crate::{syntax::syntax_token::SyntaxToken, token::token_kind::TokenKind};
 
-impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
+impl<'a, 'h, H: LambdaParserHost<'a>> LambdaParser<'a, 'h, H> {
     fn parse_tuple_param_list(&mut self, left_paren: SyntaxToken<'a>) -> H::AfterParamList {
         let mut param_list = self.host.before_param_list(left_paren);
 

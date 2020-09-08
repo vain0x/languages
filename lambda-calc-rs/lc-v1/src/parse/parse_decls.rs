@@ -1,7 +1,7 @@
 use super::{parser::LambdaParser, parser_host::LambdaParserHost};
 use crate::token::token_kind::TokenKind;
 
-impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
+impl<'a, 'h, H: LambdaParserHost<'a>> LambdaParser<'a, 'h, H> {
     fn parse_let_decl(&mut self) -> H::AfterDecl {
         let keyword = self.bump();
 

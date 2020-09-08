@@ -1,18 +1,21 @@
+use std::{collections::VecDeque, marker::PhantomData};
+
 use super::{token_data::TokenData, token_kind::TokenKind};
-use lc_utils::{
-    deque_chan::DequeSender,
-    tokenizer::{Tokenizer, TokenizerHost},
-};
+use lc_utils::tokenizer::{Tokenizer, TokenizerHost};
 
 type Tx<'a, 'h> = Tokenizer<'a, MyTokenizerHost<'h>>;
 
 pub(crate) struct MyTokenizerHost<'h> {
-    pub(crate) tokens: DequeSender<'h, TokenData>,
+    pub(crate) tokens: VecDeque<TokenData>,
+    phantom: PhantomData<&'h ()>,
 }
 
 impl<'h> MyTokenizerHost<'h> {
-    pub(crate) fn new(tokens: DequeSender<'h, TokenData>) -> Self {
-        Self { tokens }
+    pub(crate) fn new(tokens: VecDeque<TokenData>) -> Self {
+        Self {
+            tokens,
+            phantom: PhantomData,
+        }
     }
 }
 
@@ -153,17 +156,16 @@ pub(crate) fn tokenize_advance(tx: &mut Tx) -> bool {
 mod tests {
     use super::*;
     use expect_test::{expect, Expect};
-    use lc_utils::deque_chan::deque_chan;
-    use std::collections::VecDeque;
+    use std::{collections::VecDeque, mem::take};
 
     fn tokenize(source_code: &str) -> Vec<TokenData> {
         let mut deque = VecDeque::new();
-        let (tx, _) = deque_chan(&mut deque);
-        let host = MyTokenizerHost::new(tx);
+        let host = MyTokenizerHost::new(deque);
 
         {
             let mut tx = Tx::new(source_code, host);
             while tokenize_advance(&mut tx) {}
+            deque = take(&mut tx.host.tokens);
             tx.finish();
         }
 

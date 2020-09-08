@@ -1,43 +1,34 @@
-use std::collections::VecDeque;
-
 use super::parser_host::LambdaParserHost;
 use crate::{
     syntax::syntax_token::SyntaxToken,
     token::{
-        token_data::TokenData,
         token_kind::TokenKind,
         tokenize_rules::{tokenize_advance, MyTokenizerHost},
     },
 };
 use lc_utils::{
-    deque_chan::deque_chan, deque_chan::DequeReceiver, token_kind_trait::TokenKindTrait,
-    token_with_trivia::TokenWithTrivia, tokenizer::Tokenizer,
+    token_kind_trait::TokenKindTrait, token_with_trivia::TokenWithTrivia, tokenizer::Tokenizer,
 };
+use std::collections::VecDeque;
 
-pub(crate) struct LambdaParser<'a, H: LambdaParserHost<'a>> {
+pub(crate) struct LambdaParser<'a, 'h, H: LambdaParserHost<'a>> {
     source_code: &'a str,
-    tokenizer: Tokenizer<'a, MyTokenizerHost<'a>>,
-    rx: DequeReceiver<'a, TokenData>,
+    tokenizer: Tokenizer<'a, MyTokenizerHost<'h>>,
     lookahead: (TokenKind, usize),
     next: Option<SyntaxToken<'a>>,
     count: usize,
     last_index: usize,
-    pub(crate) host: &'a mut H,
+    pub(crate) host: &'h mut H,
 }
 
-impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
-    pub(crate) fn new(source_code: &'a str, host: &'a mut H) -> Self {
-        // FIXME: ライフタイムが合わない。(host が &'a なのが問題?)
-        let tokens = Box::leak(Box::new(VecDeque::new()));
-
-        let (tx, rx) = deque_chan(tokens);
-        let tokenizer_host = MyTokenizerHost::new(tx);
+impl<'a, 'h, H: LambdaParserHost<'a>> LambdaParser<'a, 'h, H> {
+    pub(crate) fn new(source_code: &'a str, host: &'h mut H) -> Self {
+        let tokenizer_host = MyTokenizerHost::new(VecDeque::new());
         let tokenizer = Tokenizer::new(source_code, tokenizer_host);
 
         let mut parser = Self {
             source_code,
             tokenizer,
-            rx,
             count: 0,
             last_index: 0,
             lookahead: (TokenKind::Blank, 0),
@@ -114,17 +105,17 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     }
 }
 
-struct MyTokenStream<'a, 'p, H: LambdaParserHost<'a>> {
-    parser: &'p mut LambdaParser<'a, H>,
+struct MyTokenStream<'a, 'h, 'p, H: LambdaParserHost<'a>> {
+    parser: &'p mut LambdaParser<'a, 'h, H>,
 }
 
-impl<'a, 'p, H: LambdaParserHost<'a>> MyTokenStream<'a, 'p, H> {
-    fn new(parser: &'p mut LambdaParser<'a, H>) -> Self {
+impl<'a, 'h, 'p, H: LambdaParserHost<'a>> MyTokenStream<'a, 'h, 'p, H> {
+    fn new(parser: &'p mut LambdaParser<'a, 'h, H>) -> Self {
         Self { parser }
     }
 
     fn try_pop_front(&mut self) -> Option<(TokenKind, usize)> {
-        match self.parser.rx.pop_front() {
+        match self.parser.tokenizer.host.tokens.pop_front() {
             Some(token_data) => {
                 // println!("rx -> {:?}", token_data);
                 Some((token_data.kind, token_data.len))
@@ -151,7 +142,7 @@ impl<'a, 'p, H: LambdaParserHost<'a>> MyTokenStream<'a, 'p, H> {
 
 fn do_lookahead<'a, 'p, H: LambdaParserHost<'a>>(
     lookahead: &mut (TokenKind, usize),
-    host: &mut MyTokenStream<'a, 'p, H>,
+    host: &mut MyTokenStream<'a, '_, 'p, H>,
 ) -> Option<TokenWithTrivia<TokenKind>> {
     let mut leading_len = 0_usize;
     while lookahead.0.is_leading_trivia() {

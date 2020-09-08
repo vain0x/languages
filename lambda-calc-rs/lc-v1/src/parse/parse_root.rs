@@ -1,7 +1,7 @@
 use super::{parser::LambdaParser, parser_host::LambdaParserHost};
 use crate::token::token_kind::TokenKind;
 
-impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
+impl<'a, 'h, H: LambdaParserHost<'a>> LambdaParser<'a, 'h, H> {
     pub(crate) fn parse_root(&mut self) -> H::AfterRoot {
         let mut decls = vec![];
         loop {

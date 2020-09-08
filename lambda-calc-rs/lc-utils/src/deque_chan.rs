@@ -1,5 +1,7 @@
 use std::{collections::VecDeque, marker::PhantomData};
 
+// 未使用
+
 // 参考: [PhantomData - The Rustonomicon](https://doc.rust-lang.org/nomicon/phantom-data.html)
 
 /// 単一のデックへの可変参照を追加用と取り出し用の2つに分割する。

@@ -1,11 +1,11 @@
-use std::mem::take;
+use super::{
+    name_resolution::NameResolution, scope::Scope, scope_chain::ScopeChain, scope_kind::ScopeKind,
+};
 use crate::{
     context::Context, semantics::local_symbol::NLocalSymbol, semantics::prim_ty::PrimTy,
     semantics::symbol::NSymbol, syntax::syntax_token::SyntaxToken,
 };
-use super::{
-    name_resolution::NameResolution, scope::Scope, scope_chain::ScopeChain, scope_kind::ScopeKind,
-};
+use std::mem::take;
 
 pub(crate) struct ScopeResolver<'a> {
     symbol_id: usize,

@@ -4,15 +4,15 @@ pub trait TokenizerHost {
     fn on_token(&mut self, text: &str, kind: Self::Kind, start: usize, end: usize);
 }
 
-pub struct Tokenizer<'a, 'h, H> {
+pub struct Tokenizer<'a, H> {
     source_code: &'a str,
     last_index: usize,
     current_index: usize,
-    pub host: &'h mut H,
+    pub host: H,
 }
 
-impl<'a, 'h, H: TokenizerHost> Tokenizer<'a, 'h, H> {
-    pub fn new(source_code: &'a str, host: &'h mut H) -> Self {
+impl<'a, 'h, H: TokenizerHost> Tokenizer<'a, H> {
+    pub fn new(source_code: &'a str, host: H) -> Self {
         Tokenizer {
             source_code,
             last_index: 0,
@@ -36,7 +36,7 @@ impl<'a, 'h, H: TokenizerHost> Tokenizer<'a, 'h, H> {
     }
 }
 
-impl<'a, 'h, H> Tokenizer<'a, 'h, H> {
+impl<'a, H> Tokenizer<'a, H> {
     fn assert_invariants(&self) {
         assert!(self.last_index <= self.current_index);
         assert!(self.source_code.is_char_boundary(self.last_index));

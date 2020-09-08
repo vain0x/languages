@@ -88,8 +88,8 @@ pub mod rust_api {
         let mut tokens = VecDeque::new();
 
         let (tx, rx) = deque_chan(&mut tokens);
-        let mut tokenizer_host = MyTokenizerHost::new(tx);
-        let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
+        let tokenizer_host = MyTokenizerHost::new(tx);
+        let tokenizer = Tokenizer::new(source_code, tokenizer_host);
 
         let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
@@ -110,8 +110,8 @@ pub mod rust_api {
         let mut tokens = VecDeque::new();
 
         let (tx, rx) = deque_chan(&mut tokens);
-        let mut tokenizer_host = MyTokenizerHost::new(tx);
-        let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
+        let tokenizer_host = MyTokenizerHost::new(tx);
+        let tokenizer = Tokenizer::new(source_code, tokenizer_host);
 
         let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
@@ -132,8 +132,8 @@ pub mod rust_api {
         let mut tokens = VecDeque::new();
 
         let (tx, rx) = deque_chan(&mut tokens);
-        let mut tokenizer_host = MyTokenizerHost::new(tx);
-        let tokenizer = Tokenizer::new(source_code, &mut tokenizer_host);
+        let tokenizer_host = MyTokenizerHost::new(tx);
+        let tokenizer = Tokenizer::new(source_code, tokenizer_host);
 
         let mut parser_host = AstLambdaParserHost::new(&context);
         let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);

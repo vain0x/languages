@@ -137,7 +137,7 @@ pub(crate) trait LambdaParserHost<'a> {
 
 pub(crate) struct LambdaParser<'a, H: LambdaParserHost<'a>> {
     source_code: &'a str,
-    tokenizer: Tokenizer<'a, 'a, MyTokenizerHost<'a>>,
+    tokenizer: Tokenizer<'a, MyTokenizerHost<'a>>,
     rx: DequeReceiver<'a, TokenData>,
     lookahead: (TokenKind, usize),
     next: Option<SyntaxToken<'a>>,
@@ -149,7 +149,7 @@ pub(crate) struct LambdaParser<'a, H: LambdaParserHost<'a>> {
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     pub(crate) fn new(
         source_code: &'a str,
-        tokenizer: Tokenizer<'a, 'a, MyTokenizerHost<'a>>,
+        tokenizer: Tokenizer<'a, MyTokenizerHost<'a>>,
         rx: DequeReceiver<'a, TokenData>,
         host: &'a mut H,
     ) -> Self {

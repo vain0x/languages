@@ -4,7 +4,7 @@ use lc_utils::{
     tokenizer::{Tokenizer, TokenizerHost},
 };
 
-type Tx<'a, 'h> = Tokenizer<'a, 'h, MyTokenizerHost<'h>>;
+type Tx<'a, 'h> = Tokenizer<'a, MyTokenizerHost<'h>>;
 
 pub(crate) struct MyTokenizerHost<'h> {
     pub(crate) tokens: DequeSender<'h, TokenData>,
@@ -159,10 +159,10 @@ mod tests {
     fn tokenize(source_code: &str) -> Vec<TokenData> {
         let mut deque = VecDeque::new();
         let (tx, _) = deque_chan(&mut deque);
-        let mut host = MyTokenizerHost::new(tx);
+        let host = MyTokenizerHost::new(tx);
 
         {
-            let mut tx = Tx::new(source_code, &mut host);
+            let mut tx = Tx::new(source_code, host);
             while tokenize_advance(&mut tx) {}
             tx.finish();
         }

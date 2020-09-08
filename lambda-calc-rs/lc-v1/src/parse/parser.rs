@@ -13,7 +13,7 @@ use std::collections::VecDeque;
 
 pub(crate) struct LambdaParser<'a, 'h, H: LambdaParserHost<'a>> {
     source_code: &'a str,
-    tokenizer: Tokenizer<'a, MyTokenizerHost<'h>>,
+    tokenizer: Tokenizer<'a, MyTokenizerHost>,
     lookahead: (TokenKind, usize),
     next: Option<SyntaxToken<'a>>,
     count: usize,

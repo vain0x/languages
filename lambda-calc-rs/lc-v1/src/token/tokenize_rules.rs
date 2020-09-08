@@ -1,25 +1,20 @@
-use std::{collections::VecDeque, marker::PhantomData};
-
 use super::{token_data::TokenData, token_kind::TokenKind};
 use lc_utils::tokenizer::{Tokenizer, TokenizerHost};
+use std::collections::VecDeque;
 
-type Tx<'a, 'h> = Tokenizer<'a, MyTokenizerHost<'h>>;
+type Tx<'a> = Tokenizer<'a, MyTokenizerHost>;
 
-pub(crate) struct MyTokenizerHost<'h> {
+pub(crate) struct MyTokenizerHost {
     pub(crate) tokens: VecDeque<TokenData>,
-    phantom: PhantomData<&'h ()>,
 }
 
-impl<'h> MyTokenizerHost<'h> {
+impl MyTokenizerHost {
     pub(crate) fn new(tokens: VecDeque<TokenData>) -> Self {
-        Self {
-            tokens,
-            phantom: PhantomData,
-        }
+        Self { tokens }
     }
 }
 
-impl<'h> TokenizerHost for MyTokenizerHost<'h> {
+impl TokenizerHost for MyTokenizerHost {
     type Kind = TokenKind;
 
     fn on_token(&mut self, text: &str, kind: TokenKind, start: usize, end: usize) {

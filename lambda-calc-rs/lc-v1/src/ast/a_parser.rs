@@ -1,6 +1,6 @@
 use super::a_tree::*;
 use crate::{
-    context::Context, parse::parser::LambdaParserHost,
+    context::Context, parse::parser_host::LambdaParserHost,
     semantics::scope::name_resolution::NameResolution,
     semantics::scope::scope_resolver::ScopeResolver, syntax::syntax_token::SyntaxToken, utils::*,
 };

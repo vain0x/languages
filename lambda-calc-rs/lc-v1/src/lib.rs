@@ -15,6 +15,7 @@ mod parse {
     pub(crate) mod parse_root;
     pub(crate) mod parse_tys;
     pub(crate) mod parser;
+    pub(crate) mod parser_host;
 }
 
 mod semantics {

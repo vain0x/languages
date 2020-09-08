@@ -1,4 +1,4 @@
-use super::parser::{LambdaParser, LambdaParserHost};
+use super::{parser::LambdaParser, parser_host::LambdaParserHost};
 use crate::token::token_kind::TokenKind;
 
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {

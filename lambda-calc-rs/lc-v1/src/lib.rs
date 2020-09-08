@@ -79,21 +79,14 @@ mod context {
 pub mod rust_api {
     use crate::{
         ast::a_parser::AstLambdaParserHost, ast::a_tree::Ast, context::Context,
-        parse::parser::LambdaParser, token::tokenize_rules::MyTokenizerHost,
+        parse::parser::LambdaParser,
     };
-    use lc_utils::{deque_chan::deque_chan, tokenizer::Tokenizer};
-    use std::collections::VecDeque;
 
     pub fn evaluate(source_code: &str) -> String {
         let context = Context::new();
-        let mut tokens = VecDeque::new();
-
-        let (tx, rx) = deque_chan(&mut tokens);
-        let tokenizer_host = MyTokenizerHost::new(tx);
-        let tokenizer = Tokenizer::new(source_code, tokenizer_host);
 
         let mut parser_host = AstLambdaParserHost::new(&context);
-        let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
+        let mut parser = LambdaParser::new(source_code, &mut parser_host);
         let root = parser.parse_root();
         let name_res = parser.host.take_output();
         // eprintln!("name_res = {:#?}", parser.host.name_res);
@@ -108,14 +101,9 @@ pub mod rust_api {
 
     pub fn type_check(source_code: &str) -> String {
         let context = Context::new();
-        let mut tokens = VecDeque::new();
-
-        let (tx, rx) = deque_chan(&mut tokens);
-        let tokenizer_host = MyTokenizerHost::new(tx);
-        let tokenizer = Tokenizer::new(source_code, tokenizer_host);
 
         let mut parser_host = AstLambdaParserHost::new(&context);
-        let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
+        let mut parser = LambdaParser::new(source_code, &mut parser_host);
         let root = parser.parse_root();
         let name_res = parser.host.take_output();
         let ast = context.bump.alloc(Ast {
@@ -130,14 +118,9 @@ pub mod rust_api {
 
     pub fn compile(source_code: &str) -> String {
         let context = Context::new();
-        let mut tokens = VecDeque::new();
-
-        let (tx, rx) = deque_chan(&mut tokens);
-        let tokenizer_host = MyTokenizerHost::new(tx);
-        let tokenizer = Tokenizer::new(source_code, tokenizer_host);
 
         let mut parser_host = AstLambdaParserHost::new(&context);
-        let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
+        let mut parser = LambdaParser::new(source_code, &mut parser_host);
         let root = parser.parse_root();
         let name_res = parser.host.take_output();
         let ast = context.bump.alloc(Ast {

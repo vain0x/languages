@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use super::parser_host::LambdaParserHost;
 use crate::{
     syntax::syntax_token::SyntaxToken,
@@ -8,7 +10,7 @@ use crate::{
     },
 };
 use lc_utils::{
-    deque_chan::DequeReceiver, token_kind_trait::TokenKindTrait,
+    deque_chan::deque_chan, deque_chan::DequeReceiver, token_kind_trait::TokenKindTrait,
     token_with_trivia::TokenWithTrivia, tokenizer::Tokenizer,
 };
 
@@ -24,12 +26,14 @@ pub(crate) struct LambdaParser<'a, H: LambdaParserHost<'a>> {
 }
 
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
-    pub(crate) fn new(
-        source_code: &'a str,
-        tokenizer: Tokenizer<'a, MyTokenizerHost<'a>>,
-        rx: DequeReceiver<'a, TokenData>,
-        host: &'a mut H,
-    ) -> Self {
+    pub(crate) fn new(source_code: &'a str, host: &'a mut H) -> Self {
+        // FIXME: ライフタイムが合わない。(host が &'a なのが問題?)
+        let tokens = Box::leak(Box::new(VecDeque::new()));
+
+        let (tx, rx) = deque_chan(tokens);
+        let tokenizer_host = MyTokenizerHost::new(tx);
+        let tokenizer = Tokenizer::new(source_code, tokenizer_host);
+
         let mut parser = Self {
             source_code,
             tokenizer,

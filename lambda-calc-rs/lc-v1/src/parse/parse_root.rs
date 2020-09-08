@@ -28,25 +28,15 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
 
 #[cfg(test)]
 mod tests {
-    use crate::token::tokenize_rules::MyTokenizerHost;
     use crate::{
         ast::a_parser::AstLambdaParserHost, context::Context, parse::parser::LambdaParser,
     };
     use expect_test::{expect, Expect};
-    use lc_utils::deque_chan::deque_chan;
-    use lc_utils::tokenizer::Tokenizer;
-    use std::collections::VecDeque;
 
     fn do_test_parse(source_code: &str, expect: Expect) {
         let context = Context::new();
-        let mut tokens = VecDeque::new();
-
-        let (tx, rx) = deque_chan(&mut tokens);
-        let tokenizer_host = MyTokenizerHost::new(tx);
-        let tokenizer = Tokenizer::new(source_code, tokenizer_host);
-
         let mut parser_host = AstLambdaParserHost::new(&context);
-        let mut parser = LambdaParser::new(source_code, tokenizer, rx, &mut parser_host);
+        let mut parser = LambdaParser::new(source_code, &mut parser_host);
         let tokens = parser.parse_root();
 
         let actual = format!("{:#?}", tokens);

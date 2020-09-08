@@ -1,6 +1,5 @@
 use super::parser::{LambdaParser, LambdaParserHost};
 use crate::token::token_kind::TokenKind;
-use lc_utils::parser::Parser;
 
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     fn parse_let_decl(&mut self) -> H::AfterDecl {

@@ -7,7 +7,7 @@ use crate::{
     },
 };
 use lc_utils::{
-    deque_chan::DequeReceiver, parser::Parser, token_kind_trait::TokenKindTrait,
+    deque_chan::DequeReceiver, token_kind_trait::TokenKindTrait,
     token_with_trivia::TokenWithTrivia, tokenizer::Tokenizer,
 };
 
@@ -188,18 +188,8 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
         });
         self.last_index += token.total_len();
     }
-}
 
-impl<'a, H: LambdaParserHost<'a>> Parser for LambdaParser<'a, H> {
-    type TokenKind = TokenKind;
-    type TokenData = SyntaxToken<'a>;
-    type Host = H;
-
-    fn host_mut(&mut self) -> &mut Self::Host {
-        self.host
-    }
-
-    fn nth(&self, index: usize) -> TokenKind {
+    pub(crate) fn nth(&self, index: usize) -> TokenKind {
         // LL(1) だから
         assert_eq!(index, 0);
 
@@ -209,20 +199,36 @@ impl<'a, H: LambdaParserHost<'a>> Parser for LambdaParser<'a, H> {
         }
     }
 
-    fn nth_data(&self, index: usize) -> Option<&SyntaxToken<'a>> {
+    pub(crate) fn nth_data(&self, index: usize) -> Option<&SyntaxToken<'a>> {
         // LL(1) だから
         assert_eq!(index, 0);
 
         self.next.as_ref()
     }
 
-    fn bump(&mut self) -> SyntaxToken<'a> {
+    pub(crate) fn next(&self) -> TokenKind {
+        self.nth(0)
+    }
+
+    pub(crate) fn next_data(&self) -> Option<&SyntaxToken<'a>> {
+        self.nth_data(0)
+    }
+
+    pub(crate) fn bump(&mut self) -> SyntaxToken<'a> {
         let next = self.next.take().unwrap();
         self.do_advance();
         next
     }
 
-    fn skip(&mut self) {
+    pub(crate) fn eat(&mut self, kind: TokenKind) -> Option<SyntaxToken<'a>> {
+        if self.next() == kind {
+            Some(self.bump())
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn skip(&mut self) {
         todo!("{:?}", self.next_data())
     }
 }

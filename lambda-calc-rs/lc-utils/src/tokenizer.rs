@@ -11,7 +11,7 @@ pub struct Tokenizer<'a, H> {
     pub host: H,
 }
 
-impl<'a, 'h, H: TokenizerHost> Tokenizer<'a, H> {
+impl<'a, H: TokenizerHost> Tokenizer<'a, H> {
     pub fn new(source_code: &'a str, host: H) -> Self {
         Tokenizer {
             source_code,

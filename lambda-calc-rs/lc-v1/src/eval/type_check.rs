@@ -1,10 +1,7 @@
 use crate::{
-    ast::a_tree::ATy,
-    ast::a_tree::{ADecl, AExpr, Ast},
+    ast::a_tree::{ADecl, AExpr, ATy, Ast},
     context::Context,
-    semantics::prim::Prim,
-    semantics::symbol::NSymbol,
-    semantics::ty::Ty,
+    semantics::{prim::Prim, symbol::NSymbol, ty::Ty},
     syntax::syntax_token::SyntaxToken,
     utils::*,
 };

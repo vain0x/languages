@@ -1,18 +1,50 @@
 use crate::{
-    ast::a_tree::AFnExpr,
-    ast::a_tree::{ADecl, AExpr, Ast},
-    semantics::prim::Prim,
-    semantics::symbol::NSymbol,
+    ast::a_tree::{ADecl, AExpr, AFnExpr, Ast},
+    semantics::local_symbol::NLocalSymbol,
+    semantics::{prim::Prim, symbol::NSymbol},
     syntax::syntax_token::SyntaxToken,
 };
-use std::{collections::HashMap, fmt::Write, mem::replace, mem::take};
+use std::{
+    cell::RefCell, collections::HashMap, collections::HashSet, fmt::Write, mem::replace, mem::take,
+    rc::Rc,
+};
 
-#[derive(Copy, Clone)]
+pub(crate) struct EClosureEnv<'a> {
+    // upvar_set_opt: Option<&'a HashSet<NLocalSymbol>>,
+    parent_opt: Option<Rc<EClosureEnv<'a>>>,
+    fields: RefCell<HashMap<NLocalSymbol, EValue<'a>>>,
+}
+
+impl<'a> EClosureEnv<'a> {
+    fn new(
+        parent_opt: Option<Rc<EClosureEnv<'a>>>,
+        _expr: &'a AFnExpr<'a>,
+        _ast: &'a Ast<'a>,
+    ) -> Self {
+        Self {
+            parent_opt,
+            fields: RefCell::default(),
+            // upvar_set_opt: ast.fn_escapes.get(&expr.id),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub(crate) enum EValue<'a> {
+    Uninit,
     Bool(bool),
     Int(i64),
-    Fn(&'a AFnExpr<'a>),
+    Fn {
+        env_opt: Option<Rc<EClosureEnv<'a>>>,
+        expr: &'a AFnExpr<'a>,
+    },
     Prim(Prim),
+}
+
+impl<'a> EValue<'a> {
+    fn take(&mut self) -> EValue<'a> {
+        replace(self, EValue::Uninit)
+    }
 }
 
 pub(crate) type EResult<'a> = Result<EValue<'a>, String>;
@@ -21,6 +53,13 @@ pub(crate) struct Evaluator<'a> {
     static_vars: HashMap<usize, EValue<'a>>,
     params: Vec<EValue<'a>>,
     local_vars: HashMap<usize, EValue<'a>>,
+
+    /// 呼び出し中のクロージャの環境
+    env_opt: Option<Rc<EClosureEnv<'a>>>,
+
+    /// upvar (エスケープするパラメータやローカル変数) の集合
+    upvar_set: HashSet<NLocalSymbol>,
+
     output: String,
     ast: &'a Ast<'a>,
 }
@@ -31,24 +70,99 @@ impl<'a> Evaluator<'a> {
             static_vars: HashMap::new(),
             params: vec![],
             local_vars: HashMap::new(),
+            env_opt: None,
             output: String::new(),
             ast,
+            upvar_set: ast
+                .fn_escapes
+                .values()
+                .flat_map(|set| set.iter().copied())
+                .collect::<HashSet<_>>(),
         }
     }
 
+    /// 関数がエスケープする変数を所有しない？
+    fn fn_is_static(&self, fn_id: usize) -> bool {
+        self.ast
+            .fn_escapes
+            .get(&fn_id)
+            .map_or(true, |set| set.is_empty())
+    }
+
+    fn symbol_as_upvar(&self, symbol: NSymbol) -> Option<NLocalSymbol> {
+        NLocalSymbol::from_symbol(symbol).filter(|id| self.upvar_set.contains(id))
+    }
+
+    fn get_value(&mut self, token: SyntaxToken<'a>) -> EResult<'a> {
+        let symbol = self.ast.name_res[&token.index];
+
+        if let Some(symbol) = self.symbol_as_upvar(symbol) {
+            let mut env = self.env_opt.as_ref().expect("illegal use of upvar");
+            loop {
+                if let Some(slot) = env.fields.borrow().get(&symbol) {
+                    return Ok(slot.clone());
+                }
+
+                match env.parent_opt.as_ref() {
+                    Some(parent) => env = parent,
+                    None => panic!("use of uninit upvar"),
+                }
+            }
+        }
+
+        let value = match symbol {
+            NSymbol::Missing => return Err(format!("unknown var {}", token.text)),
+            NSymbol::Prim(prim) => EValue::Prim(prim),
+            NSymbol::PrimTy(..) => unreachable!("use PrimTy as value"),
+            NSymbol::StaticVar { id, .. } => self.static_vars[&id].clone(),
+            NSymbol::Param { index, .. } => self.params[index].clone(),
+            NSymbol::LocalVar { id, .. } => self.local_vars[&id].clone(),
+        };
+        Ok(value)
+    }
+
     fn assign_value_opt(&mut self, name_opt: Option<SyntaxToken<'a>>, value: EValue<'a>) {
-        if let Some(symbol) = name_opt.map(|token| self.ast.name_res[&token.index]) {
-            match symbol {
-                NSymbol::Missing
-                | NSymbol::Prim(_)
-                | NSymbol::PrimTy(..)
-                | NSymbol::Param { .. } => unreachable!(),
-                NSymbol::StaticVar { id, .. } => {
-                    self.static_vars.insert(id, value);
+        let token = match name_opt {
+            Some(it) => it,
+            None => return,
+        };
+
+        let symbol = self.ast.name_res[&token.index];
+
+        if let Some(symbol) = self.symbol_as_upvar(symbol) {
+            let mut env = self.env_opt.as_ref().expect("illegal use of upvar");
+            loop {
+                if let Some(slot) = env.fields.borrow_mut().get_mut(&symbol) {
+                    *slot = value;
+                    return;
                 }
-                NSymbol::LocalVar { id, .. } => {
-                    self.local_vars.insert(id, value);
+
+                match env.parent_opt.as_ref() {
+                    Some(parent) => env = parent,
+                    None => {
+                        break;
+                    }
                 }
+            }
+
+            self.env_opt
+                .as_deref()
+                .unwrap()
+                .fields
+                .borrow_mut()
+                .insert(symbol, value);
+            return;
+        }
+
+        match symbol {
+            NSymbol::Missing | NSymbol::Prim(_) | NSymbol::PrimTy(..) | NSymbol::Param { .. } => {
+                unreachable!()
+            }
+            NSymbol::StaticVar { id, .. } => {
+                self.static_vars.insert(id, value);
+            }
+            NSymbol::LocalVar { id, .. } => {
+                self.local_vars.insert(id, value);
             }
         }
     }
@@ -64,19 +178,16 @@ impl<'a> Evaluator<'a> {
                 };
                 EValue::Int(value)
             }
-            AExpr::Var(token) => match self.ast.name_res[&token.index] {
-                NSymbol::Missing => return Err(format!("unknown var {}", token.text)),
-                NSymbol::Prim(prim) => EValue::Prim(prim),
-                NSymbol::PrimTy(..) => unreachable!(),
-                NSymbol::StaticVar { id, .. } => self.static_vars[&id],
-                NSymbol::Param { index, .. } => self.params[index],
-                NSymbol::LocalVar { id, .. } => self.local_vars[&id],
-            },
+            AExpr::Var(token) => self.get_value(*token)?,
             AExpr::Call(expr) => match self.on_expr(&*expr.callee)? {
+                EValue::Uninit => unreachable!(),
                 EValue::Bool(_) => return Err("can't call bool".into()),
                 EValue::Int(_) => return Err("can't call int".into()),
-                EValue::Fn(callee) => {
-                    let args = expr
+                EValue::Fn {
+                    expr: callee,
+                    env_opt: callee_env_opt,
+                } => {
+                    let mut args = expr
                         .args
                         .iter()
                         .map(|expr| self.on_expr(expr))
@@ -85,8 +196,26 @@ impl<'a> Evaluator<'a> {
                         return Err("arity mismatch".into());
                     }
 
+                    let env_opt = if self.fn_is_static(callee.id) {
+                        None
+                    } else {
+                        let env = EClosureEnv::new(callee_env_opt.clone(), callee, self.ast);
+                        {
+                            let mut fields = env.fields.borrow_mut();
+                            for (i, (token, _)) in callee.params.iter().enumerate() {
+                                if let Some(symbol) =
+                                    self.symbol_as_upvar(self.ast.name_res[&token.index])
+                                {
+                                    fields.insert(symbol, args[i].take());
+                                }
+                            }
+                        }
+                        Some(Rc::new(env))
+                    };
+
                     let parent_params = replace(&mut self.params, args);
                     let parent_local_vars = take(&mut self.local_vars);
+                    let parent_env_opt = replace(&mut self.env_opt, env_opt);
 
                     let result = match &callee.body_opt {
                         Some(body) => self.on_expr(&*body)?,
@@ -95,6 +224,7 @@ impl<'a> Evaluator<'a> {
 
                     self.params = parent_params;
                     self.local_vars = parent_local_vars;
+                    self.env_opt = parent_env_opt;
 
                     result
                 }
@@ -134,7 +264,10 @@ impl<'a> Evaluator<'a> {
                     (false, _, None) => return Err("alt missing".into()),
                 }
             }
-            AExpr::Fn(value) => EValue::Fn(value),
+            AExpr::Fn(expr) => EValue::Fn {
+                env_opt: self.env_opt.clone(),
+                expr,
+            },
         };
         Ok(value)
     }
@@ -203,13 +336,16 @@ impl<'a> Evaluator<'a> {
         };
 
         match value {
+            EValue::Uninit => {
+                writeln!(&mut self.output, "val {} : uninit", name).unwrap();
+            }
             EValue::Bool(value) => {
                 writeln!(&mut self.output, "val {} : bool = {};", name, value).unwrap();
             }
             EValue::Int(value) => {
                 writeln!(&mut self.output, "val {} : number = {};", name, value).unwrap();
             }
-            EValue::Fn(_) => {
+            EValue::Fn { .. } => {
                 writeln!(
                     &mut self.output,
                     "val {} : fn(...) -> ... = <function>;",

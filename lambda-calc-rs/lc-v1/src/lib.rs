@@ -208,6 +208,28 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_evaluate_closure() {
+        do_test_evaluate(
+            r#"
+                let con = fn(x) {
+                    fn() x
+                };
+                let f1 = con(1);
+                f1();
+                let f2 = con(2);
+                f2();
+            "#,
+            expect![[r#"
+                val con : fn(...) -> ... = <function>;
+                val f1 : fn(...) -> ... = <function>;
+                val it : number = 1;
+                val f2 : fn(...) -> ... = <function>;
+                val it : number = 2;
+            "#]],
+        );
+    }
+
     fn do_test_type_check(input: &str, expect: Expect) {
         let actual = crate::rust_api::type_check(input);
         expect.assert_eq(&actual)

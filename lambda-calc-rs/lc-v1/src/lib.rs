@@ -209,6 +209,27 @@ mod tests {
     }
 
     #[test]
+    fn test_evaluate_prim() {
+        do_test_evaluate(
+            r#"
+                int_add(2, 3);
+                int_add();
+                int_add(1, 2, 3);
+                int_add(true, false);
+            "#,
+            expect![[r#"
+                val it : number = 5;
+                val it = <err>;
+                ERROR: "arity error"
+                val it = <err>;
+                ERROR: "arity error"
+                val it = <err>;
+                ERROR: "type error"
+            "#]],
+        );
+    }
+
+    #[test]
     fn test_evaluate_closure() {
         do_test_evaluate(
             r#"

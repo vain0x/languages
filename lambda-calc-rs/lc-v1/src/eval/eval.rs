@@ -228,7 +228,26 @@ impl<'a> Evaluator<'a> {
 
                     result
                 }
-                EValue::Prim(..) => todo!(),
+                EValue::Prim(prim) => match prim {
+                    Prim::IntEq => todo!(),
+                    Prim::IntAdd => {
+                        let mut args = expr
+                            .args
+                            .iter()
+                            .map(|expr| self.on_expr(expr))
+                            .collect::<Result<Vec<_>, _>>()?;
+
+                        match args.as_mut_slice() {
+                            [left, right] => match (left.take(), right.take()) {
+                                (EValue::Int(left), EValue::Int(right)) => {
+                                    EValue::Int(left + right)
+                                }
+                                _ => return Err("type error".into()),
+                            },
+                            _ => return Err("arity error".into()),
+                        }
+                    }
+                },
             },
             AExpr::Block(decls) => {
                 let (decls, last_opt) = match decls.split_last() {

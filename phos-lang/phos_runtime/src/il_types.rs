@@ -32,7 +32,7 @@ pub(crate) struct PilFnData {
     pub(crate) name: PilSymbol,
 
     /// codes
-    pub(crate) codes: Vec<&'static str>,
+    pub(crate) codes: Vec<Vec<&'static str>>,
 }
 
 impl PilFnData {

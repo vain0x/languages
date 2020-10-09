@@ -2,8 +2,9 @@ use super::*;
 use std::collections::HashMap;
 
 pub(crate) struct Vm {
-    codes: &'static [&'static str],
+    codes: &'static [Vec<&'static str>],
     pc: Cell<usize>,
+    stmt: Cell<&'static [&'static str]>,
     m: &'static PilModData,
     regs: HashMap<PilSymbol, Val>,
 }
@@ -16,16 +17,24 @@ impl Vm {
         Self {
             codes: &f.codes,
             pc: Cell::new(0),
+            stmt: Cell::new(&f.codes[0]),
             m,
             regs: HashMap::new(),
         }
     }
 
-    fn scan_token(&self) -> Option<&'static str> {
+    fn scan_stmt(&self) {
         let i = self.pc.get();
         self.pc.set(i + 1);
 
-        self.codes.get(i).copied()
+        let stmt = self.codes.get(i).expect("Reached at EOF before exit");
+        self.stmt.set(stmt);
+    }
+
+    fn scan_token(&self) -> Option<&'static str> {
+        let (head, tail) = self.stmt.get().split_first()?;
+        self.stmt.set(tail);
+        Some(*head)
     }
 
     fn scan_reg(&self) -> PilSymbol {
@@ -54,6 +63,8 @@ impl Vm {
     }
 
     fn execute(&mut self) {
+        self.scan_stmt();
+
         let token = self.scan_token().expect("reached at EOF without exit");
         match token {
             "im_str" => {

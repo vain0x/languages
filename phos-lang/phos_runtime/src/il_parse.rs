@@ -37,7 +37,10 @@ pub(crate) fn parse_pil(text: &'static str, name: String, full_name: String) -> 
             }
         }
 
-        f.codes.extend(line.split_whitespace());
+        let stmt = line.split_whitespace().collect::<Vec<_>>();
+        if !stmt.is_empty() {
+            f.codes.push(stmt);
+        }
     }
 
     m.fns.insert(f.name, f);

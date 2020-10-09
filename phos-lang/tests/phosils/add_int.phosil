@@ -1,0 +1,8 @@
+#? stdout: 42\n
+#? $? = 0
+
+im_int x 19
+im_int y 23
+ex_add x y
+ex_println x
+exit 0

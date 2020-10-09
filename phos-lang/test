@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -eu
+
+PHOS_RT='./target/debug/phos-runtime'
+cargo build -p phos-runtime
+
+echo 'exit_zero'
+$PHOS_RT <tests/phosils/exit_zero.phosil >/dev/null
+
+echo 'println_hello'
+$PHOS_RT <tests/phosils/println_hello.phosil >/dev/null
+
+echo 'add_int'
+$PHOS_RT <tests/phosils/add_int.phosil >/dev/null
+
+echo OK

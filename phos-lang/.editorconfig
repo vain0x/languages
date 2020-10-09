@@ -1,0 +1,11 @@
+root = true
+
+[*.phos]
+indent_size = 4
+insert_final_line = true
+trim_trailing_whitespace = true
+
+[*.rs]
+indent_size = 4
+insert_final_line = true
+trim_trailing_whitespace = true

@@ -77,6 +77,30 @@ impl Vm {
                 let value = self.scan_int();
                 self.regs.insert(reg, Val::Int(value));
             }
+            "ex_new_obj" => {
+                let reg = self.scan_reg();
+                let tag = as_symbol(&self.scan_str());
+
+                let fields = self
+                    .stmt
+                    .get()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &s)| {
+                        if s.contains(':') {
+                            let mut words = s.split(':').map(as_symbol);
+                            let name = words.next().unwrap();
+                            let reg = words.next().unwrap();
+                            let val = self.reg_fetch(reg).clone();
+                            (name, val)
+                        } else {
+                            let val = self.reg_fetch(as_symbol(s)).clone();
+                            (PilSymbol::Index(i), val)
+                        }
+                    })
+                    .collect();
+                self.regs.insert(reg, Val::Obj(tag, fields));
+            }
             "ex_add" => {
                 let reg = self.scan_reg();
                 let rhs = self.scan_reg();
@@ -86,6 +110,7 @@ impl Vm {
                 match lhs {
                     Val::Str(lhs) => *lhs += &rhs.to_str(),
                     Val::Int(lhs) => *lhs += rhs.to_int(),
+                    Val::Obj(..) => panic!("Type error: can't add object"),
                 }
             }
             "ex_println" => {

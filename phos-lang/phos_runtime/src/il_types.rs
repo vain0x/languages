@@ -1,26 +1,37 @@
 use super::*;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub(crate) struct PilSymbol {
-    text: &'static str,
+pub(crate) enum PilSymbol {
+    Str(&'static str),
+    Index(usize),
 }
 
 impl PilSymbol {
     fn new(s: &str) -> Self {
         // TODO: インターン化
-        Self {
-            text: Box::leak(s.to_string().into_boxed_str()),
-        }
+        Self::Str(Box::leak(s.to_string().into_boxed_str()))
     }
 
     pub(crate) fn as_str(self) -> &'static str {
-        self.text
+        match self {
+            PilSymbol::Str(value) => value,
+            PilSymbol::Index(index) => Box::leak(index.to_string().into_boxed_str()),
+        }
     }
 }
 
 impl Debug for PilSymbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_str())
+        Display::fmt(self, f)
+    }
+}
+
+impl Display for PilSymbol {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            PilSymbol::Str(text) => write!(f, "{}", text),
+            PilSymbol::Index(index) => write!(f, "{}", index),
+        }
     }
 }
 

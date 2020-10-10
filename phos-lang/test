@@ -14,4 +14,7 @@ $PHOS_RT <tests/phosils/println_hello.phosil >/dev/null
 echo 'add_int'
 $PHOS_RT <tests/phosils/add_int.phosil >/dev/null
 
+echo 'new_obj'
+$PHOS_RT <tests/phosils/new_obj.phosil >/dev/null
+
 echo OK

@@ -11,7 +11,7 @@ pub(crate) use rt_vm::*;
 use std::{
     cell::Cell,
     collections::HashMap,
-    fmt::{self, Debug, Formatter},
+    fmt::{self, Debug, Display, Formatter},
 };
 
 fn main() {

@@ -19,6 +19,7 @@ mod parse {
 }
 
 mod semantics {
+    pub(crate) mod analyze;
     pub(crate) mod local_symbol;
     pub(crate) mod prim;
     pub(crate) mod prim_ty;
@@ -31,6 +32,8 @@ mod semantics {
         pub(crate) mod scope_kind;
         pub(crate) mod scope_resolver;
     }
+
+    use std::fmt::{self, Debug, Formatter};
 }
 
 mod syntax {
@@ -112,7 +115,7 @@ pub mod rust_api {
             fn_escapes: name_res.fn_escapes,
         });
 
-        let errors = crate::eval::type_check::type_check(&context, ast);
+        let errors = crate::semantics::analyze::analyze(ast, &context.bump);
         format!("{:#?}", errors)
     }
 
@@ -267,12 +270,12 @@ mod tests {
             "#,
             expect![[r#"
                 [
-                    "static a : Int",
-                    "param x : Int",
-                    "static f : Fn { params: [Int], result: Int }",
-                    "static b : Bool",
-                    "param f : Fn { params: [Bool, Int], result: Fn { params: [], result: Unit } }",
-                    "static ff : Fn { params: [Fn { params: [Bool, Int], result: Fn { params: [], result: Unit } }], result: Fn { params: [Bool, Int], result: Fn { params: [], result: Unit } } }",
+                    "static a : int",
+                    "param x : int",
+                    "static f : fn(int) -> int",
+                    "static b : bool",
+                    "param f : fn(bool, int) -> fn() -> unit",
+                    "static ff : fn(fn(bool, int) -> fn() -> unit) -> fn(bool, int) -> fn() -> unit",
                 ]"#]],
         );
     }
@@ -292,12 +295,12 @@ mod tests {
             "#,
             expect![[r#"
                 [
-                    "static PI : Int",
+                    "static PI : int",
                     "escaping: Param { id: 2 }",
-                    "param x : Int",
-                    "val a : Int",
+                    "param x : int",
+                    "val a : int",
                     "escaping: LocalVar { id: 3 }, Param { id: 2 }",
-                    "param y : Int",
+                    "param y : int",
                 ]"#]],
         );
     }

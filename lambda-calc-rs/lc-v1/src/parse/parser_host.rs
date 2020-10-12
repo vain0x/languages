@@ -10,7 +10,7 @@ pub(crate) trait LambdaParserHost<'a> {
     type BeforeBlockExpr;
     type AfterTy;
     type AfterExpr;
-    type AfterDecl;
+    type AfterStmt;
     type AfterRoot;
 
     fn before_param_ty_list(&mut self, left_paren: SyntaxToken<'a>) -> Self::BeforeParamTyList;
@@ -75,9 +75,9 @@ pub(crate) trait LambdaParserHost<'a> {
     ) -> Self::AfterExpr;
 
     fn before_block_expr(&mut self, left_paren: SyntaxToken<'a>) -> Self::BeforeBlockExpr;
-    fn after_decl_in_block(
+    fn after_stmt_in_block(
         &mut self,
-        decl: Self::AfterDecl,
+        stmt: Self::AfterStmt,
         block_expr: &mut Self::BeforeBlockExpr,
     );
     fn after_block_expr(
@@ -106,20 +106,20 @@ pub(crate) trait LambdaParserHost<'a> {
         body_opt: Option<Self::AfterExpr>,
     ) -> Self::AfterExpr;
 
-    fn after_expr_decl(
+    fn after_expr_stmt(
         &mut self,
         expr: Self::AfterExpr,
         semi_opt: Option<SyntaxToken<'a>>,
-    ) -> Self::AfterDecl;
+    ) -> Self::AfterStmt;
 
-    fn after_let_decl(
+    fn after_let_stmt(
         &mut self,
         keyword: SyntaxToken<'a>,
         name_opt: Option<SyntaxToken<'a>>,
         equal_opt: Option<SyntaxToken<'a>>,
         init_opt: Option<Self::AfterExpr>,
         semi_opt: Option<SyntaxToken<'a>>,
-    ) -> Self::AfterDecl;
+    ) -> Self::AfterStmt;
 
-    fn after_root(&mut self, decls: Vec<Self::AfterDecl>, eof: SyntaxToken<'a>) -> Self::AfterRoot;
+    fn after_root(&mut self, stmts: Vec<Self::AfterStmt>, eof: SyntaxToken<'a>) -> Self::AfterRoot;
 }

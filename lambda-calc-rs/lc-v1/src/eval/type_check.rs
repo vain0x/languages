@@ -1,5 +1,5 @@
 use crate::{
-    ast::a_tree::{ADecl, AExpr, ATy, Ast},
+    ast::a_tree::{AExpr, AStmt, ATy, Ast},
     context::Context,
     semantics::{prim::Prim, symbol::NSymbol, ty::Ty},
     syntax::syntax_token::SyntaxToken,
@@ -119,14 +119,14 @@ impl<'a> TypeChecker<'a> {
                     *result
                 }
             },
-            AExpr::Block(decls) => {
-                let (decls, last_opt) = match decls.split_last() {
-                    Some((ADecl::Expr(last), decls)) => (decls, Some(last)),
-                    _ => (decls.as_slice(), None),
+            AExpr::Block(stmts) => {
+                let (stmts, last_opt) = match stmts.split_last() {
+                    Some((AStmt::Expr(last), stmts)) => (stmts, Some(last)),
+                    _ => (stmts.as_slice(), None),
                 };
 
-                for decl in decls {
-                    self.on_decl(decl)?;
+                for stmt in stmts {
+                    self.on_stmt(stmt)?;
                 }
 
                 let last = match last_opt {
@@ -201,26 +201,26 @@ impl<'a> TypeChecker<'a> {
         Ok(ty)
     }
 
-    fn on_decl(&mut self, decl: &'a ADecl<'a>) -> Result<(), String> {
-        match decl {
-            ADecl::Expr(expr) => {
+    fn on_stmt(&mut self, stmt: &'a AStmt<'a>) -> Result<(), String> {
+        match stmt {
+            AStmt::Expr(expr) => {
                 self.on_expr(expr)?;
             }
-            ADecl::Let(decl) => {
-                let ty = match &decl.init_opt {
+            AStmt::Let(stmt) => {
+                let ty = match &stmt.init_opt {
                     Some(init) => self.on_expr(init)?,
                     None => return Err("missing init expression".into()),
                 };
 
-                self.assign_value_opt(decl.name_opt, ty);
+                self.assign_value_opt(stmt.name_opt, ty);
             }
         }
         Ok(())
     }
 
     fn on_root(&mut self) -> Result<(), String> {
-        for decl in &self.ast_opt.unwrap().root.decls {
-            self.on_decl(decl)?;
+        for stmt in &self.ast_opt.unwrap().root.stmts {
+            self.on_stmt(stmt)?;
         }
         Ok(())
     }

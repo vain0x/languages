@@ -120,7 +120,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
                 _ => {}
             }
 
-            let decl = match self.parse_decl() {
+            let stmt = match self.parse_stmt() {
                 Some(it) => it,
                 None => {
                     self.skip();
@@ -128,7 +128,7 @@ impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
                 }
             };
 
-            self.host.after_decl_in_block(decl, &mut block_expr);
+            self.host.after_stmt_in_block(stmt, &mut block_expr);
         }
 
         let right_brace_opt = self.eat(TokenKind::RightBrace);

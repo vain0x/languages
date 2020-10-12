@@ -110,7 +110,7 @@ impl<'a> ScopeResolver<'a> {
         );
     }
 
-    pub(crate) fn after_let_decl(&mut self, name_opt: Option<SyntaxToken<'a>>) {
+    pub(crate) fn after_let_stmt(&mut self, name_opt: Option<SyntaxToken<'a>>) {
         if let Some(name) = &name_opt {
             let id = self.fresh_symbol_id();
             let is_global = self

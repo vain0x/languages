@@ -3,26 +3,26 @@ use crate::token::token_kind::TokenKind;
 
 impl<'a, H: LambdaParserHost<'a>> LambdaParser<'a, H> {
     pub(crate) fn parse_root(&mut self) -> H::AfterRoot {
-        let mut decls = vec![];
+        let mut stmts = vec![];
         loop {
             if let TokenKind::Eof = self.next() {
                 break;
             }
 
-            let decl = match self.parse_decl() {
+            let stmt = match self.parse_stmt() {
                 Some(it) => it,
                 None => {
-                    eprintln!("expected decl");
+                    eprintln!("expected stmt");
                     self.skip();
                     continue;
                 }
             };
 
-            decls.push(decl);
+            stmts.push(stmt);
         }
 
         let eof = self.bump();
-        self.host.after_root(decls, eof)
+        self.host.after_root(stmts, eof)
     }
 }
 
@@ -44,13 +44,13 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_let_decls() {
+    fn test_parse_let_stmts() {
         let source_code = "let id = id; let x = 1;";
         let expect = expect![[r#"
             ARoot {
-                decls: [
+                stmts: [
                     Let(
-                        ALetDecl {
+                        ALetStmt {
                             name_opt: Some(
                                 "id",
                             ),
@@ -62,7 +62,7 @@ mod tests {
                         },
                     ),
                     Let(
-                        ALetDecl {
+                        ALetStmt {
                             name_opt: Some(
                                 "x",
                             ),
@@ -89,9 +89,9 @@ mod tests {
             "#,
             expect![[r#"
                 ARoot {
-                    decls: [
+                    stmts: [
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "x0",
                                 ),
@@ -108,7 +108,7 @@ mod tests {
                             },
                         ),
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "x1",
                                 ),
@@ -129,7 +129,7 @@ mod tests {
                             },
                         ),
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "x2",
                                 ),
@@ -168,9 +168,9 @@ mod tests {
             "#,
             expect![[r#"
                 ARoot {
-                    decls: [
+                    stmts: [
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "_",
                                 ),
@@ -191,7 +191,7 @@ mod tests {
                             },
                         ),
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "_",
                                 ),
@@ -226,7 +226,7 @@ mod tests {
                             },
                         ),
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "_",
                                 ),
@@ -247,9 +247,9 @@ mod tests {
             "#,
             expect![[r#"
                 ARoot {
-                    decls: [
+                    stmts: [
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "_",
                                 ),
@@ -306,9 +306,9 @@ mod tests {
             "#,
             expect![[r#"
                 ARoot {
-                    decls: [
+                    stmts: [
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "zero_fn",
                                 ),
@@ -329,7 +329,7 @@ mod tests {
                             },
                         ),
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "church_two",
                                 ),
@@ -377,7 +377,7 @@ mod tests {
                             },
                         ),
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "id",
                                 ),
@@ -403,7 +403,7 @@ mod tests {
                             },
                         ),
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "param_list_missing",
                                 ),
@@ -424,7 +424,7 @@ mod tests {
                             },
                         ),
                         Let(
-                            ALetDecl {
+                            ALetStmt {
                                 name_opt: Some(
                                     "body_missing",
                                 ),

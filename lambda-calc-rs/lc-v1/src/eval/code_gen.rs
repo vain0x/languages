@@ -1,5 +1,5 @@
 use crate::{
-    ast::a_tree::{ADecl, AExpr, ARoot, Ast},
+    ast::a_tree::{AExpr, ARoot, AStmt, Ast},
     semantics::prim::Prim,
     syntax::syntax_token::SyntaxToken,
 };
@@ -41,7 +41,7 @@ pub(crate) enum Code<'a> {
     LoadStaticVar(Reg, StaticVarId),
     LoadLocalVar(Reg, LocalVarId),
     StoreLocalVar(LocalVarId, Reg),
-    LabelDecl(LabelId),
+    LabelStmt(LabelId),
     Jump(LabelId),
     JumpUnless(LabelId, Reg),
     // callee, arity
@@ -171,7 +171,7 @@ impl<'a> CodeGenerator<'a> {
         let parent_break = replace(&mut self.current_break, Some((break_label, output_reg)));
 
         f(self)?;
-        self.emit(Code::LabelDecl(break_label));
+        self.emit(Code::LabelStmt(break_label));
 
         self.current_break = parent_break;
         Ok(output_reg)
@@ -184,21 +184,21 @@ impl<'a> CodeGenerator<'a> {
     ) -> GResult<()> {
         let (break_label, output_reg) = self.current_break.unwrap();
 
-        self.emit(Code::LabelDecl(arm_label));
+        self.emit(Code::LabelStmt(arm_label));
         let result = f(self)?;
         self.set_to_reg(output_reg, &result);
         self.emit(Code::Jump(break_label));
         Ok(())
     }
 
-    fn on_block(&mut self, decls: &'a [ADecl<'a>]) -> GResult<GTerm<'a>> {
-        let (decls, last_opt) = match decls.split_last() {
-            Some((ADecl::Expr(last), decls)) => (decls, Some(last)),
-            _ => (decls, None),
+    fn on_block(&mut self, stmts: &'a [AStmt<'a>]) -> GResult<GTerm<'a>> {
+        let (stmts, last_opt) = match stmts.split_last() {
+            Some((AStmt::Expr(last), stmts)) => (stmts, Some(last)),
+            _ => (stmts, None),
         };
 
-        for decl in decls {
-            self.on_decl(decl)?;
+        for stmt in stmts {
+            self.on_stmt(stmt)?;
         }
 
         match last_opt {
@@ -255,9 +255,9 @@ impl<'a> CodeGenerator<'a> {
                 self.emit(Code::EndCall(callee));
                 GTerm::Reg(Reg(0)) // 関数の結果は 0 番レジスタに入る。
             }
-            AExpr::Block(decls) => {
+            AExpr::Block(stmts) => {
                 self.enter_scope();
-                let result = self.on_block(decls);
+                let result = self.on_block(stmts);
                 self.leave_scope();
                 result?
             }
@@ -331,9 +331,9 @@ impl<'a> CodeGenerator<'a> {
         Ok(term)
     }
 
-    fn on_decl(&mut self, decl: &'a ADecl<'a>) -> GResult<()> {
-        match decl {
-            ADecl::Expr(expr) => {
+    fn on_stmt(&mut self, stmt: &'a AStmt<'a>) -> GResult<()> {
+        match stmt {
+            AStmt::Expr(expr) => {
                 let name = "it";
                 let term = self.on_expr(expr)?;
 
@@ -342,19 +342,19 @@ impl<'a> CodeGenerator<'a> {
                     self.emit(Code::PrintVal(name, reg));
                 }
             }
-            ADecl::Let(decl) => {
-                let name = match decl.name_opt {
+            AStmt::Let(stmt) => {
+                let name = match stmt.name_opt {
                     Some(name) => name.text,
                     None => "it",
                 };
 
-                let term = match &decl.init_opt {
+                let term = match &stmt.init_opt {
                     Some(init) => self.on_expr(init)?,
                     None => return Err("missing init expression".into()),
                 };
 
                 let reg = self.alloc_reg(&term);
-                match (&decl.name_opt, self.current_fn) {
+                match (&stmt.name_opt, self.current_fn) {
                     (Some(name), None) => {
                         let id = self.alloc_static_var(name);
                         self.map_stack
@@ -384,8 +384,8 @@ impl<'a> CodeGenerator<'a> {
     }
 
     fn on_root(&mut self, root: &'a ARoot<'a>) -> GResult<()> {
-        for decl in &root.decls {
-            self.on_decl(decl)?;
+        for stmt in &root.stmts {
+            self.on_stmt(stmt)?;
         }
         self.emit(Code::Exit);
 
@@ -417,7 +417,7 @@ pub(crate) fn code_gen<'a>(ast: &'a Ast<'a>) -> GResult<Program<'a>> {
 
     program.labels = vec![!0; generator.label_count];
     for (pc, code) in program.codes.iter().enumerate() {
-        if let Code::LabelDecl(label) = *code {
+        if let Code::LabelStmt(label) = *code {
             program.labels[label] = pc + 1;
         }
     }

@@ -10,9 +10,9 @@ mod eval {
 }
 
 mod parse {
-    pub(crate) mod parse_decls;
     pub(crate) mod parse_exprs;
     pub(crate) mod parse_root;
+    pub(crate) mod parse_stmts;
     pub(crate) mod parse_tys;
     pub(crate) mod parser;
     pub(crate) mod parser_host;
@@ -183,7 +183,7 @@ mod tests {
                 let _ = if true { 1 } else { 0 };
                 let _ = if false { 1 } else { 0 };
 
-                // expr decl
+                // expr stmt
                 42;
 
                 let id = fn(x) x;
@@ -513,7 +513,7 @@ mod tests {
                                     1,
                                 ),
                             ),
-                            LabelDecl(
+                            LabelStmt(
                                 0,
                             ),
                             MovImm(
@@ -527,7 +527,7 @@ mod tests {
                             Jump(
                                 2,
                             ),
-                            LabelDecl(
+                            LabelStmt(
                                 1,
                             ),
                             MovImm(
@@ -544,7 +544,7 @@ mod tests {
                                     3,
                                 ),
                             ),
-                            LabelDecl(
+                            LabelStmt(
                                 3,
                             ),
                             MovImm(
@@ -558,7 +558,7 @@ mod tests {
                             Jump(
                                 5,
                             ),
-                            LabelDecl(
+                            LabelStmt(
                                 4,
                             ),
                             MovImm(
@@ -572,7 +572,7 @@ mod tests {
                             Jump(
                                 5,
                             ),
-                            LabelDecl(
+                            LabelStmt(
                                 5,
                             ),
                             Mov(
@@ -586,7 +586,7 @@ mod tests {
                             Jump(
                                 2,
                             ),
-                            LabelDecl(
+                            LabelStmt(
                                 2,
                             ),
                             Mov(

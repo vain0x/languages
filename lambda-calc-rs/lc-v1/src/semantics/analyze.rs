@@ -1,28 +1,21 @@
+use std::mem::take;
+
 use crate::{
     ast::a_tree::{AExpr, AStmt, ATy, Ast},
-    eval::type_check::*,
+    eval::{code_gen::*, type_check::*},
     semantics::{symbol::*, ty::*},
     syntax::syntax_token::SyntaxToken,
     utils::*,
 };
 
-enum Term<'a> {
-    Todo,
-    Unit,
-    Bool(bool),
-    Int(i64),
-
-    #[allow(unused)]
-    Var(&'a str),
-}
-
-type AfterRval<'a> = (Term<'a>, Ty<'a>);
+pub(crate) type AfterRval<'a> = (GTerm<'a>, Ty<'a>);
 
 #[derive(Default)]
 struct Analyzer<'a> {
     // write:
     type_checker: TypeChecker<'a>,
     errors: Vec<String>,
+    cg_opt: Option<&'a CodeGenerator<'a>>,
 
     // read:
     ast_opt: Option<&'a Ast<'a>>,
@@ -35,6 +28,11 @@ impl<'a> Analyzer<'a> {
         self.bump_opt = Some(bump);
 
         self.type_checker.init(ast, bump);
+        self.cg_opt = {
+            let cg = bump.alloc(CodeGenerator::default());
+            cg.init(ast);
+            Some(cg)
+        };
     }
 
     #[allow(unused)]
@@ -46,9 +44,38 @@ impl<'a> Analyzer<'a> {
         self.bump_opt.unwrap()
     }
 
+    fn cg(&self) -> &'a CodeGenerator<'a> {
+        self.cg_opt.unwrap()
+    }
+
     fn assign_value_opt(&mut self, name_opt: Option<SyntaxToken<'a>>, ty: Ty<'a>) {
         self.type_checker
             .assign_value_opt(name_opt, ty, &mut self.errors);
+    }
+
+    fn do_in_branch(
+        &mut self,
+        cond_term: GTerm<'a>,
+        gen_arms: impl FnOnce(&mut Self, &mut BranchState) -> TResult<()>,
+    ) -> TResult<GTerm<'a>> {
+        let mut branch_state = self.cg().before_branch(cond_term, 2);
+
+        gen_arms(self, &mut branch_state)?;
+
+        let term = self.cg().after_branch(branch_state);
+        Ok(term)
+    }
+
+    fn do_in_arm<'s, 'br>(
+        &'s mut self,
+        branch_state: &'br mut BranchState,
+        gen_arm: impl FnOnce(&mut Self, &mut ArmState<'br>) -> TResult<AfterRval<'a>> + 's,
+    ) -> TResult<()> {
+        let mut arm_state = self.cg().before_arm(branch_state);
+
+        let (arm_term, _arm_ty) = gen_arm(self, &mut arm_state)?;
+        self.cg().after_arm(arm_term, arm_state);
+        Ok(())
     }
 
     fn on_ty(&mut self, ty: &'a ATy<'a>) -> TResult<Ty<'a>> {
@@ -82,27 +109,28 @@ impl<'a> Analyzer<'a> {
 
     fn on_expr(&mut self, expr: &'a AExpr<'a>) -> TResult<AfterRval<'a>> {
         let ty = match expr {
-            AExpr::True(..) => (Term::Bool(true), Ty::Bool),
-            AExpr::False(..) => (Term::Bool(false), Ty::Bool),
+            AExpr::True(..) => (GTerm::Bool(true), Ty::Bool),
+            AExpr::False(..) => (GTerm::Bool(false), Ty::Bool),
             AExpr::Number(token) => {
                 let value = token
                     .text
                     .parse::<i64>()
                     .map_err(|_| format!("can't parse as int: {:?}", token.text))?;
-                (Term::Int(value), Ty::Int)
+                (GTerm::Int(value), Ty::Int)
             }
             AExpr::Var(token) => {
-                let ty = self.type_checker.eval_var_opt(*token)?;
-                (Term::Todo, ty)
+                let term = self.cg().eval_var(*token)?;
+                let ty = self.type_checker.eval_var(*token)?;
+                (term, ty)
             }
             AExpr::Call(expr) => {
                 // callable
-                let (_fn_term, fn_ty) = self.on_expr(&*expr.callee)?;
+                let (fn_term, fn_ty) = self.on_expr(&*expr.callee)?;
                 let arity = expr.args.len();
                 let fn_ty = self.type_checker.expect_callable(fn_ty, arity)?;
 
                 // args
-                let _arg_terms = expr
+                let arg_terms = expr
                     .args
                     .iter()
                     .zip(fn_ty.params)
@@ -113,7 +141,8 @@ impl<'a> Analyzer<'a> {
                     })
                     .collect::<TResult<Vec<_>>>()?;
 
-                (Term::Todo, *fn_ty.result)
+                let result_term = self.cg().on_call_expr(fn_term, arg_terms);
+                (result_term, *fn_ty.result)
             }
             AExpr::Block(stmts) => {
                 let (stmts, last_opt) = match stmts.split_last() {
@@ -127,7 +156,7 @@ impl<'a> Analyzer<'a> {
 
                 let last = match last_opt {
                     Some(last) => self.on_expr(last)?,
-                    None => (Term::Unit, Ty::Unit),
+                    None => (GTerm::Unit, Ty::Unit),
                 };
                 last
             }
@@ -136,22 +165,25 @@ impl<'a> Analyzer<'a> {
                     Some(it) => it,
                     None => return Err("cond missing".into()),
                 };
-
-                let (_cond_term, cond_ty) = self.on_expr(cond)?;
+                let (cond_term, cond_ty) = self.on_expr(cond)?;
                 self.type_checker.expect_cond_ty(cond_ty)?;
 
-                let (_body_term, body_ty) = match &expr.body_opt {
-                    Some(body) => self.on_expr(body)?,
-                    None => (Term::Unit, Ty::Unit),
-                };
-                let (_alt_term, alt_ty) = match &expr.alt_opt {
-                    Some(alt) => self.on_expr(alt)?,
-                    None => (Term::Unit, Ty::Unit),
-                };
+                let result_term = self.do_in_branch(cond_term, |an, branch_state| {
+                    an.do_in_arm(branch_state, |an, _arm| match &expr.body_opt {
+                        Some(body) => an.on_expr(body),
+                        None => Ok((GTerm::Unit, Ty::Unit)),
+                    })?;
+                    an.do_in_arm(branch_state, |an, _arm| match &expr.alt_opt {
+                        Some(alt) => an.on_expr(alt),
+                        None => Ok((GTerm::Unit, Ty::Unit)),
+                    })
+                })?;
 
                 // TODO: branch
+                let body_ty = Ty::Bool;
+                let alt_ty = Ty::Bool;
                 let result_ty = self.type_checker.join_ty(body_ty, alt_ty)?;
-                (Term::Todo, result_ty)
+                (result_term, result_ty)
             }
             AExpr::Fn(expr) => {
                 let mut escaping_symbols = self
@@ -170,26 +202,31 @@ impl<'a> Analyzer<'a> {
 
                 let mut param_tys = BumpaloVec::new_in(self.bump());
                 for (token, ty_opt) in &expr.params {
-                    let ty = ty_opt
-                        .as_ref()
-                        .ok_or_else(|| "missing type ascription".to_string())?;
-                    let ty = self.on_ty(&ty)?;
+                    let ty = match ty_opt {
+                        Some(ty) => self.on_ty(&ty)?,
+                        None => Ty::Todo,
+                    };
+                    // .ok_or_else(|| "missing type ascription".to_string())?;
                     param_tys.push(ty);
 
                     self.assign_value_opt(Some(*token), ty);
                 }
 
+                let builder = self.cg().before_fn_expr(expr.params.len());
+
                 let body = expr
                     .body_opt
                     .as_ref()
                     .ok_or_else(|| "function body missing".to_string())?;
-                let (_, result_ty) = self.on_expr(body)?;
+                let (body_term, body_ty) = self.on_expr(body)?;
+
+                let fn_term = self.cg().after_fn_expr(body_term, builder);
 
                 let fn_ty = Ty::Fn(FnTy {
                     params: self.bump().alloc_slice_fill_iter(param_tys),
-                    result: self.bump().alloc(result_ty),
+                    result: self.bump().alloc(body_ty),
                 });
-                (Term::Todo, fn_ty)
+                (fn_term, fn_ty)
             }
         };
         Ok(ty)
@@ -198,31 +235,40 @@ impl<'a> Analyzer<'a> {
     fn on_stmt(&mut self, stmt: &'a AStmt<'a>) -> Result<(), String> {
         match stmt {
             AStmt::Expr(expr) => {
-                self.on_expr(expr)?;
+                let (term, _) = self.on_expr(expr)?;
+                self.cg().after_expr_stmt(term);
             }
             AStmt::Let(stmt) => {
-                let (_init_term, init_ty) = match &stmt.init_opt {
+                let (init_term, init_ty) = match &stmt.init_opt {
                     Some(init) => self.on_expr(init)?,
                     None => return Err("missing init expression".into()),
                 };
 
                 self.assign_value_opt(stmt.name_opt, init_ty);
+                self.cg().after_let_stmt(stmt.name_opt, init_term);
             }
         }
         Ok(())
     }
 
     fn on_root(&mut self) -> Result<(), String> {
+        self.cg().before_root();
+
         for stmt in &self.ast().root.stmts {
             self.on_stmt(stmt)?;
         }
+
+        self.cg().after_root();
         Ok(())
     }
 }
 
-pub(crate) fn analyze<'a>(ast: &'a Ast<'a>, bump: &'a bumpalo::Bump) -> Vec<String> {
+pub(crate) fn analyze<'a>(ast: &'a Ast<'a>, bump: &'a bumpalo::Bump) -> (Program<'a>, Vec<String>) {
     let mut analyzer = Analyzer::default();
     analyzer.init(ast, bump);
     analyzer.on_root().unwrap();
-    analyzer.errors
+
+    let program = take(&mut *analyzer.cg().program.borrow_mut());
+    let errors = analyzer.errors;
+    (program, errors)
 }

@@ -2,6 +2,7 @@ use super::*;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub(crate) enum Ty<'a> {
+    Todo,
     Unit,
     Bool,
     Int,
@@ -11,6 +12,7 @@ pub(crate) enum Ty<'a> {
 impl<'a> Debug for Ty<'a> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
+            Ty::Todo => write!(f, "{{todo}}"),
             Ty::Unit => write!(f, "unit"),
             Ty::Bool => write!(f, "bool"),
             Ty::Int => write!(f, "int"),

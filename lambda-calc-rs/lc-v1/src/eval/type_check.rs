@@ -22,6 +22,14 @@ impl<'a> TypeChecker<'a> {
         self.bump_opt = Some(bump);
     }
 
+    fn ast(&self) -> &'a Ast<'a> {
+        self.ast_opt.unwrap()
+    }
+
+    fn bump(&self) -> &'a bumpalo::Bump {
+        &self.bump_opt.unwrap()
+    }
+
     pub(crate) fn assign_value_opt(
         &mut self,
         name_opt: Option<SyntaxToken<'a>>,
@@ -33,8 +41,7 @@ impl<'a> TypeChecker<'a> {
             None => return,
         };
 
-        let symbol = self.ast_opt.unwrap().name_res[&token.index];
-
+        let symbol = self.ast().name_res[&token.index];
         match symbol {
             NSymbol::Missing | NSymbol::Prim(_) | NSymbol::PrimTy(..) => unreachable!(),
             NSymbol::StaticVar { id, .. } => {
@@ -52,7 +59,7 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    pub(crate) fn eval_var_opt(&mut self, token: SyntaxToken<'a>) -> TResult<Ty<'a>> {
+    pub(crate) fn eval_var(&mut self, token: SyntaxToken<'a>) -> TResult<Ty<'a>> {
         let ty = match self.ast_opt.unwrap().name_res[&token.index] {
             NSymbol::Missing => return Err(format!("unknown var {}", token.text)),
             NSymbol::Prim(prim) => match prim {
@@ -75,7 +82,10 @@ impl<'a> TypeChecker<'a> {
 
     pub(crate) fn expect_assignable(&mut self, target_ty: Ty<'a>, src_ty: Ty<'a>) -> TResult<()> {
         if src_ty != target_ty {
-            return Err("type mismatch".into());
+            return Err(format!(
+                "type mismatch: src={:?} target={:?}",
+                src_ty, target_ty
+            ));
         }
 
         Ok(())
@@ -108,9 +118,5 @@ impl<'a> TypeChecker<'a> {
         }
 
         Ok(ty)
-    }
-
-    fn bump(&self) -> &'a bumpalo::Bump {
-        &self.bump_opt.unwrap()
     }
 }

@@ -35,7 +35,6 @@ impl<'a> Analyzer<'a> {
         };
     }
 
-    #[allow(unused)]
     fn ast(&self) -> &'a Ast<'a> {
         self.ast_opt.unwrap()
     }

@@ -27,7 +27,7 @@ impl<'a> TypeChecker<'a> {
     }
 
     fn bump(&self) -> &'a bumpalo::Bump {
-        &self.bump_opt.unwrap()
+        self.bump_opt.unwrap()
     }
 
     pub(crate) fn assign_value_opt(
@@ -60,7 +60,7 @@ impl<'a> TypeChecker<'a> {
     }
 
     pub(crate) fn eval_var(&mut self, token: SyntaxToken<'a>) -> TResult<Ty<'a>> {
-        let ty = match self.ast_opt.unwrap().name_res[&token.index] {
+        let ty = match self.ast().name_res[&token.index] {
             NSymbol::Missing => return Err(format!("unknown var {}", token.text)),
             NSymbol::Prim(prim) => match prim {
                 Prim::IntEq => Ty::Fn(FnTy {

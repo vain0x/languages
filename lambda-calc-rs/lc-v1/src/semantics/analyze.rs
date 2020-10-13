@@ -68,12 +68,14 @@ impl<'a> Analyzer<'a> {
     fn do_in_arm<'s, 'br>(
         &'s mut self,
         branch_state: &'br mut BranchState,
+        joint: &'br mut Joint<'a>,
         gen_arm: impl FnOnce(&mut Self, &mut ArmState<'br>) -> TResult<AfterRval<'a>> + 's,
     ) -> TResult<()> {
         let mut arm_state = self.cg().before_arm(branch_state);
 
-        let (arm_term, _arm_ty) = gen_arm(self, &mut arm_state)?;
+        let (arm_term, arm_ty) = gen_arm(self, &mut arm_state)?;
         self.cg().after_arm(arm_term, arm_state);
+        joint.push(arm_ty, &mut self.type_checker)?;
         Ok(())
     }
 
@@ -167,21 +169,23 @@ impl<'a> Analyzer<'a> {
                 let (cond_term, cond_ty) = self.on_expr(cond)?;
                 self.type_checker.expect_cond_ty(cond_ty)?;
 
+                let mut result_ty = self.type_checker.new_joint();
                 let result_term = self.do_in_branch(cond_term, |an, branch_state| {
-                    an.do_in_arm(branch_state, |an, _arm| match &expr.body_opt {
-                        Some(body) => an.on_expr(body),
-                        None => Ok((GTerm::Unit, Ty::Unit)),
+                    an.do_in_arm(branch_state, &mut result_ty, |an, _arm| {
+                        match &expr.body_opt {
+                            Some(body) => an.on_expr(body),
+                            None => Ok((GTerm::Unit, Ty::Unit)),
+                        }
                     })?;
-                    an.do_in_arm(branch_state, |an, _arm| match &expr.alt_opt {
-                        Some(alt) => an.on_expr(alt),
-                        None => Ok((GTerm::Unit, Ty::Unit)),
+                    an.do_in_arm(branch_state, &mut result_ty, |an, _arm| {
+                        match &expr.alt_opt {
+                            Some(alt) => an.on_expr(alt),
+                            None => Ok((GTerm::Unit, Ty::Unit)),
+                        }
                     })
                 })?;
 
-                // TODO: branch
-                let body_ty = Ty::Bool;
-                let alt_ty = Ty::Bool;
-                let result_ty = self.type_checker.join_ty(body_ty, alt_ty)?;
+                let result_ty = result_ty.into_ty(&mut self.type_checker);
                 (result_term, result_ty)
             }
             AExpr::Fn(expr) => {

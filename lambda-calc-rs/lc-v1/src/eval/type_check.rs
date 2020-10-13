@@ -7,6 +7,22 @@ use std::collections::HashMap;
 
 pub(crate) type TResult<T> = Result<T, String>;
 
+/// if の結果型を構成するのに使う。
+pub(crate) enum Joint<'a> {
+    Empty,
+    Ty(Ty<'a>),
+}
+
+impl<'a> Joint<'a> {
+    pub(crate) fn push(&mut self, ty: Ty<'a>, tc: &mut TypeChecker<'a>) -> TResult<()> {
+        tc.add_to_joint(self, ty)
+    }
+
+    pub(crate) fn into_ty(self, tc: &mut TypeChecker<'a>) -> Ty<'a> {
+        tc.consume_joint(self)
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct TypeChecker<'a> {
     static_vars: HashMap<usize, Ty<'a>>,
@@ -112,11 +128,31 @@ impl<'a> TypeChecker<'a> {
         Ok(())
     }
 
-    pub(crate) fn join_ty(&mut self, ty: Ty<'a>, other_ty: Ty<'a>) -> TResult<Ty<'a>> {
-        if ty != other_ty {
-            return Err("inconsistent if type".into());
-        }
+    pub(crate) fn new_joint(&mut self) -> Joint<'a> {
+        Joint::Empty
+    }
 
-        Ok(ty)
+    fn add_to_joint(&mut self, joint: &mut Joint<'a>, ty: Ty<'a>) -> TResult<()> {
+        match *joint {
+            Joint::Empty => {
+                *joint = Joint::Ty(ty);
+            }
+            Joint::Ty(current_ty) => {
+                if ty != current_ty {
+                    return Err("inconsistent if type".into());
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn consume_joint(&mut self, joint: Joint<'a>) -> Ty<'a> {
+        match joint {
+            Joint::Empty => {
+                // never or fresh meta ty?
+                Ty::Unit
+            }
+            Joint::Ty(ty) => ty,
+        }
     }
 }

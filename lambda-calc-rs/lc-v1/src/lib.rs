@@ -438,6 +438,17 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "inconsistent")]
+    fn test_compile_if_without_inconsistent_types() {
+        do_test_compile(
+            r#"
+                if true { 1 } else { false }
+            "#,
+            expect![[""]],
+        );
+    }
+
+    #[test]
     fn test_compile_fn_with_arity_zero() {
         do_test_compile(
             r#"

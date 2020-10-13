@@ -55,25 +55,30 @@ impl<'a> Analyzer<'a> {
     fn do_in_branch(
         &mut self,
         cond_term: GTerm<'a>,
-        gen_arms: impl FnOnce(&mut Self, &mut BranchState) -> TResult<()>,
-    ) -> TResult<GTerm<'a>> {
-        let mut branch_state = self.cg().before_branch(cond_term, 2);
+        gen_arms: impl FnOnce(&mut Self, &mut (BranchState, Joint<'a>)) -> TResult<()>,
+    ) -> TResult<AfterRval<'a>> {
+        let branch_state = self.cg().before_branch(cond_term, 2);
+        let joint = self.type_checker.new_joint();
+        let mut pair = (branch_state, joint);
 
-        gen_arms(self, &mut branch_state)?;
+        gen_arms(self, &mut pair)?;
 
+        let (branch_state, joint) = pair;
         let term = self.cg().after_branch(branch_state);
-        Ok(term)
+        let ty = joint.into_ty(&mut self.type_checker);
+        Ok((term, ty))
     }
 
     fn do_in_arm<'s, 'br>(
         &'s mut self,
-        branch_state: &'br mut BranchState,
-        joint: &'br mut Joint<'a>,
-        gen_arm: impl FnOnce(&mut Self, &mut ArmState<'br>) -> TResult<AfterRval<'a>> + 's,
+        arm: &'br mut (BranchState, Joint<'a>),
+        gen_arm: impl FnOnce(&mut Self) -> TResult<AfterRval<'a>> + 's,
     ) -> TResult<()> {
-        let mut arm_state = self.cg().before_arm(branch_state);
+        let (branch_state, joint) = arm;
+        let arm_state = self.cg().before_arm(branch_state);
 
-        let (arm_term, arm_ty) = gen_arm(self, &mut arm_state)?;
+        let (arm_term, arm_ty) = gen_arm(self)?;
+
         self.cg().after_arm(arm_term, arm_state);
         joint.push(arm_ty, &mut self.type_checker)?;
         Ok(())
@@ -169,24 +174,16 @@ impl<'a> Analyzer<'a> {
                 let (cond_term, cond_ty) = self.on_expr(cond)?;
                 self.type_checker.expect_cond_ty(cond_ty)?;
 
-                let mut result_ty = self.type_checker.new_joint();
-                let result_term = self.do_in_branch(cond_term, |an, branch_state| {
-                    an.do_in_arm(branch_state, &mut result_ty, |an, _arm| {
-                        match &expr.body_opt {
-                            Some(body) => an.on_expr(body),
-                            None => Ok((GTerm::Unit, Ty::Unit)),
-                        }
+                self.do_in_branch(cond_term, |an, arm| {
+                    an.do_in_arm(arm, |an| match &expr.body_opt {
+                        Some(body) => an.on_expr(body),
+                        None => Ok((GTerm::Unit, Ty::Unit)),
                     })?;
-                    an.do_in_arm(branch_state, &mut result_ty, |an, _arm| {
-                        match &expr.alt_opt {
-                            Some(alt) => an.on_expr(alt),
-                            None => Ok((GTerm::Unit, Ty::Unit)),
-                        }
+                    an.do_in_arm(arm, |an| match &expr.alt_opt {
+                        Some(alt) => an.on_expr(alt),
+                        None => Ok((GTerm::Unit, Ty::Unit)),
                     })
-                })?;
-
-                let result_ty = result_ty.into_ty(&mut self.type_checker);
-                (result_term, result_ty)
+                })?
             }
             AExpr::Fn(expr) => {
                 let mut escaping_symbols = self

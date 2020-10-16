@@ -49,6 +49,29 @@ mod token {
     pub(crate) mod tokenize_rules;
 }
 
+mod ty_inference {
+    #![allow(unused)]
+
+    pub(crate) mod ref_wrapper;
+    pub(crate) mod tyi;
+
+    pub(crate) use ref_wrapper::*;
+
+    use crate::utils::*;
+    use bumpalo::Bump;
+    use std::{
+        cell::{Cell, RefCell},
+        collections::{HashMap, HashSet},
+        fmt::{self, Debug, Formatter},
+        hash::{Hash, Hasher},
+        iter, mem,
+        ops::Deref,
+        ptr,
+        rc::Rc,
+        sync::atomic::{self, AtomicUsize},
+    };
+}
+
 mod utils {
     pub(crate) use bumpalo::{boxed::Box as BumpaloBox, collections::Vec as BumpaloVec};
 }

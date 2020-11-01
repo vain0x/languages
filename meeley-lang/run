@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+dune exec ./meeley_cli/meeley.exe

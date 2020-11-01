@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "metal_cli",
+    "metal_core"
+]

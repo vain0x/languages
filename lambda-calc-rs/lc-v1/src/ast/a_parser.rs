@@ -41,11 +41,11 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
     type BeforeArgList = BumpaloVec<'a, AExpr<'a>>;
     type AfterArgList = BumpaloVec<'a, AExpr<'a>>;
 
-    type BeforeBlockExpr = BumpaloVec<'a, ADecl<'a>>;
+    type BeforeBlockExpr = BumpaloVec<'a, AStmt<'a>>;
 
     type AfterTy = ATy<'a>;
     type AfterExpr = AExpr<'a>;
-    type AfterDecl = ADecl<'a>;
+    type AfterStmt = AStmt<'a>;
     type AfterRoot = ARoot<'a>;
 
     fn before_param_ty_list(&mut self, _left_paren: SyntaxToken<'a>) -> Self::BeforeParamTyList {
@@ -173,12 +173,12 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         BumpaloVec::new_in(&self.context.bump)
     }
 
-    fn after_decl_in_block(
+    fn after_stmt_in_block(
         &mut self,
-        decl: Self::AfterDecl,
+        stmt: Self::AfterStmt,
         block_expr: &mut Self::BeforeBlockExpr,
     ) {
-        block_expr.push(decl);
+        block_expr.push(stmt);
     }
 
     fn after_block_expr(
@@ -228,32 +228,32 @@ impl<'a> LambdaParserHost<'a> for AstLambdaParserHost<'a> {
         })
     }
 
-    fn after_expr_decl(
+    fn after_expr_stmt(
         &mut self,
         expr: Self::AfterExpr,
         _semi_opt: Option<SyntaxToken<'a>>,
-    ) -> Self::AfterDecl {
-        ADecl::Expr(expr)
+    ) -> Self::AfterStmt {
+        AStmt::Expr(expr)
     }
 
-    fn after_let_decl(
+    fn after_let_stmt(
         &mut self,
         _keyword: SyntaxToken<'a>,
         name_opt: Option<SyntaxToken<'a>>,
         _equal_opt: Option<SyntaxToken<'a>>,
         init_opt: Option<Self::AfterExpr>,
         _semi_opt: Option<SyntaxToken<'a>>,
-    ) -> Self::AfterDecl {
-        self.scope_resolver.after_let_decl(name_opt);
+    ) -> Self::AfterStmt {
+        self.scope_resolver.after_let_stmt(name_opt);
 
-        ADecl::Let(ALetDecl { name_opt, init_opt })
+        AStmt::Let(ALetStmt { name_opt, init_opt })
     }
 
-    fn after_root(&mut self, decls: Vec<Self::AfterDecl>, eof: SyntaxToken<'a>) -> Self::AfterRoot {
+    fn after_root(&mut self, stmts: Vec<Self::AfterStmt>, eof: SyntaxToken<'a>) -> Self::AfterRoot {
         self.scope_resolver.after_root();
 
         ARoot {
-            decls: self.context.allocate_iter(decls),
+            stmts: self.context.allocate_iter(stmts),
             eof,
         }
     }

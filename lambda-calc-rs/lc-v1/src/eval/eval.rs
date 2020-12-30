@@ -1,5 +1,5 @@
 use crate::{
-    ast::a_tree::{ADecl, AExpr, AFnExpr, Ast},
+    ast::a_tree::{AExpr, AFnExpr, AStmt, Ast},
     semantics::local_symbol::NLocalSymbol,
     semantics::{prim::Prim, symbol::NSymbol},
     syntax::syntax_token::SyntaxToken,
@@ -249,14 +249,14 @@ impl<'a> Evaluator<'a> {
                     }
                 },
             },
-            AExpr::Block(decls) => {
-                let (decls, last_opt) = match decls.split_last() {
-                    Some((ADecl::Expr(last), decls)) => (decls, Some(last)),
-                    _ => (decls.as_slice(), None),
+            AExpr::Block(stmts) => {
+                let (stmts, last_opt) = match stmts.split_last() {
+                    Some((AStmt::Expr(last), stmts)) => (stmts, Some(last)),
+                    _ => (stmts.as_slice(), None),
                 };
 
-                for decl in decls {
-                    self.on_decl(decl)?;
+                for stmt in stmts {
+                    self.on_stmt(stmt)?;
                 }
 
                 let last = match last_opt {
@@ -291,27 +291,27 @@ impl<'a> Evaluator<'a> {
         Ok(value)
     }
 
-    fn on_decl(&mut self, decl: &'a ADecl<'a>) -> Result<(), String> {
-        match decl {
-            ADecl::Expr(expr) => {
+    fn on_stmt(&mut self, stmt: &'a AStmt<'a>) -> Result<(), String> {
+        match stmt {
+            AStmt::Expr(expr) => {
                 let _value = self.on_expr(expr)?;
             }
-            ADecl::Let(decl) => {
-                let value = match &decl.init_opt {
+            AStmt::Let(stmt) => {
+                let value = match &stmt.init_opt {
                     Some(init) => self.on_expr(init)?,
                     None => return Err("missing init expression".into()),
                 };
 
-                self.assign_value_opt(decl.name_opt, value);
+                self.assign_value_opt(stmt.name_opt, value);
             }
         }
         Ok(())
     }
 
     fn on_root(&mut self) {
-        for decl in &self.ast.root.decls {
-            match decl {
-                ADecl::Expr(expr) => {
+        for stmt in &self.ast.root.stmts {
+            match stmt {
+                AStmt::Expr(expr) => {
                     let name = "it";
                     let result = self.on_expr(expr);
 
@@ -320,20 +320,20 @@ impl<'a> Evaluator<'a> {
                         self.assign_value_opt(None, value);
                     }
                 }
-                ADecl::Let(decl) => {
-                    let name = match decl.name_opt {
+                AStmt::Let(stmt) => {
+                    let name = match stmt.name_opt {
                         Some(name) => name.text,
                         None => "it",
                     };
 
-                    let result = match &decl.init_opt {
+                    let result = match &stmt.init_opt {
                         Some(init) => self.on_expr(init),
                         None => Err("missing init expression".into()),
                     };
 
                     self.emit_val(name, &result);
                     if let Ok(value) = result {
-                        self.assign_value_opt(decl.name_opt, value);
+                        self.assign_value_opt(stmt.name_opt, value);
                     }
                 }
             }

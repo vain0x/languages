@@ -44,26 +44,26 @@ pub(crate) enum AExpr<'a> {
     Number(SyntaxToken<'a>),
     Var(SyntaxToken<'a>),
     Call(ACallExpr<'a>),
-    Block(BumpaloVec<'a, ADecl<'a>>),
+    Block(BumpaloVec<'a, AStmt<'a>>),
     If(AIfExpr<'a>),
     Fn(AFnExpr<'a>),
 }
 
 #[derive(Debug)]
-pub(crate) struct ALetDecl<'a> {
+pub(crate) struct ALetStmt<'a> {
     pub(crate) name_opt: Option<SyntaxToken<'a>>,
     pub(crate) init_opt: Option<AExpr<'a>>,
 }
 
 #[derive(Debug)]
-pub(crate) enum ADecl<'a> {
+pub(crate) enum AStmt<'a> {
     Expr(AExpr<'a>),
-    Let(ALetDecl<'a>),
+    Let(ALetStmt<'a>),
 }
 
 #[derive(Debug)]
 pub(crate) struct ARoot<'a> {
-    pub(crate) decls: BumpaloVec<'a, ADecl<'a>>,
+    pub(crate) stmts: BumpaloVec<'a, AStmt<'a>>,
     pub(crate) eof: SyntaxToken<'a>,
 }
 

@@ -1,13 +1,22 @@
-// Learn more about F# at http://docs.microsoft.com/dotnet/fsharp
+module LambdaCli.Program
 
 open System
+open LambdaDomain.Location
+open LambdaSyntax.Tokenize
 
-// Define a function to construct a message to print
-let from whom =
-    sprintf "from %s" whom
+let private dumpTokens (tokens: _ array, errors: _ array) =
+  if errors |> Array.isEmpty |> not then
+    printfn "ERRORS(%d)" errors.Length
+    for text, range in errors do
+      printfn "    ErrorToken(%O) %A" range text
+
+    printfn ""
+
+  printfn "TOKENS(%d)" tokens.Length
+  for kind, text, range in tokens do
+      printfn "    %A(%O) %A" kind range text
 
 [<EntryPoint>]
-let main argv =
-    let message = from "F#" // Call the function
-    printfn "Hello world %s" message
-    0 // return an integer exit code
+let main _ =
+  stdin.ReadToEnd() |> tokenizeString |> dumpTokens
+  0

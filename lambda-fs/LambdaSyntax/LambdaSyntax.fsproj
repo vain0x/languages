@@ -5,7 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <Compile Include="Token.fs" />
+    <Compile Include="Tokenize.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,13 @@
+#? stdout: Point(x: 1, y: 2)\n
+#? stdout: Array(1, 2, 3)\n
+#? $? = 0
+
+im_int x 1
+im_int y 2
+ex_new_obj p "Point" x:x y:y
+ex_println p
+
+im_int z 3
+ex_new_obj a "Array" x y z
+ex_println a
+exit 0

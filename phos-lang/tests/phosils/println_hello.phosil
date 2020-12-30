@@ -1,0 +1,6 @@
+#? stdout: hello\n
+#? $? = 0
+
+im_str t "hello"
+ex_println t
+exit 0

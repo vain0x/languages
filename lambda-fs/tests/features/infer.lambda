@@ -71,7 +71,7 @@ type_error (\y. y (\z. y z));
 
 (
     let t = \x. let y = \z. x in y;
-    type_assert t: 'a -> 'a;
+    type_assert t: 'a -> 'b -> 'a;
 );
 
 (

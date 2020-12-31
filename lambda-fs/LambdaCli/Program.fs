@@ -4,6 +4,7 @@ open System
 open LambdaDomain.Location
 open LambdaSyntax.Tokenize
 open LambdaSyntax.Parse
+open LambdaSyntax.ScopeRes
 
 let private dumpTokens (tokens: _ array, errors: _ array) =
   if errors |> Array.isEmpty |> not then
@@ -29,5 +30,8 @@ let main _ =
     exit 1
 
   let ast = parseTokens tokens
-  printfn "%A" ast
+  // printfn "%A" ast
+
+  let scopeResult = scopeRes ast
+  printfn "%A" scopeResult
   0

@@ -9,6 +9,7 @@
     <Compile Include="Syntax.fs" />
     <Compile Include="Tokenize.fs" />
     <Compile Include="Parse.fs" />
+    <Compile Include="ScopeRes.fs" />
   </ItemGroup>
 
   <ItemGroup>

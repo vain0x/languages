@@ -1,7 +1,7 @@
 // From: http://okmij.org/ftp/ML/generalization/sound_eager.ml
 
 let id = \x. x;
-type_assert id: a -> a;
+type_assert id: 'a -> 'a;
 
 let c1 = \x. \y. x y;
 type_assert c1: ('a -> 'b) -> 'a -> 'b;

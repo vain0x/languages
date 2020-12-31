@@ -7,6 +7,7 @@ module LambdaDomain.Location
 
 /// Position in string.
 [<RequireQualifiedAccess; Struct>]
+[<StructuredFormatDisplay("{AsDisplay}")>]
 type Pos =
   {
     /// Row index (0-indexed).
@@ -14,6 +15,8 @@ type Pos =
 
     /// Column index (0-indexed).
     Column: int }
+
+  member private this.AsDisplay = this.ToString()
 
   override this.ToString() =
     let row, column = this.Row, this.Column
@@ -33,9 +36,12 @@ module Pos =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess>]
+[<StructuredFormatDisplay("{AsDisplay}")>]
 type Range =
   { Start: Pos
     End: Pos }
+
+  member private this.AsDisplay = this.ToString()
 
   override this.ToString() =
     let s, t = this.Start, this.End

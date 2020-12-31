@@ -6,6 +6,7 @@ open LambdaSyntax.Tokenize
 open LambdaSyntax.Parse
 open LambdaSyntax.ScopeRes
 open LambdaSyntax.HirGen
+open LambdaSemantics.Infer
 
 let private dumpTokens (tokens: _ array, errors: _ array) =
   if errors |> Array.isEmpty |> not then
@@ -37,5 +38,7 @@ let main _ =
   // printfn "%A" scopeResult
 
   let hir = hirGen ast scopeResult
-  printfn "%A" hir
+  // printfn "%A" hir
+
+  infer hir |> ignore
   0

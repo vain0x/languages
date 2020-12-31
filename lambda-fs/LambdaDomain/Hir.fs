@@ -17,18 +17,13 @@ type HTyScheme = HTyId [] * HTy
 
 [<NoEquality; NoComparison>]
 type HExpr =
-  | HUnitExpr of Pos
   | HNameExpr of HVar * Pos
   | HLambdaExpr of HVar * HExpr * Pos
   | HAppExpr of HExpr * HExpr * Pos
-  | HBlockExpr of HStmt [] * HExpr * Pos
+  | HLetExpr of HVar * init: HExpr * Pos
+  | HTypeAssertExpr of HExpr * HTyScheme * Pos
+  | HTypeErrorExpr of HExpr * Pos
+  | HBlockExpr of HExpr [] * HExpr * Pos
 
 [<NoEquality; NoComparison>]
-type HStmt =
-  | HExprStmt of HExpr * Pos
-  | HLetStmt of HVar * init: HExpr * Pos
-  | HTypeAssertStmt of HExpr * HTyScheme * Pos
-  | HTypeErrorStmt of HExpr * Pos
-
-[<NoEquality; NoComparison>]
-type HRoot = HRoot of HStmt []
+type HRoot = HRoot of HExpr []

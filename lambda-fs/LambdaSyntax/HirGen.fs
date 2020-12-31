@@ -16,8 +16,7 @@ let private posOfName name =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Ctx =
   { Scope: ScopeResult
-    SymbolMap: Map<Pos, int>
-    Stmts: ResizeArray<HStmt> }
+    SymbolMap: Map<Pos, int> }
 
 let private newCtx (scopeRes: ScopeResult): Ctx =
   let symbolMap =
@@ -27,12 +26,7 @@ let private newCtx (scopeRes: ScopeResult): Ctx =
     |> Map.ofArray
 
   { Scope = scopeRes
-    SymbolMap = symbolMap
-    Stmts = ResizeArray() }
-
-let private addStmt stmt (ctx: Ctx) =
-  ctx.Stmts.Add(stmt)
-  ctx
+    SymbolMap = symbolMap }
 
 let private getName (ctx: Ctx) name =
   let (AName (_, text, range)) = name
@@ -46,12 +40,12 @@ let private hgTy ctx ty =
   match ty with
   | AUniversalTy name ->
       let text, symbol, pos = getName ctx name
-      HVarTy((text, symbol), pos), ctx
+      HVarTy((text, symbol), pos)
 
   | AArrowTy (l, r) ->
-      let l, ctx = hgTy ctx l
-      let r, ctx = hgTy ctx r
-      HArrowTy(l, r, Pos.zero), ctx
+      let l = hgTy ctx l
+      let r = hgTy ctx r
+      HArrowTy(l, r, Pos.zero)
 
 let private collectVarTys ty =
   let varTys = ResizeArray()
@@ -69,101 +63,85 @@ let private collectVarTys ty =
   varTys |> Seq.distinctBy snd |> Seq.toArray
 
 let private hgTyScheme ctx ty =
-  let ty, ctx = hgTy ctx ty
+  let ty = hgTy ctx ty
   let varTys = collectVarTys ty
-  (varTys, ty), ctx
+  varTys, ty
 
-let private hgExprOrUnit ctx expr =
-  let exprOpt, ctx = hgExpr ctx expr
+let private hgLetExpr (ctx: Ctx) letExpr =
+  match letExpr with
+  | ALetExpr (name, init, None) ->
+      let text, symbol, pos = getName ctx name
+      let init = hgExpr ctx init
+      HLetExpr((text, symbol), init, pos)
 
-  match exprOpt with
-  | Some it -> it, ctx
-  | None -> HUnitExpr Pos.zero, ctx
+  | ALetExpr (name, init, Some next) ->
+      // Flatten chain of let-in.
+      let stmts, last =
+        let items = ResizeArray()
+        items.Add(name, init)
 
-let private hgExprBlock (ctx: Ctx) expr =
-  let stmts = ctx.Stmts
-  let ctx = { ctx with Stmts = ResizeArray() }
+        let rec go expr =
+          match expr with
+          | ALetExpr (name, init, Some next) ->
+              items.Add(name, init)
+              go next
 
-  let exprOpt, (ctx: Ctx) = hgExpr ctx expr
+          | _ -> expr
 
-  let expr =
-    match exprOpt with
-    | Some it -> it
-    | None -> HUnitExpr Pos.zero
+        let next = go next
+        items.ToArray(), next
 
-  let stmts, ctx = ctx.Stmts, { ctx with Stmts = stmts }
+      let stmts =
+        stmts
+        |> Array.map
+             (fun (name, init) ->
+               let text, symbol, pos = getName ctx name
+               let init = hgExpr ctx init
+               HLetExpr((text, symbol), init, pos))
 
-  if stmts.Count = 0 then
-    expr, ctx
-  else
-    HBlockExpr(stmts.ToArray(), expr, Pos.zero), ctx
+      let last = hgExpr ctx last
+      HBlockExpr(stmts, last, Pos.zero)
+
+  | _ -> failwith "NEVER"
 
 let private hgExpr (ctx: Ctx) expr =
   match expr with
   | ANameExpr name ->
       let text, symbol, pos = getName ctx name
-      Some(HNameExpr((text, symbol), pos)), ctx
+      HNameExpr((text, symbol), pos)
 
   | ALambdaExpr (name, body) ->
       let text, symbol, pos = getName ctx name
-      let body, ctx = hgExprBlock ctx body
-      Some(HLambdaExpr((text, symbol), body, pos)), ctx
+      let body = hgExpr ctx body
+      HLambdaExpr((text, symbol), body, pos)
 
-  | ALetExpr (name, init, nextOpt) ->
-      let text, symbol, pos = getName ctx name
-      let init, ctx = hgExprOrUnit ctx init
-
-      let ctx =
-        ctx
-        |> addStmt (HLetStmt((text, symbol), init, pos))
-
-      match nextOpt with
-      | Some next -> hgExpr ctx next
-      | None -> None, ctx
+  | ALetExpr _ -> hgLetExpr ctx expr
 
   | ATypeAssertExpr (arg, ty) ->
-      let arg, ctx = hgExprBlock ctx arg
-      let ty, ctx = hgTyScheme ctx ty
-
-      let ctx =
-        ctx
-        |> addStmt (HTypeAssertStmt(arg, ty, Pos.zero))
-
-      None, ctx
+      let arg = hgExpr ctx arg
+      let ty = hgTyScheme ctx ty
+      HTypeAssertExpr(arg, ty, Pos.zero)
 
   | ATypeErrorExpr arg ->
-      let arg, ctx = hgExprBlock ctx arg
-
-      let ctx =
-        ctx |> addStmt (HTypeErrorStmt(arg, Pos.zero))
-
-      None, ctx
+      let arg = hgExpr ctx arg
+      HTypeErrorExpr(arg, Pos.zero)
 
   | AAppExpr (l, r) ->
-      let l, ctx = hgExprOrUnit ctx l
-      let r, ctx = hgExprOrUnit ctx r
-      Some(HAppExpr(l, r, Pos.zero)), ctx
+      let l = hgExpr ctx l
+      let r = hgExpr ctx r
+      HAppExpr(l, r, Pos.zero)
 
   | ABlockExpr (stmts, last) ->
-      let ctx = stmts |> hgStmts ctx
-      hgExpr ctx last
+      let stmts = stmts |> hgStmts ctx
+      let last = hgExpr ctx last
+      HBlockExpr(stmts, last, Pos.zero)
 
-let private hgStmts ctx stmts =
-  stmts
-  |> Array.fold
-       (fun ctx expr ->
-         let exprOpt, ctx = hgExpr ctx expr
-
-         match exprOpt with
-         | Some it -> ctx |> addStmt (HExprStmt(it, Pos.zero))
-         | None -> ctx)
-       ctx
+let private hgStmts ctx stmts = stmts |> Array.map (hgExpr ctx)
 
 let hirGen (ast: ARoot) (scopeRes: ScopeResult): HRoot =
   let ctx = newCtx scopeRes
 
   let (ARoot stmts) = ast
-  let ctx = hgStmts ctx stmts
-  let stmts = ctx.Stmts.ToArray()
+  let stmts = hgStmts ctx stmts
 
   HRoot stmts

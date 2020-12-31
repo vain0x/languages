@@ -3,23 +3,24 @@ module rec LambdaDomain.Hir
 
 open LambdaDomain.Location
 
-type HTyId = string * int
+// hint, id
+type HVarTy = string * int * Pos
 
 // hint, id
-type HVar = string * int
+type HVar = string * int * Pos
 
 [<NoEquality; NoComparison>]
 type HTy =
-  | HVarTy of HTyId * Pos
+  | HVarTy of HVarTy
   | HArrowTy of HTy * HTy * Pos
 
-type HTyScheme = HTyId [] * HTy
+type HTyScheme = HVarTy [] * HTy
 
 [<NoEquality; NoComparison>]
 type HExpr =
-  | HNameExpr of HVar * Pos
+  | HNameExpr of HVar
   | HLambdaExpr of HVar * HExpr * Pos
-  | HAppExpr of HExpr * HExpr * Pos
+  | HAppExpr of HExpr * HExpr
   | HLetExpr of HVar * init: HExpr * Pos
   | HTypeAssertExpr of HExpr * HTyScheme * Pos
   | HTypeErrorExpr of HExpr * Pos

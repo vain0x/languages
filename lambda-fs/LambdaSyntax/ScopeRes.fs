@@ -112,7 +112,7 @@ let rec private scopeTy ty (ctx: Sx) =
 
           ctx |> importTy (textOfName name) symbol
 
-  | AArrowTy (s, t) -> ctx |> scopeTy s |> scopeTy t
+  | AArrowTy (s, t, _) -> ctx |> scopeTy s |> scopeTy t
 
 let private scopeTyRoot ty ctx = ctx |> doWithScope (scopeTy ty)
 
@@ -123,27 +123,27 @@ let rec private scopeExpr expr (ctx: Sx) =
       | Some symbol -> ctx |> markAsUse (posOfName name) symbol
       | None -> ctx |> markAsUnresolved (posOfName name)
 
-  | ALambdaExpr (name, body) ->
+  | ALambdaExpr (name, body, _) ->
       ctx
       |> doWithScope (fun ctx -> ctx |> defineAsValue name |> scopeExpr body)
 
-  | ALetExpr (name, init, Some next) ->
+  | ALetExpr (name, init, Some next, _) ->
       ctx
       |> doWithScope (scopeExpr init)
       |> doWithScope (fun ctx -> ctx |> defineAsValue name |> scopeExpr next)
 
-  | ALetExpr (name, init, None) ->
+  | ALetExpr (name, init, None, _) ->
       ctx
       |> doWithScope (scopeExpr init)
       |> defineAsValue name
 
-  | ATypeAssertExpr (arg, ty) -> ctx |> scopeExpr arg |> scopeTyRoot ty
+  | ATypeAssertExpr (arg, ty, _) -> ctx |> scopeExpr arg |> scopeTyRoot ty
 
-  | ATypeErrorExpr arg -> ctx |> scopeExpr arg
+  | ATypeErrorExpr (arg, _) -> ctx |> scopeExpr arg
 
   | AAppExpr (l, r) -> ctx |> scopeExpr l |> scopeExpr r
 
-  | ABlockExpr (stmts, last) ->
+  | ABlockExpr (stmts, last, _) ->
       ctx
       |> doWithScope (fun ctx -> ctx |> scopeExprs stmts |> scopeExpr last)
 

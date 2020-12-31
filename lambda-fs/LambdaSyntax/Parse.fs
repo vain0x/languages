@@ -7,6 +7,11 @@ open LambdaSyntax.Syntax
 
 let private some (value, state) = Some value, state
 
+let private setOnce value ref =
+  match !ref with
+  | None -> ref := Some value
+  | Some _ -> ()
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -103,9 +108,9 @@ let private parseArrowTy px =
   let l, px = parseAtomicTy px
 
   match get 0 px with
-  | PunToken, "->", _ ->
+  | PunToken, "->", range ->
       let r, px = px |> bump |> parseArrowTy
-      AArrowTy(l, r), px
+      AArrowTy(l, r, range.Start), px
 
   | _ -> l, px
 
@@ -134,10 +139,10 @@ let private parseAtomicExpr px =
       let px = expectPun ")" px
       body, px
 
-  | PunToken, "\\", _ ->
+  | PunToken, "\\", range ->
       let name, px = px |> bump |> parseName
       let body, px = px |> expectPun "." |> parseStmt
-      ALambdaExpr(name, body), px
+      ALambdaExpr(name, body, range.Start), px
 
   | _ -> error "Expected an expression" px
 
@@ -164,7 +169,7 @@ let private atStmt px =
 
 let private parseStmt px =
   match get 0 px with
-  | KeywordToken, "let", _ ->
+  | KeywordToken, "let", range ->
       let name, px = px |> bump |> parseName
       let init, px = px |> expectPun "=" |> parseStmt
 
@@ -173,17 +178,17 @@ let private parseStmt px =
         | KeywordToken, "in", _ -> px |> bump |> parseStmt |> some
         | _ -> None, px
 
-      ALetExpr(name, init, next), px
+      ALetExpr(name, init, next, range.Start), px
 
-  | KeywordToken, "type_assert", _ ->
+  | KeywordToken, "type_assert", range ->
       let arg, px = px |> bump |> parseExpr
 
       let ty, px = px |> parseAscription
-      ATypeAssertExpr(arg, ty), px
+      ATypeAssertExpr(arg, ty, range.Start), px
 
-  | KeywordToken, "type_error", _ ->
+  | KeywordToken, "type_error", range ->
       let arg, px = px |> bump |> parseExpr
-      ATypeErrorExpr arg, px
+      ATypeErrorExpr(arg, range.Start), px
 
   | _ -> parseExpr px
 
@@ -191,15 +196,17 @@ let private parseBlockExpr px =
   let first, px = parseStmt px
 
   let items = ResizeArray()
+  let posOpt = ref None
 
   let rec go last px =
     match get 0 px with
-    | PunToken, ";", _ ->
+    | PunToken, ";", range ->
         let px = px |> bump
 
         if atStmt px then
           let item, px = px |> parseStmt
           items.Add(last)
+          posOpt |> setOnce range.Start
           go item px
         else
           last, px
@@ -211,7 +218,7 @@ let private parseBlockExpr px =
   if items.Count = 0 then
     last, px
   else
-    ABlockExpr(items.ToArray(), last), px
+    ABlockExpr(items.ToArray(), last, Option.get !posOpt), px
 
 // -----------------------------------------------
 // Root

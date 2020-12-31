@@ -38,21 +38,19 @@ let private getName (ctx: Ctx) name =
 
 let private hgTy ctx ty =
   match ty with
-  | AUniversalTy name ->
-      let text, symbol, pos = getName ctx name
-      HVarTy((text, symbol), pos)
+  | AUniversalTy name -> HVarTy(getName ctx name)
 
-  | AArrowTy (l, r) ->
+  | AArrowTy (l, r, pos) ->
       let l = hgTy ctx l
       let r = hgTy ctx r
-      HArrowTy(l, r, Pos.zero)
+      HArrowTy(l, r, pos)
 
 let private collectVarTys ty =
   let varTys = ResizeArray()
 
   let rec go ty =
     match ty with
-    | HVarTy (v, _) -> varTys.Add(v)
+    | HVarTy v -> varTys.Add(v)
 
     | HArrowTy (l, r, _) ->
         go l
@@ -60,7 +58,9 @@ let private collectVarTys ty =
 
   go ty
 
-  varTys |> Seq.distinctBy snd |> Seq.toArray
+  varTys
+  |> Seq.distinctBy (fun (_, id, _) -> id)
+  |> Seq.toArray
 
 let private hgTyScheme ctx ty =
   let ty = hgTy ctx ty
@@ -69,21 +69,20 @@ let private hgTyScheme ctx ty =
 
 let private hgLetExpr (ctx: Ctx) letExpr =
   match letExpr with
-  | ALetExpr (name, init, None) ->
-      let text, symbol, pos = getName ctx name
+  | ALetExpr (name, init, None, pos) ->
       let init = hgExpr ctx init
-      HLetExpr((text, symbol), init, pos)
+      HLetExpr(getName ctx name, init, pos)
 
-  | ALetExpr (name, init, Some next) ->
+  | ALetExpr (name, init, Some next, pos) ->
       // Flatten chain of let-in.
       let stmts, last =
         let items = ResizeArray()
-        items.Add(name, init)
+        items.Add(name, init, pos)
 
         let rec go expr =
           match expr with
-          | ALetExpr (name, init, Some next) ->
-              items.Add(name, init)
+          | ALetExpr (name, init, Some next, pos) ->
+              items.Add(name, init, pos)
               go next
 
           | _ -> expr
@@ -94,47 +93,43 @@ let private hgLetExpr (ctx: Ctx) letExpr =
       let stmts =
         stmts
         |> Array.map
-             (fun (name, init) ->
-               let text, symbol, pos = getName ctx name
+             (fun (name, init, pos) ->
                let init = hgExpr ctx init
-               HLetExpr((text, symbol), init, pos))
+               HLetExpr(getName ctx name, init, pos))
 
       let last = hgExpr ctx last
-      HBlockExpr(stmts, last, Pos.zero)
+      HBlockExpr(stmts, last, pos)
 
   | _ -> failwith "NEVER"
 
 let private hgExpr (ctx: Ctx) expr =
   match expr with
-  | ANameExpr name ->
-      let text, symbol, pos = getName ctx name
-      HNameExpr((text, symbol), pos)
+  | ANameExpr name -> HNameExpr(getName ctx name)
 
-  | ALambdaExpr (name, body) ->
-      let text, symbol, pos = getName ctx name
+  | ALambdaExpr (name, body, pos) ->
       let body = hgExpr ctx body
-      HLambdaExpr((text, symbol), body, pos)
+      HLambdaExpr(getName ctx name, body, pos)
 
   | ALetExpr _ -> hgLetExpr ctx expr
 
-  | ATypeAssertExpr (arg, ty) ->
+  | ATypeAssertExpr (arg, ty, pos) ->
       let arg = hgExpr ctx arg
       let ty = hgTyScheme ctx ty
-      HTypeAssertExpr(arg, ty, Pos.zero)
+      HTypeAssertExpr(arg, ty, pos)
 
-  | ATypeErrorExpr arg ->
+  | ATypeErrorExpr (arg, pos) ->
       let arg = hgExpr ctx arg
-      HTypeErrorExpr(arg, Pos.zero)
+      HTypeErrorExpr(arg, pos)
 
   | AAppExpr (l, r) ->
       let l = hgExpr ctx l
       let r = hgExpr ctx r
-      HAppExpr(l, r, Pos.zero)
+      HAppExpr(l, r)
 
-  | ABlockExpr (stmts, last) ->
+  | ABlockExpr (stmts, last, pos) ->
       let stmts = stmts |> hgStmts ctx
       let last = hgExpr ctx last
-      HBlockExpr(stmts, last, Pos.zero)
+      HBlockExpr(stmts, last, pos)
 
 let private hgStmts ctx stmts = stmts |> Array.map (hgExpr ctx)
 

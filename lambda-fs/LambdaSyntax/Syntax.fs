@@ -13,17 +13,17 @@ type AName = AName of TokenData
 [<NoEquality; NoComparison>]
 type ATy =
   | AUniversalTy of AName
-  | AArrowTy of ATy * ATy
+  | AArrowTy of ATy * ATy * Pos
 
 [<NoEquality; NoComparison>]
 type AExpr =
   | ANameExpr of AName
-  | ALambdaExpr of AName * AExpr
-  | ALetExpr of AName * init: AExpr * inClause: AExpr option
-  | ATypeAssertExpr of AExpr * ATy
-  | ATypeErrorExpr of AExpr
+  | ALambdaExpr of AName * AExpr * Pos
+  | ALetExpr of AName * init: AExpr * inClause: AExpr option * Pos
+  | ATypeAssertExpr of AExpr * ATy * Pos
+  | ATypeErrorExpr of AExpr * Pos
   | AAppExpr of AExpr * AExpr
-  | ABlockExpr of AExpr [] * AExpr
+  | ABlockExpr of AExpr [] * AExpr * Pos
 
 [<NoEquality; NoComparison>]
 type ARoot = ARoot of AExpr []

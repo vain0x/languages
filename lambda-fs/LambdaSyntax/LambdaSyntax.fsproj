@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Token.fs" />
+    <Compile Include="Syntax.fs" />
+    <Compile Include="Tokenize.fs" />
+    <Compile Include="Parse.fs" />
+    <Compile Include="ScopeRes.fs" />
+    <Compile Include="HirGen.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LambdaDomain\LambdaDomain.fsproj" />
+  </ItemGroup>
+
+</Project>

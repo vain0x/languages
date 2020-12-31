@@ -1,0 +1,100 @@
+// From: http://okmij.org/ftp/ML/generalization/sound_eager.ml
+
+let id = \x. x;
+type_assert id: 'a -> 'a;
+
+let c1 = \x. \y. x y;
+type_assert c1: ('a -> 'b) -> 'a -> 'b;
+
+// Eta-expansion of c1.
+(
+    let t = \x. c1 x;
+    type_assert t: ('a -> 'b) -> 'a -> 'b;
+);
+
+// id function and redundant let binding.
+(
+    let t =
+        let y = \z. z in y;
+    type_assert t: 'a -> 'a;
+);
+
+// id function with redundant parameter.
+(
+    let t = \x. let y = \z. z in y;
+    type_assert t: 'a -> 'b -> 'b;
+);
+
+// id function with redundant application.
+(
+    let t = \x. let y = \z. z in y x;
+    type_assert t: 'a -> 'a;
+);
+
+// Ill-typed term.
+type_error (\x. x x);
+
+// Max Heiber's example.
+// fun y -> y (fun z -> y z)
+type_error (\y. y (\z. y z));
+
+// id can be 'self-applied', on the surface of it.
+(
+    let t =
+        let id = id
+        in id id;
+    type_assert t: 'a -> 'a;
+);
+
+(
+    let t = (
+        let x = c1
+        in let y =
+            let z = x id in z
+        in y
+    );
+    type_assert t: 'a -> 'a;
+);
+
+// fun x -> fun y -> let x = x y in fun x -> y x;;
+// - : (('a -> 'b) -> 'c) -> ('a -> 'b) -> 'a -> 'b = <fun>
+(
+    let t = \x. \y. (let x = x y in \x. y x);
+    type_assert t: (('a -> 'b) -> 'c) -> ('a -> 'b) -> 'a -> 'b;
+);
+
+// Escape of type variables.
+(
+    let t = \x. let y = x in y;
+    type_assert t: 'a -> 'a;
+);
+
+(
+    let t = \x. let y = \z. x in y;
+    type_assert t: 'a -> 'b -> 'a;
+);
+
+(
+    let t = \x. let y = \z. x z in y;
+    type_assert t: ('a -> 'b) -> 'a -> 'b;
+);
+
+(
+    let t = \x. \y.
+        let z = x y
+        in z y;
+    type_assert t: ('a -> 'a -> 'b) -> 'a -> 'b;
+);
+
+type_error (\x. let y = x in y y);
+
+(
+    // fun x -> let y = let z = x (fun x -> x) in z in y;;
+    //  - : (('a -> 'a) -> 'b) -> 'b = <fun>
+    let t = \x.
+        let y =
+            let z = x (\w. w)
+            in z
+        in y;
+    type_assert t: (('a -> 'a) -> 'b) -> 'b;
+);

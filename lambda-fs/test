@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -eu
+
+mkdir -p target
+
+cat tests/features/infer.lambda | dotnet run -p LambdaCli >target/infer.txt
+grep ERROR target/infer.txt || :
+echo OK

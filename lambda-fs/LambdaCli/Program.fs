@@ -5,6 +5,7 @@ open LambdaDomain.Location
 open LambdaSyntax.Tokenize
 open LambdaSyntax.Parse
 open LambdaSyntax.ScopeRes
+open LambdaSyntax.HirGen
 
 let private dumpTokens (tokens: _ array, errors: _ array) =
   if errors |> Array.isEmpty |> not then
@@ -33,5 +34,8 @@ let main _ =
   // printfn "%A" ast
 
   let scopeResult = scopeRes ast
-  printfn "%A" scopeResult
+  // printfn "%A" scopeResult
+
+  let hir = hirGen ast scopeResult
+  printfn "%A" hir
   0

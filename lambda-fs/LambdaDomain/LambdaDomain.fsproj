@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <Compile Include="Location.fs" />
+    <Compile Include="Hir.fs" />
   </ItemGroup>
 
 </Project>

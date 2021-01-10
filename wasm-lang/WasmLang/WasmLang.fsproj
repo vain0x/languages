@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Ops.fs" />
+    <Compile Include="MemoryBuffer.fs" />
+    <Compile Include="WriteInt.fs" />
+    <Compile Include="Types.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

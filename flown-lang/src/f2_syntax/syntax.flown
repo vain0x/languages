@@ -1,0 +1,117 @@
+// Flown syntax tokenizer/parser
+
+// ===============================================
+
+// Tokenize
+
+enum Token {
+    Int
+    Float
+    Char
+    String
+    Ident
+
+    // Keyword
+    EnumKw
+    FnKw
+
+    // Punctuation
+    LeftParen
+    RightParen
+}
+
+struct TokenData {
+    kind: Token
+    word: string
+}
+
+fn tokenize(s: string, tokens: &mut Array[TokenData]) {
+
+}
+
+struct SyntaxError(msg: string, i: usize)
+
+// ===============================================
+
+// Parse
+
+owned struct Ast(
+    root: &mut SyntaxRoot | null
+    nodes: SyntaxNode
+)
+
+struct FnStmt(
+    name: &TokenData
+    param_list: ParamList
+    result_ty_opt: &Ty | null
+    body_opt: &Block | null
+)
+
+ref struct Parser(
+    tokens: &Array[TokenData]
+    i: usize
+    ast: &mut Ast
+    errors: &mut Array[SyntaxError]
+)
+
+fn parse(tokens: &Array[TokenData], ast: &mut Ast, errors: &mut Array[SyntaxError]) {
+    let p = &mut Parser(tokens, i: 0, ast, errors)
+    parse_root(p)
+
+    if p.i != p.tokens.len() {
+        p.errors(SyntaxError("Expected EOF.", p.i))
+    }
+}
+
+struct Syntax(
+    source: Text
+    tokens: Array[TokenData]
+    ast: Ast
+    errors: Vec[SyntaxError]
+)
+
+// ===============================================
+
+fn read_and_parse(syntax: &mut Syntax) {
+    stdin.read_to_string(&mut syntax.source)
+    tokenize(syntax.source.as_string(), &mut syntax.tokens)
+    parse(&syntax.tokens, &mut syntax.ast, &mut syntax.errors)
+}
+
+fn check_command -> never {
+    let syntax = Syntax::new()
+    read_and_parse(&mut syntax)
+
+    let code = if syntax.errors.len() == 0 {
+        0
+    } else {
+        println("ERROR:")
+        for e in syntax.errors {
+            e.dump()
+        }
+        1
+    }
+
+    std::process::exit(code)
+}
+
+struct PoorEvaluator(syntax: Syntax)
+
+fn eval_command -> never {
+    let e = PoorEvaluator::new()
+    read_and_parse(&mut e.syntax)
+
+    let code = e.syntax.ast.find_int_literal().unwrap()
+    std::process::exit(code)
+}
+
+fn main {
+    match std::process::args() {
+        ["check"] => check_command()
+        ["eval"] => eval_command()
+        args => {
+            eprintln("Invalid args. Usage: flown [check|eval]")
+            std::process::exit(1)
+        }
+    }
+}

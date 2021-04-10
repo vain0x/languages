@@ -14,7 +14,14 @@ bumpalo = { version = "3.6.1", features = ["boxed", "collections"] }
 log = { version = "0.4.14", features = ["std"] }
 
 # Tokenizer library <https://github.com/maciejhirsz/logos>
-logos = { version = "0.12.0" }
+logos = "0.12.0"
+
+# Parser generator library <https://github.com/lalrpop/lalrpop>
+lalrpop-util = "0.19.5"
+regex = { version = "1", default_features = false, features = ["std"] }
+
+[build-dependencies]
+lalrpop = "0.19.5"
 
 [dev-dependencies]
 # Snapshot testing <https://github.com/rust-analyzer/expect-test>

@@ -1,0 +1,23 @@
+// https://lalrpop.github.io/lalrpop/
+
+use crate::parse as lexer;
+
+grammar;
+
+pub Term: lexer::Token = {
+    <n:Num> => n,
+    "(" <t:Term> ")" => t,
+};
+
+Num: lexer::Token = "num";
+
+extern {
+    type Location = usize;
+    type Error = lexer::LexicalError;
+
+    enum lexer::Token {
+        "(" => lexer::Token::LeftParen,
+        ")" => lexer::Token::RightParen,
+        "num" => lexer::Token::Number,
+    }
+}

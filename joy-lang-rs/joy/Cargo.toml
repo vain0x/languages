@@ -7,3 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+joy_syntax = { path = "../joy_syntax" }
+joy_util = { path = "../joy_util" }
+
+# Bump allocator <https://github.com/fitzgen/bumpalo>
+bumpalo = { version = "3.6.1", features = ["boxed", "collections"] }
+
+# Logging API <https://github.com/rust-lang/log>
+log = { version = "0.4.14", features = ["std"] }

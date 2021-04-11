@@ -7,31 +7,9 @@ use bumpalo::Bump;
 
 grammar<'b>(source_code: &'b str, bump: &'b Bump);
 
-pub Root: ARoot<'b> = {
-    () => ARoot { decls: bumpalo::vec![in bump] },
-    <mut r:Root> <decl:Decl> => {
-        r.decls.push(decl);
-        r
-    }
-};
-
-pub Decl: ADecl<'b> = {
-    <term:Term> "eos" => ADecl(term, ),
-};
-
-pub Term: ALit<'b> = {
-    <n:Num> => n,
-};
-
-Num: ALit<'b> = {
-    <l:@L> <n:"num"> <r:@R> => {
-        ALit {
-            token: n,
-            text: &source_code[l.index()..r.index()],
-            pos: l,
-        }
-    }
-};
+// -----------------------------------------------
+// Tokens
+// -----------------------------------------------
 
 extern {
     type Location = Pos;
@@ -40,8 +18,143 @@ extern {
     enum Token {
         "eos" => Token::Eos,
         "num" => Token::DecimalInt,
-        "+" => Token::Plus,
+        "ident" => Token::Ident,
         "(" => Token::LeftParen,
         ")" => Token::RightParen,
+        "[" => Token::LeftBracket,
+        "]" => Token::RightBracket,
+        "{" => Token::LeftBrace,
+        "}" => Token::RightBrace,
+        "&" => Token::And,
+        "&&" => Token::AndAnd,
+        "&&&" => Token::AndAndAnd,
+        "&=" => Token::AndEqual,
+        "!" => Token::Bang,
+        "!=" => Token::BangEqual,
+        ":" => Token::Colon,
+        "::" => Token::ColonColon,
+        "," => Token::Comma,
+        "." => Token::Dot,
+        ".." => Token::DotDot,
+        "..=" => Token::DotDotEqual,
+        "..<" => Token::DotDotLeft,
+        "=" => Token::Equal,
+        "==" => Token::EqualEqual,
+        "#" => Token::Hash,
+        "#!" => Token::HashBang,
+        "^" => Token::Hat,
+        "^=" => Token::HatEqual,
+        "<" => Token::Left,
+        "<=" => Token::LeftEqual,
+        "<=>" => Token::LeftEqualRight,
+        "<<" => Token::LeftLeft,
+        "<<=" => Token::LeftLeftEqual,
+        "<-" => Token::LeftSlimArrow,
+        "-" => Token::Minus,
+        "-=" => Token::MinusEqual,
+        "--" => Token::MinusMinus,
+        "%" => Token::Percent,
+        "%=" => Token::PercentEqual,
+        "|" => Token::Pipe,
+        "|=" => Token::PipeEqual,
+        "||" => Token::PipePipe,
+        "+" => Token::Plus,
+        "+=" => Token::PlusEqual,
+        "++" => Token::PlusPlus,
+        "?" => Token::Question,
+        "??" => Token::QuestionQuestion,
+        ">" => Token::Right,
+        ">=" => Token::RightEqual,
+        "=>" => Token::RightFatArrow,
+        "->" => Token::RightSlimArrow,
+        ">>" => Token::RightRight,
+        ">>=" => Token::RightRightEqual,
+        ";" => Token::Semi,
+        "/" => Token::Slash,
+        "/=" => Token::SlashEqual,
+        "*" => Token::Star,
+        "*=" => Token::StarEqual,
+        "**" => Token::StarStar,
+        "**=" => Token::StarStarEqual,
     }
 }
+
+// -----------------------------------------------
+// Terminals
+// -----------------------------------------------
+
+Lit: ALit<'b> = {
+    <l:@L> <n:"num"> <r:@R> => ALit {
+        token: n,
+        text: &source_code[l.index()..r.index()],
+        pos: l,
+    },
+};
+
+Name: AName<'b> = {
+    <l:@L> "ident" <r:@R> => AName {
+        text: &source_code[l.index()..r.index()],
+        pos: l,
+    },
+};
+
+// -----------------------------------------------
+// Types
+// -----------------------------------------------
+
+// -----------------------------------------------
+// Patterns
+// -----------------------------------------------
+
+// -----------------------------------------------
+// Expressions
+// -----------------------------------------------
+
+AtomicExpr: AExpr<'b> = {
+    <lit:Lit> => AExpr::Lit(lit),
+    <name:Name> => AExpr::Name(name),
+    "(" <expr:Expr> ")" => expr,
+}
+
+MulExpr: AExpr<'b> = {
+    <expr:AtomicExpr> => expr,
+    <l:AtomicExpr> <pos:@L> "*" <r:AtomicExpr> => AExpr::Binary(ABinaryExpr {
+        op: BinaryOp::Mul, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
+    }),
+    <l:AtomicExpr> <pos:@L> "/" <r:AtomicExpr> => AExpr::Binary(ABinaryExpr {
+        op: BinaryOp::Div, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
+    }),
+    <l:AtomicExpr> <pos:@L> "%" <r:AtomicExpr> => AExpr::Binary(ABinaryExpr {
+        op: BinaryOp::Modulo, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
+    }),
+}
+
+AddExpr: AExpr<'b> = {
+    <expr:MulExpr> => expr,
+    <l:AddExpr> <pos:@L> "+" <r:MulExpr> => AExpr::Binary(ABinaryExpr {
+        op: BinaryOp::Add, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
+    }),
+    <l:AddExpr> <pos:@L> "-" <r:MulExpr> => AExpr::Binary(ABinaryExpr {
+        op: BinaryOp::Sub, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
+    }),
+}
+
+Expr: AExpr<'b> = {
+    <expr:AddExpr> => expr,
+}
+
+// -----------------------------------------------
+// Declarations
+// -----------------------------------------------
+
+Decl: ADecl<'b> = {
+    <expr:Expr> "eos" => ADecl(AExprDecl(expr)),
+};
+
+pub Root: ARoot<'b> = {
+    () => ARoot { decls: bumpalo::vec![in bump] },
+    <mut r:Root> <decl:Decl> => {
+        r.decls.push(decl);
+        r
+    }
+};

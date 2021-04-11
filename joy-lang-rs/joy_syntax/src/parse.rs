@@ -61,7 +61,8 @@ fn parse_test() {
 
     let mut lexer = MyLexer {
         tokenizer: JoyTokenizer::new(
-            r#"42
+            r#"42 + 2 *
+                3
 
             32"#,
         ),

@@ -251,6 +251,7 @@ dependencies = [
  "log",
  "logos",
  "regex",
+ "text-position-rs",
 ]
 
 [[package]]
@@ -490,6 +491,11 @@ dependencies = [
  "dirs",
  "winapi",
 ]
+
+[[package]]
+name = "text-position-rs"
+version = "0.2.0"
+source = "git+https://github.com/vain0x/text-position-rs?tag=v0.2.0#bf5fc2f5292b3592553d690417827b8adca834b1"
 
 [[package]]
 name = "tiny-keccak"

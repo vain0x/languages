@@ -1,42 +1,39 @@
+use crate::tokenize::{JoyTokenizer, Token};
+use bumpalo::Bump;
+
+type Pos = text_position_rs::CompositePosition;
+type Utf8Pos = text_position_rs::Utf8Position;
+
 pub type Spanned<Tok, Loc, Error> = Result<(Loc, Tok, Loc), Error>;
 
-#[derive(Clone, Debug)]
-pub enum Token {
-    LeftParen,
-    RightParen,
-    Number,
+#[derive(Clone, Copy, Debug, Default)]
+pub struct LexicalError;
+
+/// For lalrpop.
+pub struct MyLexer<'b> {
+    tokenizer: JoyTokenizer<'b>,
 }
 
-pub(crate) type LexicalError = ();
-
-struct MyLexer {
-    index: usize,
-    tokens: Vec<(Token, usize)>,
-}
-
-impl Iterator for MyLexer {
+impl<'b> Iterator for MyLexer<'b> {
     type Item = Spanned<Token, usize, LexicalError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let i = self.index;
-        let (token, len) = self.tokens.pop()?;
-        self.index += len;
-        Some(Ok((i, token, self.index)))
+        let (token, text, pos) = self.tokenizer.next()?;
+        Some(Ok((
+            pos.index as usize,
+            token,
+            pos.index as usize + text.len(),
+        )))
     }
 }
 
 #[test]
-fn calculator1() {
+fn parse_test() {
     use crate::grammar::*;
 
-    let mut tokens = vec![
-        (Token::LeftParen, 1),
-        (Token::Number, 2),
-        (Token::RightParen, 1),
-    ];
-    tokens.reverse();
+    let mut lexer = MyLexer {
+        tokenizer: JoyTokenizer::new("(42)"),
+    };
 
-    TermParser::new()
-        .parse(MyLexer { index: 0, tokens })
-        .unwrap();
+    TermParser::new().parse(&mut lexer).unwrap();
 }

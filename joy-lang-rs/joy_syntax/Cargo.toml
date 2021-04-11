@@ -20,6 +20,8 @@ logos = "0.12.0"
 lalrpop-util = "0.19.5"
 regex = { version = "1", default_features = false, features = ["std"] }
 
+text-position-rs = { git = "https://github.com/vain0x/text-position-rs", tag = "v0.2.0", features = ["checked"] }
+
 [build-dependencies]
 lalrpop = "0.19.5"
 

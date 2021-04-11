@@ -1,7 +1,8 @@
-use logos::{Logos};
+use logos::Logos;
+use text_position_rs::CompositePosition;
 
-#[derive(Logos, Debug, PartialEq)]
-enum Token {
+#[derive(Logos, Clone, Copy, Debug, PartialEq)]
+pub enum Token {
     // Trivias:
     #[error]
     Bad,
@@ -11,6 +12,9 @@ enum Token {
     Newlines,
     #[regex("//[^\r\n]*")]
     Comment,
+
+    // Extra:
+    Eos,
 
     // Literals:
     #[regex("[0-9]+")]
@@ -149,6 +153,146 @@ enum Token {
     StarStarEqual,
 }
 
+impl Token {
+    pub fn is_trailing_trivia(self) -> bool {
+        match self {
+            Token::Bad | Token::Blank | Token::Comment => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_trivia(self) -> bool {
+        self == Token::Newlines || self.is_trailing_trivia()
+    }
+
+    pub fn at_statement_last(self) -> bool {
+        match self {
+            Token::DecimalInt
+            | Token::String
+            | Token::False
+            | Token::Return
+            | Token::True
+            | Token::Ident
+            | Token::RightParen
+            | Token::RightBracket
+            | Token::RightBrace => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_semi(self) -> bool {
+        self == Token::Semi
+    }
+}
+
+/// For parser.
+pub struct JoyTokenizer<'b> {
+    source_code: &'b str,
+    lexer: logos::Lexer<'b, Token>,
+    pos: CompositePosition,
+    last: Option<(Token, usize)>,
+    auto_eos: bool,
+    fused: bool,
+}
+
+impl<'b> JoyTokenizer<'b> {
+    pub fn new(source_code: &'b str) -> Self {
+        let mut lexer = logos::Lexer::new(source_code);
+        let last = lexer
+            .next()
+            .map(|token| (token, range_to_len(lexer.span())));
+
+        Self {
+            source_code,
+            lexer,
+            pos: CompositePosition::new(0, 0, 0, 0),
+            last,
+            auto_eos: false,
+            fused: last.is_none(),
+        }
+    }
+
+    fn end_pos(&self, pos: CompositePosition, len: usize) -> CompositePosition {
+        let i = pos.index as usize;
+        let s = &self.source_code[i..i + len];
+        pos + CompositePosition::from(s)
+    }
+
+    fn bump(&mut self) {
+        let last = self
+            .lexer
+            .next()
+            .map(|token| (token, range_to_len(self.lexer.span())));
+        self.last = last;
+    }
+
+    pub fn next(&mut self) -> Option<(Token, &'b str, CompositePosition)> {
+        if self.fused {
+            return None;
+        }
+
+        if self.auto_eos {
+            self.auto_eos = false;
+            return Some((Token::Eos, "", self.pos));
+        }
+
+        let start = self.pos;
+
+        let mut leading_len = 0_usize;
+        while let Some(len) = self
+            .last
+            .and_then(|(t, len)| if t.is_trivia() { Some(len) } else { None })
+        {
+            leading_len += len;
+            self.bump();
+        }
+
+        let (main_token, main_len) = match self.last {
+            Some(it) => it,
+            None => {
+                self.fused = true;
+                return None;
+            }
+        };
+        let main_pos = self.end_pos(start, leading_len);
+        self.bump();
+
+        let mut trailing_len = 0_usize;
+        while let Some(len) = self.last.and_then(|(t, len)| {
+            if t.is_trailing_trivia() {
+                Some(len)
+            } else {
+                None
+            }
+        }) {
+            trailing_len += len;
+            self.bump();
+        }
+
+        let end_pos = self.end_pos(main_pos, main_len + trailing_len);
+        self.pos = end_pos;
+
+        if main_token.is_semi() {
+            return Some((Token::Eos, "", main_pos));
+        }
+
+        let main_text = {
+            let i = main_pos.index as usize;
+            &self.source_code[i..i + main_len]
+        };
+
+        if main_token.at_statement_last() && self.last.map_or(true, |(t, _)| t == Token::Newlines) {
+            self.auto_eos = true;
+        }
+
+        Some((main_token, main_text, main_pos))
+    }
+}
+
+fn range_to_len(range: std::ops::Range<usize>) -> usize {
+    range.end - range.start
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,7 +326,7 @@ mod tests {
             r#"
                 // The function.
                 fn main() {
-                    printfn "Hello, world!"
+                    printfn("Hello, world!")
                 }
             "#,
             expect![[r#"
@@ -198,11 +342,12 @@ mod tests {
                 60..61  LeftBrace
                 61..82  Newlines "\n                    "
                 82..89  Ident "printfn"
-                89..90  Blank " "
+                89..90  LeftParen
                 90..105  String "\"Hello, world!\""
-                105..122  Newlines "\n                "
-                122..123  RightBrace
-                123..136  Newlines "\n            "
+                105..106  RightParen
+                106..123  Newlines "\n                "
+                123..124  RightBrace
+                124..137  Newlines "\n            "
             "#]],
         );
     }

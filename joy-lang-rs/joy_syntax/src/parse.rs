@@ -59,7 +59,8 @@ fn parse_test() {
             + 42 )"#,
         ),
     };
+    let bump = Bump::new();
 
-    RootParser::new().parse(&mut lexer).unwrap();
+    RootParser::new().parse(&bump, &mut lexer).unwrap();
     // panic!();
 }

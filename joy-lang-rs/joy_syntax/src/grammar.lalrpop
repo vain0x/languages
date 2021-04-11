@@ -3,12 +3,14 @@
 use crate::ast::*;
 use crate::parse::{MyLexer, LexicalError, Pos};
 use crate::tokenize::Token;
+use bumpalo::Bump;
 
-grammar<'b>;
+grammar<'b>(bump: &'b Bump);
 
-pub Root: ARoot = {
-    () => ARoot,
-    <decl:Decl> <r:Root> => {
+pub Root: ARoot<'b> = {
+    () => ARoot { decls: bumpalo::vec![in bump] },
+    <decl:Decl> <mut r:Root> => {
+        r.decls.push(decl);
         r
     }
 };
@@ -22,6 +24,7 @@ pub Decl: ADecl = {
 
 pub Term: Token = {
     <n:Num> => n,
+    "+" <t:Term> => t,
     "(" <t:Term> ")" "eos" => t,
 };
 
@@ -34,6 +37,7 @@ extern {
     enum Token {
         "eos" => Token::Eos,
         "num" => Token::DecimalInt,
+        "+" => Token::Plus,
         "(" => Token::LeftParen,
         ")" => Token::RightParen,
     }

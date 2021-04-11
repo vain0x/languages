@@ -22,4 +22,6 @@ pub enum BinaryOp {
 
 pub struct ADecl;
 
-pub struct ARoot;
+pub struct ARoot<'b> {
+    pub decls: BumpVec<'b, ADecl>,
+}

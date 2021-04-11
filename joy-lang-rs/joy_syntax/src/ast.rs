@@ -1,6 +1,9 @@
-use bumpalo::{collections::Vec as BumpVec, boxed::Box as BumpBox};
+use bumpalo::{boxed::Box as BumpBox, collections::Vec as BumpVec};
 
-pub struct Name<'b> { text: &'b str, index: usize }
+pub struct Name<'b> {
+    text: &'b str,
+    index: usize,
+}
 
 type BoxedExpr<'b> = BumpBox<'b, AExpr<'b>>;
 
@@ -16,3 +19,7 @@ pub enum BinaryOp {
     Add,
     Sub,
 }
+
+pub struct ADecl;
+
+pub struct ARoot;

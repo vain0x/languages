@@ -1,10 +1,24 @@
 // https://lalrpop.github.io/lalrpop/
 
-use crate::parse::{MyLexer, LexicalError};
-use text_position_rs::CompositePosition;
+use crate::ast::*;
+use crate::parse::{MyLexer, LexicalError, Pos};
 use crate::tokenize::Token;
 
 grammar<'b>;
+
+pub Root: ARoot = {
+    () => ARoot,
+    <decl:Decl> <r:Root> => {
+        r
+    }
+};
+
+pub Decl: ADecl = {
+    <term:Term> => {
+        eprintln!("{:?}", term);
+        ADecl
+    },
+};
 
 pub Term: Token = {
     <n:Num> => n,
@@ -14,7 +28,7 @@ pub Term: Token = {
 Num: Token = "num";
 
 extern {
-    type Location = usize;
+    type Location = Pos;
     type Error = LexicalError;
 
     enum Token {

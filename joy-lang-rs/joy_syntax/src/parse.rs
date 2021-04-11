@@ -1,8 +1,30 @@
 use crate::tokenize::{JoyTokenizer, Token};
 use bumpalo::Bump;
+use std::fmt::{self, Debug};
 
-type Pos = text_position_rs::CompositePosition;
+use text_position_rs::CompositePosition;
 type Utf8Pos = text_position_rs::Utf8Position;
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct Pos(CompositePosition);
+
+impl Debug for Pos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Utf8Pos::from(self.0).fmt(f)
+    }
+}
+
+impl Default for Pos {
+    fn default() -> Self {
+        Pos(CompositePosition::new(0, 0, 0, 0))
+    }
+}
+
+impl From<CompositePosition> for Pos {
+    fn from(pos: CompositePosition) -> Self {
+        Pos(pos)
+    }
+}
 
 pub type Spanned<Tok, Loc, Error> = Result<(Loc, Tok, Loc), Error>;
 
@@ -15,14 +37,14 @@ pub struct MyLexer<'b> {
 }
 
 impl<'b> Iterator for MyLexer<'b> {
-    type Item = Spanned<Token, usize, LexicalError>;
+    type Item = Spanned<Token, Pos, LexicalError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let (token, text, pos) = self.tokenizer.next()?;
         Some(Ok((
-            pos.index as usize,
+            pos.into(),
             token,
-            pos.index as usize + text.len(),
+            (pos + CompositePosition::from(text)).into(),
         )))
     }
 }
@@ -32,8 +54,12 @@ fn parse_test() {
     use crate::grammar::*;
 
     let mut lexer = MyLexer {
-        tokenizer: JoyTokenizer::new("(42)"),
+        tokenizer: JoyTokenizer::new(
+            r#"(
+            + 42 )"#,
+        ),
     };
 
-    TermParser::new().parse(&mut lexer).unwrap();
+    RootParser::new().parse(&mut lexer).unwrap();
+    // panic!();
 }

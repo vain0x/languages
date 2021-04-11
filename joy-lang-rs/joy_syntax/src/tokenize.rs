@@ -187,7 +187,7 @@ impl Token {
 
 /// For parser.
 pub struct JoyTokenizer<'b> {
-    source_code: &'b str,
+    pub(crate) source_code: &'b str,
     lexer: logos::Lexer<'b, Token>,
     pos: CompositePosition,
     last: Option<(Token, usize)>,

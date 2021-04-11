@@ -8,6 +8,12 @@ type Utf8Pos = text_position_rs::Utf8Position;
 #[derive(Copy, Clone, PartialEq)]
 pub struct Pos(CompositePosition);
 
+impl Pos {
+    pub fn index(&self) -> usize {
+        self.0.index as usize
+    }
+}
+
 impl Debug for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Utf8Pos::from(self.0).fmt(f)
@@ -55,12 +61,15 @@ fn parse_test() {
 
     let mut lexer = MyLexer {
         tokenizer: JoyTokenizer::new(
-            r#"(
-            + 42 )"#,
+            r#"42
+
+            32"#,
         ),
     };
     let bump = Bump::new();
 
-    RootParser::new().parse(&bump, &mut lexer).unwrap();
-    // panic!();
+    let result = RootParser::new()
+        .parse(&lexer.tokenizer.source_code, &bump, &mut lexer)
+        .unwrap();
+    panic!("{:?}", result);
 }

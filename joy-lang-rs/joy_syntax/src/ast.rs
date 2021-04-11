@@ -1,8 +1,16 @@
+use crate::{parse::Pos, tokenize::Token};
 use bumpalo::{boxed::Box as BumpBox, collections::Vec as BumpVec};
 
+#[derive(Debug)]
+pub struct ALit<'b> {
+    pub(crate) token: Token,
+    pub(crate) text: &'b str,
+    pub(crate) pos: Pos,
+}
+
 pub struct Name<'b> {
-    text: &'b str,
-    index: usize,
+    pub(crate) text: &'b str,
+    pub(crate) index: usize,
 }
 
 type BoxedExpr<'b> = BumpBox<'b, AExpr<'b>>;
@@ -20,8 +28,10 @@ pub enum BinaryOp {
     Sub,
 }
 
-pub struct ADecl;
+#[derive(Debug)]
+pub struct ADecl<'b>(pub ALit<'b>);
 
+#[derive(Debug)]
 pub struct ARoot<'b> {
-    pub decls: BumpVec<'b, ADecl>,
+    pub decls: BumpVec<'b, ADecl<'b>>,
 }

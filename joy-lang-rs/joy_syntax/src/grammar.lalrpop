@@ -5,30 +5,33 @@ use crate::parse::{MyLexer, LexicalError, Pos};
 use crate::tokenize::Token;
 use bumpalo::Bump;
 
-grammar<'b>(bump: &'b Bump);
+grammar<'b>(source_code: &'b str, bump: &'b Bump);
 
 pub Root: ARoot<'b> = {
     () => ARoot { decls: bumpalo::vec![in bump] },
-    <decl:Decl> <mut r:Root> => {
+    <mut r:Root> <decl:Decl> => {
         r.decls.push(decl);
         r
     }
 };
 
-pub Decl: ADecl = {
-    <term:Term> => {
-        eprintln!("{:?}", term);
-        ADecl
-    },
+pub Decl: ADecl<'b> = {
+    <term:Term> "eos" => ADecl(term, ),
 };
 
-pub Term: Token = {
+pub Term: ALit<'b> = {
     <n:Num> => n,
-    "+" <t:Term> => t,
-    "(" <t:Term> ")" "eos" => t,
 };
 
-Num: Token = "num";
+Num: ALit<'b> = {
+    <l:@L> <n:"num"> <r:@R> => {
+        ALit {
+            token: n,
+            text: &source_code[l.index()..r.index()],
+            pos: l,
+        }
+    }
+};
 
 extern {
     type Location = Pos;

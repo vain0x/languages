@@ -30,8 +30,17 @@ pub enum AExpr<'b> {
 }
 
 impl<'b> AExpr<'b> {
-    pub fn boxed_in(self, bump: &'b Bump) -> BoxedExpr<'b> {
+    pub(crate) fn boxed_in(self, bump: &'b Bump) -> BoxedExpr<'b> {
         BumpBox::new_in(self, bump)
+    }
+
+    pub(crate) fn new_binary(op: BinaryOp, l: Self, r: Self, pos: Pos, bump: &'b Bump) -> Self {
+        Self::Binary(ABinaryExpr {
+            op,
+            l: l.boxed_in(bump),
+            r: r.boxed_in(bump),
+            pos,
+        })
     }
 }
 
@@ -52,7 +61,25 @@ pub struct AExprDecl<'b>(pub AExpr<'b>);
 #[derive(Debug)]
 pub struct ADecl<'b>(pub AExprDecl<'b>);
 
+impl<'b> ADecl<'b> {
+    pub(crate) fn new_expr(expr: AExpr<'b>) -> Self {
+        Self(AExprDecl(expr))
+    }
+}
+
 #[derive(Debug)]
 pub struct ARoot<'b> {
     pub decls: BumpVec<'b, ADecl<'b>>,
+}
+
+impl<'b> ARoot<'b> {
+    pub fn new(bump: &'b Bump) -> Self {
+        Self {
+            decls: bumpalo::vec![in bump],
+        }
+    }
+
+    pub fn push(&mut self, decl: ADecl<'b>) {
+        self.decls.push(decl);
+    }
 }

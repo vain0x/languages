@@ -1,6 +1,9 @@
-use crate::tokenize::{JoyTokenizer, Token};
+use crate::{
+    ast::ARoot,
+    tokenize::{JoyTokenizer, Token},
+};
 use bumpalo::Bump;
-use std::fmt::{self, Debug};
+use std::fmt::{self, Debug, Display};
 
 use text_position_rs::CompositePosition;
 type Utf8Pos = text_position_rs::Utf8Position;
@@ -16,7 +19,13 @@ impl Pos {
 
 impl Debug for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Utf8Pos::from(self.0).fmt(f)
+        Debug::fmt(&Utf8Pos::from(self.0), f)
+    }
+}
+
+impl Display for Pos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Display::fmt(&Utf8Pos::from(self.0), f)
     }
 }
 
@@ -37,6 +46,12 @@ pub type Spanned<Tok, Loc, Error> = Result<(Loc, Tok, Loc), Error>;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LexicalError;
 
+impl Display for LexicalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Lexical error")
+    }
+}
+
 /// For lalrpop.
 pub struct MyLexer<'b> {
     tokenizer: JoyTokenizer<'b>,
@@ -55,22 +70,93 @@ impl<'b> Iterator for MyLexer<'b> {
     }
 }
 
-#[test]
-fn parse_test() {
-    use crate::grammar::*;
+#[derive(Debug)]
+pub struct ParseError<'b> {
+    pub msg: &'b str,
+    pub pos: Pos,
+}
 
+pub fn parse_from_string<'b>(
+    source_code: &'b str,
+    bump: &'b Bump,
+) -> Result<ARoot<'b>, ParseError<'b>> {
     let mut lexer = MyLexer {
-        tokenizer: JoyTokenizer::new(
-            r#"42 + 2 *
-                3
-
-            32"#,
-        ),
+        tokenizer: JoyTokenizer::new(source_code),
     };
-    let bump = Bump::new();
 
-    let result = RootParser::new()
-        .parse(&lexer.tokenizer.source_code, &bump, &mut lexer)
-        .unwrap();
-    panic!("{:?}", result);
+    match crate::grammar::RootParser::new().parse(source_code, &bump, &mut lexer) {
+        Ok(it) => Ok(it),
+        Err(err) => {
+            let pos = match err {
+                lalrpop_util::ParseError::InvalidToken { location: l }
+                | lalrpop_util::ParseError::UnrecognizedEOF { location: l, .. }
+                | lalrpop_util::ParseError::UnrecognizedToken {
+                    token: (l, _, _), ..
+                }
+                | lalrpop_util::ParseError::ExtraToken { token: (l, _, _) } => l,
+                lalrpop_util::ParseError::User { .. } => Pos::default(),
+            };
+            Err(ParseError {
+                msg: bump.alloc_str(&format!("{}", err)),
+                pos,
+            })
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use expect_test::{expect_file, ExpectFile};
+
+    fn should_parse(source_code: &str, expect: ExpectFile) {
+        let bump = Bump::new();
+        let result = parse_from_string(source_code, &bump).unwrap();
+        expect.assert_debug_eq(&result);
+    }
+
+    fn should_fail(source_code: &str, expect: ExpectFile) {
+        let bump = Bump::new();
+        let result = parse_from_string(source_code, &bump).expect_err("should fail");
+        expect.assert_eq(&format!("Parse error: {} at {:?}", result.msg, result.pos));
+    }
+
+    macro_rules! should_parse {
+        ($($name:ident ,)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    should_parse(
+                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".joy")),
+                        expect_file![concat!("../../tests/parse/",  stringify!($name), ".generated.txt")],
+                    );
+                }
+            )*
+        }
+    }
+
+    macro_rules! should_fail {
+        ($($name:ident ,)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    should_fail(
+                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".joy")),
+                        expect_file![concat!("../../tests/parse/",  stringify!($name), ".generated.txt")],
+                    );
+                }
+            )*
+        }
+    }
+
+    should_parse! {
+        ok_empty,
+        ok_zero,
+        ok_multiline_expr,
+    }
+
+    should_fail! {
+        err_broken_arithmetic,
+        err_two_ints,
+    }
 }

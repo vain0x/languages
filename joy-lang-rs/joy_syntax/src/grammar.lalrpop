@@ -83,19 +83,15 @@ extern {
 // Terminals
 // -----------------------------------------------
 
-Lit: ALit<'b> = {
-    <l:@L> <n:"num"> <r:@R> => ALit {
-        token: n,
-        text: &source_code[l.index()..r.index()],
-        pos: l,
-    },
+Lit: ALit<'b> = <l:@L> <n:"num"> <r:@R> => ALit {
+    token: n,
+    text: &source_code[l.index()..r.index()],
+    pos: l,
 };
 
-Name: AName<'b> = {
-    <l:@L> "ident" <r:@R> => AName {
-        text: &source_code[l.index()..r.index()],
-        pos: l,
-    },
+Name: AName<'b> = <l:@L> "ident" <r:@R> => AName {
+    text: &source_code[l.index()..r.index()],
+    pos: l,
 };
 
 // -----------------------------------------------
@@ -118,43 +114,31 @@ AtomicExpr: AExpr<'b> = {
 
 MulExpr: AExpr<'b> = {
     <expr:AtomicExpr> => expr,
-    <l:AtomicExpr> <pos:@L> "*" <r:AtomicExpr> => AExpr::Binary(ABinaryExpr {
-        op: BinaryOp::Mul, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
-    }),
-    <l:AtomicExpr> <pos:@L> "/" <r:AtomicExpr> => AExpr::Binary(ABinaryExpr {
-        op: BinaryOp::Div, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
-    }),
-    <l:AtomicExpr> <pos:@L> "%" <r:AtomicExpr> => AExpr::Binary(ABinaryExpr {
-        op: BinaryOp::Modulo, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
-    }),
+    <l:AtomicExpr> <pos:@L> "*" <r:AtomicExpr> => AExpr::new_binary(BinaryOp::Mul, l, r, pos, bump),
+    <l:AtomicExpr> <pos:@L> "/" <r:AtomicExpr> => AExpr::new_binary(BinaryOp::Div, l, r, pos, bump),
+    <l:AtomicExpr> <pos:@L> "%" <r:AtomicExpr> => AExpr::new_binary(BinaryOp::Modulo, l, r, pos, bump),
 }
 
 AddExpr: AExpr<'b> = {
     <expr:MulExpr> => expr,
-    <l:AddExpr> <pos:@L> "+" <r:MulExpr> => AExpr::Binary(ABinaryExpr {
-        op: BinaryOp::Add, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
-    }),
-    <l:AddExpr> <pos:@L> "-" <r:MulExpr> => AExpr::Binary(ABinaryExpr {
-        op: BinaryOp::Sub, l: l.boxed_in(bump), r: r.boxed_in(bump), pos,
-    }),
+    <l:AddExpr> <pos:@L> "+" <r:MulExpr> => AExpr::new_binary(BinaryOp::Add, l, r, pos, bump),
+    <l:AddExpr> <pos:@L> "-" <r:MulExpr> => AExpr::new_binary(BinaryOp::Sub, l, r, pos, bump),
 }
 
-Expr: AExpr<'b> = {
-    <expr:AddExpr> => expr,
-}
+Expr: AExpr<'b> = <expr:AddExpr> => expr;
 
 // -----------------------------------------------
 // Declarations
 // -----------------------------------------------
 
 Decl: ADecl<'b> = {
-    <expr:Expr> "eos" => ADecl(AExprDecl(expr)),
+    <expr:Expr> "eos" => ADecl::new_expr(expr),
 };
 
 pub Root: ARoot<'b> = {
-    () => ARoot { decls: bumpalo::vec![in bump] },
+    () => ARoot::new(bump),
     <mut r:Root> <decl:Decl> => {
-        r.decls.push(decl);
+        r.push(decl);
         r
     }
 };

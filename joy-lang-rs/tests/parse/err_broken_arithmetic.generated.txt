@@ -1,0 +1,2 @@
+Parse error: Unrecognized token `Star` found at 1:6:1:7
+Expected one of "(", "ident" or "num" at 1:6

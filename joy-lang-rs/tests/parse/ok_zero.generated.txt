@@ -1,0 +1,15 @@
+ARoot {
+    decls: [
+        ADecl(
+            AExprDecl(
+                Lit(
+                    ALit {
+                        token: DecimalInt,
+                        text: "0",
+                        pos: 1:1,
+                    },
+                ),
+            ),
+        ),
+    ],
+}

@@ -1,5 +1,13 @@
+use std::fmt::{self, Debug, Display};
+
 use logos::Logos;
 use text_position_rs::CompositePosition;
+
+impl Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Debug::fmt(self, f)
+    }
+}
 
 #[derive(Logos, Clone, Copy, Debug, PartialEq)]
 pub enum Token {
@@ -273,6 +281,7 @@ impl<'b> JoyTokenizer<'b> {
         self.pos = end_pos;
 
         if main_token.is_semi() {
+            // No need to emit semi.
             return Some((Token::Eos, "", main_pos));
         }
 
@@ -312,9 +321,7 @@ mod tests {
                 | Token::DecimalInt
                 | Token::String
                 | Token::Ident => output += &format!("{:?} {:?}\n", token, &input[span]),
-                _ => {
-                    output += &format!("{:?}\n", token);
-                }
+                _ => output += &format!("{:?}\n", token),
             }
         }
         expect.assert_eq(&output);

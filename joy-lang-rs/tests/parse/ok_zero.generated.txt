@@ -1,6 +1,6 @@
 ARoot {
     decls: [
-        ADecl(
+        Expr(
             AExprDecl(
                 Lit(
                     ALit {

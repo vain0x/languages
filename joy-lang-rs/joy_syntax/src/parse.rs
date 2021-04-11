@@ -153,6 +153,10 @@ mod tests {
         ok_empty,
         ok_zero,
         ok_multiline_expr,
+        ok_let,
+        ok_fn,
+        ok_call_expr,
+        ok_semi,
     }
 
     should_fail! {

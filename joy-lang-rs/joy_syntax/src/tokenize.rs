@@ -1,6 +1,5 @@
-use std::fmt::{self, Debug, Display};
-
 use logos::Logos;
+use std::fmt::{self, Debug, Display};
 use text_position_rs::CompositePosition;
 
 impl Display for Token {

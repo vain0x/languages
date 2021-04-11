@@ -1,37 +1,57 @@
-use crate::{parse::Pos, tokenize::Token};
-use bumpalo::{boxed::Box as BumpBox, collections::Vec as BumpVec, Bump};
+use crate::{internals::*, parse::Pos, tokenize::Token};
 
 #[derive(Debug)]
 pub struct ALit<'b> {
-    pub(crate) token: Token,
-    pub(crate) text: &'b str,
-    pub(crate) pos: Pos,
+    pub token: Token,
+    pub text: &'b str,
+    pub pos: Pos,
 }
 
 #[derive(Debug)]
 pub struct AName<'b> {
-    pub(crate) text: &'b str,
-    pub(crate) pos: Pos,
+    pub text: &'b str,
+    pub pos: Pos,
+}
+
+#[derive(Debug)]
+pub struct ACallExpr<'b> {
+    pub callee: BoxedExpr<'b>,
+    pub args: BumpVec<'b, AExpr<'b>>,
+    pub pos: Pos,
 }
 
 #[derive(Debug)]
 pub struct ABinaryExpr<'b> {
-    pub(crate) op: BinaryOp,
-    pub(crate) l: BoxedExpr<'b>,
-    pub(crate) r: BoxedExpr<'b>,
-    pub(crate) pos: Pos,
+    pub op: BinaryOp,
+    pub l: BoxedExpr<'b>,
+    pub r: BoxedExpr<'b>,
+    pub pos: Pos,
 }
 
 #[derive(Debug)]
 pub enum AExpr<'b> {
     Lit(ALit<'b>),
     Name(AName<'b>),
+    Call(ACallExpr<'b>),
     Binary(ABinaryExpr<'b>),
 }
 
 impl<'b> AExpr<'b> {
     pub(crate) fn boxed_in(self, bump: &'b Bump) -> BoxedExpr<'b> {
         BumpBox::new_in(self, bump)
+    }
+
+    pub(crate) fn new_call(
+        callee: Self,
+        args: BumpVec<'b, AExpr<'b>>,
+        pos: Pos,
+        bump: &'b Bump,
+    ) -> Self {
+        Self::Call(ACallExpr {
+            callee: callee.boxed_in(bump),
+            args,
+            pos,
+        })
     }
 
     pub(crate) fn new_binary(op: BinaryOp, l: Self, r: Self, pos: Pos, bump: &'b Bump) -> Self {
@@ -59,11 +79,37 @@ pub enum BinaryOp {
 pub struct AExprDecl<'b>(pub AExpr<'b>);
 
 #[derive(Debug)]
-pub struct ADecl<'b>(pub AExprDecl<'b>);
+pub struct ALetDecl<'b> {
+    pub name: AName<'b>,
+    pub init: AExpr<'b>,
+    pub pos: Pos,
+}
+
+#[derive(Debug)]
+pub struct AFnDecl<'b> {
+    pub name: AName<'b>,
+    pub body: AExpr<'b>,
+    pub pos: Pos,
+}
+
+#[derive(Debug)]
+pub enum ADecl<'b> {
+    Expr(AExprDecl<'b>),
+    Let(ALetDecl<'b>),
+    Fn(AFnDecl<'b>),
+}
 
 impl<'b> ADecl<'b> {
     pub(crate) fn new_expr(expr: AExpr<'b>) -> Self {
-        Self(AExprDecl(expr))
+        ADecl::Expr(AExprDecl(expr))
+    }
+
+    pub(crate) fn new_let(name: AName<'b>, init: AExpr<'b>, pos: Pos) -> Self {
+        ADecl::Let(ALetDecl { name, init, pos })
+    }
+
+    pub(crate) fn new_fn(name: AName<'b>, body: AExpr<'b>, pos: Pos) -> Self {
+        ADecl::Fn(AFnDecl { name, body, pos })
     }
 }
 

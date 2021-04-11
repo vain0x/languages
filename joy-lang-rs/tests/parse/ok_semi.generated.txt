@@ -1,0 +1,37 @@
+ARoot {
+    decls: [
+        Expr(
+            AExprDecl(
+                Lit(
+                    ALit {
+                        token: DecimalInt,
+                        text: "1",
+                        pos: 3:1,
+                    },
+                ),
+            ),
+        ),
+        Expr(
+            AExprDecl(
+                Lit(
+                    ALit {
+                        token: DecimalInt,
+                        text: "2",
+                        pos: 3:4,
+                    },
+                ),
+            ),
+        ),
+        Expr(
+            AExprDecl(
+                Lit(
+                    ALit {
+                        token: DecimalInt,
+                        text: "3",
+                        pos: 3:7,
+                    },
+                ),
+            ),
+        ),
+    ],
+}

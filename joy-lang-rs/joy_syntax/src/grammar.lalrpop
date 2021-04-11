@@ -1,9 +1,9 @@
 // https://lalrpop.github.io/lalrpop/
 
 use crate::ast::*;
-use crate::parse::{MyLexer, LexicalError, Pos};
+use crate::internals::*;
+use crate::parse::{LexicalError, Pos};
 use crate::tokenize::Token;
-use bumpalo::Bump;
 
 grammar<'b>(source_code: &'b str, bump: &'b Bump);
 
@@ -18,6 +18,12 @@ extern {
     enum Token {
         "eos" => Token::Eos,
         "num" => Token::DecimalInt,
+        "string" => Token::String,
+        "false" => Token::False,
+        "fn" => Token::Fn,
+        "let" => Token::Let,
+        "return" => Token::Return,
+        "true" => Token::True,
         "ident" => Token::Ident,
         "(" => Token::LeftParen,
         ")" => Token::RightParen,
@@ -83,8 +89,15 @@ extern {
 // Terminals
 // -----------------------------------------------
 
-Lit: ALit<'b> = <l:@L> <n:"num"> <r:@R> => ALit {
-    token: n,
+LitToken: Token = {
+    <t:"num"> => t,
+    <t:"string"> => t,
+    <t:"false"> => t,
+    <t:"true"> => t,
+};
+
+Lit: ALit<'b> = <l:@L> <t:LitToken> <r:@R> => ALit {
+    token: t,
     text: &source_code[l.index()..r.index()],
     pos: l,
 };
@@ -112,11 +125,31 @@ AtomicExpr: AExpr<'b> = {
     "(" <expr:Expr> ")" => expr,
 }
 
-MulExpr: AExpr<'b> = {
+
+
+NonEmptyArgs: BumpVec<'b, AExpr<'b>> = {
+    <expr:Expr> => bumpalo::vec![in bump; expr],
+    <mut args:NonEmptyArgs> "," <next:Expr> => {
+        args.push(next);
+        args
+    }
+}
+
+Args: BumpVec<'b, AExpr<'b>> = {
+    () => bumpalo::vec![in bump],
+    <args:NonEmptyArgs> ","? => args,
+}
+
+ChainExpr: AExpr<'b> = {
     <expr:AtomicExpr> => expr,
-    <l:AtomicExpr> <pos:@L> "*" <r:AtomicExpr> => AExpr::new_binary(BinaryOp::Mul, l, r, pos, bump),
-    <l:AtomicExpr> <pos:@L> "/" <r:AtomicExpr> => AExpr::new_binary(BinaryOp::Div, l, r, pos, bump),
-    <l:AtomicExpr> <pos:@L> "%" <r:AtomicExpr> => AExpr::new_binary(BinaryOp::Modulo, l, r, pos, bump),
+    <l:ChainExpr> <pos:@L> "(" <args:Args> ")" => AExpr::new_call(l, args, pos, bump),
+}
+
+MulExpr: AExpr<'b> = {
+    <expr:ChainExpr> => expr,
+    <l:ChainExpr> <pos:@L> "*" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Mul, l, r, pos, bump),
+    <l:ChainExpr> <pos:@L> "/" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Div, l, r, pos, bump),
+    <l:ChainExpr> <pos:@L> "%" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Modulo, l, r, pos, bump),
 }
 
 AddExpr: AExpr<'b> = {
@@ -133,10 +166,13 @@ Expr: AExpr<'b> = <expr:AddExpr> => expr;
 
 Decl: ADecl<'b> = {
     <expr:Expr> "eos" => ADecl::new_expr(expr),
+    <pos:@L> "let" <name:Name> "=" <init:Expr> "eos" => ADecl::new_let(name, init, pos),
+    <pos:@L> "fn" <name:Name> "(" ")" "{" <body:Expr> "eos"? "}" => ADecl::new_fn(name, body, pos),
 };
 
 pub Root: ARoot<'b> = {
     () => ARoot::new(bump),
+    <mut r:Root> "eos" => r,
     <mut r:Root> <decl:Decl> => {
         r.push(decl);
         r

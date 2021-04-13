@@ -1,7 +1,7 @@
 ARoot {
-    decls: [
+    stmts: [
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Call(
                     ACallExpr {
                         callee: Name(
@@ -17,7 +17,7 @@ ARoot {
             ),
         ),
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Call(
                     ACallExpr {
                         callee: Name(
@@ -33,7 +33,7 @@ ARoot {
             ),
         ),
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Call(
                     ACallExpr {
                         callee: Name(
@@ -57,7 +57,7 @@ ARoot {
             ),
         ),
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Call(
                     ACallExpr {
                         callee: Name(
@@ -94,7 +94,7 @@ ARoot {
             ),
         ),
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Call(
                     ACallExpr {
                         callee: Name(
@@ -118,7 +118,7 @@ ARoot {
             ),
         ),
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Call(
                     ACallExpr {
                         callee: Name(
@@ -156,7 +156,7 @@ ARoot {
             ),
         ),
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Call(
                     ACallExpr {
                         callee: Call(

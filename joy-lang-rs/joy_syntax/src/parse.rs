@@ -4,8 +4,8 @@ use crate::{
 };
 use bumpalo::Bump;
 use std::fmt::{self, Debug, Display};
-
 use text_position_rs::CompositePosition;
+
 type Utf8Pos = text_position_rs::Utf8Position;
 
 #[derive(Copy, Clone, PartialEq)]

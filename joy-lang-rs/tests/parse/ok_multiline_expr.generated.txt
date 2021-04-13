@@ -1,7 +1,7 @@
 ARoot {
-    decls: [
+    stmts: [
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Binary(
                     ABinaryExpr {
                         op: Add,

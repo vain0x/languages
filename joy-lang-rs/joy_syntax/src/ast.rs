@@ -76,56 +76,56 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug)]
-pub struct AExprDecl<'b>(pub AExpr<'b>);
+pub struct AExprStmt<'b>(pub AExpr<'b>);
 
 #[derive(Debug)]
-pub struct ALetDecl<'b> {
+pub struct ALetStmt<'b> {
     pub name: AName<'b>,
     pub init: AExpr<'b>,
     pub pos: Pos,
 }
 
 #[derive(Debug)]
-pub struct AFnDecl<'b> {
+pub struct AFnStmt<'b> {
     pub name: AName<'b>,
     pub body: AExpr<'b>,
     pub pos: Pos,
 }
 
 #[derive(Debug)]
-pub enum ADecl<'b> {
-    Expr(AExprDecl<'b>),
-    Let(ALetDecl<'b>),
-    Fn(AFnDecl<'b>),
+pub enum AStmt<'b> {
+    Expr(AExprStmt<'b>),
+    Let(ALetStmt<'b>),
+    Fn(AFnStmt<'b>),
 }
 
-impl<'b> ADecl<'b> {
+impl<'b> AStmt<'b> {
     pub(crate) fn new_expr(expr: AExpr<'b>) -> Self {
-        ADecl::Expr(AExprDecl(expr))
+        AStmt::Expr(AExprStmt(expr))
     }
 
     pub(crate) fn new_let(name: AName<'b>, init: AExpr<'b>, pos: Pos) -> Self {
-        ADecl::Let(ALetDecl { name, init, pos })
+        AStmt::Let(ALetStmt { name, init, pos })
     }
 
     pub(crate) fn new_fn(name: AName<'b>, body: AExpr<'b>, pos: Pos) -> Self {
-        ADecl::Fn(AFnDecl { name, body, pos })
+        AStmt::Fn(AFnStmt { name, body, pos })
     }
 }
 
 #[derive(Debug)]
 pub struct ARoot<'b> {
-    pub decls: BumpVec<'b, ADecl<'b>>,
+    pub stmts: BumpVec<'b, AStmt<'b>>,
 }
 
 impl<'b> ARoot<'b> {
     pub fn new(bump: &'b Bump) -> Self {
         Self {
-            decls: bumpalo::vec![in bump],
+            stmts: bumpalo::vec![in bump],
         }
     }
 
-    pub fn push(&mut self, decl: ADecl<'b>) {
-        self.decls.push(decl);
+    pub fn push(&mut self, decl: AStmt<'b>) {
+        self.stmts.push(decl);
     }
 }

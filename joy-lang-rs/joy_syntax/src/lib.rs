@@ -7,7 +7,7 @@ mod tokenize;
 
 lalrpop_mod!(pub grammar);
 
-pub use parse::parse_from_string;
+pub use crate::{parse::parse_from_string, tokenize::Token};
 
 pub(crate) mod internals {
     pub(crate) use bumpalo::{boxed::Box as BumpBox, collections::Vec as BumpVec, Bump};

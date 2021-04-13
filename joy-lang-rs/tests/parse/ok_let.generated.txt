@@ -1,7 +1,7 @@
 ARoot {
-    decls: [
+    stmts: [
         Let(
-            ALetDecl {
+            ALetStmt {
                 name: AName {
                     text: "a",
                     pos: 1:5,
@@ -17,7 +17,7 @@ ARoot {
             },
         ),
         Let(
-            ALetDecl {
+            ALetStmt {
                 name: AName {
                     text: "b",
                     pos: 3:5,
@@ -33,7 +33,7 @@ ARoot {
             },
         ),
         Let(
-            ALetDecl {
+            ALetStmt {
                 name: AName {
                     text: "c",
                     pos: 7:5,

@@ -1,7 +1,7 @@
 ARoot {
-    decls: [
+    stmts: [
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Lit(
                     ALit {
                         token: DecimalInt,

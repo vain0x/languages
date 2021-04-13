@@ -1,7 +1,7 @@
 ARoot {
-    decls: [
+    stmts: [
         Fn(
-            AFnDecl {
+            AFnStmt {
                 name: AName {
                     text: "main",
                     pos: 1:4,

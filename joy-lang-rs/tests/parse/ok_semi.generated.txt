@@ -1,7 +1,7 @@
 ARoot {
-    decls: [
+    stmts: [
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Lit(
                     ALit {
                         token: DecimalInt,
@@ -12,7 +12,7 @@ ARoot {
             ),
         ),
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Lit(
                     ALit {
                         token: DecimalInt,
@@ -23,7 +23,7 @@ ARoot {
             ),
         ),
         Expr(
-            AExprDecl(
+            AExprStmt(
                 Lit(
                     ALit {
                         token: DecimalInt,

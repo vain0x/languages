@@ -3,8 +3,8 @@ use joy_syntax::{ast, AModule, Token};
 
 #[derive(Debug)]
 pub(crate) struct XLocal<'b> {
-    name: &'b str,
-    alive: bool,
+    pub(crate) name: &'b str,
+    pub(crate) alive: bool,
 }
 
 #[derive(Debug)]
@@ -30,6 +30,7 @@ pub(crate) enum XTerminator<'b> {
 pub(crate) struct XBody<'b> {
     pub(crate) name: &'b str,
     pub(crate) args: BumpVec<'b, ast::AName<'b>>,
+    pub(crate) locals: RefCell<BumpVec<'b, &'b XLocal<'b>>>,
     pub(crate) blocks: RefCell<BumpVec<'b, XBlock<'b>>>,
 }
 
@@ -38,6 +39,7 @@ impl<'b> XBody<'b> {
         Self {
             name,
             args: bumpalo::vec![in bump],
+            locals: RefCell::new(bumpalo::vec![in bump]),
             blocks: RefCell::new(bumpalo::vec![in bump]),
         }
     }
@@ -52,6 +54,14 @@ pub(crate) struct XDebugStmt<'b> {
 #[derive(Debug)]
 pub(crate) enum XStmt<'b> {
     Debug(XDebugStmt<'b>),
+    Copy {
+        target: &'b XLocal<'b>,
+        src: &'b XLocal<'b>,
+    },
+    SetFn {
+        target: &'b XLocal<'b>,
+        body: &'b XBody<'b>,
+    },
     SetImmediateString {
         target: &'b XLocal<'b>,
         value: &'b str,
@@ -68,19 +78,24 @@ pub(crate) struct XModule<'b> {
     pub(crate) name: &'b str,
     pub(crate) path: &'b str,
     pub(crate) source_code: &'b str,
+    pub(crate) toplevel: &'b XBody<'b>,
     // pub(crate) symbols: HashMap<&'b str, MDefRef<'b>>,
 }
 
 pub(crate) struct XProgram<'b> {
     pub(crate) modules: BumpVec<'b, XModule<'b>>,
     pub(crate) bodies: BumpVec<'b, &'b XBody<'b>>,
+
+    pub(crate) toplevel: &'b XBody<'b>,
 }
 
 impl<'b> XProgram<'b> {
     pub(crate) fn new_in(bump: &'b Bump) -> Self {
+        let toplevel = bump.alloc(XBody::new("program", bump));
         Self {
             modules: BumpVec::new_in(bump),
             bodies: BumpVec::new_in(bump),
+            toplevel,
         }
     }
 }
@@ -113,7 +128,7 @@ pub(crate) struct XirGen<'a, 'b> {
 
 impl<'a, 'b: 'a> XirGen<'a, 'b> {
     pub(crate) fn new(program: &'a mut XProgram<'b>, bump: &'b Bump) -> Self {
-        let toplevel = bump.alloc(XBody::new("toplevel", bump)) as &_;
+        let toplevel = program.toplevel;
         Self {
             program,
             toplevel,
@@ -141,6 +156,12 @@ impl<'a, 'b: 'a> XirGen<'a, 'b> {
             name: "_",
             alive: false,
         });
+        self.locals.push(local);
+        local
+    }
+
+    fn push_local_new(&mut self, name: &'static str) -> &'b XLocal<'b> {
+        let local = self.bump.alloc(XLocal { name, alive: true });
         self.locals.push(local);
         local
     }
@@ -196,13 +217,25 @@ impl<'a, 'b: 'a> XirGen<'a, 'b> {
                 }
             },
             ast::AExpr::Name(name) => {
-                // FIXME:
-                self.set_im_str(target, name.text);
+                let r = self
+                    .env
+                    .get(name.text)
+                    .unwrap_or_else(|| panic!("undefined '{}' {:?}", name.text, name.pos));
+
+                match r {
+                    Ref::Local(local) => {
+                        self.stmts.push(XStmt::Copy { target, src: local });
+                    }
+                    Ref::Body(body) => {
+                        self.stmts.push(XStmt::SetFn { target, body });
+                    }
+                }
             }
             ast::AExpr::Call(expr) => {
-                self.gen_expr(&expr.args[0], target);
+                let local = self.push_local_new("s");
+                self.gen_expr(&expr.args[0], local);
                 self.stmts.push(XStmt::Debug(XDebugStmt {
-                    arg: XArg::Local(target),
+                    arg: XArg::Local(local),
                     pos: expr.pos.index(),
                 }));
             }
@@ -229,6 +262,8 @@ impl<'a, 'b: 'a> XirGen<'a, 'b> {
         self.gen_expr(&stmt.body, result);
         self.terminate(XTerminator::Return(result));
         // eprintln!("fn {} {:?}", stmt.name.text, &self.body);
+
+        self.body.locals.borrow_mut().extend(self.locals.drain(..));
 
         let body = replace(&mut self.body, self.bodies.pop().unwrap());
         self.program.bodies.push(body);
@@ -258,13 +293,15 @@ impl<'a, 'b: 'a> XirGen<'a, 'b> {
         source_code: &'b str,
         ast: &'b ast::ARoot<'b>,
     ) {
+        let toplevel = self.bump.alloc(XBody::new(name, self.bump));
         self.program.modules.push(XModule {
             name,
             path: name,
             source_code,
+            toplevel,
         });
 
-        let old_body = replace(&mut self.body, self.bump.alloc(XBody::new(name, self.bump)));
+        let old_body = replace(&mut self.body, toplevel);
 
         for stmt in &ast.stmts {
             self.declare_stmt(stmt);
@@ -276,7 +313,10 @@ impl<'a, 'b: 'a> XirGen<'a, 'b> {
         for decl in decls {
             self.gen_decl(decl);
         }
-        self.terminate(XTerminator::Exit);
+        let result = self.push_local_killed();
+        self.terminate(XTerminator::Return(result));
+
+        self.body.locals.borrow_mut().extend(self.locals.drain(..));
 
         let body = replace(&mut self.body, old_body);
         self.program.bodies.push(body);

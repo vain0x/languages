@@ -41,9 +41,10 @@ mod tests {
         eval.run();
 
         expect![[r#"
-            debug: Local(XLocal { name: "_", alive: false })
+            debug: "\"0\""
         "#]]
         .assert_eq(&eval.output);
+        panic!()
         // let actual = mir
         //     .bodies
         //     .iter()

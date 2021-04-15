@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -eu
+
+cat tests/input.milone | dotnet run 2> >(tee err.ignored.txt) | tee output.ignored.fs

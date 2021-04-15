@@ -1,0 +1,3 @@
+module rec MiloneSyntaxV2.Program
+
+let main _ = 0

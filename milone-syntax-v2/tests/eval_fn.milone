@@ -1,0 +1,10 @@
+fn f() {
+    puts(1)
+}
+
+fn add(x: int, y: int) -> int {
+    x + y
+}
+
+puts(add(2, 3), add(4, 5));
+puts(x);

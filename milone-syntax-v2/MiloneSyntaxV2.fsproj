@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="EscapeSequence.fs" />
+    <Compile Include="Source.fs" />
+    <Compile Include="Syntax.fs" />
+    <Compile Include="SyntaxTokenize.fs" />
+    <Compile Include="SyntaxParse.fs" />
+    <Compile Include="SyntaxScope.fs" />
+    <Compile Include="Sema.fs" />
+    <Compile Include="SemaNameResolve.fs" />
+    <Compile Include="SemaTypeCheck.fs" />
+    <Compile Include="Hir.fs" />
+    <Compile Include="HirGen.fs" />
+    <Compile Include="Eval.fs" />
+    <Compile Include="Cli.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\milone-lang\milone_libs\MiloneStd\MiloneStd.fsproj" />
+  </ItemGroup>
+
+</Project>

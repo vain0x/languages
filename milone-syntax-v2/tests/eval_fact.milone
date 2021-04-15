@@ -1,0 +1,13 @@
+
+fn fact(x: int) -> int {
+    if x <= 0 { 1 } else { x * fact(x - 1) }
+}
+
+fn go(i: int, n: int) -> unit {
+    if i < n {
+        puts(fact(i))
+        go(i + 1, n)
+    }
+}
+
+go(0, 5)

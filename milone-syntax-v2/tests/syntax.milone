@@ -1,0 +1,102 @@
+// comment
+
+1
+2
+3
+
+fn f() {
+}
+
+fn g(x: int, y: int, Map[int, int]) -> int {
+    let a = x + 1;
+    a + 2
+}
+
+if pred() {
+
+}
+
+if pred() {
+    if_content;
+} else if else_if_cond {
+    else_if_content;
+} else {
+    else_content;
+}
+
+f(label1: 1, a + b);
+
+match k {
+    1 => {}
+    2 => second,
+
+    guarded if guard => {}
+
+    [] => nil,
+    [ x ] => x,
+    [ x, y, ..zs ] => {},
+    [ .. ] => {}
+}
+
+[];
+[ ..xs, ..ys ];
+dp[i][j];
+
+fn fst[T, U](t: (T, U)) -> T {
+    let (x, _) = t;
+    x
+}
+
+fst::[int, int]((a, b));
+
+let MyUnit::Value[m::Foo] = MyUnit::Value::[m::Foo];
+
+let a@(_,_,_) = fail;
+let a@_ | b@_ = unit;
+
+let unit: unit = unit;
+
+[ 42, false, true, unit ];
+
+t & p | q & r;
+
+|| 0;
+|a: int, b| -> int { a + b };
+
+enum Color { R, G, B }
+
+enum Result[T, E] {
+    Ok(T),
+    Err(E),
+}
+
+enum Complex {
+    Rect(x: float, y: float),
+    Polar(r: float, t: float),
+}
+
+struct Id(int);
+
+struct Pair[T1, T2](
+    t1: T1,
+    t2: T2,
+);
+
+struct A::[T](value: T);
+
+enum X { X; Y; }
+
+type Identity[T] = T;
+type MoreIdentity[T] = Identity[T];
+type Map[K, T] = std::collections::TreeMap[K, T];
+
+mod sub {
+    unit;
+    let a = 1;
+    fn f() {}
+}
+
+{}
+
+use global;
+use a::{b as my_b, c::d::{e, f}};

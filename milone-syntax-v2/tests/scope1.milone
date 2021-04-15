@@ -1,0 +1,46 @@
+
+// fn fact(x: int) -> int {
+//     if x <= 0 { 1 } else { x * fact(x - 1) }
+// }
+//
+// fn go(i: int, n: int) -> unit {
+//     if i < n {
+//         puts(i, fact(i))
+//         go(i + 1, n)
+//     }
+// }
+//
+// go(0, 10)
+
+puts("he");
+
+{
+    let a = 1;
+    let b = 2;
+    let a = 3;
+    {
+        let a = 4;
+    }
+    puts(a);
+}
+
+{
+    fn f() { f() }
+
+    f();
+
+    let f = || f();
+
+    f();
+
+    fn f() { f() }
+}
+
+{
+    struct Int(int);
+
+    let n = Int(1);
+
+    enum AB { A(int), B(int) };
+    let a = AB::A(1);
+}

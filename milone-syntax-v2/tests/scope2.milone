@@ -1,0 +1,14 @@
+inner::f();
+inner::deep2::d2();
+
+mod inner {
+    mod deep1 {
+        fn d1() {}
+    }
+
+    mod deep2 {
+        fn d2() {}
+    }
+
+    fn f() {}
+}

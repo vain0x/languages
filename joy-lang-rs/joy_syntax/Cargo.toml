@@ -1,0 +1,30 @@
+[package]
+name = "joy_syntax"
+version = "0.1.0"
+authors = ["vain0x <vainzerox@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Bump allocator <https://github.com/fitzgen/bumpalo>
+bumpalo = { version = "3.6.1", features = ["boxed", "collections"] }
+
+# Logging API <https://github.com/rust-lang/log>
+log = { version = "0.4.14", features = ["std"] }
+
+# Tokenizer library <https://github.com/maciejhirsz/logos>
+logos = "0.12.0"
+
+# Parser generator library <https://github.com/lalrpop/lalrpop>
+lalrpop-util = "0.19.5"
+regex = { version = "1", default_features = false, features = ["std"] }
+
+text-position-rs = { git = "https://github.com/vain0x/text-position-rs", tag = "v0.2.0", features = ["checked"] }
+
+[build-dependencies]
+lalrpop = "0.19.5"
+
+[dev-dependencies]
+# Snapshot testing <https://github.com/rust-analyzer/expect-test>
+expect-test = { git = "https://github.com/rust-analyzer/expect-test.git", tag = "v1.0.1" }

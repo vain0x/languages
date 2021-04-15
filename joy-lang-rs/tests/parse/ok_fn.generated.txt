@@ -1,0 +1,33 @@
+ARoot {
+    stmts: [
+        Fn(
+            AFnStmt {
+                name: AName {
+                    text: "main",
+                    pos: 1:4,
+                },
+                body: Call(
+                    ACallExpr {
+                        callee: Name(
+                            AName {
+                                text: "println",
+                                pos: 2:5,
+                            },
+                        ),
+                        args: [
+                            Lit(
+                                ALit {
+                                    token: String,
+                                    text: "\"Hello, world!\"",
+                                    pos: 2:13,
+                                },
+                            ),
+                        ],
+                        pos: 2:12,
+                    },
+                ),
+                pos: 1:1,
+            },
+        ),
+    ],
+}

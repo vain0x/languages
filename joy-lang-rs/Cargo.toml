@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "joy",
+    "joy_syntax",
+    "joy_util"
+]

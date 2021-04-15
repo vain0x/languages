@@ -1,0 +1,41 @@
+ARoot {
+    stmts: [
+        Expr(
+            AExprStmt(
+                Binary(
+                    ABinaryExpr {
+                        op: Add,
+                        l: Binary(
+                            ABinaryExpr {
+                                op: Mul,
+                                l: Lit(
+                                    ALit {
+                                        token: DecimalInt,
+                                        text: "42",
+                                        pos: 1:1,
+                                    },
+                                ),
+                                r: Lit(
+                                    ALit {
+                                        token: DecimalInt,
+                                        text: "2",
+                                        pos: 2:5,
+                                    },
+                                ),
+                                pos: 1:4,
+                            },
+                        ),
+                        r: Lit(
+                            ALit {
+                                token: DecimalInt,
+                                text: "3",
+                                pos: 3:5,
+                            },
+                        ),
+                        pos: 2:7,
+                    },
+                ),
+            ),
+        ),
+    ],
+}

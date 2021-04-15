@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# PROJECT_DIR=$PWD
+
+# (
+#     cd ../../milone-lang
+
+#     MILONE_HOME=$PWD \
+#         ./milone-netcore -q $PROJECT_DIR >$PROJECT_DIR/milone_pattern_compile.generated.c
+
+#     docker run --rm \
+#         -v "$PROJECT_DIR:/mnt/milone_pattern_compile" \
+#         -v "$PWD:/mnt/milone-home" \
+#         --workdir //mnt/miline_pattern_compile \
+#         gcc:10 \
+#         sh -c 'gcc -std=c11 -O2 -I //mnt/milone-home/runtime && ./a.out'
+# )
+
+dotnet run

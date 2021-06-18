@@ -1,6 +1,6 @@
 use crate::{
     ast::ARoot,
-    tokenize::{JoyTokenizer, Token},
+    tokenize::{FoxxTokenizer, Token},
 };
 use bumpalo::Bump;
 use std::fmt::{self, Debug, Display};
@@ -54,7 +54,7 @@ impl Display for LexicalError {
 
 /// For lalrpop.
 pub struct MyLexer<'b> {
-    tokenizer: JoyTokenizer<'b>,
+    tokenizer: FoxxTokenizer<'b>,
 }
 
 impl<'b> Iterator for MyLexer<'b> {
@@ -81,7 +81,7 @@ pub fn parse_from_string<'b>(
     bump: &'b Bump,
 ) -> Result<ARoot<'b>, ParseError<'b>> {
     let mut lexer = MyLexer {
-        tokenizer: JoyTokenizer::new(source_code),
+        tokenizer: FoxxTokenizer::new(source_code),
     };
 
     match crate::grammar::RootParser::new().parse(source_code, &bump, &mut lexer) {
@@ -127,7 +127,7 @@ mod tests {
                 #[test]
                 fn $name() {
                     should_parse(
-                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".joy")),
+                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".foxx")),
                         expect_file![concat!("../../tests/parse/",  stringify!($name), ".generated.txt")],
                     );
                 }
@@ -141,7 +141,7 @@ mod tests {
                 #[test]
                 fn $name() {
                     should_fail(
-                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".joy")),
+                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".foxx")),
                         expect_file![concat!("../../tests/parse/",  stringify!($name), ".generated.txt")],
                     );
                 }

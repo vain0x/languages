@@ -1,5 +1,5 @@
 use crate::internals::*;
-use joy_syntax::{ast, AModule, Token};
+use foxx_syntax::{ast, AModule, Token};
 
 #[derive(Debug)]
 pub(crate) struct XLocal<'b> {

@@ -193,7 +193,7 @@ impl Token {
 }
 
 /// For parser.
-pub struct JoyTokenizer<'b> {
+pub struct FoxxTokenizer<'b> {
     pub(crate) source_code: &'b str,
     lexer: logos::Lexer<'b, Token>,
     pos: CompositePosition,
@@ -202,7 +202,7 @@ pub struct JoyTokenizer<'b> {
     fused: bool,
 }
 
-impl<'b> JoyTokenizer<'b> {
+impl<'b> FoxxTokenizer<'b> {
     pub fn new(source_code: &'b str) -> Self {
         let mut lexer = logos::Lexer::new(source_code);
         let last = lexer

@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "foxx",
+    "foxx_syntax",
+    "foxx_util"
+]

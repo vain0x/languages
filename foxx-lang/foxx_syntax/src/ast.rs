@@ -1,5 +1,15 @@
 use crate::{internals::*, parse::Pos, tokenize::Token};
 
+#[inline]
+fn box_in<'b, T: 'b>(value: T, bump: &'b Bump) -> BumpBox<'b, T> {
+    BumpBox::new_in(value, bump)
+}
+
+#[inline]
+fn opt_box_in<'b, T: 'b>(value_opt: Option<T>, bump: &'b Bump) -> Option<BumpBox<'b, T>> {
+    value_opt.map(|value| BumpBox::new_in(value, bump))
+}
+
 pub struct ALit<'b> {
     pub token: Token,
     pub text: &'b str,
@@ -25,7 +35,7 @@ pub struct ABinaryExpr<'b> {
 }
 
 pub struct AReturnExpr<'b> {
-    pub arg_opt: Option<&'b AExpr<'b>>,
+    pub arg_opt: Option<BoxedExpr<'b>>,
     pub pos: Pos,
 }
 
@@ -38,10 +48,6 @@ pub enum AExpr<'b> {
 }
 
 impl<'b> AExpr<'b> {
-    pub(crate) fn boxed_in(self, bump: &'b Bump) -> BoxedExpr<'b> {
-        BumpBox::new_in(self, bump)
-    }
-
     pub(crate) fn new_call(
         callee: Self,
         args: BumpVec<'b, AExpr<'b>>,
@@ -49,7 +55,7 @@ impl<'b> AExpr<'b> {
         bump: &'b Bump,
     ) -> Self {
         Self::Call(ACallExpr {
-            callee: callee.boxed_in(bump),
+            callee: box_in(callee, bump),
             args,
             pos,
         })
@@ -58,15 +64,15 @@ impl<'b> AExpr<'b> {
     pub(crate) fn new_binary(op: BinaryOp, l: Self, r: Self, pos: Pos, bump: &'b Bump) -> Self {
         Self::Binary(ABinaryExpr {
             op,
-            l: l.boxed_in(bump),
-            r: r.boxed_in(bump),
+            l: box_in(l, bump),
+            r: box_in(r, bump),
             pos,
         })
     }
 
     pub(crate) fn new_return(arg_opt: Option<AExpr<'b>>, pos: Pos, bump: &'b Bump) -> Self {
         Self::Return(AReturnExpr {
-            arg_opt: arg_opt.map(|x| bump.alloc(x) as &_),
+            arg_opt: opt_box_in(arg_opt, bump),
             pos,
         })
     }

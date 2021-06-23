@@ -109,16 +109,22 @@ mod tests {
     use super::*;
     use expect_test::{expect_file, ExpectFile};
 
-    fn should_parse(source_code: &str, expect: ExpectFile) {
+    fn should_parse(source_code: &str) {
         let bump = Bump::new();
-        let result = parse_from_string(source_code, &bump).unwrap();
-        expect.assert_debug_eq(&result);
+        let result: String = match parse_from_string(source_code, &bump) {
+            Ok(_) => "OK".into(),
+            Err(err) => format!("{:?}", err),
+        };
+        assert_eq!(&result, "OK");
     }
 
     fn should_fail(source_code: &str, expect: ExpectFile) {
         let bump = Bump::new();
-        let result = parse_from_string(source_code, &bump).expect_err("should fail");
-        expect.assert_eq(&format!("Parse error: {} at {:?}", result.msg, result.pos));
+        let result = match parse_from_string(source_code, &bump) {
+            Ok(_) => "unexpectedly parsed".into(),
+            Err(err) => format!("Parse error: {} at {:?}\n", err.msg, err.pos),
+        };
+        expect.assert_eq(&result);
     }
 
     macro_rules! should_parse {
@@ -128,7 +134,6 @@ mod tests {
                 fn $name() {
                     should_parse(
                         include_str!(concat!("../../tests/parse/",  stringify!($name), ".foxx")),
-                        expect_file![concat!("../../tests/parse/",  stringify!($name), ".generated.txt")],
                     );
                 }
             )*
@@ -156,6 +161,7 @@ mod tests {
         ok_let,
         ok_fn,
         ok_call_expr,
+        ok_return_expr,
         ok_semi,
     }
 

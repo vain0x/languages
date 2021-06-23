@@ -232,7 +232,7 @@ impl<'a, 'b: 'a> XirGen<'a, 'b> {
                     pos: expr.pos.index(),
                 }));
             }
-            ast::AExpr::Binary(_) => todo!(),
+            _ => todo!(),
         }
     }
 

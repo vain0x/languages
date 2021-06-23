@@ -24,11 +24,17 @@ pub struct ABinaryExpr<'b> {
     pub pos: Pos,
 }
 
+pub struct AReturnExpr<'b> {
+    pub arg_opt: Option<&'b AExpr<'b>>,
+    pub pos: Pos,
+}
+
 pub enum AExpr<'b> {
     Lit(ALit<'b>),
     Name(AName<'b>),
     Call(ACallExpr<'b>),
     Binary(ABinaryExpr<'b>),
+    Return(AReturnExpr<'b>),
 }
 
 impl<'b> AExpr<'b> {
@@ -54,6 +60,13 @@ impl<'b> AExpr<'b> {
             op,
             l: l.boxed_in(bump),
             r: r.boxed_in(bump),
+            pos,
+        })
+    }
+
+    pub(crate) fn new_return(arg_opt: Option<AExpr<'b>>, pos: Pos, bump: &'b Bump) -> Self {
+        Self::Return(AReturnExpr {
+            arg_opt: arg_opt.map(|x| bump.alloc(x) as &_),
             pos,
         })
     }

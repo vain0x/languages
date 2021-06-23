@@ -20,6 +20,7 @@ mod tests {
     use expect_test::{expect, Expect};
     use foxx_syntax::{parse_from_string, AModule};
 
+    #[cfg(skip)]
     #[test]
     fn eval_test() {
         let bump = &Bump::new();

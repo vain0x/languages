@@ -158,7 +158,10 @@ AddExpr: AExpr<'b> = {
     <l:AddExpr> <pos:@L> "-" <r:MulExpr> => AExpr::new_binary(BinaryOp::Sub, l, r, pos, bump),
 }
 
-Expr: AExpr<'b> = <expr:AddExpr> => expr;
+Expr: AExpr<'b> = {
+    <expr:AddExpr> => expr,
+    <pos:@L> "return" <arg:Expr?> => AExpr::new_return(arg, pos, bump),
+}
 
 // -----------------------------------------------
 // Statements

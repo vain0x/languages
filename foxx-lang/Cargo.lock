@@ -155,10 +155,30 @@ version = "0.1.0"
 dependencies = [
  "bumpalo",
  "expect-test",
+ "foxx_check",
+ "foxx_codegen",
  "foxx_syntax",
  "foxx_util",
  "log",
 ]
+
+[[package]]
+name = "foxx_check"
+version = "0.1.0"
+dependencies = [
+ "foxx_util",
+]
+
+[[package]]
+name = "foxx_codegen"
+version = "0.1.0"
+dependencies = [
+ "foxx_util",
+]
+
+[[package]]
+name = "foxx_runtime"
+version = "0.1.0"
 
 [[package]]
 name = "foxx_syntax"

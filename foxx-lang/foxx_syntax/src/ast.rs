@@ -1,26 +1,22 @@
 use crate::{internals::*, parse::Pos, tokenize::Token};
 
-#[derive(Debug)]
 pub struct ALit<'b> {
     pub token: Token,
     pub text: &'b str,
     pub pos: Pos,
 }
 
-#[derive(Debug)]
 pub struct AName<'b> {
     pub text: &'b str,
     pub pos: Pos,
 }
 
-#[derive(Debug)]
 pub struct ACallExpr<'b> {
     pub callee: BoxedExpr<'b>,
     pub args: BumpVec<'b, AExpr<'b>>,
     pub pos: Pos,
 }
 
-#[derive(Debug)]
 pub struct ABinaryExpr<'b> {
     pub op: BinaryOp,
     pub l: BoxedExpr<'b>,
@@ -28,7 +24,6 @@ pub struct ABinaryExpr<'b> {
     pub pos: Pos,
 }
 
-#[derive(Debug)]
 pub enum AExpr<'b> {
     Lit(ALit<'b>),
     Name(AName<'b>),
@@ -66,7 +61,6 @@ impl<'b> AExpr<'b> {
 
 type BoxedExpr<'b> = BumpBox<'b, AExpr<'b>>;
 
-#[derive(Debug)]
 pub enum BinaryOp {
     Mul,
     Div,
@@ -75,24 +69,20 @@ pub enum BinaryOp {
     Sub,
 }
 
-#[derive(Debug)]
 pub struct AExprStmt<'b>(pub AExpr<'b>);
 
-#[derive(Debug)]
 pub struct ALetStmt<'b> {
     pub name: AName<'b>,
     pub init: AExpr<'b>,
     pub pos: Pos,
 }
 
-#[derive(Debug)]
 pub struct AFnStmt<'b> {
     pub name: AName<'b>,
     pub body: AExpr<'b>,
     pub pos: Pos,
 }
 
-#[derive(Debug)]
 pub enum AStmt<'b> {
     Expr(AExprStmt<'b>),
     Let(ALetStmt<'b>),
@@ -113,7 +103,6 @@ impl<'b> AStmt<'b> {
     }
 }
 
-#[derive(Debug)]
 pub struct ARoot<'b> {
     pub stmts: BumpVec<'b, AStmt<'b>>,
 }

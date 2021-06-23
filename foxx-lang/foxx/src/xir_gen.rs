@@ -1,32 +1,27 @@
 use crate::internals::*;
 use foxx_syntax::{ast, AModule, Token};
 
-#[derive(Debug)]
 pub(crate) struct XLocal<'b> {
     pub(crate) name: &'b str,
     pub(crate) alive: bool,
 }
 
-#[derive(Debug)]
 pub(crate) enum XConst<'b> {
     Bool(bool),
     Int(i64),
     String(&'b str),
 }
 
-#[derive(Debug)]
 pub(crate) enum XArg<'b> {
     Const(XConst<'b>),
     Local(&'b XLocal<'b>),
 }
 
-#[derive(Debug)]
 pub(crate) enum XTerminator<'b> {
     Exit,
     Return(&'b XLocal<'b>),
 }
 
-#[derive(Debug)]
 pub(crate) struct XBody<'b> {
     pub(crate) name: &'b str,
     pub(crate) args: BumpVec<'b, ast::AName<'b>>,
@@ -45,13 +40,11 @@ impl<'b> XBody<'b> {
     }
 }
 
-#[derive(Debug)]
 pub(crate) struct XDebugStmt<'b> {
     pub(crate) arg: XArg<'b>,
     pub(crate) pos: usize,
 }
 
-#[derive(Debug)]
 pub(crate) enum XStmt<'b> {
     Debug(XDebugStmt<'b>),
     Copy {
@@ -68,7 +61,6 @@ pub(crate) enum XStmt<'b> {
     },
 }
 
-#[derive(Debug)]
 pub(crate) struct XBlock<'b> {
     pub(crate) stmts: BumpVec<'b, XStmt<'b>>,
     pub(crate) terminator: XTerminator<'b>,
@@ -168,7 +160,8 @@ impl<'a, 'b: 'a> XirGen<'a, 'b> {
 
     fn set_const(&mut self, local: &'b XLocal<'b>, init: XConst<'b>) {
         // set init value to local.
-        eprintln!("{} <- {:?}", local.name, init);
+        eprintln!("set_const {} <- ???", local.name);
+        // eprintln!("{} <- {:?}", local.name, init);
     }
 
     fn set_im_str(&mut self, target: &'b XLocal<'b>, value: &'b str) {

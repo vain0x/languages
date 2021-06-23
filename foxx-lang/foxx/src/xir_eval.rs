@@ -71,7 +71,8 @@ impl<'b> XirEval<'b> {
                 for stmt in &block.stmts {
                     match stmt {
                         XStmt::Debug(stmt) => {
-                            eprintln!("trace: debug {:?}", stmt.arg);
+                            eprintln!("trace: debug (unimpl)");
+                            // eprintln!("trace: debug {:?}", stmt.arg);
                             self.output += "debug: ";
 
                             match &stmt.arg {

@@ -17,7 +17,7 @@ extern {
 
     enum Token {
         "eos" => Token::Eos,
-        "num" => Token::DecimalInt,
+        "decimal_int" => Token::DecimalInt,
         "string" => Token::String,
         "false" => Token::False,
         "fn" => Token::Fn,
@@ -90,7 +90,7 @@ extern {
 // -----------------------------------------------
 
 LitToken: Token = {
-    <t:"num"> => t,
+    <t:"decimal_int"> => t,
     <t:"string"> => t,
     <t:"false"> => t,
     <t:"true"> => t,

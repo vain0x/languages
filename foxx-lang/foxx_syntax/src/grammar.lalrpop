@@ -2,7 +2,7 @@
 
 use crate::ast::*;
 use crate::internals::*;
-use crate::parse::{LexicalError, Pos};
+use crate::parse::{LexicalError, Pos, Range};
 use crate::tokenize::Token;
 
 grammar<'b>(source_code: &'b str, bump: &'b Bump);
@@ -99,7 +99,7 @@ LitToken: Token = {
 Lit: ALit<'b> = <l:@L> <t:LitToken> <r:@R> => ALit {
     token: t,
     text: &source_code[l.index()..r.index()],
-    pos: l,
+    range: Range::new(l, r),
 };
 
 Name: AName<'b> = <l:@L> "ident" <r:@R> => AName {

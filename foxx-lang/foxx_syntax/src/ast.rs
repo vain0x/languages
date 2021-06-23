@@ -1,4 +1,8 @@
-use crate::{internals::*, parse::Pos, tokenize::Token};
+use crate::{
+    internals::*,
+    parse::{Pos, Range},
+    tokenize::Token,
+};
 
 #[inline]
 fn box_in<'b, T: 'b>(value: T, bump: &'b Bump) -> BumpBox<'b, T> {
@@ -13,7 +17,7 @@ fn opt_box_in<'b, T: 'b>(value_opt: Option<T>, bump: &'b Bump) -> Option<BumpBox
 pub struct ALit<'b> {
     pub token: Token,
     pub text: &'b str,
-    pub pos: Pos,
+    pub range: Range,
 }
 
 pub struct AName<'b> {

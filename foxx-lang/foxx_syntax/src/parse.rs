@@ -1,10 +1,13 @@
 use crate::{
-    ast::ARoot,
+    ast::{self, ARoot},
     tokenize::{FoxxTokenizer, Token},
 };
 use bumpalo::Bump;
-use std::fmt::{self, Debug, Display};
-use text_position_rs::CompositePosition;
+use std::{
+    fmt::{self, Debug, Display},
+    ops::Index,
+};
+use text_position_rs::{CompositePosition, TextRange};
 
 type Utf8Pos = text_position_rs::Utf8Position;
 
@@ -38,6 +41,51 @@ impl Default for Pos {
 impl From<CompositePosition> for Pos {
     fn from(pos: CompositePosition) -> Self {
         Pos(pos)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct Range(TextRange<CompositePosition>);
+
+impl Range {
+    const ZERO: Range = Range(TextRange::ZERO);
+
+    pub fn new(start: Pos, end: Pos) -> Self {
+        Self(TextRange::from(start.0..end.0))
+    }
+
+    pub fn start(self) -> Pos {
+        Pos(self.0.start())
+    }
+
+    pub fn end(self) -> Pos {
+        Pos(self.0.end())
+    }
+}
+
+impl Default for Range {
+    fn default() -> Self {
+        Range::ZERO
+    }
+}
+
+impl Debug for Range {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
+impl Display for Range {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
+impl Index<Range> for str {
+    type Output = str;
+
+    fn index(&self, index: Range) -> &Self::Output {
+        &self[index.start().index()..index.end().index()]
     }
 }
 
@@ -107,7 +155,7 @@ pub fn parse_from_string<'b>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use expect_test::{expect_file, ExpectFile};
+    use expect_test::{expect, expect_file, ExpectFile};
 
     fn should_parse(source_code: &str) {
         let bump = Bump::new();
@@ -168,5 +216,19 @@ mod tests {
     should_fail! {
         err_broken_arithmetic,
         err_two_ints,
+    }
+
+    #[test]
+    fn lit_range() {
+        let bump = &Bump::new();
+        let result = parse_from_string("\n  12\n", bump).expect("root");
+        let stmt = result.stmts.into_iter().next().expect("stmt");
+        let expr = match stmt {
+            ast::AStmt::Expr(ast::AExprStmt(ast::AExpr::Lit(lit))) => {
+                format!("range={:?}", lit.range)
+            }
+            _ => todo!(),
+        };
+        expect![[r#"range=2.3-2.5"#]].assert_eq(&expr);
     }
 }

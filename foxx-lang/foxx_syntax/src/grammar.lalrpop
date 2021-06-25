@@ -147,9 +147,9 @@ ChainExpr: AExpr<'b> = {
 
 MulExpr: AExpr<'b> = {
     <expr:ChainExpr> => expr,
-    <l:ChainExpr> <pos:@L> "*" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Mul, l, r, pos, bump),
-    <l:ChainExpr> <pos:@L> "/" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Div, l, r, pos, bump),
-    <l:ChainExpr> <pos:@L> "%" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Modulo, l, r, pos, bump),
+    <l:MulExpr> <pos:@L> "*" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Mul, l, r, pos, bump),
+    <l:MulExpr> <pos:@L> "/" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Div, l, r, pos, bump),
+    <l:MulExpr> <pos:@L> "%" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Modulo, l, r, pos, bump),
 }
 
 AddExpr: AExpr<'b> = {

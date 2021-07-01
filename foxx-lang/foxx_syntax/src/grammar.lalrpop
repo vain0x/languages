@@ -111,6 +111,42 @@ Name: AName<'b> = <l:@L> "ident" <r:@R> => AName {
 // Types
 // -----------------------------------------------
 
+Ty: ATy<'b> = {
+    <name:Name> => ATy::Name(name),
+    "(" <ty:Ty> ")" => ty,
+};
+
+
+
+Field: AField<'b> = {
+    <l:@L> <name:Name> ":" <ty:Ty> <r:@R> => AField { name, ty, range: Range::new(l, r) },
+};
+
+NonEmptyFields: BumpVec<'b, AField<'b>> = {
+    <field:Field> => bumpalo::vec![in bump; field],
+    <mut fields:NonEmptyFields> "," <next:Field> => {
+        fields.push(next);
+        fields
+    }
+}
+
+Fields: BumpVec<'b, AField<'b>> = {
+    () => bumpalo::vec![in bump],
+    <fields:NonEmptyFields> ","? => fields,
+}
+
+ParamList: AParamList<'b> = {
+    <l:@L> "(" <fields:Fields> ")" <r:@R> => AParamList { fields, range: Range::new(l, r) },
+};
+
+Ascribe: ATy<'b> = {
+    ":" <ty:Ty> => ty,
+};
+
+ResultTy: ATy<'b> = {
+    "->" <ty:Ty> => ty,
+};
+
 // -----------------------------------------------
 // Patterns
 // -----------------------------------------------
@@ -169,8 +205,8 @@ Expr: AExpr<'b> = {
 
 Stmt: AStmt<'b> = {
     <expr:Expr> "eos" => AStmt::new_expr(expr),
-    <pos:@L> "let" <name:Name> "=" <init:Expr> "eos" => AStmt::new_let(name, init, pos),
-    <pos:@L> "fn" <name:Name> "(" ")" "{" <body:Expr> "eos"? "}" => AStmt::new_fn(name, body, pos),
+    <pos:@L> "let" <name:Name> <ty_opt:Ascribe?> "=" <init:Expr> "eos" => AStmt::new_let(name, ty_opt, init, pos),
+    <pos:@L> "fn" <name:Name> <param_list:ParamList> <result_ty_opt:ResultTy?> "{" <body:Expr> "eos"? "}" => AStmt::new_fn(name, param_list, result_ty_opt, body, pos),
 };
 
 pub Root: ARoot<'b> = {

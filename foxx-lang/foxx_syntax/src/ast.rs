@@ -14,6 +14,10 @@ fn opt_box_in<'b, T: 'b>(value_opt: Option<T>, bump: &'b Bump) -> Option<BumpBox
     value_opt.map(|value| BumpBox::new_in(value, bump))
 }
 
+// -----------------------------------------------
+// フラグメント
+// -----------------------------------------------
+
 pub struct ALit<'b> {
     pub token: Token,
     pub text: &'b str,
@@ -24,6 +28,33 @@ pub struct AName<'b> {
     pub text: &'b str,
     pub pos: Pos,
 }
+
+pub struct AField<'b> {
+    pub name: AName<'b>,
+    pub ty: ATy<'b>,
+    pub range: Range,
+}
+
+pub struct AParamList<'b> {
+    pub fields: BumpVec<'b, AField<'b>>,
+    pub range: Range,
+}
+
+// -----------------------------------------------
+// 型
+// -----------------------------------------------
+
+pub enum ATy<'b> {
+    Name(AName<'b>),
+}
+
+// -----------------------------------------------
+// パターン
+// -----------------------------------------------
+
+// -----------------------------------------------
+// 式
+// -----------------------------------------------
 
 pub struct ACallExpr<'b> {
     pub callee: BoxedExpr<'b>,
@@ -92,16 +123,23 @@ pub enum BinaryOp {
     Sub,
 }
 
+// -----------------------------------------------
+// 文
+// -----------------------------------------------
+
 pub struct AExprStmt<'b>(pub AExpr<'b>);
 
 pub struct ALetStmt<'b> {
     pub name: AName<'b>,
+    pub ty_opt: Option<ATy<'b>>,
     pub init: AExpr<'b>,
     pub pos: Pos,
 }
 
 pub struct AFnStmt<'b> {
     pub name: AName<'b>,
+    pub param_list: AParamList<'b>,
+    pub result_ty_opt: Option<ATy<'b>>,
     pub body: AExpr<'b>,
     pub pos: Pos,
 }
@@ -117,14 +155,40 @@ impl<'b> AStmt<'b> {
         AStmt::Expr(AExprStmt(expr))
     }
 
-    pub(crate) fn new_let(name: AName<'b>, init: AExpr<'b>, pos: Pos) -> Self {
-        AStmt::Let(ALetStmt { name, init, pos })
+    pub(crate) fn new_let(
+        name: AName<'b>,
+        ty_opt: Option<ATy<'b>>,
+        init: AExpr<'b>,
+        pos: Pos,
+    ) -> Self {
+        AStmt::Let(ALetStmt {
+            name,
+            ty_opt,
+            init,
+            pos,
+        })
     }
 
-    pub(crate) fn new_fn(name: AName<'b>, body: AExpr<'b>, pos: Pos) -> Self {
-        AStmt::Fn(AFnStmt { name, body, pos })
+    pub(crate) fn new_fn(
+        name: AName<'b>,
+        param_list: AParamList<'b>,
+        result_ty_opt: Option<ATy<'b>>,
+        body: AExpr<'b>,
+        pos: Pos,
+    ) -> Self {
+        AStmt::Fn(AFnStmt {
+            name,
+            param_list,
+            result_ty_opt,
+            body,
+            pos,
+        })
     }
 }
+
+// -----------------------------------------------
+// ルート
+// -----------------------------------------------
 
 pub struct ARoot<'b> {
     pub stmts: BumpVec<'b, AStmt<'b>>,

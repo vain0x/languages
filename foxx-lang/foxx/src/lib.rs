@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 pub(crate) mod xir_eval;
 pub(crate) mod xir_gen;
 

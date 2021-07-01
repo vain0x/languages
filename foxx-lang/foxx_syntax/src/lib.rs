@@ -9,6 +9,7 @@ lalrpop_mod!(pub grammar);
 
 pub use crate::{parse::parse_from_string, tokenize::Token};
 
+#[allow(unused)]
 pub(crate) mod internals {
     pub(crate) use bumpalo::{boxed::Box as BumpBox, collections::Vec as BumpVec, Bump};
     pub(crate) use std::fmt::Debug;

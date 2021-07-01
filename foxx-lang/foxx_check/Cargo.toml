@@ -8,3 +8,13 @@ edition = "2018"
 
 [dependencies]
 foxx_util = { path = "../foxx_util" }
+
+# Bump allocator <https://github.com/fitzgen/bumpalo>
+bumpalo = { version = "3.6.1", features = ["boxed", "collections"] }
+
+# Logging API <https://github.com/rust-lang/log>
+log = { version = "0.4.14", features = ["std"] }
+
+[dev-dependencies]
+# Snapshot testing <https://github.com/rust-analyzer/expect-test>
+expect-test = { git = "https://github.com/rust-analyzer/expect-test.git", tag = "v1.0.1" }

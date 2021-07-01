@@ -175,7 +175,7 @@ Stmt: AStmt<'b> = {
 
 pub Root: ARoot<'b> = {
     () => ARoot::new(bump),
-    <mut r:Root> "eos" => r,
+    <r:Root> "eos" => r,
     <mut r:Root> <stmt:Stmt> => {
         r.push(stmt);
         r

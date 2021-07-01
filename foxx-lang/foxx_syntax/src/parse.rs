@@ -1,5 +1,5 @@
 use crate::{
-    ast::{self, ARoot},
+    ast::ARoot,
     tokenize::{FoxxTokenizer, Token},
 };
 use bumpalo::Bump;
@@ -155,6 +155,7 @@ pub fn parse_from_string<'b>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast;
     use expect_test::{expect, expect_file, ExpectFile};
 
     fn should_parse(source_code: &str) {

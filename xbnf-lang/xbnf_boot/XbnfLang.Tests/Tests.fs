@@ -12,8 +12,7 @@ open XbnfLang.Sugar
 open XbnfLang.Tokenize
 open Xunit
 
-let inline is< ^T> (expected: ^T) (actual: ^T) =
-  Assert.Equal(actual, expected)
+let inline is< ^T> (expected: ^T) (actual: ^T) = Assert.Equal(expected, actual)
 
 let findTestsDirectory () =
   let cwd = Environment.CurrentDirectory

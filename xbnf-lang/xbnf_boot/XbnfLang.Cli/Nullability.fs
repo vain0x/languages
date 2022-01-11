@@ -7,32 +7,25 @@ open XbnfLang.Types
 let nodeIsNullable isNullable node =
   let rec go (node, _) =
     match node with
-    | EmptyNode _ ->
-      true
+    | EmptyNode _ -> true
 
-    | TokenNode _ ->
-      false
+    | TokenNode _ -> false
 
-    | SymbolNode name ->
-      isNullable name
+    | SymbolNode name -> isNullable name
 
-    | Many1Node item ->
-      go item
+    | Many1Node item -> go item
 
-    | ConcatNode (first, second) ->
-      go first && go second
+    | ConcatNode (first, second) -> go first && go second
 
-    | OrNode (first, second) ->
-      go first || go second
+    | OrNode (first, second) -> go first || go second
 
   go node
 
 let ruleIsNullable isNullable rule =
   match rule with
-  | Rule (_, body, _, _) ->
-    nodeIsNullable isNullable body
+  | Rule (_, body, _, _) -> nodeIsNullable isNullable body
 
-let isNullableFun (rules: Rule list): IsNullableFun =
+let isNullableFun (rules: Rule list) : IsNullableFun =
   let set = HashSet()
   let isNullable name = set.Contains(name)
 

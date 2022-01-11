@@ -17,79 +17,54 @@ type AnnotationData = Annotation * Location
 type Token =
   | EofToken
 
-  | StrToken
-    of string
+  | StrToken of string
 
   /// LIKE_THIS
-  | LoudToken
-    of string
+  | LoudToken of string
 
   /// like_this
-  | SnakeToken
-    of string
+  | SnakeToken of string
 
-  | PunToken
-    of string
+  | PunToken of string
 
-type TokenData =
-  Token * int * int
+type TokenData = Token * int * int
 
 type Term =
-  | TokenTerm
-    of string
+  | TokenTerm of string
 
-  | SymbolTerm
-    of string
+  | SymbolTerm of string
 
-  | OptTerm
-    of TermData
+  | OptTerm of TermData
 
-  | ManyTerm
-    of TermData
+  | ManyTerm of TermData
 
-  | Many1Term
-    of TermData
+  | Many1Term of TermData
 
-  | SepTerm
-    of item:TermData * sep:string
+  | SepTerm of item: TermData * sep: string
 
-  | Sep1Term
-    of item:TermData * sep:string
+  | Sep1Term of item: TermData * sep: string
 
-  | ConcatTerm
-    of TermData * TermData
+  | ConcatTerm of TermData * TermData
 
-  | OrTerm
-    of TermData * TermData
+  | OrTerm of TermData * TermData
 
-type TermData =
-  Term * (AnnotationData list * Location)
+type TermData = Term * (AnnotationData list * Location)
 
-type StmtTerm =
-  | RuleStmtTerm
-    of string * TermData * Comment list * Location
+type StmtTerm = RuleStmtTerm of string * TermData * Comment list * Location
 
 type Node =
-  | TokenNode
-    of string
+  | TokenNode of string
 
-  | SymbolNode
-    of string
+  | SymbolNode of string
 
   | EmptyNode
 
-  | Many1Node
-    of NodeData
+  | Many1Node of NodeData
 
-  | ConcatNode
-    of NodeData * NodeData
+  | ConcatNode of NodeData * NodeData
 
-  | OrNode
-    of NodeData * NodeData
+  | OrNode of NodeData * NodeData
 
-type NodeData =
-  Node * (AnnotationData list * Location)
+type NodeData = Node * (AnnotationData list * Location)
 
-type Rule =
-  | Rule
-    of string * NodeData * Comment list * Location
+type Rule = Rule of string * NodeData * Comment list * Location

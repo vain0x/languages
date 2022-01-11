@@ -18,7 +18,7 @@ let termAddAnnotation annotation (term, (annotations, location)) =
 
 /// x? ==> (x / ε)
 let optNode item location =
-  OrNode (item, (EmptyNode, location)), location
+  OrNode(item, (EmptyNode, location)), location
 
 /// x* ==> (x+)?
 let manyNode item location =
@@ -26,7 +26,7 @@ let manyNode item location =
 
 /// x,+ ==> x ("," x)*
 let sep1Node item sep location =
-  ConcatNode (item, manyNode (ConcatNode (sep, item), location) location), location
+  ConcatNode(item, manyNode (ConcatNode(sep, item), location) location), location
 
 /// x,* ==> (x,+)?
 let sepNode item sep location =

@@ -15,18 +15,21 @@ let analyze rules =
     match rule with
     | Rule (name, body, comments, location) ->
       let comments =
-        [
-          yield! comments
+        [ yield! comments
 
           if body |> nodeIsNullable isNullable then
             "NULLABLE"
 
-          let first = firstSet name |> Set.toList |> String.concat ", "
+          let first =
+            firstSet name |> Set.toList |> String.concat ", "
+
           "FIRST = {" + first + "}"
 
-          let first = followSet name |> Set.toList |> String.concat ", "
-          "FOLLOW = {" + first + "}"
-        ]
-      Rule (name, body, comments, location)
+          let first =
+            followSet name |> Set.toList |> String.concat ", "
+
+          "FOLLOW = {" + first + "}" ]
+
+      Rule(name, body, comments, location)
 
   rules |> List.map analyzeRule

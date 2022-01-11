@@ -1,11 +1,11 @@
 [RuleStmtTerm
    ("annotation_on_suffix",
     (OptTerm (TokenTerm """", ([], (28, 30))), ([("opt", (23, 27))], (30, 31))),
-    [],(0, 20));
+    [], (0, 20));
  RuleStmtTerm
    ("nested_annotations",
-    (SymbolTerm "_", ([("first", (55, 61)); ("second", (62, 69))], (70, 71))),[],
-    (34, 52));
+    (SymbolTerm "_", ([("first", (55, 61)); ("second", (62, 69))], (70, 71))),
+    [], (34, 52));
  RuleStmtTerm
    ("add",
     (OrTerm
@@ -16,5 +16,5 @@
                 (OrTerm
                    ((TokenTerm ""+"", ([], (112, 115))),
                     (TokenTerm ""-"", ([], (118, 121)))), ([], (116, 117)))),
-             ([], (0, 0))),(SymbolTerm "mul", ([], (123, 126)))), ([], (0, 0)))),
-     ([("binary", (81, 88))], (93, 94))),[],(75, 78))]
+             ([], (0, 0))), (SymbolTerm "mul", ([], (123, 126)))), ([], (0, 0)))),
+     ([("binary", (81, 88))], (93, 94))), [], (75, 78))]

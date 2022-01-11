@@ -8,19 +8,15 @@ open XbnfLang.Types
 
 let ruleToFirstSet isNullable firstSet rule =
   match rule with
-  | Rule (_, body, _, _) ->
-    nodeToFirstSet isNullable firstSet body
+  | Rule (_, body, _, _) -> nodeToFirstSet isNullable firstSet body
 
 let followSet isNullable firstSet rules =
   let map = HashMap()
 
   let followSet (name: string) =
     match map.TryGetValue(name) with
-    | true, set ->
-      set
-
-    | false, _ ->
-      Set.empty
+    | true, set -> set
+    | false, _ -> Set.empty
 
   let mutable stuck = false
 
@@ -32,11 +28,11 @@ let followSet isNullable firstSet rules =
     let rec go follow (node, _) =
       match node with
       | EmptyNode _
-      | TokenNode _ ->
-        ()
+      | TokenNode _ -> ()
 
       | SymbolNode name ->
         let current = followSet name
+
         if Set.isSubset follow current |> not then
           map.[name] <- current |> Set.union follow
           stuck <- false
@@ -79,7 +75,6 @@ let followSet isNullable firstSet rules =
 
     for rule in rules do
       match rule with
-      | Rule (name, body, _, _) ->
-        update name body
+      | Rule (name, body, _, _) -> update name body
 
   followSet

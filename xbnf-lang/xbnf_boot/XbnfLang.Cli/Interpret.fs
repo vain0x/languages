@@ -12,6 +12,86 @@ open XbnfLang.Types
 type private TokenData = string * int * int
 
 // -----------------------------------------------
+// BTerm
+// -----------------------------------------------
+
+[<RequireQualifiedAccess>]
+type private BTerm =
+  | Token of string
+  | Symbol of string
+  | Empty
+  | Concat of BTerm * BTerm
+  | Many1 of BTerm
+  | Or of BTerm * BTerm
+  | Start
+  | Finish of string
+  | LeftRec of symbol: string * head: BTerm * tail: BTerm
+
+type private BRule = BRule of string * BTerm
+
+let private lowerNode (node: NodeData) =
+  let node, _ = node
+
+  match node with
+  | TokenNode token -> BTerm.Token token
+  | SymbolNode symbol -> BTerm.Symbol symbol
+  | EmptyNode -> BTerm.Empty
+  | Many1Node item -> lowerNode item
+  | ConcatNode (l, r) -> BTerm.Concat(lowerNode l, lowerNode r)
+  | OrNode (l, r) -> BTerm.Or(lowerNode l, lowerNode r)
+
+let private lowerRule rule =
+  let (Rule (name, node, _, _)) = rule
+
+  let body =
+    let term = lowerNode node
+
+    let leftRecOpt =
+      let orList =
+        let rec go acc term =
+          match term with
+          | BTerm.Or (l, r) ->
+            let acc = go acc l
+            go acc r
+
+          | _ -> term :: acc
+
+        go [] term |> List.rev
+
+      let baseList, recList =
+        orList
+        |> List.map (fun term ->
+          // concat(nullable, self), many1(self) などのパターンもある。
+          match term with
+          | BTerm.Symbol n when n = name -> Error BTerm.Empty
+          | BTerm.Concat (BTerm.Symbol n, rep) when n = name -> Error rep
+          | _ -> Ok term)
+        |> List.fold
+             (fun (baseList, recList) r ->
+               match r with
+               | Ok term -> term :: baseList, recList
+               | Error term -> baseList, term :: recList)
+             ([], [])
+
+      match baseList, recList with
+      | _, [] -> None
+      | [], (_ :: _) -> failwithf "left-recursion only %s" name
+
+      | b :: bs, r :: rs ->
+        let fold x xs =
+          xs |> List.fold (fun l r -> BTerm.Or(l, r)) x
+
+        Some(fold b bs, fold r rs)
+
+    match leftRecOpt with
+    | Some (baseTerm, repTerm) -> BTerm.LeftRec(name, baseTerm, repTerm)
+    | None -> BTerm.Concat(BTerm.Concat(BTerm.Start, term), BTerm.Finish name)
+
+  BRule(name, body)
+
+let private lowerRules rules = rules |> List.map lowerRule
+
+// -----------------------------------------------
 // Grammar
 // -----------------------------------------------
 

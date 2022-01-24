@@ -190,3 +190,15 @@ let interpretTestRecursion () =
       T "**" T "**" F
     """
   |> is """(expr (pow (bit T) "**" (pow (bit T) "**" (pow (bit F)))))"""
+
+[<Fact>]
+let interpretTestLeftRecursion () =
+  interpret
+    """
+      plus = plus "+" N
+      expr = plus
+    """
+    """
+      N "+" N "+" N
+    """
+  |> is """(expr (plus (plus N "+" N) N)"""

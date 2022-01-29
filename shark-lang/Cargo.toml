@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "shark",
+    "shark_syntax",
+    "shark_util"
+]

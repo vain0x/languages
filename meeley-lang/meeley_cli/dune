@@ -1,0 +1,3 @@
+(executable
+ (name meeley)
+ (libraries base stdio))

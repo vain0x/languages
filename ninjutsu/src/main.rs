@@ -1,4 +1,7 @@
-use ninjutsu::tokenize;
+use ninjutsu::{
+    parse,
+    tokenize::{self, Tokenizer},
+};
 use std::{env::args, fs, path::PathBuf, process::exit};
 
 fn help() -> ! {
@@ -26,6 +29,25 @@ fn main() {
                     .expect("write");
                 let mut serializer = serde_json::Serializer::new(w);
                 serde::Serialize::serialize(&tokens, &mut serializer).expect("serialize");
+            }
+        }
+        "parse" => {
+            for filename in args {
+                let filename = PathBuf::from(filename);
+                let buf = fs::read_to_string(&filename).expect("read");
+
+                let tokenizer = Tokenizer::new(&buf);
+                let root = parse::parse_tokens(tokenizer);
+
+                let w = fs::OpenOptions::new()
+                    .create(true)
+                    .truncate(true)
+                    .write(true)
+                    .open(filename.with_extension("nin_ast"))
+                    .expect("write");
+
+                let mut serializer = serde_json::Serializer::new(w);
+                serde::Serialize::serialize(&root, &mut serializer).expect("serialize");
             }
         }
 

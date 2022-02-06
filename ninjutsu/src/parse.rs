@@ -87,7 +87,7 @@ fn parse_call_expr(px: &mut Px<'_>) -> AExpr {
                     break;
                 }
 
-                let arg = parse_atom_expr(px);
+                let arg = parse_expr(px);
                 args.push(arg);
                 px.eat(Token::Comma);
             }

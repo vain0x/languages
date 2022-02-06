@@ -1,5 +1,10 @@
+bin/ninja
 tests/**/*.nin_tokens
 tests/**/*.nin_ast
+tests/**/*.nin_ir
+tests/**/build.ninja
+
+.ninja_log
 
 
 

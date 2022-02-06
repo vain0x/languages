@@ -2,7 +2,13 @@ use ninjutsu::{
     parse,
     tokenize::{self, Tokenizer},
 };
-use std::{env::args, fs, path::PathBuf, process::exit};
+use std::{
+    env::args,
+    fs,
+    os::unix::prelude::CommandExt,
+    path::PathBuf,
+    process::{exit, Command},
+};
 
 fn help() -> ! {
     println!("ninjutsu <SUBCOMMAND>");
@@ -49,6 +55,31 @@ fn main() {
                 let mut serializer = serde_json::Serializer::new(w);
                 serde::Serialize::serialize(&root, &mut serializer).expect("serialize");
             }
+        }
+        "build" => {
+            let ninja = r#"
+rule cargo-build
+  command = cargo build
+
+rule parse
+  command = cargo run -- parse $in
+
+rule compile
+  command = echo $in >$out
+
+build tests/hello/hello.nin_ast: parse tests/hello/hello.nin
+build tests/hello/io.nin_ast: parse tests/hello/io.nin
+
+build tests/hello/io.nin_ir: compile tests/hello/io.nin_ast
+build tests/hello/hello.nin_ir: compile tests/hello/hello.nin_ast tests/hello/io.nin_ir
+
+default tests/hello/hello.nin_ir
+"#;
+
+            let build_file = &"tests/hello/build.ninja";
+            fs::write(build_file, ninja).expect("write");
+            let err = Command::new("./bin/ninja").arg("-f").arg(build_file).arg("-v").exec();
+            panic!("{:?}", err);
         }
 
         arg => {

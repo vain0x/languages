@@ -32,6 +32,8 @@ pub enum Token {
     Return,
     #[token("true")]
     True,
+    #[token("use")]
+    Use,
     #[regex(r#"[A-Za-z_]([0-9A-Za-z_]|[^\x00-\x7f])*"#)]
     Ident,
 

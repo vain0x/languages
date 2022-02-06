@@ -17,6 +17,7 @@ pub enum AExprKind {
         callee: Box<AExpr>,
         args: Vec<AExpr>,
     },
+    Use(AIdent),
 }
 
 #[derive(Serialize)]

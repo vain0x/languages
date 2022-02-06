@@ -49,24 +49,30 @@ impl<'b> Px<'b> {
     }
 }
 
+fn parse_ident(px: &mut Px) -> AIdent {
+    assert_eq!(px.next(), Token::Ident);
+    let (_, ident, _) = px.bump();
+    AIdent(ident.to_string())
+}
+
 fn parse_atom_expr(px: &mut Px<'_>) -> AExpr {
     match px.next() {
         Token::Ident => {
-            let (_, ident, _) = px.bump();
+            let ident = parse_ident(px);
             AExpr {
-                kind: AExprKind::Symbol(AIdent(ident.to_string())),
+                kind: AExprKind::Symbol(ident),
             }
         }
         Token::DecimalInt => {
-            let (_, ident, _) = px.bump();
+            let (_, text, _) = px.bump();
             AExpr {
-                kind: AExprKind::Lit(ALit::DecimalInt(ident.parse().expect("parse"))),
+                kind: AExprKind::Lit(ALit::DecimalInt(text.parse().expect("parse"))),
             }
         }
         Token::String => {
-            let (_, ident, _) = px.bump();
+            let (_, text, _) = px.bump();
             AExpr {
-                kind: AExprKind::Lit(ALit::String(ident[1..ident.len() - 1].to_string())),
+                kind: AExprKind::Lit(ALit::String(text[1..text.len() - 1].to_string())),
             }
         }
         _ => panic!("unexpected token, {:?}", px.last),
@@ -103,7 +109,16 @@ fn parse_call_expr(px: &mut Px<'_>) -> AExpr {
 }
 
 fn parse_expr(px: &mut Px<'_>) -> AExpr {
-    parse_call_expr(px)
+    match px.next() {
+        Token::Use => {
+            px.bump();
+            let ident = parse_ident(px);
+            AExpr {
+                kind: AExprKind::Use(ident),
+            }
+        }
+        _ => parse_call_expr(px),
+    }
 }
 
 fn parse_root(px: &mut Px<'_>) -> ARoot {

@@ -1,0 +1,154 @@
+// Test linear primitives.
+
+let increment (r: __linear<int>) : int * __linear<int> = {
+    let n = __dispose r
+    n, __acquire n
+}
+
+let drop (r: __linear<int>) : int * __linear<int> = {
+    let _ = __dispose r
+}
+
+expect "acquire and dispose" {
+    let r = __acquire 41
+    let _ = __dispose r
+}
+
+expect "move" {
+    let r1 = __acquire 41
+    let r2 = r1
+    let _ = __dispose r2
+}
+
+expect "pass in function" {
+    let r =  __acquire 41
+    let n, r = increment r
+    assert (n = 41)
+    let _ = __dispose r
+}
+
+expect "two resources" {
+    let r1 = __acquire 41
+    let s1 = __acquire 42
+
+    let n, r2 = increment r1
+    assert (n = 41)
+    let m, s2 = increment s1
+    assert (m = 42)
+
+    let _ = __dispose r2
+    let _ = __dispose s2
+}
+
+expect "wrap resource in pair" {
+    let r1 = __acquire 1
+    let t = r1, 2
+
+    let _, r2 = t
+    let _ = __dispose r2
+}
+
+expect "move to branches" {
+    let r1 = __acquire 1
+
+    let _ =
+        if 0 = 0 then
+            let _, r2 = increment r1
+            let _ = __dispose r2
+            1
+        else
+            let _ = __dispose r1
+            0
+        end
+}
+
+expect "use in branches" {
+    let r1 = __acquire 1
+
+    let r3 =
+        if true then
+            let _, r2 = increment r1
+            r2
+        else
+            r1
+        end
+    
+    let _ = __dispose r3
+}
+
+
+
+let rec add_aux (r1: __linear<int>) (i: int) (n: int) : __linear<int> = {
+    if i = n then
+        r1
+    else
+        let _, r2 = increment r1
+        add_aux r2 i n
+    end
+}
+
+let add (r: __linear<int>) (n: int) : __linear<int> = {
+    add_aux r 0 n
+}
+
+expect "use in loop" {
+    let r1 = __acquire 41
+    let r2 = add r1 8
+    let n = __dispose r2
+    assert (n = 49)
+}
+
+
+
+expect_error "leak resource" {
+    let _leaked = __acquire 41
+}
+
+expect_error "leak pair" {
+    let r = __acquire 41
+    let _leaked = r, 42
+}
+
+expect_error "leak pair as function result" {
+    let r = __acquire 41
+    let _leaked = increment r
+}
+
+expect_error "dispose twice" {
+    let r = __acquire 41
+    let _ = __dispose r
+    let _ = __dispose r
+}
+
+expect_error "move twice" {
+    let r1 = __acquire 41
+    let s1 = r1
+    let s2 = r1
+    let _ = __dispose s1
+    let _ = __dispose s2
+}
+
+expect_error "use disposed resource (use-after-free)" {
+    let r1 = __acquire 41
+    let _ = __dispose r1
+    let _, r2 = increment r1
+    let _ = __dispose r2
+}
+
+expect_error "duplicate resource (use-after-free)" {
+    let r1 = __acquire 41
+    let _, r2 = increment r1
+    let _, r3 = increment r1
+    let _ = __dispose r2
+    let _ = __dispose r3
+}
+
+expect_error "leak in one branch" {
+    let r = __acquire 41
+
+    if true then
+        let _ = __dispose r
+    else
+        // r is not disposed!
+    end
+}

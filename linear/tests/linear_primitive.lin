@@ -78,7 +78,7 @@ expect "use in branches" {
 
 
 
-let rec add_aux (r1: __linear<int>) (i: int) (n: int) : __linear<int> = {
+let add_aux (r1: __linear<int>) (i: int) (n: int) : __linear<int> = {
     if i = n then
         r1
     else

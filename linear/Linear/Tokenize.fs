@@ -117,6 +117,7 @@ let tokenizeNext (i: int) (s: string) : Token option * int =
   | ':'
   | ','
   | '='
+  | '+'
   | ';'
   | '*' -> Some PunToken, 1
 
@@ -183,6 +184,8 @@ let tokenizeString (s: string) : TokenData array * (string * Range) array =
         let mutable popping = None // popはセミコロン挿入の後に行う (雑)
 
         match kind, text with
+        | KeywordToken, "if" -> brackets.Add(Brace)
+        | KeywordToken, "end" -> popping <- Some Brace
         | PunToken, "(" -> brackets.Add(Paren)
         | PunToken, "{" -> brackets.Add(Brace)
         | PunToken, ")" -> popping <- Some Paren

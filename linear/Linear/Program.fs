@@ -4,14 +4,27 @@ open System.IO
 
 [<EntryPoint>]
 let main _ =
-  let src = File.ReadAllText("tests/linear_primitive.lin")
-  let tokens, errors = Linear.Tokenize.tokenizeString src
+  let files =
+    [ "tests/auto_semi.lin"
+      "tests/linear_primitive.lin"
+      // "tests/safe_wrapper.lin"
+      ]
 
-  if errors.Length <> 0 then
-    for message, range in errors do
-      eprintfn "ERROR: %A %s" range message
+  for file in files do
+    printfn "file: %s" file
+    let src = File.ReadAllText(file)
+    let tokens, errors = Tokenize.tokenizeString src
 
-  for kind, text, range in tokens do
-    printfn "%A %A %A" range kind text
+    if errors.Length <> 0 then
+      for message, range in errors do
+        eprintfn "ERROR: %A %s" range message
+
+      exit 1
+
+    // for kind, text, range in tokens do
+    //   printfn "%A %A %A" range kind text
+
+    let ast = Parse.parseTokens tokens
+    printfn "%A" ast
 
   0

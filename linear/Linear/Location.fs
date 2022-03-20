@@ -1,6 +1,8 @@
 /// Source location information.
 module Linear.Location
 
+let private compareInt (l: int) (r: int) = compare l r
+
 // -----------------------------------------------
 // Pos
 // -----------------------------------------------
@@ -29,6 +31,12 @@ module Pos =
   let toPair (pos: Pos) : int * int = pos.Row, pos.Column
 
   let toString (pos: Pos) = string pos
+
+  let compare (l: Pos) (r: Pos) : int =
+    if l.Row <> r.Row then
+      compareInt l.Row r.Row
+    else
+      compareInt l.Column r.Column
 
 // -----------------------------------------------
 // Range

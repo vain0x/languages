@@ -65,6 +65,7 @@ let private identKind (t: string) =
   | "expect"
   | "if"
   | "let"
+  | "of"
   | "then"
   | "type" -> KeywordToken
 

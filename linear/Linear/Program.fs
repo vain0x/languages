@@ -7,8 +7,7 @@ let main _ =
   let files =
     [ "tests/auto_semi.lin"
       "tests/linear_primitive.lin"
-      // "tests/safe_wrapper.lin"
-      ]
+      "tests/safe_wrapper.lin" ]
 
   for file in files do
     printfn "file: %s" file

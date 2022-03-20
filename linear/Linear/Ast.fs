@@ -42,6 +42,7 @@ type AExpr =
 [<NoEquality; NoComparison>]
 type ADecl =
   | AFunDecl of AName * paramList: (AName * ATy) list * resultTy: ATy * body: AExpr * Range
+  | ANewtypeDecl of AName * variant: AName * payload: ATy * Range
   | AExpectDecl of desc: string * AExpr * Range
   | AExpectErrorDecl of desc: string * AExpr * Range
 

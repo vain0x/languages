@@ -420,6 +420,16 @@ let private parseFunDecl px : ADecl * Px =
   let range = endRange start px
   AFunDecl(name, paramList, resultTy, body, range), px
 
+let private parseTypeDecl px =
+  let start = startRange px
+  let name, px = parseName (bump px)
+  let px = expectPun "=" px
+  let variant, px = parseName px
+  let px = expectKeyword "of" px
+  let payloadTy, px = parseTy px
+  let range = endRange start px
+  ANewtypeDecl(name, variant, payloadTy, range), px
+
 let private parseExpectDecl px : ADecl * Px =
   let start = startRange px
   let px = bump px
@@ -451,6 +461,7 @@ let private parseExpectErrorDecl px : ADecl * Px =
 let private parseDecl px : ADecl * Px =
   match get0 px with
   | KeywordToken, "let", _ -> parseFunDecl px
+  | KeywordToken, "type", _ -> parseTypeDecl px
   | KeywordToken, "expect", _ -> parseExpectDecl px
   | KeywordToken, "expect_error", _ -> parseExpectErrorDecl px
   | _ -> fail "Expected a declaration" px

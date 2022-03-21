@@ -43,6 +43,12 @@ type TPrim =
   | UUDispose
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
+type TUnary =
+  | Assert
+  | UUAcquire
+  | UUDispose
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TSymbolKind =
   | Var
   | Fun
@@ -51,10 +57,11 @@ type TSymbolKind =
 [<NoEquality; NoComparison>]
 type TExpr =
   | TIntExpr of int * Pos
+  | TBoolExpr of bool * Pos
   | TUnitExpr of Pos
   | TSymbolExpr of TSymbolKind * Id * TTy * Pos
-  | TPrimExpr of TPrim * TTy * Pos
   | TAppExpr of TExpr * TExpr
+  | TUnaryExpr of TUnary * TExpr
   | TBinaryExpr of TBinary * TExpr * TExpr
   | TIfExpr of cond: TExpr * thenClause: TExpr * elseClause: TExpr
   | TLetExpr of pat: TPat * init: TExpr

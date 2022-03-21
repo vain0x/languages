@@ -207,61 +207,39 @@ let private tcPat targetTy (state: Sx) (pat: APat) : TPat * Sx =
 // Type Check Expressions
 // -----------------------------------------------
 
-// Computes expression type bottom-up.
-let private tcExprInfer (state: Sx) (expr: AExpr) : TTy =
+let private exprToTy (expr: TExpr) : TTy =
   match expr with
-  | AIntExpr _ -> TIntTy
-  | AUnitExpr _ -> TUnitTy
+  | TIntExpr _ -> TIntTy
+  | TBoolExpr _ -> TBoolTy
+  | TUnitExpr _ -> TUnitTy
+  | TSymbolExpr (_, _, ty, _) -> ty
 
-  | ANameExpr name ->
-    match resolveValueSymbol state name with
-    | TValueSymbol.Var varName ->
-      state.SymbolTys
-      |> Map.tryFind (idOf varName)
-      |> unwrap
+  | TAppExpr (lTy, _) ->
+    match exprToTy lTy with
+    | TFunTy (_, rTy) -> rTy
+    | _ -> unreachable ()
 
-    | _ ->
-      // Functions, primitives and variants appear only as function in application.
-      fail "Can't appear as value" (posOf name)
+  | TUnaryExpr (unary, arg) ->
+    match unary with
+    | TUnary.Assert -> TUnitTy
+    | TUnary.UUAcquire -> TLinearTy(exprToTy arg)
 
-  | AAppExpr (lExpr, rExpr) ->
-    let onDefault () =
-      match tcExprInfer state lExpr with
-      | TFunTy (_, rTy) -> rTy
-      | _ -> fail "Expected function type" Pos.zero
+    | TUnary.UUDispose ->
+      match exprToTy arg with
+      | TLinearTy itemTy -> itemTy
+      | _ -> unreachable ()
 
-    match lExpr with
-    | ANameExpr name ->
-      // Some primitive has polymorphic type that can't be represented in TTy.
-      // Here compute the use-site type of primitive by using argument type.
-      match resolveValueSymbol state name with
-      | TValueSymbol.Prim prim ->
-        let rTy = tcExprInfer state rExpr
-
-        match prim with
-        | TPrim.Assert
-        | TPrim.UUDispose -> TUnitTy
-
-        | TPrim.UUAcquire -> TLinearTy rTy
-
-      | _ -> onDefault ()
-    | _ -> onDefault ()
-
-  | ABinaryExpr (binary, lExpr, rExpr) ->
+  | TBinaryExpr (binary, lExpr, rExpr) ->
     match binary with
-    | Binary.Add -> TIntTy
-    | Binary.Equal -> TBoolTy
+    | TBinary.Add -> TIntTy
+    | TBinary.Equal -> TBoolTy
+    | TBinary.Pair -> TPairTy(exprToTy lExpr, exprToTy rExpr)
 
-    | Binary.Pair ->
-      let lTy = tcExprInfer state lExpr
-      let rTy = tcExprInfer state rExpr
-      TPairTy(lTy, rTy)
+  | TIfExpr (_, thenClause, _) -> exprToTy thenClause
+  | TLetExpr _ -> TUnitTy
+  | TBlockExpr (_, last) -> exprToTy last
 
-  | AIfExpr (_, thenClause, _) -> tcExprInfer state thenClause
-  | ALetExpr _ -> TUnitTy
-  | ABlockExpr (_, last) -> tcExprInfer state last
-
-let private tcNameExpr targetTy state name : TExpr * Sx =
+let private tcNameExpr state name : TExpr * Sx =
   match resolveValueSymbol state name with
   | TValueSymbol.Var varName ->
     let defTy =
@@ -269,11 +247,10 @@ let private tcNameExpr targetTy state name : TExpr * Sx =
       |> Map.tryFind (idOf varName)
       |> unwrap
 
-    unify (posOf name) targetTy defTy
     TSymbolExpr(TSymbolKind.Var, idOf varName, defTy, posOf name), state
 
   | TValueSymbol.Prim _ ->
-    // Type of some primitive is polymorphic and not representable.
+    // Some primitive has polymorphic type that can't be represented in TTy.
     fail "Must appear in function application" (posOf name)
 
   | TValueSymbol.Fun funName ->
@@ -282,7 +259,6 @@ let private tcNameExpr targetTy state name : TExpr * Sx =
       |> Map.tryFind (idOf funName)
       |> unwrap
 
-    unify (posOf name) targetTy defTy
     TSymbolExpr(TSymbolKind.Fun, idOf funName, defTy, posOf name), state
 
   | TValueSymbol.NewtypeVariant (variantName, _) ->
@@ -291,71 +267,94 @@ let private tcNameExpr targetTy state name : TExpr * Sx =
       |> Map.tryFind (idOf variantName)
       |> unwrap
 
-    unify (posOf name) targetTy defTy
     TSymbolExpr(TSymbolKind.Variant, idOf variantName, defTy, posOf name), state
 
-let private tcExpr targetTy (state: Sx) (expr: AExpr) : TExpr * Sx =
+let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
   match expr with
-  | ANameExpr name -> tcNameExpr targetTy state name
+  | ANameExpr name -> tcNameExpr state name
 
-  | AIntExpr (value, pos) ->
-    match targetTy with
-    | TIntTy -> TIntExpr(value, pos), state
-    | _ -> fail "Expected int" pos
-
-  | AUnitExpr pos ->
-    match targetTy with
-    | TUnitTy -> TUnitExpr pos, state
-    | _ -> fail "Expected unit" pos
+  | AIntExpr (value, pos) -> TIntExpr(value, pos), state
+  | AUnitExpr pos -> TUnitExpr pos, state
 
   | AAppExpr (lExpr, rExpr) ->
-    let onDefault () =
-      let lTy, rTy =
-        match targetTy with
-        | TFunTy (lTy, rTy) -> lTy, rTy
-        | _ -> fail "Expected function" Pos.zero // FIXME: pos
+    let pos = Pos.zero // FIXME: pos
 
-      let lExpr, state = tcExpr lTy state lExpr
-      let rExpr, state = tcExpr rTy state rExpr
+    let onDefault () =
+      let lExpr, state = tcExpr state lExpr
+      let rExpr, state = tcExpr state rExpr
+
+      let lTy = exprToTy lExpr
+      let rTy = exprToTy rExpr
+
+      match lTy with
+      | TFunTy (argTy, _) -> unify pos argTy rTy
+      | _ -> fail "Expected function" pos
+
       TAppExpr(lExpr, rExpr), state
 
     match lExpr with
-    | ANameExpr (AName (_, name, _)) ->
-      match resolveValueSymbol state (identOf name) with
-      | TValueSymbol.Prim prim -> ()
+    | ANameExpr name ->
+      match resolveValueSymbol state name with
+      | TValueSymbol.Prim prim ->
+        let rExpr, state = tcExpr state rExpr
+
+        match prim with
+        | TPrim.Assert ->
+          unify pos (exprToTy rExpr) TUnitTy
+          TUnaryExpr(TUnary.Assert, rExpr), state
+
+        | TPrim.UUAcquire -> TUnaryExpr(TUnary.UUAcquire, rExpr), state
+
+        | TPrim.UUDispose ->
+          match exprToTy rExpr with
+          | TLinearTy _ -> ()
+          | _ -> fail "Expected __linear<_>" pos
+
+          TUnaryExpr(TUnary.UUDispose, rExpr), state
+
       | _ -> onDefault ()
     | _ -> onDefault ()
 
-
-
   | ABinaryExpr (binary, lExpr, rExpr) ->
-    let binary, lTy, rTy, resultTy =
-      match binary with
-      | Binary.Add -> TBinary.Add, TIntTy, TIntTy, TIntTy
-      | Binary.Equal -> TBinary.Equal, TIntTy, TIntTy, TBoolTy
-      | Binary.Pair ->
-        match targetTy with
-        | TPairTy (lTy, rTy) -> TBinary.Pair, lTy, rTy, TPairTy(lTy, rTy)
-        | _ -> fail "Expected pair" Pos.zero // FIXME: pos
-
     let pos = Pos.zero // FIXME: pos
-    unify pos targetTy resultTy
-    let lExpr, state = tcExpr lTy state lExpr
-    let rExpr, state = tcExpr rTy state rExpr
+    let lExpr, state = tcExpr state lExpr
+    let rExpr, state = tcExpr state rExpr
+
+    let binary, lTy, rTy =
+      match binary with
+      | Binary.Add -> TBinary.Add, TIntTy, TIntTy
+      | Binary.Equal -> TBinary.Equal, TIntTy, TIntTy
+      | Binary.Pair -> TBinary.Pair, exprToTy lExpr, exprToTy rExpr
+
+    unify pos (exprToTy lExpr) lTy
+    unify pos (exprToTy rExpr) rTy
     TBinaryExpr(binary, lExpr, rExpr), state
 
   | AIfExpr (cond, thenClause, elseClause) ->
-    let cond, state = tcExpr TBoolTy state cond
-    let thenClause, state = tcExpr targetTy state thenClause
-    let elseClause, state = tcExpr targetTy state elseClause
+    let cond, state = tcExprTopDown TBoolTy state cond
+    let thenClause, state = tcExpr state thenClause
+    let elseClause, state = tcExpr state elseClause
+    unify Pos.zero (exprToTy thenClause) (exprToTy elseClause)
     TIfExpr(cond, thenClause, elseClause), state
 
   | ALetExpr (pat, init) ->
-    let pat, state = tcPat () state pat
-    let init, state = tcExpr () state init
+    let init, state = tcExpr state init
+    let pat, state = tcPat (exprToTy init) state pat
     TLetExpr(pat, init), state
 
-  | ABlockExpr (exprs, last) -> failwith "Not Implemented"
+  | ABlockExpr (exprs, last) ->
+    let exprs, state =
+      exprs
+      |> List.mapFold (tcExprTopDown TUnitTy) state
+
+    let last, state = tcExpr state last
+    TBlockExpr(exprs, last), state
+
+/// Type-checks an expression and validates it has expected target type.
+let private tcExprTopDown targetTy state expr : TExpr * Sx =
+  let expr, state = tcExpr state expr
+  unify Pos.zero (exprToTy expr) targetTy // FIXME: pos
+  expr, state
 
 // -----------------------------------------------
 // Collect Declarations
@@ -389,7 +388,7 @@ let private collectDecls (state: Sx) root : SigMap * Sx =
              { state with
                  ValueEnv =
                    state.ValueEnv
-                   |> Map.add (identOf variant) (TValueSymbol.NewtypeVariant variantName)
+                   |> Map.add (identOf variant) (TValueSymbol.NewtypeVariant(variantName, tName))
                  TyEnv =
                    state.TyEnv
                    |> Map.add (identOf name) (TTySymbol.NewtypeUnion tName) }
@@ -497,7 +496,7 @@ let private tcFunDecl (sigMap: SigMap) (state: Sx) funDecl =
            (paramName, ty), state)
          state
 
-  let body, state = tcExpr result state body
+  let body, state = tcExprTopDown result state body
 
   // Rollback scope.
   let state = { state with ValueEnv = parentEnv }
@@ -546,13 +545,13 @@ let private tcDecl (sigMap: SigMap) funs newtypes declAcc (state: Sx) (decl: ADe
     funs, newtypes, declAcc, state
 
   | AExpectDecl (desc, body, range) ->
-    let body, state = tcExpr TUnitTy state body
+    let body, state = tcExprTopDown TUnitTy state body
     let declAcc = TExpectDecl(desc, body, range) :: declAcc
     funs, newtypes, declAcc, state
 
   | AExpectErrorDecl (desc, body, range) ->
     try
-      let body, state = tcExpr TUnitTy state body
+      let body, state = tcExprTopDown TUnitTy state body
       let declAcc = TExpectErrorDecl(desc, body, range) :: declAcc
       funs, newtypes, declAcc, state
     with

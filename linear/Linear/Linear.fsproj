@@ -11,7 +11,8 @@
     <Compile Include="Tokenize.fs" />
     <Compile Include="Ast.fs" />
     <Compile Include="Parse.fs" />
-    <!-- <Compile Include="TypeCheck.fs" /> -->
+    <Compile Include="TypedIR.fs" />
+    <Compile Include="TypeCheck.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

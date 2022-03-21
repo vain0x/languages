@@ -56,9 +56,9 @@ type TSymbolKind =
 
 [<NoEquality; NoComparison>]
 type TExpr =
-  | TIntExpr of int * Pos
-  | TBoolExpr of bool * Pos
-  | TUnitExpr of Pos
+  | TIntExpr of int * Range
+  | TBoolExpr of bool * Range
+  | TUnitExpr of Range
   | TSymbolExpr of TSymbolKind * Id * TTy * Pos
   | TAppExpr of TExpr * TExpr
   | TUnaryExpr of TUnary * TExpr

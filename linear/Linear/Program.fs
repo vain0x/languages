@@ -24,7 +24,7 @@ let main _ =
     //   printfn "%A %A %A" range kind text
 
     let ast = Parse.parseTokens tokens
-    printfn "ast:\n%A" ast
+    // printfn "ast:\n%A" ast
 
     if file <> "tests/auto_semi.lin" then
       let m = TypeCheck.typeCheck ast

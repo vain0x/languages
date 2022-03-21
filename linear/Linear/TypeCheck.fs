@@ -4,9 +4,9 @@ open Linear.Ast
 open Linear.Location
 open Linear.TypedIR
 
-exception TyError of message: string * pos: Pos with
+exception TyError of message: string * range: Range with
   override this.ToString() =
-    $"Type error: {this.pos} {this.message}"
+    $"Type error: {this.range} {this.message}"
 
 type TSymbol = TSymbolKind * TName
 
@@ -50,7 +50,10 @@ type private TyCheckState =
 
 type private Sx = TyCheckState
 
-let private fail message (pos: Pos) : 'A = raise (TyError(message, pos))
+let private fail message (pos: Pos) : 'A =
+  raise (TyError(message, Range.ofPos pos))
+
+let private fail2 message range : 'A = raise (TyError(message, range))
 
 let private emptyState () : TyCheckState =
   { SymbolTys = Map.empty
@@ -114,7 +117,7 @@ let private genName (name: AName) : TName =
 
 let private unify pos lTy rTy : unit =
   let fail () : 'A =
-    raise (TyError($"can't unify {lTy}, {rTy}", pos))
+    raise (TyError($"can't unify {lTy}, {rTy}", Range.ofPos pos))
 
   let children ty =
     match ty with
@@ -151,6 +154,12 @@ let private unify pos lTy rTy : unit =
 
   go lTy rTy
 
+let private unify2 (range: Range) lTy rTy : unit =
+  try
+    unify range.Start lTy rTy
+  with
+  | :? TyError as ex -> raise (TyError(ex.message, range))
+
 // -----------------------------------------------
 // Type Check Patterns
 // -----------------------------------------------
@@ -176,14 +185,14 @@ let private tcPat targetTy (state: Sx) (pat: APat) : TPat * Sx =
     | TUnitTy -> TUnitPat pos, state
     | _ -> fail "Expected unit" pos
 
-  | APairPat (lPat, rPat) ->
+  | APairPat (lPat, rPat, pos) ->
     match targetTy with
     | TPairTy (lTy, rTy) ->
       let lPat, state = tcPat lTy state lPat
       let rPat, state = tcPat rTy state rPat
       TPairPat(lPat, rPat), state
 
-    | _ -> fail "Expected pair type" Pos.zero // FIXME: pos
+    | _ -> fail "Expected pair type" pos
 
   | AWrapPat (name, payloadPat) ->
     let variantName, unionName =
@@ -192,13 +201,18 @@ let private tcPat targetTy (state: Sx) (pat: APat) : TPat * Sx =
       | _ -> failwithf "Expected variant name %A" (posOf name)
 
     match targetTy with
-    | TUnionTy u when idOf u <> idOf unionName -> ()
+    | TUnionTy u when idOf u = idOf unionName -> ()
     | _ -> fail "Expected union" (posOf name)
 
     let defPayloadTy =
-      state.SymbolTys
-      |> Map.tryFind (idOf variantName)
-      |> unwrap
+      let variantTy =
+        state.SymbolTys
+        |> Map.tryFind (idOf variantName)
+        |> unwrap
+
+      match variantTy with
+      | TFunTy (payloadTy, _) -> payloadTy
+      | _ -> unreachable ()
 
     let payloadPat, state = tcPat defPayloadTy state payloadPat
     TWrapPat(variantName, payloadPat), state
@@ -214,8 +228,8 @@ let private exprToTy (expr: TExpr) : TTy =
   | TUnitExpr _ -> TUnitTy
   | TSymbolExpr (_, _, ty, _) -> ty
 
-  | TAppExpr (lTy, _) ->
-    match exprToTy lTy with
+  | TAppExpr (lExpr, _) ->
+    match exprToTy lExpr with
     | TFunTy (_, rTy) -> rTy
     | _ -> unreachable ()
 
@@ -238,6 +252,17 @@ let private exprToTy (expr: TExpr) : TTy =
   | TIfExpr (_, thenClause, _) -> exprToTy thenClause
   | TLetExpr _ -> TUnitTy
   | TBlockExpr (_, last) -> exprToTy last
+
+let private rangeOf (expr: AExpr) : Range =
+  match expr with
+  | AIntExpr (_, range) -> range
+  | AUnitExpr range -> range
+  | ANameExpr (AName (_, _, range)) -> range
+  | AAppExpr (_, _, pos) -> Range.ofPos pos
+  | ABinaryExpr (_, lExpr, rExpr) -> Range.join (rangeOf lExpr) (rangeOf rExpr)
+  | AIfExpr (_, _, _, range) -> range
+  | ALetExpr (_, _, range) -> range
+  | ABlockExpr (_, _, range) -> range
 
 let private tcNameExpr state name : TExpr * Sx =
   match resolveValueSymbol state name with
@@ -276,10 +301,9 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
   | AIntExpr (value, pos) -> TIntExpr(value, pos), state
   | AUnitExpr pos -> TUnitExpr pos, state
 
-  | AAppExpr (lExpr, rExpr) ->
-    let pos = Pos.zero // FIXME: pos
-
+  | AAppExpr (lExpr, rExpr, _) ->
     let onDefault () =
+      let rRange = rangeOf rExpr
       let lExpr, state = tcExpr state lExpr
       let rExpr, state = tcExpr state rExpr
 
@@ -287,8 +311,8 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
       let rTy = exprToTy rExpr
 
       match lTy with
-      | TFunTy (argTy, _) -> unify pos argTy rTy
-      | _ -> fail "Expected function" pos
+      | TFunTy (argTy, _) -> unify2 rRange argTy rTy
+      | _ -> fail2 "Expected function" rRange
 
       TAppExpr(lExpr, rExpr), state
 
@@ -296,11 +320,12 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
     | ANameExpr name ->
       match resolveValueSymbol state name with
       | TValueSymbol.Prim prim ->
+        let rRange = rangeOf rExpr
         let rExpr, state = tcExpr state rExpr
 
         match prim with
         | TPrim.Assert ->
-          unify pos (exprToTy rExpr) TUnitTy
+          unify (posOf name) (exprToTy rExpr) TBoolTy
           TUnaryExpr(TUnary.Assert, rExpr), state
 
         | TPrim.UUAcquire -> TUnaryExpr(TUnary.UUAcquire, rExpr), state
@@ -308,7 +333,7 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
         | TPrim.UUDispose ->
           match exprToTy rExpr with
           | TLinearTy _ -> ()
-          | _ -> fail "Expected __linear<_>" pos
+          | _ -> fail2 "Expected __linear<_>" rRange
 
           TUnaryExpr(TUnary.UUDispose, rExpr), state
 
@@ -316,7 +341,8 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
     | _ -> onDefault ()
 
   | ABinaryExpr (binary, lExpr, rExpr) ->
-    let pos = Pos.zero // FIXME: pos
+    let lRange = rangeOf lExpr
+    let rRange = rangeOf rExpr
     let lExpr, state = tcExpr state lExpr
     let rExpr, state = tcExpr state rExpr
 
@@ -326,23 +352,23 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
       | Binary.Equal -> TBinary.Equal, TIntTy, TIntTy
       | Binary.Pair -> TBinary.Pair, exprToTy lExpr, exprToTy rExpr
 
-    unify pos (exprToTy lExpr) lTy
-    unify pos (exprToTy rExpr) rTy
+    unify2 lRange (exprToTy lExpr) lTy
+    unify2 rRange (exprToTy rExpr) rTy
     TBinaryExpr(binary, lExpr, rExpr), state
 
-  | AIfExpr (cond, thenClause, elseClause) ->
+  | AIfExpr (cond, thenClause, elseClause, range) ->
     let cond, state = tcExprTopDown TBoolTy state cond
     let thenClause, state = tcExpr state thenClause
     let elseClause, state = tcExpr state elseClause
-    unify Pos.zero (exprToTy thenClause) (exprToTy elseClause)
+    unify range.Start (exprToTy thenClause) (exprToTy elseClause)
     TIfExpr(cond, thenClause, elseClause), state
 
-  | ALetExpr (pat, init) ->
+  | ALetExpr (pat, init, _) ->
     let init, state = tcExpr state init
     let pat, state = tcPat (exprToTy init) state pat
     TLetExpr(pat, init), state
 
-  | ABlockExpr (exprs, last) ->
+  | ABlockExpr (exprs, last, _) ->
     let exprs, state =
       exprs
       |> List.mapFold (tcExprTopDown TUnitTy) state
@@ -352,8 +378,9 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
 
 /// Type-checks an expression and validates it has expected target type.
 let private tcExprTopDown targetTy state expr : TExpr * Sx =
+  let range = rangeOf expr
   let expr, state = tcExpr state expr
-  unify Pos.zero (exprToTy expr) targetTy // FIXME: pos
+  unify2 range (exprToTy expr) targetTy
   expr, state
 
 // -----------------------------------------------
@@ -516,9 +543,9 @@ let private tcNewtypeDecl (sigMap: SigMap) (state: Sx) newtypeDecl =
     | ANewtypeDecl (name, variant, _, range) -> name, variant, range
     | _ -> unreachable ()
 
-  let unionName = genName name
+  let variantName = genName variant
 
-  let _, payload = sigMap |> Map.tryFind (idOf unionName) |> unwrap
+  let _, payload = sigMap |> Map.tryFind (idOf variantName) |> unwrap
 
   let newtypeDef: TNewtypeDef =
     { Name = genName name

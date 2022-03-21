@@ -16,6 +16,12 @@ let drop (counter: Counter) : unit = {
     let _ = __dispose n
 }
 
+let increment (counter: Counter) : int * Counter = {
+    let (Counter n1) = counter
+    let n2 = (__dispose n1) + 1
+    n2, create n2
+}
+
 // -----------------------------------------------
 // Tests
 // -----------------------------------------------
@@ -34,8 +40,8 @@ expect "create two" {
 
 expect "use method" {
     let r1 = create 41
-    let n, r2 = create 42
-    assert (n = 41)
+    let n, r2 = increment r1
+    assert (n = 42)
     drop r2
 }
 

@@ -19,7 +19,7 @@ type APat =
   | ANamePat of AName
   | AWildcardPat of Pos
   | AUnitPat of Pos
-  | APairPat of APat * APat
+  | APairPat of APat * APat * Pos
   | AWrapPat of AName * APat
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -30,14 +30,14 @@ type Binary =
 
 [<NoEquality; NoComparison>]
 type AExpr =
-  | AIntExpr of int * Pos
-  | AUnitExpr of Pos
+  | AIntExpr of int * Range
+  | AUnitExpr of Range
   | ANameExpr of AName
-  | AAppExpr of AExpr * AExpr
+  | AAppExpr of AExpr * AExpr * Pos
   | ABinaryExpr of Binary * AExpr * AExpr
-  | AIfExpr of cond: AExpr * thenClause: AExpr * elseClause: AExpr
-  | ALetExpr of APat * init: AExpr
-  | ABlockExpr of AExpr list * last: AExpr
+  | AIfExpr of cond: AExpr * thenClause: AExpr * elseClause: AExpr * Range
+  | ALetExpr of APat * init: AExpr * Range
+  | ABlockExpr of AExpr list * last: AExpr * Range
 
 [<NoEquality; NoComparison>]
 type ADecl =

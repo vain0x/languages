@@ -216,9 +216,9 @@ let private parsePairPat px : APat * Px =
   let l, px = parseAtomicPat px
 
   match get0 px with
-  | PunToken, ",", _ ->
+  | PunToken, ",", range ->
     let r, px = parseAtomicPat (bump px)
-    APairPat(l, r), px
+    APairPat(l, r, range.Start), px
 
   | _ -> l, px
 
@@ -245,17 +245,17 @@ let private atFirstOfExpr px =
 
 let private parseAtomicExpr px : AExpr * Px =
   match get0 px with
-  | IntToken, text, range -> AIntExpr(int text, range.Start), bump px
+  | IntToken, text, range -> AIntExpr(int text, range), bump px
 
   | IdentToken, _, _ ->
     let name, px = px |> parseName
     ANameExpr name, px
 
-  | PunToken, "(", _ ->
+  | PunToken, "(", r1 ->
     let px = bump px
 
     match get0 px with
-    | PunToken, ")", _ -> AUnitExpr(lastPos px), bump px
+    | PunToken, ")", r2 -> AUnitExpr(Range.join r1 r2), bump px
 
     | _ ->
       let bodyExpr, px = parseExpr px
@@ -267,8 +267,9 @@ let private parseAtomicExpr px : AExpr * Px =
 let private parseAppExpr px =
   let rec go l px =
     if atFirstOfAtomicExpr px then
+      let pos = lastPos px
       let r, px = parseAtomicExpr px
-      go (AAppExpr(l, r)) px
+      go (AAppExpr(l, r, pos)) px
     else
       l, px
 
@@ -302,6 +303,7 @@ let private parsePairExpr px =
   | _ -> l, px
 
 let private parseIfExpr px =
+  let start = startRange px
   let px = bump px
   let cond, px = parseExpr px
   let px = expectKeyword "then" px
@@ -309,14 +311,17 @@ let private parseIfExpr px =
   let px = expectKeyword "else" px
   let elseClause, px = parseClause px
   let px = expectKeyword "end" px
-  AIfExpr(cond, thenClause, elseClause), px
+  let range = endRange start px
+  AIfExpr(cond, thenClause, elseClause, range), px
 
 let private parseLetExpr px =
+  let start = startRange px
   let px = bump px
   let pat, px = parsePat px
   let px = expectPun "=" px
   let init, px = parseBlockOrExpr px
-  ALetExpr(pat, init), px
+  let range = endRange start px
+  ALetExpr(pat, init, range), px
 
 let private parseExpr px : AExpr * Px =
   match get0 px with
@@ -355,16 +360,18 @@ let private parseClause px : AExpr * Px =
   let px = skipSemi px
 
   if atFirstOfExpr px then
+    let start = startRange px
     let expr, px = parseExpr px
     let acc, last, px = go [] expr px
+    let range = endRange start px
     let px = skipSemi px
 
     if List.isEmpty acc then
       last, px
     else
-      ABlockExpr(List.rev acc, last), px
+      ABlockExpr(List.rev acc, last, range), px
   else
-    AUnitExpr(lastPos px), px
+    AUnitExpr(Range.ofPos (lastPos px)), px
 
 /// `{ clause }`
 let private parseBlockExpr px : AExpr * Px =

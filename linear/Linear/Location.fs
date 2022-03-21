@@ -72,6 +72,8 @@ module Range =
 
   let ofPos (pos: Pos) : Range = { Start = pos; End = pos }
 
+  let join (l: Range) (r: Range) : Range = { Start = l.Start; End = r.End }
+
 // -----------------------------------------------
 // Cursor
 // -----------------------------------------------

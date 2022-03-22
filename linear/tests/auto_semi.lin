@@ -1,0 +1,74 @@
+// Auto semicolon insertion (ASI).
+
+let main () : unit = {
+    // ASI works in basic cases.
+    let _ = atomic
+    let _ = 41
+
+    let _ =
+        newline
+
+    let _ =
+        42
+
+    let _ =
+        followed_by_binary +
+        1
+
+    let _ =
+        43 +
+        1
+
+    let _ = f a b
+
+    let _ =
+        f a b
+
+
+
+    // ASI works in nested blocks.
+    let _ = {
+        f a
+        f b
+    }
+
+    let _ = if cond then
+        f a
+        f b
+    else
+        g c
+        g d
+    end
+
+
+
+    // ASI ignores non-trivial lines.
+    let _ =
+
+        // Comments.
+
+        44
+
+
+
+    // ASI is disabled as long as inner-most bracket is paren.
+    let _ = (p
+            )
+
+    let _ =
+        (f
+            a
+            b)
+
+
+
+    // ASI is re-enabled inside another non-paren bracket.
+    let _ = 
+        (f
+            (if p then
+                s
+                t
+            else
+                u
+            end))
+}

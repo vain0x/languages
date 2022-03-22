@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Location.fs" />
+    <Compile Include="Token.fs" />
+    <Compile Include="Tokenize.fs" />
+    <Compile Include="Ast.fs" />
+    <Compile Include="Parse.fs" />
+    <Compile Include="TypedIR.fs" />
+    <Compile Include="TypeCheck.fs" />
+    <Compile Include="Eval.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+</Project>

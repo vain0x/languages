@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+dotnet run -nologo --project Linear

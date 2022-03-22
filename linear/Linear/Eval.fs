@@ -213,7 +213,9 @@ let eval (m: TModule) : unit =
                let _ = evalBlock rx state body
                false
              with
-             | EvalError _ ->
+             | EvalError (message, r) ->
+               printfn "trace: expected_error %s at %A is resolved at runtime:\n  %s at %A" desc range message r
+
                // Expected.
                true
 

@@ -45,6 +45,9 @@ type private TTySymbol =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TyCheckState =
   { SymbolTys: Map<Id, TTy>
+    LinearUnions: Set<Id>
+    /// Linear values: id -> (true if alive)
+    Linearity: Map<Id, bool>
     ValueEnv: Map<TIdent, TValueSymbol>
     TyEnv: Map<TIdent, TTySymbol> }
 
@@ -57,6 +60,8 @@ let private fail2 message range : 'A = raise (TyError(message, range))
 
 let private emptyState () : TyCheckState =
   { SymbolTys = Map.empty
+    LinearUnions = Set.empty
+    Linearity = Map.empty
     ValueEnv =
       Map.ofList [ "assert", TValueSymbol.Prim TPrim.Assert
                    "__acquire", TValueSymbol.Prim TPrim.UUAcquire
@@ -65,6 +70,75 @@ let private emptyState () : TyCheckState =
       Map.ofList [ "int", TTySymbol.Int
                    "unit", TTySymbol.Unit
                    "bool", TTySymbol.Bool ] }
+
+let private isLinearTy (state: Sx) ty =
+  match ty with
+  | TLinearTy _ -> true
+  | TUnionTy name -> state.LinearUnions |> Set.contains (idOf name)
+  | TPairTy (lTy, rTy) -> isLinearTy state lTy || isLinearTy state rTy
+
+  | TIntTy
+  | TUnitTy
+  | TBoolTy
+  | TFunTy _ -> false
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private Branch =
+  | Start of parent: Map<Id, bool>
+  | Next of parent: Map<Id, bool> * prev: Map<Id, bool>
+
+let private startBranch (state: Sx) : Branch * Sx = (Branch.Start state.Linearity), state
+
+let private nextBranch branch (state: Sx) : Branch * Sx =
+  let parent, prevOpt =
+    match branch with
+    | Branch.Start parent -> parent, None
+    | Branch.Next (parent, prev) -> parent, Some prev
+
+  let delta =
+    state.Linearity
+    |> Map.fold
+         (fun delta id alive ->
+           match parent |> Map.tryFind id with
+           | Some parentAlive ->
+             if parentAlive <> alive then
+               //  printfn "debug: id=%d parent %A alive=%A" id parentAlive alive
+               assert (parentAlive && not alive)
+               (id, false) :: delta
+             else
+               delta
+           | None -> (id, alive) :: delta)
+         []
+
+  // check matching
+  match prevOpt with
+  | Some prev ->
+    let rest =
+      delta
+      |> List.fold
+           (fun prev (id, alive) ->
+             match prev |> Map.tryFind id with
+             | Some prevAlive when alive = prevAlive -> prev |> Map.remove id
+             | _ -> prev)
+           prev
+
+    if rest |> Map.exists (fun _ alive -> alive) then
+      // eprintfn "debug: prev=%A, delta=%A rest=%A" prev delta rest
+      fail "linearity violation" Pos.zero
+
+  | None -> ()
+
+  let branch =
+    match branch with
+    | Branch.Start _ -> Branch.Next(parent, Map.ofList delta)
+    | _ -> branch
+
+  branch, { state with Linearity = parent }
+
+let private endBranch branch (state: Sx) : Sx =
+  let linearity = state.Linearity
+  let _, state = nextBranch branch state
+  { state with Linearity = linearity }
 
 // -----------------------------------------------
 // Name resolution
@@ -174,11 +248,21 @@ let private tcPat targetTy (state: Sx) (pat: APat) : TPat * Sx =
           ValueEnv =
             state.ValueEnv
             |> Map.add (identOf name) (TValueSymbol.Var tName)
-          SymbolTys = state.SymbolTys |> Map.add (idOf tName) targetTy }
+          SymbolTys = state.SymbolTys |> Map.add (idOf tName) targetTy
+          Linearity =
+            if isLinearTy state targetTy then
+              printfn "trace: linear var %s defined at %A" (identOf name) (posOf name)
+              state.Linearity |> Map.add (idOf tName) true
+            else
+              state.Linearity }
 
     TVarPat(tName, targetTy), state
 
-  | AWildcardPat pos -> TWildcardPat(targetTy, pos), state
+  | AWildcardPat pos ->
+    if isLinearTy state targetTy then
+      fail "Linear value can't be bound to wildcard" pos
+
+    TWildcardPat(targetTy, pos), state
 
   | AUnitPat pos ->
     match targetTy with
@@ -272,6 +356,15 @@ let private tcNameExpr state name : TExpr * Sx =
       |> Map.tryFind (idOf varName)
       |> unwrap
 
+    let state =
+      match state.Linearity |> Map.tryFind (idOf varName) with
+      | Some true ->
+        printfn "trace: linear var %s used at %A" (identOf name) (posOf name)
+        { state with Linearity = state.Linearity |> Map.add (idOf varName) false }
+
+      | Some false -> fail "Already disposed" (posOf name)
+      | None -> state
+
     TSymbolExpr(TSymbolKind.Var, idOf varName, defTy, posOf name), state
 
   | TValueSymbol.Prim _ ->
@@ -358,8 +451,11 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
 
   | AIfExpr (cond, thenClause, elseClause, range) ->
     let cond, state = tcExprTopDown TBoolTy state cond
+    let branch, state = startBranch state
     let thenClause, state = tcExpr state thenClause
+    let branch, state = nextBranch branch state
     let elseClause, state = tcExpr state elseClause
+    let state = endBranch branch state
     unify range.Start (exprToTy thenClause) (exprToTy elseClause)
     TIfExpr(cond, thenClause, elseClause), state
 
@@ -381,6 +477,22 @@ let private tcExprTopDown targetTy state expr : TExpr * Sx =
   let range = rangeOf expr
   let expr, state = tcExpr state expr
   unify2 range (exprToTy expr) targetTy
+  expr, state
+
+let private tcExprBody targetTy (state: Sx) expr : TExpr * Sx =
+  assert (state.Linearity |> Map.isEmpty)
+  let branch, state = startBranch state
+  let expr, state = tcExprTopDown targetTy state expr
+
+  state.Linearity
+  |> Map.iter (fun id alive ->
+    if alive then
+      // printfn "debug: id=%d" id
+      fail "Leaked resource" Pos.zero)
+
+  let state = endBranch branch state
+  let state = { state with Linearity = Map.empty }
+
   expr, state
 
 // -----------------------------------------------
@@ -474,7 +586,13 @@ let private collectDecls (state: Sx) root : SigMap * Sx =
                { state with
                    SymbolTys =
                      state.SymbolTys
-                     |> Map.add (idOf variantName) variantTy }
+                     |> Map.add (idOf variantName) variantTy
+                   LinearUnions =
+                     if isLinearTy state payloadTy then
+                       printfn "trace: linear type %s" (identOf name)
+                       state.LinearUnions |> Set.add (idOf unionName)
+                     else
+                       state.LinearUnions }
 
              sigMap, state
 
@@ -523,7 +641,7 @@ let private tcFunDecl (sigMap: SigMap) (state: Sx) funDecl =
            (paramName, ty), state)
          state
 
-  let body, state = tcExprTopDown result state body
+  let body, state = tcExprBody result state body
 
   // Rollback scope.
   let state = { state with ValueEnv = parentEnv }
@@ -572,17 +690,19 @@ let private tcDecl (sigMap: SigMap) funs newtypes declAcc (state: Sx) (decl: ADe
     funs, newtypes, declAcc, state
 
   | AExpectDecl (desc, body, range) ->
-    let body, state = tcExprTopDown TUnitTy state body
+    let body, state = tcExprBody TUnitTy state body
     let declAcc = TExpectDecl(desc, body, range) :: declAcc
     funs, newtypes, declAcc, state
 
   | AExpectErrorDecl (desc, body, range) ->
     try
-      let body, state = tcExprTopDown TUnitTy state body
+      let body, state = tcExprBody TUnitTy state body
       let declAcc = TExpectErrorDecl(desc, body, range) :: declAcc
       funs, newtypes, declAcc, state
     with
-    | :? TyError -> funs, newtypes, declAcc, state
+    | :? TyError as ex ->
+      printfn "trace: expect_error %s at %A is resolved in type check\n  %s at %A" desc range ex.message ex.range
+      funs, newtypes, declAcc, state
 
 // -----------------------------------------------
 // Interface

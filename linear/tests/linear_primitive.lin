@@ -1,8 +1,9 @@
 // Test linear primitives.
 
 let increment (r: __linear<int>) : int * __linear<int> = {
-    let n = __dispose r
-    n, __acquire n
+    let n1 = __dispose r
+    let n2 = n1 + 1
+    n2, __acquire n2
 }
 
 let drop (r: __linear<int>) : unit = {
@@ -23,7 +24,7 @@ expect "move" {
 expect "pass in function" {
     let r =  __acquire 41
     let n, r = increment r
-    assert (n = 41)
+    assert (n = 42)
     let _ = __dispose r
 }
 
@@ -32,9 +33,9 @@ expect "two resources" {
     let s1 = __acquire 42
 
     let n, r2 = increment r1
-    assert (n = 41)
+    assert (n = 42)
     let m, s2 = increment s1
-    assert (m = 42)
+    assert (m = 43)
 
     let _ = __dispose r2
     let _ = __dispose s2
@@ -83,7 +84,7 @@ let add_aux (r1: __linear<int>) (i: int) (n: int) : __linear<int> = {
         r1
     else
         let _, r2 = increment r1
-        add_aux r2 i n
+        add_aux r2 (i + 1) n
     end
 }
 

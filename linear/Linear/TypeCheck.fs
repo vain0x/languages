@@ -233,7 +233,7 @@ let private exprToTy (expr: TExpr) : TTy =
     | TFunTy (_, rTy) -> rTy
     | _ -> unreachable ()
 
-  | TUnaryExpr (unary, arg) ->
+  | TUnaryExpr (unary, arg, _) ->
     match unary with
     | TUnary.Assert -> TUnitTy
     | TUnary.UUAcquire -> TLinearTy(exprToTy arg)
@@ -301,7 +301,7 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
   | AIntExpr (value, pos) -> TIntExpr(value, pos), state
   | AUnitExpr pos -> TUnitExpr pos, state
 
-  | AAppExpr (lExpr, rExpr, _) ->
+  | AAppExpr (lExpr, rExpr, pos) ->
     let onDefault () =
       let rRange = rangeOf rExpr
       let lExpr, state = tcExpr state lExpr
@@ -326,16 +326,16 @@ let private tcExpr (state: Sx) (expr: AExpr) : TExpr * Sx =
         match prim with
         | TPrim.Assert ->
           unify (posOf name) (exprToTy rExpr) TBoolTy
-          TUnaryExpr(TUnary.Assert, rExpr), state
+          TUnaryExpr(TUnary.Assert, rExpr, pos), state
 
-        | TPrim.UUAcquire -> TUnaryExpr(TUnary.UUAcquire, rExpr), state
+        | TPrim.UUAcquire -> TUnaryExpr(TUnary.UUAcquire, rExpr, pos), state
 
         | TPrim.UUDispose ->
           match exprToTy rExpr with
           | TLinearTy _ -> ()
           | _ -> fail2 "Expected __linear<_>" rRange
 
-          TUnaryExpr(TUnary.UUDispose, rExpr), state
+          TUnaryExpr(TUnary.UUDispose, rExpr, pos), state
 
       | _ -> onDefault ()
     | _ -> onDefault ()

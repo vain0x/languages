@@ -28,6 +28,8 @@ let main _ =
 
     if file <> "tests/auto_semi.lin" then
       let m = TypeCheck.typeCheck ast
-      printfn "module:\n%A" m
+      // printfn "module:\n%A" m
+
+      Eval.eval m
 
   0

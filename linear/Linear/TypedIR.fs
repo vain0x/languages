@@ -61,7 +61,7 @@ type TExpr =
   | TUnitExpr of Range
   | TSymbolExpr of TSymbolKind * Id * TTy * Pos
   | TAppExpr of TExpr * TExpr
-  | TUnaryExpr of TUnary * TExpr
+  | TUnaryExpr of TUnary * TExpr * Pos
   | TBinaryExpr of TBinary * TExpr * TExpr
   | TIfExpr of cond: TExpr * thenClause: TExpr * elseClause: TExpr
   | TLetExpr of pat: TPat * init: TExpr

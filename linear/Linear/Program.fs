@@ -32,4 +32,29 @@ let main _ =
 
       Eval.eval m
 
+  let file = "tests/issue_leaky_fun.lin"
+  printfn "file: %s" file
+  let src = File.ReadAllText(file)
+  let tokens, errors = Tokenize.tokenizeString src
+
+  if errors.Length <> 0 then
+    for message, range in errors do
+      eprintfn "ERROR: %A %s" range message
+
+    exit 1
+
+  // for kind, text, range in tokens do
+  //   printfn "%A %A %A" range kind text
+
+  let ast = Parse.parseTokens tokens
+  // printfn "ast:\n%A" ast
+
+  (try
+    TypeCheck.typeCheck ast |> ignore
+    None
+   with
+   | ex -> Some ex)
+  |> Option.get
+  |> printfn "ERROR: %A"
+
   0

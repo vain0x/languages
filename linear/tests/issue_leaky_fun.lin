@@ -1,0 +1,7 @@
+// This function should NOT type-check.
+/// Leaks a value.
+let forget (value: __linear<int>) : unit = {}
+
+expect "leaky function" {
+    forget(__acquire 0)
+}

@@ -479,20 +479,23 @@ let private tcExprTopDown targetTy state expr : TExpr * Sx =
   unify2 range (exprToTy expr) targetTy
   expr, state
 
-let private tcExprBody targetTy (state: Sx) expr : TExpr * Sx =
+let private startBody (state: Sx) =
   assert (state.Linearity |> Map.isEmpty)
-  let branch, state = startBranch state
-  let expr, state = tcExprTopDown targetTy state expr
+  state
 
+let private endBody (state: Sx) =
   state.Linearity
   |> Map.iter (fun id alive ->
     if alive then
       // printfn "debug: id=%d" id
       fail "Leaked resource" Pos.zero)
 
-  let state = endBranch branch state
-  let state = { state with Linearity = Map.empty }
+  { state with Linearity = Map.empty }
 
+let private tcExprBody targetTy (state: Sx) expr : TExpr * Sx =
+  let state = startBody state
+  let expr, state = tcExprTopDown targetTy state expr
+  let state = endBody state
   expr, state
 
 // -----------------------------------------------
@@ -620,6 +623,8 @@ let private tcFunDecl (sigMap: SigMap) (state: Sx) funDecl =
   // Recollect already resolved type of type ascriptions.
   let paramTys, result = sigMap |> Map.tryFind (idOf tName) |> unwrap
 
+  let state = startBody state
+
   // Add params to scope.
   let paramList, state =
     let paramList =
@@ -634,6 +639,11 @@ let private tcFunDecl (sigMap: SigMap) (state: Sx) funDecl =
            let state =
              { state with
                  SymbolTys = state.SymbolTys |> Map.add (idOf paramName) ty
+                 Linearity =
+                   if isLinearTy state ty then
+                     state.Linearity |> Map.add (idOf paramName) true
+                   else
+                     state.Linearity
                  ValueEnv =
                    state.ValueEnv
                    |> Map.add (identOf name) (TValueSymbol.Var paramName) }
@@ -641,7 +651,8 @@ let private tcFunDecl (sigMap: SigMap) (state: Sx) funDecl =
            (paramName, ty), state)
          state
 
-  let body, state = tcExprBody result state body
+  let body, state = tcExprTopDown result state body
+  let state = endBody state
 
   // Rollback scope.
   let state = { state with ValueEnv = parentEnv }

@@ -147,7 +147,7 @@ expect_error "duplicate resource (use-after-free)" {
 expect_error "leak in one branch" {
     let r = __acquire 41
 
-    if true then
+    if 0 = 0 then
         let _ = __dispose r
     else
         // r is not disposed!

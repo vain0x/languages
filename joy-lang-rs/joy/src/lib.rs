@@ -18,7 +18,7 @@ mod tests {
     use super::*;
     use crate::{internals::*, xir_gen::XProgram};
     use expect_test::{expect, Expect};
-    use shark_syntax::{parse_from_string, AModule};
+    use joy_syntax::{parse_from_string, AModule};
 
     #[test]
     fn eval_test() {

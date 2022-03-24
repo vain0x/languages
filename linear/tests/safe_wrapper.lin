@@ -7,57 +7,57 @@
 /// Linear counter type.
 type Counter = Counter of __linear<int>
 
-let create (init: int) : Counter = {
+let create (init: int) : Counter = (
     Counter(__acquire init)
-}
+)
 
-let drop (counter: Counter) : unit = {
+let drop (counter: Counter) : unit = (
     let (Counter n) = counter
     let _ = __dispose n
-}
+)
 
-let increment (counter: Counter) : int * Counter = {
+let increment (counter: Counter) : int * Counter = (
     let (Counter n1) = counter
     let n2 = (__dispose n1) + 1
     n2, create n2
-}
+)
 
 // -----------------------------------------------
 // Tests
 // -----------------------------------------------
 
-expect "create and drop" {
+expect "create and drop" (
     let r = create 41
     drop r
-}
+)
 
-expect "create two" {
+expect "create two" (
     let r1 = create 41
     let r2 = create 42
     drop r1
     drop r2
-}
+)
 
-expect "use method" {
+expect "use method" (
     let r1 = create 41
     let n, r2 = increment r1
     assert (n = 42)
     drop r2
-}
+)
 
-expect_error "leak" {
+expect_error "leak" (
     let _ = create 41
-}
+)
 
-expect_error "leak in pair" {
+expect_error "leak in pair" (
     let r1 = create 41
     let _leaked = r1, 42
-}
+)
 
-expect_error "use twice" {
+expect_error "use twice" (
     let r1 = create 41
     let _, r2 = increment r1
     let _, r3 = increment r1
     drop r2
     drop r3
-}
+)

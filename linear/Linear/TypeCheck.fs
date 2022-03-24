@@ -718,7 +718,7 @@ let private tcDecl (sigMap: SigMap) funs newtypes declAcc (state: Sx) (decl: ADe
       printfn "trace: expect_error %s at %A is resolved in type check\n  %s at %A" desc range ex.message ex.range
       funs, newtypes, declAcc, state
 
-    | Error _ -> fail2 "expected_error declaration unexpectedly type-checked" range
+    | Error _ -> fail2 "expect_error declaration unexpectedly type-checked" range
 
 // -----------------------------------------------
 // Interface

@@ -1,6 +1,6 @@
 // Auto semicolon insertion (ASI).
 
-let main () : unit = {
+let main () : unit = (
     // ASI works in basic cases.
     let _ = atomic
     let _ = 41
@@ -27,10 +27,10 @@ let main () : unit = {
 
 
     // ASI works in nested blocks.
-    let _ = {
+    let _ = (
         f a
         f b
-    }
+    )
 
     let _ = if cond then
         f a
@@ -51,14 +51,17 @@ let main () : unit = {
 
 
 
-    // ASI is disabled as long as inner-most bracket is paren.
+    // Paren.
     let _ = (p
             )
 
+    // Multi-line function application.
     let _ =
-        (f
+        f (
             a
-            b)
+        ) (
+            b
+        )
 
 
 
@@ -71,4 +74,4 @@ let main () : unit = {
             else
                 u
             end))
-}
+)

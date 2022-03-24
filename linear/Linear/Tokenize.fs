@@ -144,25 +144,6 @@ let tokenizeString (s: string) : TokenData array * (string * Range) array =
   let errors = ResizeArray()
   let mutable cursor = Cursor.create s
 
-  let brackets = ResizeArray<Paren>()
-
-  let innermost () =
-    if brackets.Count >= 1 then
-      brackets.[brackets.Count - 1]
-    else
-      Brace
-
-  let popLast () =
-    if brackets.Count >= 1 then
-      brackets.RemoveAt(brackets.Count - 1)
-
-  let pop b =
-    while brackets.Count >= 1 && innermost () <> b do
-      popLast ()
-
-    if brackets.Count >= 1 && innermost () = b then
-      popLast ()
-
   while cursor |> Cursor.atEof |> not do
     let i = cursor.Index
 
@@ -182,19 +163,8 @@ let tokenizeString (s: string) : TokenData array * (string * Range) array =
       if kind = BadToken then
         errors.Add(text, range)
       else if kind |> isTrivia |> not then
-        let mutable popping = None // popはセミコロン挿入の後に行う (雑)
-
-        match kind, text with
-        | KeywordToken, "if" -> brackets.Add(Brace)
-        | KeywordToken, "end" -> popping <- Some Brace
-        | PunToken, "(" -> brackets.Add(Paren)
-        | PunToken, "{" -> brackets.Add(Brace)
-        | PunToken, ")" -> popping <- Some Paren
-        | PunToken, "}" -> popping <- Some Brace
-        | _ -> ()
-
         let autoSemi =
-          if innermost () = Brace && tokens.Count >= 1 then
+          if tokens.Count >= 1 then
             let prev = tokens.[tokens.Count - 1]
             let _, _, r = prev
 
@@ -207,10 +177,6 @@ let tokenizeString (s: string) : TokenData array * (string * Range) array =
 
         match autoSemi with
         | Some pos -> tokens.Add(PunToken, ";", Range.ofPos pos)
-        | _ -> ()
-
-        match popping with
-        | Some b -> pop b
         | _ -> ()
 
         tokens.Add(kind, text, range)

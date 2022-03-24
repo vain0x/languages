@@ -258,7 +258,7 @@ let private parseAtomicExpr px : AExpr * Px =
     | PunToken, ")", r2 -> AUnitExpr(Range.join r1 r2), bump px
 
     | _ ->
-      let bodyExpr, px = parseExpr px
+      let bodyExpr, px = parseClause px
       let px = expectPun ")" px
       bodyExpr, px
 
@@ -319,15 +319,19 @@ let private parseLetExpr px =
   let px = bump px
   let pat, px = parsePat px
   let px = expectPun "=" px
-  let init, px = parseBlockOrExpr px
+  let init, px = parseExpr px
   let range = endRange start px
   ALetExpr(pat, init, range), px
 
 let private parseExpr px : AExpr * Px =
   match get0 px with
   | KeywordToken, "if", _ -> parseIfExpr px
-  | KeywordToken, "let", _ -> parseLetExpr px
   | _ -> parsePairExpr px
+
+let private parseExprOrLet px : AExpr * Px =
+  match get0 px with
+  | KeywordToken, "let", _ -> parseLetExpr px
+  | _ -> parseExpr px
 
 // -----------------------------------------------
 // Clauses and Blocks
@@ -338,7 +342,7 @@ let private atEndOfClause px =
   | EofToken, _, _
   | KeywordToken, "else", _
   | KeywordToken, "end", _
-  | PunToken, "}", _ -> true
+  | PunToken, ")", _ -> true
 
   | _ -> false
 
@@ -354,14 +358,14 @@ let private parseClause px : AExpr * Px =
     if atEndOfClause px then
       acc, last, px
     else
-      let expr, px = parseExpr px
+      let expr, px = parseExprOrLet px
       go (last :: acc) expr px
 
   let px = skipSemi px
 
   if atFirstOfExpr px then
     let start = startRange px
-    let expr, px = parseExpr px
+    let expr, px = parseExprOrLet px
     let acc, last, px = go [] expr px
     let range = endRange start px
     let px = skipSemi px
@@ -373,23 +377,12 @@ let private parseClause px : AExpr * Px =
   else
     AUnitExpr(Range.ofPos (lastPos px)), px
 
-/// `{ clause }`
-let private parseBlockExpr px : AExpr * Px =
-  let px = expectPun "{" px
+/// `( clause )`
+let private parseParenExpr px : AExpr * Px =
+  let px = expectPun "(" px
   let bodyExpr, px = parseClause px
-  let px = expectPun "}" px
+  let px = expectPun ")" px
   bodyExpr, px
-
-/// `{ clause } | expr`
-let private parseBlockOrExpr px : AExpr * Px =
-  let brace, px = eatPun "{" px
-
-  if brace then
-    let bodyExpr, px = parseClause px
-    let px = expectPun "}" px
-    bodyExpr, px
-  else
-    parseExpr px
 
 // -----------------------------------------------
 // Declarations
@@ -423,7 +416,7 @@ let private parseFunDecl px : ADecl * Px =
   let px = expectPun ":" px
   let resultTy, px = parseTy px
   let px = expectPun "=" px
-  let body, px = parseBlockExpr px
+  let body, px = parseParenExpr px
   let range = endRange start px
   AFunDecl(name, paramList, resultTy, body, range), px
 
@@ -447,7 +440,7 @@ let private parseExpectDecl px : ADecl * Px =
 
     get0 px, bump px
 
-  let body, px = parseBlockExpr px
+  let body, px = parseParenExpr px
   let range = endRange start px
   AExpectDecl(desc, body, range), px
 
@@ -461,7 +454,7 @@ let private parseExpectErrorDecl px : ADecl * Px =
 
     get0 px, bump px
 
-  let body, px = parseBlockExpr px
+  let body, px = parseParenExpr px
   let range = endRange start px
   AExpectErrorDecl(desc, body, range), px
 

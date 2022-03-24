@@ -68,9 +68,7 @@ type TExpr =
   | TBlockExpr of TExpr list * last: TExpr
 
 [<NoEquality; NoComparison>]
-type TDecl =
-  | TExpectDecl of desc: string * TExpr * Range
-  | TExpectErrorDecl of desc: string * TExpr * Range
+type TDecl = TExpectDecl of desc: string * TExpr * Range
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TFunDef =

@@ -706,14 +706,19 @@ let private tcDecl (sigMap: SigMap) funs newtypes declAcc (state: Sx) (decl: ADe
     funs, newtypes, declAcc, state
 
   | AExpectErrorDecl (desc, body, range) ->
-    try
-      let body, state = tcExprBody TUnitTy state body
-      let declAcc = TExpectErrorDecl(desc, body, range) :: declAcc
-      funs, newtypes, declAcc, state
-    with
-    | :? TyError as ex ->
+    let result =
+      try
+        let body, _ = tcExprBody TUnitTy state body
+        Error body
+      with
+      | :? TyError as ex -> Ok ex
+
+    match result with
+    | Ok ex ->
       printfn "trace: expect_error %s at %A is resolved in type check\n  %s at %A" desc range ex.message ex.range
       funs, newtypes, declAcc, state
+
+    | Error _ -> fail2 "expected_error declaration unexpectedly type-checked" range
 
 // -----------------------------------------------
 // Interface

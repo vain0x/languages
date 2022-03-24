@@ -203,25 +203,6 @@ let eval (m: TModule) : unit =
                eprintfn "Failed in %s %A" desc range
                reraise ()
 
-           state
-
-         | TExpectErrorDecl (desc, body, range) ->
-           printfn "trace: expect_error %A %A" desc range
-
-           let ok =
-             try
-               let _ = evalBlock rx state body
-               false
-             with
-             | EvalError (message, r) ->
-               printfn "trace: expected_error %s at %A is resolved at runtime:\n  %s at %A" desc range message r
-
-               // Expected.
-               true
-
-           if not ok then
-             fail (sprintf "Unexpectedly success %s" desc) range
-
            state)
        (emptyState ())
   |> ignore

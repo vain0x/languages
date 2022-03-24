@@ -1,60 +1,67 @@
 module Linear.Program
 
 open System.IO
+open Linear.Location
 
-[<EntryPoint>]
-let main _ =
-  let files =
-    [ "tests/auto_semi.lin"
-      "tests/linear_primitive.lin"
-      "tests/safe_wrapper.lin" ]
+let private at (file: string) (range: Range) = sprintf "%s:%A" file range.Start
 
-  for file in files do
-    printfn "file: %s" file
-    let src = File.ReadAllText(file)
-    let tokens, errors = Tokenize.tokenizeString src
-
-    if errors.Length <> 0 then
-      for message, range in errors do
-        eprintfn "ERROR: %A %s" range message
-
-      exit 1
-
-    // for kind, text, range in tokens do
-    //   printfn "%A %A %A" range kind text
-
-    let ast = Parse.parseTokens tokens
-    // printfn "ast:\n%A" ast
-
-    if file <> "tests/auto_semi.lin" then
-      let m = TypeCheck.typeCheck ast
-      // printfn "module:\n%A" m
-
-      Eval.eval m
-
-  let file = "tests/issue_leaky_fun.lin"
-  printfn "file: %s" file
+let private readTokenize (file: string) =
   let src = File.ReadAllText(file)
   let tokens, errors = Tokenize.tokenizeString src
 
   if errors.Length <> 0 then
+    printfn "ERROR: Tokenize errors (%d)" errors.Length
+
     for message, range in errors do
-      eprintfn "ERROR: %A %s" range message
+      printfn "  %s %s" (at file range) message
 
     exit 1
 
-  // for kind, text, range in tokens do
-  //   printfn "%A %A %A" range kind text
+  tokens
 
+let private cmdParse (file: string) =
+  printfn "file: %s" file
+  let tokens = readTokenize file
   let ast = Parse.parseTokens tokens
-  // printfn "ast:\n%A" ast
+  printfn "ast:\n%A" ast
 
-  (try
-    TypeCheck.typeCheck ast |> ignore
-    None
-   with
-   | ex -> Some ex)
-  |> Option.get
-  |> printfn "ERROR: %A"
+let private cmdTypeCheck (file: string) =
+  printfn "file: %s" file
+  let tokens = readTokenize file
+  let ast = Parse.parseTokens tokens
+  let m = TypeCheck.typeCheck ast
+  printfn "module:\n%A" m
 
+let private cmdTypeFail (file: string) =
+  printfn "file: %s" file
+  let tokens = readTokenize file
+  let ast = Parse.parseTokens tokens
+
+  let result =
+    try
+      Ok(TypeCheck.typeCheck ast)
+    with
+    | ex -> Error ex
+
+  match result with
+  | Ok m ->
+    printfn "module:\n%A" m
+    printfn "Unexpectedly type-check succeeded."
+    exit 1
+
+  | Error ex -> printfn "Expectedly type-error occurred: %A" ex
+
+let private cmdEval (file: string) =
+  printfn "file: %s" file
+  let tokens = readTokenize file
+  let ast = Parse.parseTokens tokens
+  let m = TypeCheck.typeCheck ast
+  Eval.eval m
+
+[<EntryPoint>]
+let main _ =
+  cmdParse "tests/auto_semi.lin"
+  cmdEval "tests/linear_primitive.lin"
+  cmdEval "tests/safe_wrapper.lin"
+  cmdTypeFail "tests/issue_leaky_fun.lin"
   0

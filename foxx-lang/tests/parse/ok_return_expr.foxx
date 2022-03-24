@@ -1,0 +1,11 @@
+fn f() {
+    return 0
+}
+
+fn h() {
+    (return) - (return)
+}
+
+fn g() {
+    return 0 - 1
+}

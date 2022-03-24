@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 pub(crate) mod xir_eval;
 pub(crate) mod xir_gen;
 
@@ -18,8 +20,9 @@ mod tests {
     use super::*;
     use crate::{internals::*, xir_gen::XProgram};
     use expect_test::{expect, Expect};
-    use joy_syntax::{parse_from_string, AModule};
+    use foxx_syntax::{parse_from_string, AModule};
 
+    #[cfg(skip)]
     #[test]
     fn eval_test() {
         let bump = &Bump::new();

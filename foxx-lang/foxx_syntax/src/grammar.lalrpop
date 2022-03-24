@@ -2,7 +2,7 @@
 
 use crate::ast::*;
 use crate::internals::*;
-use crate::parse::{LexicalError, Pos};
+use crate::parse::{LexicalError, Pos, Range};
 use crate::tokenize::Token;
 
 grammar<'b>(source_code: &'b str, bump: &'b Bump);
@@ -17,7 +17,7 @@ extern {
 
     enum Token {
         "eos" => Token::Eos,
-        "num" => Token::DecimalInt,
+        "decimal_int" => Token::DecimalInt,
         "string" => Token::String,
         "false" => Token::False,
         "fn" => Token::Fn,
@@ -90,7 +90,7 @@ extern {
 // -----------------------------------------------
 
 LitToken: Token = {
-    <t:"num"> => t,
+    <t:"decimal_int"> => t,
     <t:"string"> => t,
     <t:"false"> => t,
     <t:"true"> => t,
@@ -99,7 +99,7 @@ LitToken: Token = {
 Lit: ALit<'b> = <l:@L> <t:LitToken> <r:@R> => ALit {
     token: t,
     text: &source_code[l.index()..r.index()],
-    pos: l,
+    range: Range::new(l, r),
 };
 
 Name: AName<'b> = <l:@L> "ident" <r:@R> => AName {
@@ -110,6 +110,42 @@ Name: AName<'b> = <l:@L> "ident" <r:@R> => AName {
 // -----------------------------------------------
 // Types
 // -----------------------------------------------
+
+Ty: ATy<'b> = {
+    <name:Name> => ATy::Name(name),
+    "(" <ty:Ty> ")" => ty,
+};
+
+
+
+Field: AField<'b> = {
+    <l:@L> <name:Name> ":" <ty:Ty> <r:@R> => AField { name, ty, range: Range::new(l, r) },
+};
+
+NonEmptyFields: BumpVec<'b, AField<'b>> = {
+    <field:Field> => bumpalo::vec![in bump; field],
+    <mut fields:NonEmptyFields> "," <next:Field> => {
+        fields.push(next);
+        fields
+    }
+}
+
+Fields: BumpVec<'b, AField<'b>> = {
+    () => bumpalo::vec![in bump],
+    <fields:NonEmptyFields> ","? => fields,
+}
+
+ParamList: AParamList<'b> = {
+    <l:@L> "(" <fields:Fields> ")" <r:@R> => AParamList { fields, range: Range::new(l, r) },
+};
+
+Ascribe: ATy<'b> = {
+    ":" <ty:Ty> => ty,
+};
+
+ResultTy: ATy<'b> = {
+    "->" <ty:Ty> => ty,
+};
 
 // -----------------------------------------------
 // Patterns
@@ -147,9 +183,9 @@ ChainExpr: AExpr<'b> = {
 
 MulExpr: AExpr<'b> = {
     <expr:ChainExpr> => expr,
-    <l:ChainExpr> <pos:@L> "*" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Mul, l, r, pos, bump),
-    <l:ChainExpr> <pos:@L> "/" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Div, l, r, pos, bump),
-    <l:ChainExpr> <pos:@L> "%" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Modulo, l, r, pos, bump),
+    <l:MulExpr> <pos:@L> "*" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Mul, l, r, pos, bump),
+    <l:MulExpr> <pos:@L> "/" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Div, l, r, pos, bump),
+    <l:MulExpr> <pos:@L> "%" <r:ChainExpr> => AExpr::new_binary(BinaryOp::Modulo, l, r, pos, bump),
 }
 
 AddExpr: AExpr<'b> = {
@@ -158,7 +194,10 @@ AddExpr: AExpr<'b> = {
     <l:AddExpr> <pos:@L> "-" <r:MulExpr> => AExpr::new_binary(BinaryOp::Sub, l, r, pos, bump),
 }
 
-Expr: AExpr<'b> = <expr:AddExpr> => expr;
+Expr: AExpr<'b> = {
+    <expr:AddExpr> => expr,
+    <pos:@L> "return" <arg:Expr?> => AExpr::new_return(arg, pos, bump),
+}
 
 // -----------------------------------------------
 // Statements
@@ -166,13 +205,13 @@ Expr: AExpr<'b> = <expr:AddExpr> => expr;
 
 Stmt: AStmt<'b> = {
     <expr:Expr> "eos" => AStmt::new_expr(expr),
-    <pos:@L> "let" <name:Name> "=" <init:Expr> "eos" => AStmt::new_let(name, init, pos),
-    <pos:@L> "fn" <name:Name> "(" ")" "{" <body:Expr> "eos"? "}" => AStmt::new_fn(name, body, pos),
+    <pos:@L> "let" <name:Name> <ty_opt:Ascribe?> "=" <init:Expr> "eos" => AStmt::new_let(name, ty_opt, init, pos),
+    <pos:@L> "fn" <name:Name> <param_list:ParamList> <result_ty_opt:ResultTy?> "{" <body:Expr> "eos"? "}" => AStmt::new_fn(name, param_list, result_ty_opt, body, pos),
 };
 
 pub Root: ARoot<'b> = {
     () => ARoot::new(bump),
-    <mut r:Root> "eos" => r,
+    <r:Root> "eos" => r,
     <mut r:Root> <stmt:Stmt> => {
         r.push(stmt);
         r

@@ -1,10 +1,13 @@
 use crate::{
     ast::ARoot,
-    tokenize::{JoyTokenizer, Token},
+    tokenize::{FoxxTokenizer, Token},
 };
 use bumpalo::Bump;
-use std::fmt::{self, Debug, Display};
-use text_position_rs::CompositePosition;
+use std::{
+    fmt::{self, Debug, Display},
+    ops::Index,
+};
+use text_position_rs::{CompositePosition, TextRange};
 
 type Utf8Pos = text_position_rs::Utf8Position;
 
@@ -41,6 +44,51 @@ impl From<CompositePosition> for Pos {
     }
 }
 
+#[derive(Copy, Clone, PartialEq)]
+pub struct Range(TextRange<CompositePosition>);
+
+impl Range {
+    const ZERO: Range = Range(TextRange::ZERO);
+
+    pub fn new(start: Pos, end: Pos) -> Self {
+        Self(TextRange::from(start.0..end.0))
+    }
+
+    pub fn start(self) -> Pos {
+        Pos(self.0.start())
+    }
+
+    pub fn end(self) -> Pos {
+        Pos(self.0.end())
+    }
+}
+
+impl Default for Range {
+    fn default() -> Self {
+        Range::ZERO
+    }
+}
+
+impl Debug for Range {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
+impl Display for Range {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
+impl Index<Range> for str {
+    type Output = str;
+
+    fn index(&self, index: Range) -> &Self::Output {
+        &self[index.start().index()..index.end().index()]
+    }
+}
+
 pub type Spanned<Tok, Loc, Error> = Result<(Loc, Tok, Loc), Error>;
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -54,7 +102,7 @@ impl Display for LexicalError {
 
 /// For lalrpop.
 pub struct MyLexer<'b> {
-    tokenizer: JoyTokenizer<'b>,
+    tokenizer: FoxxTokenizer<'b>,
 }
 
 impl<'b> Iterator for MyLexer<'b> {
@@ -81,7 +129,7 @@ pub fn parse_from_string<'b>(
     bump: &'b Bump,
 ) -> Result<ARoot<'b>, ParseError<'b>> {
     let mut lexer = MyLexer {
-        tokenizer: JoyTokenizer::new(source_code),
+        tokenizer: FoxxTokenizer::new(source_code),
     };
 
     match crate::grammar::RootParser::new().parse(source_code, &bump, &mut lexer) {
@@ -107,18 +155,25 @@ pub fn parse_from_string<'b>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use expect_test::{expect_file, ExpectFile};
+    use crate::ast;
+    use expect_test::{expect, expect_file, ExpectFile};
 
-    fn should_parse(source_code: &str, expect: ExpectFile) {
+    fn should_parse(source_code: &str) {
         let bump = Bump::new();
-        let result = parse_from_string(source_code, &bump).unwrap();
-        expect.assert_debug_eq(&result);
+        let result: String = match parse_from_string(source_code, &bump) {
+            Ok(_) => "OK".into(),
+            Err(err) => format!("{:?}", err),
+        };
+        assert_eq!(&result, "OK");
     }
 
     fn should_fail(source_code: &str, expect: ExpectFile) {
         let bump = Bump::new();
-        let result = parse_from_string(source_code, &bump).expect_err("should fail");
-        expect.assert_eq(&format!("Parse error: {} at {:?}", result.msg, result.pos));
+        let result = match parse_from_string(source_code, &bump) {
+            Ok(_) => "unexpectedly parsed".into(),
+            Err(err) => format!("Parse error: {} at {:?}\n", err.msg, err.pos),
+        };
+        expect.assert_eq(&result);
     }
 
     macro_rules! should_parse {
@@ -127,8 +182,7 @@ mod tests {
                 #[test]
                 fn $name() {
                     should_parse(
-                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".joy")),
-                        expect_file![concat!("../../tests/parse/",  stringify!($name), ".generated.txt")],
+                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".foxx")),
                     );
                 }
             )*
@@ -141,7 +195,7 @@ mod tests {
                 #[test]
                 fn $name() {
                     should_fail(
-                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".joy")),
+                        include_str!(concat!("../../tests/parse/",  stringify!($name), ".foxx")),
                         expect_file![concat!("../../tests/parse/",  stringify!($name), ".generated.txt")],
                     );
                 }
@@ -156,11 +210,26 @@ mod tests {
         ok_let,
         ok_fn,
         ok_call_expr,
+        ok_return_expr,
         ok_semi,
     }
 
     should_fail! {
         err_broken_arithmetic,
         err_two_ints,
+    }
+
+    #[test]
+    fn lit_range() {
+        let bump = &Bump::new();
+        let result = parse_from_string("\n  12\n", bump).expect("root");
+        let stmt = result.stmts.into_iter().next().expect("stmt");
+        let expr = match stmt {
+            ast::AStmt::Expr(ast::AExprStmt(ast::AExpr::Lit(lit))) => {
+                format!("range={:?}", lit.range)
+            }
+            _ => todo!(),
+        };
+        expect![[r#"range=2.3-2.5"#]].assert_eq(&expr);
     }
 }

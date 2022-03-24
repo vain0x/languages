@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "foxx",
+    "foxx_check",
+    "foxx_codegen",
+    "foxx_runtime",
+    "foxx_syntax",
+    "foxx_util"
+]

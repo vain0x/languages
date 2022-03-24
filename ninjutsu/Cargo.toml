@@ -1,0 +1,18 @@
+[package]
+name = "ninjutsu"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Logging API <https://github.com/rust-lang/log>
+log = { version = "0.4.14", features = ["std"] }
+
+# Tokenizer library <https://github.com/maciejhirsz/logos>
+logos = "0.12.0"
+
+text-position-rs = { git = "https://github.com/vain0x/text-position-rs", tag = "v0.3.0", features = ["checked"] }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

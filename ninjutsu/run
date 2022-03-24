@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eu
+
+# cargo run -- parse tests/hello/hello.nin
+cargo run -- build

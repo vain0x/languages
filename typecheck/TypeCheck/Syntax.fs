@@ -134,7 +134,7 @@ module Ty =
         fields
         |> Seq.map (fun (name, fieldTy) -> sprintf "%s: %s" name (fieldTy |> go 0))
         |> String.concat ", "
-        |> sprintf "{%s}"
+        |> sprintf "{ %s }"
 
       | UnionTy(l, r) ->
         let l = l |> go 20
@@ -174,6 +174,45 @@ type Term =
   | LambdaTerm of name: string * rhs: Term
 
   | LetTerm of IsRec * name: string * rhs: Term * body: Term
+
+  override this.ToString() =
+    let rec go (t: Term) =
+      let paren (t: Term) =
+        let isPrimary =
+          match t with
+          | BoolLitTerm _
+          | IntLitTerm _
+          | VarTerm _
+          | AppTerm _
+          | RecordTerm _ -> true
+          | _ -> false
+
+        if isPrimary then go t else sprintf "(%s)" (go t)
+
+      match t with
+      | BoolLitTerm value -> string value
+      | IntLitTerm value -> sprintf "%d" value
+      | VarTerm name -> sprintf "%s" name
+      | RecordTerm fields ->
+        sprintf
+          "{ %s }"
+          (fields
+           |> Seq.map (fun (name, t) -> sprintf "%s = %s" name (go t))
+           |> String.concat "; ")
+      | AppTerm(lhs, rhs) -> sprintf "(%s %s)" (go lhs) (go rhs)
+      | SelectTerm(lhs, fieldName) -> sprintf "%s.%s" (paren lhs) fieldName
+      | LambdaTerm(name, rhs) -> sprintf "fun %s -> %s" name (go rhs)
+      | LetTerm(isRec, name, rhs, body) ->
+        sprintf
+          "let%s %s = %s in %s"
+          (match isRec with
+           | Rec -> " rec"
+           | _ -> "")
+          name
+          (go rhs)
+          (go body)
+
+    go this
 
 // -----------------------------------------------
 // Decl

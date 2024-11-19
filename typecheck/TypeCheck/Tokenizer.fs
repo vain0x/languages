@@ -25,7 +25,7 @@ exception BadTokenException of index: int
 let nextToken (i: int) (s: string) : Token * int =
   assert (i < s.Length)
 
-  let badToken = raise (BadTokenException i)
+  let badToken i = raise (BadTokenException i)
 
   match nth i s with
   | ' '

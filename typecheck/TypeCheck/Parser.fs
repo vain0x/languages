@@ -13,7 +13,7 @@ type Px(tokens: (Token * Range) array) =
 
   member _.Nth(n) : Token =
     if index + n < tokens.Length then
-      tokens.[index + n] |> fst
+      tokens[index + n] |> fst
     else
       EofToken
 
@@ -21,14 +21,14 @@ type Px(tokens: (Token * Range) array) =
 
   member _.NextRange: Range =
     if index < tokens.Length then
-      tokens.[index] |> snd
+      tokens[index] |> snd
     else
-      tokens.[tokens.Length - 1] |> snd
+      tokens[tokens.Length - 1] |> snd
 
   member _.Shift() : Token =
     assert (index + 1 <= tokens.Length)
 
-    let token, tokenPos = tokens.[index]
+    let token, tokenPos = tokens[index]
     index <- index + 1
 
     if Trace then
@@ -95,13 +95,13 @@ let parseRecordArgs (px: Px) : (string * Term) list =
 
 let parseAtomicTerm (px: Px) : Term option =
   match px.Next with
-  // | KeywordToken "true" ->
-  //     px.Shift() |> ignore
-  //     BoolLitTerm true |> Some
+  | KeywordToken "true" ->
+    px.Shift() |> ignore
+    BoolLitTerm true |> Some
 
-  // | KeywordToken "false" ->
-  //     px.Shift() |> ignore
-  //     BoolLitTerm false |> Some
+  | KeywordToken "false" ->
+    px.Shift() |> ignore
+    BoolLitTerm false |> Some
 
   | IntToken value ->
     px.Shift() |> ignore

@@ -157,7 +157,7 @@ module Ty =
 
 /// 項
 type Term =
-  // | BoolLitTerm of bool
+  | BoolLitTerm of bool
 
   | IntLitTerm of int
 

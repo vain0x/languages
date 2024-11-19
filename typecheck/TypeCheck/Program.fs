@@ -1,7 +1,7 @@
 ﻿module TypeCheck.Main
 
 open TypeCheck.Syntax
-open TypeCheck.Typer
+open TypeCheck.TypeChecker
 open TypeCheck.TypeSimplifier
 
 let parse (text: string) : Ast =
@@ -12,7 +12,7 @@ let parse (text: string) : Ast =
   with Parser.ParseException(message, _token, range) ->
     failwithf "Parse error at %O: %s" range message
 
-let infer (text: string) : Ast * InferenceResult =
+let typeCheck (text: string) : Ast * InferenceResult =
   let ast = parse text
   let ctx = builtInCtx ()
   let coalesceTy = coalesceTySimplified
@@ -55,9 +55,11 @@ let test (text: string) =
             let ty = line.Substring(i + 1).Trim()
             yield name, ty ]
 
-  eprintfn "expects = %A" expects
+  eprintfn "expects (%d)" expects.Length
+  for v, t in expects do
+    eprintfn "  val %s: %s" v t
 
-  let _, result = infer text
+  let _, result = typeCheck text
   dumpInferenceResult result
 
   List.length result |> assertEq "number of assertion" (List.length expects)

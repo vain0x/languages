@@ -1,7 +1,5 @@
 module TypeCheck.Helpers
 
-open System.Collections.Generic
-
 // -----------------------------------------------
 // Pos
 // -----------------------------------------------
@@ -37,7 +35,7 @@ module Pos =
     assert (endIndex <= s.Length)
 
     let rec go (row: int) (head: int) =
-      let index = s.IndexOf("\n", head)
+      let index = s.IndexOf('\n', head)
 
       if index < 0 || index >= endIndex then
         Pos.Create(len, row, endIndex - head)
@@ -73,17 +71,17 @@ type Range =
 let hex (n: int) = sprintf "%x" n
 
 /// i 番目の文字
-let nth (i: int) (s: string) : char = if i < s.Length then s.[i] else '\x00'
+let nth (i: int) (s: string) : char = if i < s.Length then s[i] else '\x00'
 
 /// 部分文字列
-let substr (l: int) (r: int) (s: string) = if l < r then s.[l .. r - 1] else ""
+let substr (l: int) (r: int) (s: string) = if l < r then s[l .. r - 1] else ""
 
 /// 条件を満たすプレフィックスの長さ
 let prefixLen (i: int) (pred: char -> bool) (s: string) =
   let start = i
   let mutable i = i
 
-  while i < s.Length && pred s.[i] do
+  while i < s.Length && pred s[i] do
     i <- i + 1
 
   i - start

@@ -30,11 +30,11 @@ type Token =
 
 /// 型変数 (イミュータブル)
 type TyVar =
-  | TyVar of hint: string * hash: int
+  | TyVar of hint: string * id: string
 
   override this.ToString() =
     let (TyVar(hint, hash)) = this
-    sprintf "%s:%x" hint hash
+    sprintf "'%s_%s" hint hash
 
 // -----------------------------------------------
 // Ty

@@ -3,6 +3,11 @@
 
 
 
+Joy/Lexer.fs
+Joy/Parser.fs
+
+
+
 # Created by https://www.gitignore.io/api/fsharp
 # Edit at https://www.gitignore.io/?templates=fsharp
 

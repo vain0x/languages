@@ -1,0 +1,14 @@
+{
+open FSharp.Text.Lexing
+open Parser
+
+let lexeme lexbuf = LexBuffer<_>.LexemeString lexbuf
+}
+
+rule read =
+  parse
+  | ['0'-'9']+ { NUM(lexeme lexbuf) }
+  | "+" { PLUS }
+  | [' ' '\r' '\n']+ { read lexbuf }
+  | "//" [^'\r' '\n']* { read lexbuf }
+  | eof { EOF }

@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Joy", "Joy\Joy.fsproj", "{13CF81C5-1422-437E-A8B9-D44D53653F3C}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Joy.Tests", "Joy.Tests\Joy.Tests.fsproj", "{506EE3BB-9E90-4305-82ED-C926B722DE3D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{13CF81C5-1422-437E-A8B9-D44D53653F3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13CF81C5-1422-437E-A8B9-D44D53653F3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13CF81C5-1422-437E-A8B9-D44D53653F3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13CF81C5-1422-437E-A8B9-D44D53653F3C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{506EE3BB-9E90-4305-82ED-C926B722DE3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{506EE3BB-9E90-4305-82ED-C926B722DE3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{506EE3BB-9E90-4305-82ED-C926B722DE3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{506EE3BB-9E90-4305-82ED-C926B722DE3D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

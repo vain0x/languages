@@ -1,0 +1,23 @@
+%{
+open FSharp.Text.Lexing
+%}
+
+%start root
+%type <int> root
+
+%token <string> NUM
+%token PLUS
+%token EOF
+
+%left PLUS
+
+%%
+
+root: expr EOF { $1 }
+
+expr:
+    expr PLUS primary { $1 + $3 }
+    | primary { $1 }
+
+primary:
+    NUM { int $1 }

@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eu
+
+# dotnet build -noLogo --no-restore TypeCheck 1>&2
+dotnet run --project TypeCheck
